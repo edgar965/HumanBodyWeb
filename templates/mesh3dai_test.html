@@ -11,6 +11,7 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dairechnen.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
@@ -30,6 +31,16 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
         {# Name änderbar (19.10.2026, Stift wie bei Mesh-3D: `gemeinsam/auftragname.js`, `Mesh3dainame`); Kennung und Adresse bleiben. #}
         <span id="auftrag-name" data-adresse="{% url 'mesh3dai_testname' test.kennung %}">{{ test.name }}</span></h1>
 </div>
+
+{% comment %}Knopf „Rechnen“ (23.10.2026, Edgar: „Knopf auf der Seite: Mesh hochladen, ‚Rechnen‘, Fortschritt sehen“): `Mesh3dairechenlauf` — feste Schritte, KI-Fassungen aus `Mesh3daikifassungen`.{% endcomment %}
+<section class="card mesh3dai-rechnen" id="mesh3dai-rechnen" data-kennung="{{ test.kennung }}">
+    <div class="mesh3dai-rechnen-kopf">
+        <button type="button" class="btn btn-primary" data-aktion="rechnen"><span><i class="fas fa-play"></i> Rechnen</span></button>
+        <span class="mesh3dai-rechnen-status" data-status>Stand wird geladen …</span>
+    </div>
+    <div class="progress-bar-mini mesh3dai-rechnen-balken"><span class="progress-fill-mini" data-balken style="width: 0%"></span></div>
+    <ol class="mesh3dai-rechnen-schritte" data-schritte></ol>
+</section>
 
 <section class="card mesh3dai-zeile" id="mesh3dai-test" data-kennung="{{ test.kennung }}">
     {# Geschlecht der Figur (16.10.2026 abends, Edgar: „ganz oben im Testjob soll die Einstellung änderbar sein, ob es weiblich oder männlich ist“) — `Mesh3daitest.geschlecht_setzen`. #}
@@ -103,7 +114,9 @@ diese Seite zeigt, gegen das Ziel (`Mesh3daitestfaelle`, `mesh3daitestfaelle.js`
 <script type="module">
 import { Mesh3daitestseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestseite.js' %}";
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
+import { Mesh3dairechnen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dairechnen.js' %}";
 Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
 Auftragname.binden();
+new Mesh3dairechnen(document.getElementById('mesh3dai-rechnen'));
 </script>
 {% endblock %}

@@ -25,6 +25,15 @@ MENUE = [
                     {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/mesh-3D-AI/'},
                 ],
             },
+            # Seit 24.10.2026 (Edgar: „mach eine Kopie von Dashboard - Mesh3d-AI ohne Inhalte (nur Seiten …) und benenne sie 2d-3d-AI“): dieselben Seiten leer (`core/api/ai2d3d.py`).
+            # Ohne Jobs gibt es keine Einträge je Job — kommt einer dazu, hängt ihn ein `menu_provider` an wie bei Mesh3D-AI (`mesh3daimenue.py`).
+            {
+                'label': '2d-3d-AI',
+                'icon': 'bi-image',
+                'untermenu': [
+                    {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/2d-3d-AI/'},
+                ],
+            },
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -192,6 +201,14 @@ HILFE_EXTRA = [
                 'icon': 'bi-cpu',
                 'url': '/hilfe/architektur/mesh3dai/',
                 'aktiv': 'hilfe_architektur_mesh3dai',
+            },
+            # Fotos → KI → Genesis-Modell: Netz (Vorschlag), Prüfung, Messlatte, andere Anbieter, Plan (Edgar, 24.10.2026: „erstelle eine neue Seite hilfe - Architektur - 3d-3d-AI in der Art von
+            # /hilfe/architektur/mesh3dai/“ — gemeint ist 2d-3d-AI).
+            {
+                'label': '2d-3d-AI',
+                'icon': 'bi-image',
+                'url': '/hilfe/architektur/2d-3d-ai/',
+                'aktiv': 'hilfe_architektur_ai2d3d',
             },
         ],
     },

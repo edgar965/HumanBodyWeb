@@ -1,0 +1,53 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}{% load dezahl %}
+{% comment %}
+Hilfe -> Architektur -> 2d-3d-AI (Edgar, 24.10.2026: „erstelle eine neue Seite hilfe - Architektur - 3d-3d-AI in der Art von /hilfe/architektur/mesh3dai/ und mach genau wie diese Seite die komplette
+dokumentation, inkl. grafischer Darstellung des neuronalen Netzes“; dazu „alles, aber wirklich alles in der Pipeline soll im RAM und auf GPU laufen“).
+Aufbau wie `architektur_mesh3dai.html`: Grafik und Kurz erklärt, dann 1 Eingabe, 2 Netz, 3 Ausgabe, 4 Prüfung, 5 Training, 6 GPU, 7 andere Anbieter; zum Aufklappen 8 Plan, 9 Offene Fragen.
+Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …andere, …plan). Stil: die Klassen der Mesh3D-AI-Seite (`hilfe_architektur_mesh3dai.css`, Präfix `m3a`).
+{% endcomment %}
+
+{% block title %}Architektur 2d-3d-AI{% endblock %}
+{% block topbar_title %}Architektur — 2d-3d-AI: wie eine KI aus Fotos ein Genesis-Modell machen soll{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_genesis.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_mesh3dai.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite ag-breit m3a">
+
+  <h1>2d-3d-AI: Fotos → Genesis-Modell</h1>
+
+  <div class="info-box info-box-blue">
+    <strong>Worum es geht:</strong> Eine KI bekommt Fotos einer Person von mehreren Seiten und soll daraus ein Genesis-9-Modell machen — <strong>Haltung</strong> ({{ masse.knochen }} Knochen als
+    Daz-Winkel), <strong>Form</strong> ({{ masse.formregler|de }} Genesis-Formregler), <strong>Haut</strong> und <strong>Kleider</strong> (Katalogstück + Farbe). Gelernt wird daraus, dass die Figur, aus
+    denselben Perspektiven gerendert, <strong>so aussieht wie die Fotos</strong>; im Training kommt die Wahrheit dazu, denn die Fotos der Exporte sind selbst Renderings einer bekannten Genesis-Figur.
+    Jobs mit Wahrheit: <a href="/2d-3d-AI/">{{ jobs|length }} Exporte</a>; Tests mit echten Fotos: <a href="/2d-3d-AI/#test">{{ tests|length }}</a>. Heute zeigen die Jobseiten das Genesis-Modell von
+    Mesh3D-AI (Fotos → Tripo-Netz → KI, die <strong>Messlatte A</strong>). Das Netz unten ist ein <strong>Vorschlag (Weg B)</strong>, nicht gebaut und nicht trainiert.
+    Zahlen liest die Seite beim Aufruf von der Platte; festgehaltene Messungen nennen Datum und Quelle.
+  </div>
+
+  {% if befunde %}
+  <div class="info-box info-box-red">
+    <strong>Befunde beim Aufbau der Seite:</strong>
+    <ul>{% for b in befunde %}<li>{{ b }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% include "hilfe/_architektur_ai2d3d_kurz.html" %}
+  {% include "hilfe/_architektur_ai2d3d_eingabe.html" %}
+  {% include "hilfe/_architektur_ai2d3d_netz.html" %}
+  {% include "hilfe/_architektur_ai2d3d_pruefung.html" %}
+  {% include "hilfe/_architektur_ai2d3d_training.html" %}
+  {% include "hilfe/_architektur_ai2d3d_andere.html" %}
+
+  <h2 id="einzelheiten">Einzelheiten (zum Aufklappen)</h2>
+  <details class="m3a-mehr" open><summary>8. Entscheidungen und Reihenfolge</summary>{% include "hilfe/_architektur_ai2d3d_plan.html" %}</details>
+  <details class="m3a-mehr"><summary>9. Offene Fragen und Grenzen</summary>
+    <ul>{% for o in offen %}<li>{{ o }}</li>{% endfor %}</ul>
+  </details>
+
+</div>
+{% endblock %}

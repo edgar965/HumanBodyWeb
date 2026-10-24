@@ -79,6 +79,11 @@ class Architekturmesh3daischicht:
         if not g:
             return None
         e = json.loads((cls.wurzel() / 'laeufe' / g['lauf'] / 'lauf_ergebnis.json').read_text(encoding='utf-8'))
+        if 'job_training' in e:         # seit 22.10.2026 gewählt: der Basislauf auf den sechs Tripo-Jobs nachtrainiert (eigenes Format, ohne `schritte` oben — die Seite warf KeyError)
+            j = e['job_training']
+            return {'name': g['lauf'], 'grund': g.get('grund', ''), 'job': True, 'text': e.get('text', ''), 'basislauf': e.get('basislauf'), 'jobs': j.get('jobs', []),
+                    'schritte': j.get('schritte'), 'messung': [{'test': t, 'iou': m.get('iou', {}), 'mm': m.get('abstand_mm_median')} for t, m in (j.get('messung') or {}).items()],
+                    'fassung': 0}
         letzte = {}
         for v in e.get('verlauf', []):
             letzte[v.get('messung', 'sauber')] = v

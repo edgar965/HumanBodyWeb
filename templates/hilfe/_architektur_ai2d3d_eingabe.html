@@ -1,0 +1,34 @@
+{% load dezahl %}
+{% comment %}1. Eingabe (24.10.2026): Exporte mit bekannter Kamera, echte Fotos, die Netze aus den Fotos (Weg A) und ihr Abstand zur Wahrheit — Daten `Ai2d3djobs`, `Architekturai2d3dmessung`.{% endcomment %}
+<h2 id="eingabe">1. Eingabe: Fotos und ihre Kamera</h2>
+<p><strong>Exporte</strong> (Charakter-Seite → Exportieren, `Modellansichten`): vier Aufnahmen 1536 × 2048, vorne, links, rechts, hinten; Kamera perspektivisch mit 20° senkrechtem Öffnungswinkel, auf die
+  Mitte der Hülle der Figur gerichtet, Abstand so, dass Höhe und Breite mit 8 % Luft ins Bild passen, plus halbe Tiefe. Damit ist die Kamera jedes Fotos aus dem Foto selbst bestimmt — der
+  Vergleich auf der Jobseite rendert nach genau dieser Regel. Grund einfarbig 25/26/46 (am Bildrand Abstand 0, gemessen an Olesia1_vorne.jpg).</p>
+<p><strong>Echte Fotos</strong> (Reiter Test): beliebig viele, beliebig groß, Grund weiß (Randy, Zauberer — Bilder einer Bild-KI) oder freigestellt (Ed 2026, PNG mit Transparenz). Die Winkel stehen
+  nach Augenschein in <code>3DObjects/ai2d3d/&lt;Name&gt;/job.json</code>; Kamera und Licht sind unbekannt.</p>
+
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Job</th><th>Art</th><th class="num">Fotos</th><th>Netz aus den Fotos</th><th>Genesis-Modell heute</th></tr></thead>
+  <tbody>
+  {% for j in jobs %}<tr><td><a href="/2d-3d-AI/{{ j.id }}/">{{ j.name }}</a></td><td>Export, Wahrheit {{ j.figur }}</td><td class="num">{{ j.fotos|length }}</td>
+    <td>{% for n in j.netze %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+    <td>{% if j.paar %}<a href="/mesh-3D-AI/{{ j.paar.kennung }}/">Mesh3D-AI · {{ j.paar.name }}</a>{% else %}—{% endif %}</td></tr>{% endfor %}
+  {% for j in tests %}<tr><td><a href="/2d-3d-AI/test/{{ j.id }}/">{{ j.name }}</a></td><td>echte Fotos</td><td class="num">{{ j.fotos|length }}</td>
+    <td>{% for n in j.netze %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+    <td>{% if j.test %}<a href="/mesh-3D-AI/test/{{ j.test }}/">Mesh3D-AI-Test · {{ j.test }}</a>{% else %}—{% endif %}</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h3>Weg A: ein Netz aus den Fotos — wie weit liegt es neben der Wahrheit?</h3>
+{% if netzvergleich %}
+<p>Aus Edgars vier Exportfotos von {{ netzvergleich.job }}: dasselbe Netz einmal von Tripo3D (Edgars Lauf) und einmal von Hunyuan3D-2mv (lokal), eingepasst (Höhe, Mitte, ICP mit Maßstab) und gegen
+  die Wahrheit gemessen, je {{ netzvergleich.punkte|de }} Punkte. Abstände in mm (<code>_bild3d/OlesiaWalk_tripovergleich/vergleich.json</code>, gerechnet 23.10.2026).</p>
+<table class="doku m3a-laeufe m3a-schmal">
+  <thead><tr><th>Netz</th><th class="num">Dreiecke</th><th class="num">Netz → Wahrheit Mittel</th><th class="num">p95</th><th class="num">Wahrheit → Netz Mittel</th><th class="num">p95</th><th class="num">Wahrheit &gt; 20 mm</th></tr></thead>
+  <tbody>{% for z in netzvergleich.zeilen %}<tr><td>{{ z.name }}</td><td class="num">{{ z.dreiecke|de }}</td><td class="num">{{ z.n_mittel|de:1 }}</td><td class="num">{{ z.n_p95|de:1 }}</td>
+    <td class="num">{{ z.w_mittel|de:1 }}</td><td class="num">{{ z.w_p95|de:1 }}</td><td class="num">{{ z.ueber20|de:1 }} %</td></tr>{% endfor %}</tbody>
+</table>
+<p>Hunyuan liegt rund doppelt so weit daneben wie Tripo, vor allem in den Ausreißern. Jeder Fehler hier geht in Mesh3D-AI weiter — das ist der Grund, warum Weg B ohne Netz dazwischen das Ziel ist.
+  Ein Hunyuan-Netz dauert {% if zeiten.netz_s %}{{ zeiten.netz_s|de:0 }} s{% else %}—{% endif %} ({{ zeiten.modell|default:"—" }}, {{ zeiten.flaechen|de }} Flächen), ein Satz von vier Bildern aus einer
+  Genesis-Probe {% if zeiten.bilder_s %}{{ zeiten.bilder_s|de:1 }} s{% else %}—{% endif %} (<code>_bild3d/Damira0_0001</code>).</p>
+{% else %}<p class="m3a-klein">Kein Netzvergleich gefunden.</p>{% endif %}

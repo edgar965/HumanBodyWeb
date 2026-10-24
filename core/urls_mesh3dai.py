@@ -10,6 +10,8 @@ from .api.mesh3daiformvariante import Mesh3daiformvarianteendpunkte
 from .api.mesh3daigenesis import Mesh3daigenesisendpunkt
 from .api.mesh3dailaufaktuell import Mesh3dailaufaktuellendpunkt
 from .api.mesh3dainame import Mesh3dainameendpunkte
+from .api.mesh3daipapierkorb import Mesh3daipapierkorbendpunkt
+from .api.mesh3dairechnen import Mesh3dairechnenendpunkte
 from .api.mesh3daiprobenhaut import Mesh3daiprobenhautendpunkte
 from .api.mesh3daiprobenkleider import Mesh3daiprobenkleiderendpunkte
 from .api.mesh3daistandardanimation import Mesh3daistandardanimationendpunkte
@@ -54,6 +56,10 @@ MESH3DAI = [
     path('api/mesh3dai/formvariante/<str:figur>/bild/<str:name>', Mesh3daiformvarianteendpunkte.bild, name='mesh3dai_formvariante_bild'),
     path('mesh-3D-AI/<str:job>/', Mesh3daiendpunkte.seite, name='mesh3dai_job'),
     path('api/mesh3dai/jobs/', Mesh3daiendpunkte.jobs, name='mesh3dai_jobs'),
+    path('api/mesh3dai/loeschen/', Mesh3daipapierkorbendpunkt.loeschen, name='mesh3dai_loeschen'),
+    path('api/mesh3dai/test-neu/', Mesh3dairechnenendpunkte.neu, name='mesh3dai_testneu'),
+    path('api/mesh3dai/test/<str:kennung>/rechnen/', Mesh3dairechnenendpunkte.starten, name='mesh3dai_rechnen'),
+    path('api/mesh3dai/test/<str:kennung>/rechnen/stand/', Mesh3dairechnenendpunkte.stand, name='mesh3dai_rechnenstand'),
     path('api/mesh3dai/<str:job>/proben/', Mesh3daiendpunkte.proben, name='mesh3dai_proben'),
     path('api/mesh3dai/<str:job>/stand/', Mesh3daiendpunkte.stand, name='mesh3dai_stand'),
     path('api/mesh3dai/<str:job>/testfaelle/', Mesh3daitestfaelleendpunkte.job, name='mesh3dai_jobtestfaelle'),

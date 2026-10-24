@@ -117,7 +117,8 @@ class Mesh3daiattrappe:
         from .mesh3dainame import Mesh3dainame
         from .mesh3daipaare import Mesh3daipaare
 
-        feste = [dict(s) for s in cls.STAMMDATEN]
+        # ein fester Job zählt nur mit seinem Ordner — „Gewählte löschen“ (`Mesh3daipapierkorb`, 23.10.2026) verschiebt ihn nach `_beiseite/`
+        feste = [dict(s) for s in cls.STAMMDATEN if (Mesh3daipaare.ordner() / s['ordner']).is_dir()]
         ids = {s['id'] for s in feste}
         return Mesh3dainame.jobs(feste + [p for p in Mesh3daipaare.stammdaten() if p['id'] not in ids])
 

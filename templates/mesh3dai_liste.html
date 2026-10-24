@@ -11,6 +11,7 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiat
 <link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dairechnen.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dailaufaktuell.css' %}">
 {% comment %}Die Reiterleiste (`.seitenreiter`) ist in `mesh.css` gestaltet — dieselbe wie auf /mesh-3D/ und „Modell aus Dateien“.{% endcomment %}
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
@@ -38,20 +39,32 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiat
 </div>
 
 <div data-reiterfeld="jobs">
-<div class="card mesh3dai-joblist">
+<div class="card mesh3dai-joblist" data-loeschen="jobs">
     <h2>Jobs</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/mesh3dai/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="mesh3dai-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Ein Job ist ein Modell, an dem eine KI aus einem Netz ein Genesis-Modell machen lernt. Ein Klick auf eine Zeile öffnet die Seite des Jobs: Proben, Start (was das Netz sieht), Ziel (was es liefern soll) und Ergebnis (was es liefert).</p>
     {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
 </div>
 </div>
 
 <div data-reiterfeld="test" hidden>
-<div class="card mesh3dai-joblist">
+<div class="card mesh3dai-joblist" data-loeschen="tests">
     <h2>Test</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/mesh3dai/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="mesh3dai-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Netze, für die es <strong>keine Trainingsdaten</strong> gibt — dieselben wie die Testaufträge auf /mesh-3D/ (Edgar, Zauberer, Spiralballerina …). Gerechnet mit dem Netz von Mesh3D-AI, das nur an Ursula1 trainiert ist.
         Ein Klick öffnet den Test mit zwei Feldern: <strong>Mesh</strong> (das Netz, mit dem vorhergesagten Rig) und <strong>Ausgabe</strong> (Ursula1 in der vorhergesagten Haltung). Ein Ziel gibt es nicht, darum keine Fehlerzahl.</p>
     {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
 </div>
+{% comment %}Neuer Test aus einem Mesh (23.10.2026, Edgar: „Knopf auf der Seite: Mesh hochladen, ‚Rechnen‘, Fortschritt sehen“) — `Mesh3dairechenschlange.anlegen`, danach rechnet der Lauf von selbst.{% endcomment %}
+<form class="card mesh3dai-joblist mesh3dai-testneu" id="mesh3dai-testneu">
+    <h2>Neuer Test aus einem Mesh</h2>
+    <p class="hb-hinweis">Datei (GLB, OBJ, FBX, Blend) hochladen — danach rechnet der Lauf mit festen Schritten (Rig und A-Pose, Haltung, Form, Figur, Kleider und Haar aus dem Mesh, Prüfung); den Fortschritt zeigt die Seite des Tests.</p>
+    <label>Datei <input type="file" name="datei" accept=".glb,.obj,.fbx,.blend" required></label>
+    <label>Name <input type="text" name="name" placeholder="wie die Datei"></label>
+    <label>Figur <select name="geschlecht" data-reihenfolge="fest"><option value="weiblich">weiblich</option><option value="maennlich">männlich</option></select></label>
+    <button type="submit" class="btn btn-primary"><span><i class="fas fa-upload"></i> Anlegen und rechnen</span></button>
+    <span class="hb-hinweis" data-meldung></span>
+</form>
 </div>
 
 {% comment %}Dritter Reiter „Formtraining“ (18.10.2026, Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw. … mach einen neuen Tab ‚Formtraining‘“):
@@ -92,8 +105,12 @@ Ein Lauf öffnet seine Seite `/mesh-3D-AI/formtraining/<lauf>/` (`mesh3dai_forml
 import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
 import { Mesh3dailiste } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailiste.js' %}";
 import { Mesh3dailaufaktuell } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailaufaktuell.js' %}";
+import { Mesh3dailoeschen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailoeschen.js' %}";
+import { Mesh3daitestneu } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestneu.js' %}";
+Mesh3daitestneu.binden(document.getElementById('mesh3dai-testneu'));
 Seitenreiter.binden(document.getElementById('mesh3dai-reiter'), 'mesh3dai_reiter');
 Mesh3dailiste.aufbauen();
+Mesh3dailoeschen.aufbauen();
 Mesh3dailaufaktuell.binden(document.querySelector('[data-reiterfeld="aktuell"]'));
 </script>
 {% endblock %}

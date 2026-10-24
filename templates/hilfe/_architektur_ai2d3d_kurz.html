@@ -1,0 +1,25 @@
+{% load dezahl %}
+{% comment %}„Neuronales Netz – Fotos“ (24.10.2026): Grafik `Architekturai2d3dbild` (gleiche Bildsprache wie „Neuronales Netz – Figur“ auf der Mesh3D-AI-Seite), darunter der Weg in Worten.{% endcomment %}
+<h2 id="kurz">Neuronales Netz – Fotos → Genesis</h2>
+{% if bild %}<div class="m3a-bildrahmen">{{ bild }}</div>{% endif %}
+<ol class="m3a-kurz">
+  <li><strong>Was die Kette tun soll:</strong> aus {{ masse.ansichten }} Fotos (Exporte) oder bis zu 8 echten Fotos eine Genesis-9-Figur machen, die aus denselben Perspektiven gerendert aussieht wie die
+    Fotos. <strong>Eingabe</strong> sind die Bilder und je Bild der Winkel der Kamera um die Figur (0° vorne, 90° links, 180° hinten, 270° rechts). <strong>Ausgabe</strong> sind die Genesis-Parameter —
+    keine Punktwolke, kein Netz: Daz-Winkel, Formregler, Hautton, Kleiderwahl.</li>
+  <li><strong>Eingabe (rot):</strong> je Foto {{ masse.bild.0 }} × {{ masse.bild.1 }} Pixel, je Pixel Farbe (R, G, B) und Maske (M: gehört zur Figur). Bei Exporten ist der Grund einfarbig
+    (25/26/46), die Maske fällt also ab; bei echten Fotos kommt sie aus Sapiens2.</li>
+  <li><strong>Rückgrat (violett):</strong> ein vortrainiertes Netz für Menschenbilder (Sapiens2-0.4B, läuft schon in python10). Es zerlegt jedes Foto in {{ masse.tokens|de }} Felder zu 16 × 16 Pixeln
+    und gibt je Feld einen Merkmalsvektor aus. Alle Fotos laufen durch DASSELBE Rückgrat. In Stufe 1 bleibt es eingefroren — es lernt nicht mit, es liefert nur Merkmale.</li>
+  <li><strong>Bündel:</strong> je Foto lesen 64 lernbare Anfragen die {{ masse.tokens|de }} Felder und fassen sie in 64 Tokens zusammen; dazu kommt der Winkel des Fotos. So weiß jedes Token, aus welcher
+    Richtung es schaut.</li>
+  <li><strong>Fusion 1–6:</strong> sechs Transformer-Schichten über die Tokens aller Fotos zugleich. Hier verbindet das Netz Vorder-, Seiten- und Rückansicht — wie dick ist der Oberschenkel von der
+    Seite, wo steht der Fuß von hinten.</li>
+  <li><strong>Figur:</strong> ein Token liest alle anderen und hält die ganze Figur in einem Vektor (512 Zahlen).</li>
+  <li><strong>Köpfe (grün):</strong> aus dem Figurvektor je Ausgabe ein kleines Netz — Haltung ({{ masse.knochen }} Knochen × 3 Winkel + Wurzel), Form ({{ masse.formregler|de }} Regler), Hautton,
+    Kleider (je Stück der Garderobe: getragen ja/nein und Farbe), bei echten Fotos die Kamera je Foto.</li>
+  <li><strong>Nach dem Netz (grau, ohne Gewichte):</strong> {% for titel, text in danach %}<em>{{ titel }}</em> — {{ text }}{% if not forloop.last %}; {% endif %}{% endfor %}.</li>
+  <li><strong>Lernen (roter Pfeil):</strong> der Verlust ist der Unterschied zwischen Renderings und Fotos (Umriss, Farbe), im Training zusätzlich Regler, Winkel und Punkte gegen die Wahrheit. Er geht
+    rückwärts durch Rendering und Genesis-Figur ins Netz — darum muss beides differenzierbar auf der GPU laufen (Abschnitt 6).</li>
+  <li><strong>Warum nicht nur „Rendering gleich Foto“:</strong> viele Kombinationen aus Form und Haltung ergeben denselben Umriss, und die Farbe hängt am Licht. Allein wäre das Signal mehrdeutig;
+    mit der Wahrheit der Trainingsfiguren wird es eindeutig. Beim Rechnen eines neuen Jobs (ohne Wahrheit) passt dieselbe Schleife das Ergebnis nur noch an die Fotos an.</li>
+</ol>

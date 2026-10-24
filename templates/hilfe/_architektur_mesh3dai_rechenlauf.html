@@ -1,0 +1,45 @@
+{% load dezahl %}
+{% comment %}Abschnitt „Rechnen per Knopf: die Kette im Projekt“ (24.10.2026, Edgar: „update /hilfe/architektur/mesh3dai/ mit dem genauen Code, inkl. Kopf KI und allen Änderungen der letzten Tage“).
+Daten: `Architekturmesh3dairechenlauf` (Schritte aus `Mesh3dairechenlauf.SCHRITTE`, Netze aus `Mesh3daikifassungen`, Testfälle per ast aus `mesh3dai_kostuem_pruefung.py`).{% endcomment %}
+<h2 id="rechenlauf">Rechnen per Knopf: die Kette im Projekt</h2>
+{% with r=rechenlauf %}
+<div class="info-box info-box-blue">
+  <strong>Seit 23.10.2026</strong> rechnet ein Test mit einem Klick („Rechnen“ auf der Testseite oder Upload eines Meshs): Arbeitsprozess <code>manage.py mesh3dai_rechnen</code> → <code>Mesh3dairechenlauf</code>
+  (<code>core/dienste/mesh3dairechenlauf.py</code>), ein Lauf zur Zeit (<code>Mesh3dairechenschlange</code>), Stand und Log in <code>_test/&lt;k&gt;/rechnen/</code>. Jeder Schritt ist ein eigener Prozess
+  im Ordner <code>A:\3DTools\mesh3dai\</code> (Rechencode, {{ r.klassen.zahlen.module|de }} Module mit {{ r.klassen.zahlen.klassen|de }} Klassen); <code>mesh3dai_stimmen_lauf.py</code> davor nimmt nur die Sperre der
+  Grafikkarte. <code>--ab &lt;schritt&gt;</code> rechnet erst ab dort, die Schritte davor bleiben. {{ r.haut }}
+</div>
+
+<h3>Die Schritte, genau so aufgerufen</h3>
+<table class="doku">
+  <thead><tr><th>#</th><th>Schritt</th><th>was</th><th>Aufruf (Arbeitsverzeichnis <code>mesh3dai/</code>, {…} aus den KI-Fassungen)</th><th>Netz</th>{% if r.lauf %}<th>Dauer {{ r.lauf.kennung }}</th>{% endif %}</tr></thead>
+  <tbody>{% for s in r.schritte %}<tr><td class="num">{{ s.nr }}</td><td><code>{{ s.schluessel }}</code></td><td>{{ s.text }}</td><td><code>{{ s.aufruf }}</code></td>
+    <td>{% for k in s.fassungen %}<code>{{ k }}</code>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+    {% if r.lauf %}<td class="num">{% for x in r.lauf.schritte %}{% if x.schluessel == s.schluessel %}{% if x.uebernommen %}übernommen{% elif x.dauer_s is not None %}{{ x.dauer_s|de:1 }} s{% else %}—{% endif %}{% endif %}{% endfor %}</td>{% endif %}</tr>{% endfor %}</tbody>
+</table>
+{% if r.lauf %}<p class="m3a-klein">Dauer: jüngster fertiger Lauf (<code>{{ r.lauf.kennung }}</code>, {{ r.lauf.ende }}{% if r.lauf.ab %}, ab „{{ r.lauf.ab }}“ — „übernommen“ = vom Lauf davor{% endif %}), aus <code>rechnen/stand.json</code>.</p>{% endif %}
+
+<h3>Welche Netze (KI-Fassungen)</h3>
+<p>Eine Datei legt fest, welches Netz jeder Schritt nimmt: <code>3DObjects/mesh3dai/ki_fassungen.json</code> (<code>Mesh3daikifassungen</code>); ein neuer Schlüssel kommt mit seiner Vorgabe hinein, ein getauschter Wert bleibt.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Schlüssel</th><th>Wert</th><th>wofür</th></tr></thead>
+  <tbody>{% for x in r.fassungen %}<tr><td><code>{{ x.schluessel }}</code></td><td><code>{{ x.wert }}</code></td><td>{{ x.text }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Was sich in den letzten Tagen geändert hat</h3>
+<table class="doku">
+  <thead><tr><th>Datum</th><th>was</th><th>gemessen</th></tr></thead>
+  <tbody>{% for d, was, mess in r.neu %}<tr><td>{{ d }}</td><td>{{ was }}</td><td>{{ mess }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Die Prüfung: Testfälle der Kostüm-Prüfung (Fassung {{ r.pruefung.fassung }})</h3>
+<p>Am Ende des Schritts „kleider“ prüft <code>Kostuempruefung</code> (<code>{{ r.pruefung.datei }}</code>) Eingang und Ergebnis nebeneinander im Raum der Figur, in ihrer Haltung. Erst die Prüfung, dann der Fix:
+  jeder gemeldete Fehler wurde zuerst ein Testfall, am Ziel geeicht und am damaligen Ergebnis rot.</p>
+<table class="doku">
+  <thead><tr><th>Prio</th><th>Testfall</th><th>Regel (aus dem Code)</th>{% if r.lauf.tests %}<th>{{ r.lauf.kennung }}: rot</th><th>Befund</th>{% endif %}</tr></thead>
+  <tbody>{% for t in r.pruefung.tests %}<tr><td class="num">{{ t.prio }}</td><td><strong>{{ t.name }}</strong></td><td>{{ t.text }}</td>
+    {% if r.lauf.tests %}{% for e in r.lauf.tests %}{% if e.name == t.name %}<td class="num">{% if e.von %}{{ e.rot }} von {{ e.von }}{% else %}—{% endif %}</td><td>{{ e.fehler }}</td>{% endif %}{% endfor %}{% endif %}</tr>{% endfor %}</tbody>
+</table>
+{% if r.lauf.prio %}<p class="m3a-klein">Prüfung <code>kostuem/{{ r.lauf.pruefung_datei }}</code>: {{ r.lauf.prio }}.</p>{% endif %}
+<details class="m3a-mehr"><summary>Fassungen der Prüfung</summary><ul>{% for z in r.pruefung.geschichte %}<li>{{ z }}</li>{% endfor %}</ul></details>
+{% endwith %}

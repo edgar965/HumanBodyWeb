@@ -1,0 +1,29 @@
+{% load dezahl %}
+{% comment %}2. Netz und 3. Ausgabe (24.10.2026): die Tabelle `Architekturai2d3dnetz.schichten` — dieselbe, aus der die Grafik gezeichnet ist. Vorschlag, Gewichte gerechnet.{% endcomment %}
+<h2 id="netz">2. Das Netz Schicht für Schicht (Vorschlag)</h2>
+<p>Jede Zeile ist eine Spalte der Grafik. „Neuronen“ = so viele Zahlen trägt ein Token (ein Bildfeld, ein Bündel-Token, die Figur) nach der Schicht. Die Gewichte sind aus den Maßen gerechnet
+  (Linear: ein · aus + aus; Aufmerksamkeit: 4 · d² + 4 · d; MLP: 2 · d · m + d + m), nicht an einem gebauten Netz gezählt. Das Rückgrat zählt nicht mit.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Schicht</th><th>Was sie tut</th><th>Eingang</th><th>Ausgang</th><th class="num">Neuronen</th><th class="num">Gewichte</th></tr></thead>
+  <tbody>
+  {% for art, titel, was, ein, aus, neuronen, gewichte, stichwort in schichten %}
+    <tr{% if art == 'ausgabe' %} class="m3a-neu"{% elif not gewichte %} class="m3a-ohne"{% endif %}><td>{{ titel }}</td><td>{{ was }}</td><td>{{ ein }}</td><td>{{ aus }}</td>
+      <td class="num">{{ neuronen|de }}</td><td class="num">{% if art == 'rueckgrat' %}≈ 0,4 Mrd. (eingefroren){% elif gewichte %}{{ gewichte|de }}{% else %}—{% endif %}</td></tr>
+  {% endfor %}
+    <tr class="m3a-summe"><td colspan="5">Summe der lernbaren Gewichte (ohne Rückgrat)</td><td class="num">{{ gewichte|de }}</td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Setzungen, nicht gemessen: Bildgröße 512 × 384, Breite 512, 64 Anfragen je Ansicht, 6 Fusionsschichten, MLP 2.048, Breite des Rückgrats 1.024 (an Sapiens2-0.4B nicht nachgelesen).
+  Mesh3D-AI hat für dieselbe Frage (wie groß, wie tief) Messungen nach dem Bau gemacht; hier gibt es noch keine.</p>
+
+<h2 id="ausgabe">3. Ausgabe: Genesis-Parameter, nicht Punkte</h2>
+<ul>
+  <li><strong>Haltung:</strong> Daz-Winkel der {{ masse.knochen }} Knochen, jeder in den Grenzen von Genesis 9 — derselbe Weg, der bei Mesh3D-AI die brechenden Finger beendet hat (dort Abschnitt 5),
+    dazu die Wurzel (Drehung, Lage).</li>
+  <li><strong>Form:</strong> die {{ masse.formregler|de }} Formregler von Mesh3D-AI. Ihre Wirkung je Regler liegt als Tabelle vor (<code>formregler_wirkung_v6.npz</code>): Form = Grundfigur + Σ Regler ×
+    Wirkung. Das ist linear und darum leicht auf der GPU und rückwärts zu rechnen.</li>
+  <li><strong>Haut:</strong> zuerst ein Hautton auf der Grundhaut; später die Hautkacheln des Hautkopfs von Mesh3D-AI (Farbe je Texel aus den Fotos gelernt).</li>
+  <li><strong>Kleider:</strong> je Stück der Garderobe „getragen“ und Farbe — eine Wahl aus dem Katalog, keine eigene Form (Edgar, 24.10.2026: „Kleider sind nicht 100 % wichtig“). Für die
+    Rückwärtsrechnung zählt nur die Farbe; welches Stück, lernt das Netz aus der Wahrheit der Trainingsfiguren.</li>
+  <li><strong>Kamera</strong> (nur echte Fotos): Abstand, Öffnungswinkel, Versatz je Foto. Bei Exporten gilt die Regel der Charakter-Seite.</li>
+</ul>

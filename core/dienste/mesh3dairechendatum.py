@@ -12,6 +12,7 @@ Nicht gezählt: `einstellung.json` und `name.json` (schreibt der Server auf eine
 Ein Lauf, der gerade schreibt, zählt mit (seine Dateien sind schon da). Je Job 30 s gemerkt — der Datensatz hat bis 190 Probenordner.
 
     Mesh3dairechendatum.letztes(job) -> None | {'zeit': float (Unix), 'was': Text, 'datei': Pfad relativ zu mesh3dai/}
+    Mesh3dairechendatum.test(kennung) -> dasselbe für einen Test (nur `_test/<kennung>/**`)
 """
 
 import os
@@ -36,6 +37,22 @@ class Mesh3dairechendatum:
         if alt and jetzt - alt[0] < cls.MERKEN_S:
             return alt[1]
         wert = cls._rechnen(job)
+        cls._gemerkt[schluessel] = (jetzt, wert)
+        return wert
+
+    @classmethod
+    def test(cls, kennung):
+        """Dasselbe für einen Test (`_test/<kennung>/**`, Reiter „Test“; 23.10.2026, Edgar: „warum ist da kein neuer Output???“ — die Spalte las `test.json` → `gerechnet`, das nur der
+        Testlauf schreibt; Kostüm- und Kleiderläufe blieben unsichtbar)."""
+        schluessel = ('test', kennung)
+        jetzt = time.monotonic()
+        alt = cls._gemerkt.get(schluessel)
+        if alt and jetzt - alt[0] < cls.MERKEN_S:
+            return alt[1]
+        wurzel = Mesh3daipaare.ordner()
+        wert = cls._neueste(wurzel / '_test' / kennung, 8, cls._testschritt)
+        if wert:
+            wert['datei'] = os.path.relpath(wert['datei'], wurzel).replace('\\', '/')
         cls._gemerkt[schluessel] = (jetzt, wert)
         return wert
 
@@ -87,7 +104,7 @@ class Mesh3dairechendatum:
                 return 'Kleider'
             if erster.startswith('form_'):
                 return 'Ergebnisfigur'
-            return {'zerlegung': 'Zerlegung', 'vorstufe': 'Vorstufe', 'ziel': 'Ziel'}.get(erster, 'Testkette')
+            return {'zerlegung': 'Zerlegung', 'vorstufe': 'Vorstufe', 'ziel': 'Ziel', 'kostuem': 'Kostüm'}.get(erster, 'Testkette')
         name = teile[0]
         if name.startswith('form'):
             return 'Form'

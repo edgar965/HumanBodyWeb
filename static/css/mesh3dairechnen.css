@@ -1,0 +1,14 @@
+/* Knopf „Rechnen“, Fortschritt, Formular „Neuer Test“ und Auswahl zum Löschen auf Mesh3D-AI (23.10.2026) */
+.mesh3dai-rechnen { margin-bottom: 12px; }
+.mesh3dai-rechnen-kopf { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mesh3dai-rechnen-balken { margin: 8px 0; height: 6px; }
+.mesh3dai-rechnen-balken .progress-fill-mini { display: block; height: 100%; }
+.mesh3dai-rechnen-schritte { margin: 4px 0 0; padding-left: 1.4em; color: inherit; }
+.mesh3dai-rechnen-schritte li { margin: 2px 0; }
+.mesh3dai-rechnen-fertig { color: var(--success, #3fb950); }
+.mesh3dai-rechnen-laeuft { font-weight: 600; }
+.mesh3dai-rechnen-fehler { color: var(--danger, #f85149); }
+.mesh3dai-rechnen-hinweis { list-style: none; margin-left: -1.4em; opacity: 0.8; font-style: italic; }
+.mesh3dai-testneu { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.mesh3dai-testneu h2, .mesh3dai-testneu > p { flex-basis: 100%; margin: 0; }
+td.mesh3dai-wahlzelle { cursor: default; width: 2.2em; text-align: center; }

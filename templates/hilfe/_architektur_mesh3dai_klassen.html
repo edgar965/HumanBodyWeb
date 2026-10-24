@@ -1,0 +1,23 @@
+{% load dezahl %}
+{% comment %}Abschnitt „Alle Klassen der Kette und wer wen ruft“ (24.10.2026, Edgar: „Füge alle neuen Klassen ein, die du erstellt hast, für tests, für Kleideranpassung, mit Aufruf Logik“).
+Daten: `Architekturmesh3daiklassen` — per ast aus `A:\3DTools\mesh3dai\` gelesen, nichts von Hand.{% endcomment %}
+<h2 id="klassen">Alle Klassen der Kette und wer wen ruft</h2>
+{% with z=rechenlauf.klassen %}
+<p>Gelesen beim Aufruf aus <code>{{ z.ordner }}</code>: {{ z.zahlen.module|de }} Module, {{ z.zahlen.klassen|de }} Klassen; {{ z.zahlen.in_der_kette|de }} Module erreicht ein Schritt des Rechenlaufs,
+  {{ z.zahlen.neu_seit_22|de }} Zeilen tragen im Text ein Datum ab 22.10.2026. Je Schritt: sein Skript (fett) und alles, was von dort über Importe oder als Unterprozess gestartet erreichbar ist —
+  eine Klasse steht beim <em>ersten</em> Schritt, der sie erreicht. „ruft“ = Klassen der Module, die sie importiert; „startet“ = Skripte als eigener Prozess; „gerufen von“ = umgekehrt.
+  Der Text ist der erste Absatz des Docstrings (Klasse, sonst Modul).</p>
+{% for g in z.gruppen %}
+<details class="m3a-mehr"{% if g.nr == 9 or g.nr == 11 %} open{% endif %}>
+  <summary>{% if g.nr %}{{ g.nr }}. {{ g.schritt }} — {{ g.text }}{% if g.skript %} · <code>{{ g.skript }}</code>{% endif %} · erreicht {{ g.erreicht }} Module, neu hier {{ g.klassen|length }}{% else %}{{ g.text }} · {{ g.erreicht }} Module{% endif %}</summary>
+  {% if g.klassen %}
+  <table class="doku">
+    <thead><tr><th>Klasse</th><th>Datei</th><th>Stand</th><th>was (aus dem Code)</th><th>ruft / startet</th><th>gerufen von</th></tr></thead>
+    <tbody>{% for k in g.klassen %}<tr>
+      <td>{% if k.skript %}<strong>{% endif %}{{ k.klasse|default:"(Skript)" }}{% if k.skript %}</strong>{% endif %}</td><td><code>{{ k.datei }}</code></td><td>{{ k.datum|default:"—" }}</td><td>{{ k.text }}</td>
+      <td>{{ k.ruft|join:", " }}{% if k.startet %}{% if k.ruft %}<br>{% endif %}startet {{ k.startet|join:", " }}{% endif %}</td><td>{{ k.von|join:", " }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<p>Alles, was dieser Schritt erreicht, steht schon bei einem Schritt davor.</p>{% endif %}
+</details>
+{% endfor %}
+{% endwith %}

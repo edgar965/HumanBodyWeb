@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}{% load jsfassung %}
+{% block title %}{{ job.name }} · 2d-3d-AI{% endblock %}
+
+{% comment %}
+Seite EINES Jobs von „2d-3d-AI“ (24.10.2026). Edgar: „passe dazu die Jobs an, so dass Eingabe (Fotos), ggf. Mesh (Hunyuan), Genesis Modell und das Ergebnis zu sehen ist, mit den ganzen Views und
+Filter (z.B. Textur, Kleider) so wie bei den Mesh3d-AI Jobs“. Vier Felder: Fotos · Netz (Hunyuan3D-2mv / Tripo3D) · Genesis-Modell (Ergebnis der KI | Wahrheit) · Ergebnis (die Figur aus der
+Perspektive des Fotos gerendert), darunter der Vergleich aus allen Perspektiven. Seite: `static/viewer/ai2d3d/ai2d3dseite.js`; Daten: `Ai2d3dseitendaten` (als JSON unten), Jobs: `Ai2d3djobs`.
+Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum dieselben Angaben im Kopf (Worker der Haut, schnelle Anzeige, Weg der Bilder).
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
+<meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
+<meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="schnellanzeige" content="an">
+<meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-image"></i> <a href="{% url 'ai2d3d' %}" class="ai2d3d-zurueckzurliste" title="Alle Jobs">2d-3d-AI</a> <span class="ai2d3d-pfad">›</span>
+        {% if ist_test %}<a href="{% url 'ai2d3d' %}#test" class="ai2d3d-zurueckzurliste" title="Alle Tests">Test</a> <span class="ai2d3d-pfad">›</span> {% endif %}{{ job.name }}</h1>
+</div>
+
+<div class="ai2d3d-oben" id="ai2d3d-oben">
+<div class="card ai2d3d-band" role="note">
+    {% if job.wahrheit %}<strong><i class="fas fa-check-circle"></i> Export mit Wahrheit.</strong> Die Fotos sind aus der Genesis-Figur {{ job.figur }} gerendert (Charakter-Seite → Exportieren).
+    {% else %}<strong><i class="fas fa-camera"></i> Echte Fotos.</strong> {{ job.hinweis }}{% endif %}
+    {% if job.paar %} Genesis-Modell heute: Messlatte A — <a href="/mesh-3D-AI/{{ job.paar.kennung }}/">Mesh3D-AI · {{ job.paar.name }}</a> (Tripo-Netz → KI).{% endif %}
+    {% if job.test %} Messlatte A steht auf der <a href="/mesh-3D-AI/test/{{ job.test }}/">Mesh3D-AI-Testseite {{ job.test }}</a>.{% endif %}
+    <a href="{% url 'ai2d3d' %}" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
+</div>
+<div class="card ai2d3d-steuerung" id="ai2d3d-steuerung"></div>
+</div>
+
+<div class="ai2d3d-zeile ai2d3d-koerperzeile">
+    <div class="ai2d3d-bereiche ai2d3d-bereiche-vier">
+        <section class="card ai2d3d-bereich">
+            <h2><span class="ai2d3d-nummer">1</span> Fotos</h2>
+            <div class="ai2d3d-leinwand ai2d3d-fotofeld" data-feld="fotos"></div>
+            <div class="ai2d3d-daumen" id="ai2d3d-daumen"></div>
+        </section>
+        <section class="card ai2d3d-bereich">
+            <h2><span class="ai2d3d-nummer">2</span> Netz</h2>
+            <div class="ai2d3d-leinwand" data-feld="netz"></div>
+            <p class="hb-hinweis">{% for n in netze %}{{ n.name }} ({{ n.mb }} MB){% if not forloop.last %} · {% endif %}{% empty %}Kein Netz aus diesen Fotos.{% endfor %}</p>
+        </section>
+        <section class="card ai2d3d-bereich">
+            <h2><span class="ai2d3d-nummer">3</span> Genesis-Modell</h2>
+            <div class="ai2d3d-leinwand" data-feld="genesis"></div>
+            <p class="hb-hinweis" id="ai2d3d-genesisinfo"></p>
+        </section>
+        <section class="card ai2d3d-bereich">
+            <h2><span class="ai2d3d-nummer">4</span> Ergebnis</h2>
+            <div class="ai2d3d-leinwand ai2d3d-ergebnisfeld" data-feld="ergebnis"></div>
+            <p class="hb-hinweis" id="ai2d3d-ergebnisinfo"></p>
+        </section>
+    </div>
+</div>
+
+<div class="card" id="ai2d3d-vergleichskarte">
+    <h2>Vergleich aus allen Perspektiven</h2>
+    <p class="hb-hinweis">Je Foto: Foto · Rendering des Genesis-Modells · Überlagerung (grau beide, rot nur im Foto, türkis nur im Rendering). Umriss-Deckung = Schnitt durch Vereinigung der Figurflächen;
+        die Kamera folgt der Regel der Charakter-Seite auf der Hülle der gezeigten Figur, die Größe wird also mit eingepasst. Zahlen nur bei Exporten (bekannte Kamera).
+        Gegenprobe: „Wahrheit“ muss fast deckungsgleich sein.</p>
+    <div class="ai2d3d-vergleich" id="ai2d3d-vergleich"><p class="hb-hinweis">Wartet auf das Genesis-Modell …</p></div>
+</div>
+
+<div class="card" id="ai2d3d-stand">
+    <div class="ai2d3d-standkopf"><h2>Datensatz und Training</h2></div>
+    <p class="hb-hinweis">Noch kein Training für 2d-3d-AI (Weg B: Fotos direkt → KI → Genesis). Plan und Architektur: <a href="/hilfe/architektur/2d-3d-ai/">Hilfe → Architektur → 2d-3d-AI</a>.</p>
+</div>
+{{ daten|json_script:"ai2d3d-daten" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Ai2d3dseite } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dseite.js' %}";
+Ai2d3dseite.aufbauen();
+</script>
+{% endblock %}

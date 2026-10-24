@@ -54,6 +54,24 @@ class Mesh3daitest:
         p = cls.ordner() / kennung
         return p if (p / 'test.json').is_file() else None
 
+    @classmethod
+    def angelegt(cls, kennung):
+        """Ordner eines angelegten, noch nicht gerechneten Tests (Formular „Neuer Test aus einem Mesh“: `anlage.json`; `test.json` schreibt erst der Schritt „Rig“) oder `None`.
+        23.10.2026 nachts: die Seite eines solchen Tests gab 404 — dorthin leitet das Formular weiter, der Knopf „Rechnen“ war nie zu erreichen."""
+        if not cls.KENNUNG.match(str(kennung)):
+            return None
+        p = cls.ordner() / kennung
+        return p if (p / 'anlage.json').is_file() else None
+
+    @staticmethod
+    def anlage(p):
+        """Eintrag für die Liste und die Seite aus `anlage.json` (noch nicht gerechnet)."""
+        try:
+            a = json.loads((p / 'anlage.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError) as fehler:
+            return {'kennung': p.name, 'name': p.name, 'fehler': str(fehler)}
+        return {'kennung': p.name, 'name': a.get('name') or p.name, 'geschlecht': a.get('geschlecht'), 'quelle': a.get('quelle'), 'angelegt': a.get('angelegt'), 'fertig': False}
+
     @staticmethod
     def _stammdaten():
         from .mesh3daiattrappe import Mesh3daiattrappe
@@ -144,18 +162,27 @@ class Mesh3daitest:
         return info
 
     @classmethod
-    def alle(cls):
-        """Die Tests mit ihrem Stand (`test.json`), nach Name; ein unlesbarer steht mit Fehler in der Liste statt zu fehlen. `figur`/`geschlecht` sind die eingestellten."""
+    def alle(cls, mit_tripo=False):
+        """Die Tests mit ihrem Stand (`test.json`), nach Name; ein unlesbarer steht mit Fehler in der Liste statt zu fehlen. `figur`/`geschlecht` sind die eingestellten.
+        `mit_tripo`: auch die Tripo-Jobs (Ordner mit `ziel/`), markiert mit `tripo` — nur für die Übersicht des Reiters „Test“."""
         if not cls.ordner().is_dir():
             return []
         aus = []
         weg = Mesh3daiaposewahl.gewaehlt()
         for p in sorted(cls.ordner().iterdir()):
+            # beiseitegelegte Stände (`<kennung>_beiseite_<Zeit>`) tragen die Kennung des Originals in `test.json` — sie stünden als Doppel in der Liste
+            if '_beiseite_' in p.name:
+                continue
             if not (p / 'test.json').is_file():
+                # angelegt, noch nicht gerechnet (`anlage.json`) — steht in der Liste, damit man ihn öffnen und „Rechnen“ drücken kann
+                if (p / 'anlage.json').is_file():
+                    aus.append(dict(cls.anlage(p), tripo=False))
                 continue
             # Trainingspaare (Ziel unter `ziel/`) sind seit 19.10.2026 Trainingsdaten, keine Tests (Edgar: „die sollst du als nächstes trainieren, lösche sie aus den Testläufen“);
             # ihr Ordner bleibt (MIA-Grundhaltung des Tripo-Netzes = Eingang der Trainingswolke), die Seite `/mesh-3D-AI/test/<paar>/` bleibt über die Adresse erreichbar.
-            if (p / 'ziel' / 'ziel.json').is_file():
+            # In der Übersicht stehen sie seit 23.10.2026 wieder (Edgar: „Ich sehe die anderen Jobs nicht in der Übersicht“ — die Kostüm-Ergebnisse liegen auf ihren Testseiten).
+            tripo = (p / 'ziel' / 'ziel.json').is_file()
+            if tripo and not mit_tripo:
                 continue
             e = cls.endung(p, weg)
             try:
@@ -165,6 +192,7 @@ class Mesh3daitest:
             except (OSError, ValueError) as fehler:
                 info = {'kennung': p.name, 'name': p.name, 'fehler': str(fehler)}
             info['fertig'] = bool(info.get('figur')) and (p / ('vorschau%s.glb' % e)).is_file()
+            info['tripo'] = tripo
             aus.append(info)
         return sorted(aus, key=lambda i: str(i.get('name', '')).lower())
 

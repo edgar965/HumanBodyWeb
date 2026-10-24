@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}2d-3d-AI{% endblock %}
+
+{% comment %}
+Dashboard „2d-3d-AI“, Hauptansicht (24.10.2026) — Kopie von `mesh3dai_liste.html` (Edgar: „Ich sagte eine Kopie der Mesh3d-Ai jobs … keine Gerechnet Spalten, keine Jobauswahl zum Löschen usw“).
+Dieselben vier Reiter, dieselben Spalten (aus den Mesh3D-AI-Klassen, `Ai2d3dtabellen`), Auswahl und „Gewählte löschen“ in Jobs und Test, „Neuer Test aus Fotos“ statt „aus einem Mesh“.
+Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DObjects/ai2d3d/<Name>/job.json`). Endpunkte: `core/api/ai2d3d.py`, `core/api/ai2d3daktionen.py`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dairechnen.css' %}">
+{% comment %}Die Reiterleiste (`.seitenreiter`) ist in `mesh.css` gestaltet — dieselbe wie auf /mesh-3D-AI/ und /mesh-3D/.{% endcomment %}
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-image"></i> 2d-3d-AI</h1>
+</div>
+
+<div class="seitenreiter" role="tablist" id="ai2d3d-reiter">
+    <button type="button" role="tab" data-reiter="jobs" aria-selected="true"><i class="fas fa-list"></i> Jobs</button>
+    <button type="button" role="tab" data-reiter="test" aria-selected="false"><i class="fas fa-vial"></i> Test ({{ testtabelle.zeilen|length }})</button>
+    <button type="button" role="tab" data-reiter="formtraining" aria-selected="false"><i class="fas fa-shapes"></i> Formtraining ({{ formtraining.zeilen|length }})</button>
+    <button type="button" role="tab" data-reiter="aktuell" aria-selected="false"><i class="fas fa-gauge-high"></i> Lauf Aktuell</button>
+</div>
+
+<div data-reiterfeld="jobs">
+<div class="card mesh3dai-joblist" data-loeschen="jobs">
+    <h2>Jobs</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Exporte in 2d-3d-AI ausblenden (der Ordner in 3DObjects/modelsExport bleibt — Quelle von Mesh3D-AI)"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="mesh3dai-zaehler">0</span>)</span></button></p>
+    <p class="hb-hinweis">Ein Job ist ein Export der Charakter-Seite: vier Fotos einer bekannten Genesis-Figur (Wahrheit). Ein Klick auf eine Zeile öffnet die Seite des Jobs: Fotos, Netz aus den Fotos,
+        Genesis-Modell und Ergebnis (die Figur aus denselben Perspektiven gerendert). Bis 2d-3d-AI eine eigene KI hat, kommen Genesis-Modell, Training und Rechenzeiten vom Mesh3D-AI-Job zum selben Export (Messlatte A).</p>
+    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+</div>
+</div>
+
+<div data-reiterfeld="test" hidden>
+<div class="card mesh3dai-joblist" data-loeschen="tests">
+    <h2>Test</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/ai2d3d/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="mesh3dai-zaehler">0</span>)</span></button></p>
+    <p class="hb-hinweis">Echte Fotos <strong>ohne Wahrheit</strong> (Randy, Ed 2026, Zauberer …). Ein Klick öffnet den Test mit denselben vier Feldern wie ein Job; ohne bekannte Kamera gibt es Renderings,
+        aber keine Zahl. Gerechnet, Laufzeit, Punkte, Lauf und Figur gehören zum Mesh3D-AI-Test zum selben Netz (Messlatte A).</p>
+    {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
+</div>
+{% comment %}Neuer Test aus Fotos (24.10.2026) — Gegenstück zu „Neuer Test aus einem Mesh“ auf /mesh-3D-AI/ (`Ai2d3dfotoneu`). Gerechnet wird noch nichts: 2d-3d-AI hat noch keine eigene KI.{% endcomment %}
+<form class="card mesh3dai-joblist mesh3dai-testneu" id="ai2d3d-testneu">
+    <h2>Neuer Test aus Fotos</h2>
+    <p class="hb-hinweis">Fotos einer Person von mehreren Seiten (JPG, PNG, WebP) hochladen — sie landen unter 3DObjects/ai2d3d/&lt;Name&gt;/. Die Winkel (0 vorne, 90 links, 180 hinten, 270 rechts) stehen danach in der job.json;
+        Rechnen kommt mit der eigenen KI (Hilfe → Architektur → 2d-3d-AI).</p>
+    <label>Fotos <input type="file" name="fotos" accept=".jpg,.jpeg,.png,.webp" multiple required></label>
+    <label>Name <input type="text" name="name" placeholder="wie das erste Foto"></label>
+    <button type="submit" class="btn btn-primary"><span><i class="fas fa-upload"></i> Anlegen</span></button>
+    <span class="hb-hinweis" data-meldung></span>
+</form>
+</div>
+
+<div data-reiterfeld="formtraining" hidden>
+<div class="card mesh3dai-joblist ai2d3d-jetzt" role="status">
+    <h2>Jetzt</h2>
+    <ul><li>Kein Trainingslauf für 2d-3d-AI.</li></ul>
+</div>
+<div class="card mesh3dai-joblist">
+    <h2>Trainingsläufe</h2>
+    {% include "djangobase/_tabelle.html" with tabelle=formtraining %}
+</div>
+<div class="card mesh3dai-joblist">
+    <h2>Formvarianten ({{ formvarianten.zeilen|length }})</h2>
+    {% include "djangobase/_tabelle.html" with tabelle=formvarianten %}
+</div>
+</div>
+
+<div data-reiterfeld="aktuell" hidden>
+<div class="card mesh3dai-joblist"><p class="hb-hinweis">Kein Lauf von 2d-3d-AI.</p></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_sortierung.js' %}"></script>
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_breiten.js' %}"></script>
+<script type="module">
+import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
+import { Ai2d3dliste } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dliste.js' %}";
+import { Ai2d3dloeschen } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dloeschen.js' %}";
+import { Ai2d3dtestneu } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dtestneu.js' %}";
+Ai2d3dtestneu.binden(document.getElementById('ai2d3d-testneu'));
+Seitenreiter.binden(document.getElementById('ai2d3d-reiter'), 'ai2d3d_reiter');
+Ai2d3dliste.aufbauen();
+Ai2d3dloeschen.aufbauen();
+</script>
+{% endblock %}

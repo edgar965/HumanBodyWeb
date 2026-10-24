@@ -47,6 +47,13 @@ die Hilfe dateien“). Daten: `Architekturmesh3daischicht` (liest `3DObjects/mes
   <tbody>{% for z in m.zeilen %}<tr><td>{{ z.groesse }}</td><td class="num">{{ z.netz|de:3 }}</td><td class="num">{{ z.basis|de:3 }}</td></tr>{% endfor %}</tbody>
 </table>
 {% endfor %}
+{% elif s.lauf and s.lauf.job %}
+<p>Lauf <code>{{ s.lauf.name }}</code>: der Basislauf <code>{{ s.lauf.basislauf }}</code>, {{ s.lauf.schritte|de }} Schritte weiter trainiert auf {{ s.lauf.jobs|join:", " }}. {{ s.lauf.text }}
+  {{ s.lauf.grund }} <strong>Die Messung unten ist an genau diesen Jobs — im Training gesehen.</strong></p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Test</th><th>IoU je Art</th><th>Abstand Median (mm)</th></tr></thead>
+  <tbody>{% for m in s.lauf.messung %}<tr><td>{{ m.test }}</td><td>{% for a, w in m.iou.items %}{{ a }} {{ w|de:3 }}{% if not forloop.last %} · {% endif %}{% endfor %}</td><td class="num">{{ m.mm|de:2 }}</td></tr>{% endfor %}</tbody>
+</table>
 {% elif s.lauf %}
 <p>Lauf <code>{{ s.lauf.name }}</code>: {{ s.lauf.schritte|de }} Schritte, {{ s.lauf.sekunden|de }} s, {{ s.lauf.gewichte|de }} Gewichte; je Schritt eine Wolke einer Trainingsfigur. Gestört wie im Einsatz:
   Käfig weich um ±8 mm entlang der Normale verschoben (Körperfehler der KI), Punkte ±1,5 mm, Farbe gestreut, Art aus der Zerlegung mit Fehlern oder ganz weg.

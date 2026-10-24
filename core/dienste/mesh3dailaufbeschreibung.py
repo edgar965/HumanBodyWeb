@@ -32,6 +32,7 @@ class Mesh3dailaufbeschreibung:
         ('form2_tempo_probe', 'Probe', 'Tempo des Formtrainings messen', 'training'),
         ('tempoprobe', 'Probe', 'Schnellen Weg in die Grundhaltung prüfen', None),
         ('gpu_sperre', 'Warten', 'Wartet auf die Grafikkarte', None),
+        ('mesh3dai_rechnen', 'Lauf', 'Rechnen per Knopf: alle Schritte eines Tests', None),          # 23.10.2026, `Mesh3dairechenlauf` (Arbeitsprozess `manage.py mesh3dai_rechnen`)
         # Kleider und Haar
         ('mesh3dai_stufe2_alle', 'Training', 'KI lernt Kleider, Haar und Haut an allen Tripo-Jobs, danach die Testjobs', None),
         ('mesh3dai_stufe2_lauf', 'Training', 'KI lernt Kleider, Haar und Haut an diesem Job', None),
@@ -51,6 +52,10 @@ class Mesh3dailaufbeschreibung:
         ('mesh3dai_haarkatalog', 'Daten', 'Frisuren der Garderobe vermessen', None),
         ('mesh3dai_probenzerlegung', 'Kleider', 'Kleider und Haar erkennen', None),
         ('mesh3dai_kostuem_lauf', 'Kostüme', 'Kostüm erkennen, ausschneiden, auf die Figur legen und prüfen', None),
+        ('mesh3dai_kopfangleich_lauf', 'Form', 'Kopf an das Mesh angleichen: Gesichtsmaße und Haut, in Runden', None),          # 24.10.2026, `Kopfangleich`
+        ('mesh3dai_kostuem_segmentierung', 'Kostüme', 'Bildmodelle zerlegen das Netz (Sapiens2, SAM 3)', None),
+        ('mesh3dai_kostuem_einpassen', 'Kostüme', 'Körper der KI ins Kostüm einpassen (Variante C)', None),
+        ('mesh3dai_kostuem_sichtbar', 'Kostüme', 'Körper-KI sieht nur sichtbaren Körper (Variante B)', None),
         ('mesh3dai_kikleider_proben', 'Kleider', 'Figur bauen, Kleider ausschneiden und anziehen', None),
         ('mesh3dai_kleider_zerlegung', 'Kleider', 'Kleider und Haar erkennen', None),
         ('mesh3dai_kikleider', 'Kleider', 'Kleider ausschneiden und anziehen', None),

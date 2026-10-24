@@ -1,0 +1,21 @@
+{% load dezahl %}
+{% comment %}4. Prüfung (24.10.2026): wie die Jobseite Rendering und Foto vergleicht (`Ai2d3dvergleich`), Gegenprobe, Messlatte A, die verworfene erste Messung. Werte `Architekturai2d3dmessung.DECKUNG`.{% endcomment %}
+<h2 id="pruefung">4. Die Prüfung: sieht das Rendering aus wie das Foto?</h2>
+<p>Gebaut ist zuerst die Prüfung (Projektregel „erst die Prüfung, dann der Fix“). Auf jeder Jobseite rendert der Browser die Genesis-Figur aus jeder Perspektive eines Fotos nach der Regel der
+  Charakter-Seite und vergleicht:</p>
+<ul>
+  <li><strong>Umriss-Deckung</strong> = Schnitt durch Vereinigung der Figurflächen in Foto und Rendering (100 % = deckungsgleich). Figur im Foto: Abstand zum Grund über 9 (Summe |ΔR| + |ΔG| + |ΔB|).
+    Figur im Rendering: ein zweiter Durchgang auf reinem Grün — so hängt der Umriss weder am Licht noch an dunkler Kleidung.</li>
+  <li><strong>Farbabstand</strong> = mittleres |Δ| je Kanal (0–255), wo beide Figur sind. Taugt noch nicht als Maß: das Licht der Seite ist nicht das der Charakter-Szene (Abschnitt 9).</li>
+  <li><strong>Gegenprobe:</strong> „Wahrheit“ auf der Jobseite rendert die Figur, aus der die Fotos stammen. Sie muss fast 100 % erreichen, sonst misst der Vergleich die Kamera statt der KI.</li>
+</ul>
+<table class="doku m3a-laeufe m3a-schmal">
+  <thead><tr><th>Job</th><th>Figur</th><th class="num">Mittel</th><th class="num">vorne</th><th class="num">links</th><th class="num">rechts</th><th class="num">hinten</th></tr></thead>
+  <tbody>{% for d in deckung %}<tr{% if 'Wahrheit' in d.figur %} class="m3a-ohne"{% endif %}><td>{{ d.job }}</td><td>{{ d.figur }}</td><td class="num">{{ d.mittel|de:1 }} %</td>
+    {% if d.je %}{% for w in d.je %}<td class="num">{{ w|de:1 }} %</td>{% endfor %}{% else %}<td colspan="4">nur das Mittel abgelesen</td>{% endif %}</tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Quelle: {{ deckung_quelle }}. Die übrigen Exporte zeigt die Jobseite beim Öffnen; festgehalten sind nur diese.</p>
+<p><strong>Warum die Gegenprobe Pflicht ist:</strong> {{ fehlmessung }} Mit falscher Maske stand die Messlatte A (55,7 %) über der Wahrheit (51,5 %) — ein Ergebnis, das auf eine kaputte Messung zeigt,
+  nicht auf eine gute KI.</p>
+<p><strong>Was die Zahl nicht sieht:</strong> die Kamera folgt der Hülle der GEZEIGTEN Figur. Eine zu große oder zu kleine Figur wird mit eingepasst — die Körpergröße prüft dieser Vergleich nicht.
+  Im Training (Abschnitt 5) gilt deshalb die feste Kamera der Wahrheit.</p>

@@ -6,7 +6,7 @@ GET /api/mesh3dai/test/<kennung>/          Rig, Drehungen, Ruhezentren, Kennzahl
 GET /api/mesh3dai/test/<kennung>/netz/     das Netz im Rahmen des Datensatzes (GLB, ~100.000 Dreiecke)
 POST /api/mesh3dai/test/<kennung>/geschlecht/  {"geschlecht": "weiblich" | "maennlich"} — welche Figuren die Ausgabe nehmen darf (16.10.2026 abends)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/netz/        Anzeigenetz der vorhergesagten Figur (Binärpaket wie `/api/mesh3dai/<job>/flaeche/netz/`, `Mesh3daiflaechennetz`)
-GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/bild/<name>  ein Bild dieser Figur (Haut)
+GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/bild/<name>  ein Bild dieser Figur (Haut) — die Kachel der KI, wenn Stufe 2 die Haut gerechnet hat (`Mesh3daitesthaut`), sonst die Grundhaut
 Die Liste steht im Reiter „Test“ der Seite `/mesh-3D-AI/` (`Mesh3daiendpunkte.liste`).
 """
 
@@ -27,10 +27,10 @@ class Mesh3daitestendpunkte:
     @staticmethod
     @require_GET
     def seite(request, kennung):
-        ordner = Mesh3daitest.pfad(kennung)
+        ordner = Mesh3daitest.pfad(kennung) or Mesh3daitest.angelegt(kennung)
         if ordner is None:
             raise Http404('Kein Test %s' % kennung)
-        info = next((t for t in Mesh3daitest.alle() if t.get('kennung') == kennung), {'kennung': kennung, 'name': kennung})
+        info = next((t for t in Mesh3daitest.alle() if t.get('kennung') == kennung), None) or Mesh3daitest.anlage(ordner)
         # Die Animation der Ausgabe baut eine Genesis-Figur (22.10.2026): Bilder wie auf der Jobseite (`Mesh3daitexturwahl`).
         from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
         return render(request, 'mesh3dai_test.html', {'test': info, 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
@@ -74,8 +74,9 @@ class Mesh3daitestendpunkte:
     @staticmethod
     @require_GET
     def figurbild(request, kennung, geschlecht, name):
+        from ..dienste.mesh3daitesthaut import Mesh3daitesthaut
         ordner = Mesh3daitest.form_ordner(kennung, geschlecht)
-        pfad = Mesh3daiflaechennetz.bild(ordner, name) if ordner else None
+        pfad = (Mesh3daitesthaut.bild(kennung, geschlecht, name) or Mesh3daiflaechennetz.bild(ordner, name)) if ordner else None
         if pfad is None:
             raise Http404('Kein Bild %s für Test %s (%s)' % (name, kennung, geschlecht))
         return Auftragsdatei.antwort(request, pfad)

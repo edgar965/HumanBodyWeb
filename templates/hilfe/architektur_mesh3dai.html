@@ -29,7 +29,9 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
     (<a href="#garmentcode">Kleider-GarmentCode</a>, als Wege k, s, f weiter wählbar). Mimik gibt sie nicht aus. Trainiert wird auf vier Jobs (<a href="/mesh-3D-AI/ursula1/">Ursula1</a>,
     <a href="/mesh-3D-AI/damira0/">Damira0</a>, <a href="/mesh-3D-AI/mann1/">Mann1</a>, <a href="/mesh-3D-AI/matt0/">Matt0</a>) und {{ form_varianten.zahl|default:"—" }} Formvarianten; fremde Netze ohne Soll zeigt der Reiter
     <a href="/mesh-3D-AI/#test">Test</a>. Bezugslauf dieser Seite: <code>{{ lauf_name|default:"—" }}</code>.
-    Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.
+    Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.<br>
+    <strong>Heute (24.10.2026):</strong> ein Test rechnet per Knopf in elf festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>), der Kopf wird nach dem Kopfnetz an das Mesh angeglichen
+    (<a href="#kopf">Kopf aus der KI</a>), jede Klasse mit Aufruf-Logik steht unter <a href="#klassen">Alle Klassen</a> — alles beim Aufruf aus dem Code gelesen.
   </div>
 
   {% if befunde %}
@@ -40,6 +42,10 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
   {% endif %}
 
   {% include "hilfe/_architektur_mesh3dai_kurz.html" %}
+  {# 24.10.2026: der heutige Ablauf zuerst — Rechnen per Knopf, Kopf aus der KI, alle Klassen mit Aufruf-Logik (ohne Nummer, wie Schicht und GarmentCode) #}
+  {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_rechenlauf.html" %}{% endif %}
+  {% if kopf %}{% include "hilfe/_architektur_mesh3dai_kopf.html" %}{% endif %}
+  {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_klassen.html" %}{% endif %}
   {% include "hilfe/_architektur_mesh3dai_vorstufe.html" %}
   {% include "hilfe/_architektur_mesh3dai_netz.html" %}
   {% include "hilfe/_architektur_mesh3dai_form.html" %}

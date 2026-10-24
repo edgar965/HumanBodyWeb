@@ -8,9 +8,12 @@ import { Mesh3daiausrichtung } from './mesh3daiausrichtung.js';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 import { Mesh3daitestnetzbau } from './mesh3daitestnetzbau.js';
+import { Meshfighautstueck } from '../meshfigur/meshfighautstueck.js';
 
 export class Mesh3daikikleiderfeld {
     static WEGE = new Set(['k', 's', 'h', 'f', 'g']);
+    /** = `Kleiderverdeckung.TIEFE_KOSTUEM_M` auf dem Server (ProjektTemp/_wegwerf/mesh3dai_kleider_verdeckung.py) */
+    static STOFF_TIEFE_M = 0.040;
     static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Schnitt aus der Fläche', g: 'Schicht aus der KI', h: 'Frisur der Garderobe (Bibliothek)' };
 
     /** → {gruppe, rig, namen: [Text je Stück]} oder null (keine KI-Kleider gewählt). */
@@ -29,7 +32,9 @@ export class Mesh3daikikleiderfeld {
                 mesh.userData.art = st.art;
                 gruppe.add(mesh);
                 namen.push(`${st.name} (${Mesh3daikikleiderfeld.TEXT[st.wahl]})`);
-                stuecke.push({ id: st.id, art: st.art, ruhe: netz.ruhe, dreiecke: netz.dreiecke, netz });   // `netz`: die Animation bindet das Stück an das Skelett der Figur (`Mesh3daibewegungskleid`)
+                const e = st[st.wahl];
+                const kostuem = !!(e.kostuem || e.uebertrag?.art === 'rueckhaeutung');                  // Kostüm-Weg A (Stück aus dem Eingang ausgeschnitten)
+                stuecke.push({ id: st.id, art: st.art, ruhe: netz.ruhe, dreiecke: netz.dreiecke, netz, kostuem });   // `netz`: die Animation bindet das Stück an das Skelett der Figur (`Mesh3daibewegungskleid`)
             } catch (fehler) {
                 console.warn('Mesh3daikikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message);
             }
@@ -48,11 +53,18 @@ export class Mesh3daikikleiderfeld {
         const aus = {};
         for (const st of ki?.stuecke || []) {
             if (!st.ruhe || !st.dreiecke) continue;
+            const index = st.dreiecke instanceof Uint32Array ? st.dreiecke : Uint32Array.from(st.dreiecke);
+            // Kostümstücke (23.10.2026, Edgar an OlesiaWalk: Haut in Flecken auf Shirt und Jeans; an Edgar: „das Haar fehlt an der Schädeldecke“): dieselbe Regel wie der Server
+            // (`Kleiderverdeckung.masken`, Fassung 2) — UV-Nähte verschweißt (sonst ist jede Naht ein „lockerer Rand“), Stoff bis `STOFF_TIEFE_M` hinter der Haut (der Körper der KI ragt dort
+            // Zentimeter durch das Stück), und Haar verdeckt wie Stoff (die Haarschale aus dem Eingang; der KI-Kopf ragt sonst oben hindurch).
+            const { punkte, dreiecke } = st.kostuem ? Meshfighautstueck.verschweissen(st.ruhe, index) : { punkte: st.ruhe, dreiecke: index };
             const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.BufferAttribute(st.ruhe, 3));
-            geo.setIndex(new THREE.BufferAttribute(st.dreiecke instanceof Uint32Array ? st.dreiecke : Uint32Array.from(st.dreiecke), 1));
+            geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
+            geo.setIndex(new THREE.BufferAttribute(dreiecke, 1));
             const netz = new THREE.Mesh(geo);
-            netz.userData.art = st.art === 'haar' ? 'haar' : 'kleidung';
+            netz.userData.art = st.art === 'haar' && !st.kostuem ? 'haar' : 'kleidung';
+            netz.userData.haar = st.art === 'haar';
+            if (st.kostuem) netz.userData.stoffTiefe = Mesh3daikikleiderfeld.STOFF_TIEFE_M;
             aus[`ki_${st.id}`] = netz;
         }
         if (ki) ki.haut = aus;
@@ -67,7 +79,7 @@ export class Mesh3daikikleiderfeld {
         if (!ki || ki.kleiderAn === an) return false;
         ki.kleiderAn = an;
         for (const kind of ki.gruppe.children) kind.visible = an || kind.userData.art === 'haar';
-        for (const netz of Object.values(ki.haut || {})) netz.visible = an || netz.userData.art === 'haar';
+        for (const netz of Object.values(ki.haut || {})) netz.visible = an || netz.userData.haar;
         return true;
     }
 

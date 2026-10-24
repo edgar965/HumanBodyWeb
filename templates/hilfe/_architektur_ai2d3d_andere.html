@@ -1,0 +1,10 @@
+{% comment %}7. Wie andere es machen (24.10.2026, Edgar: „schau auch nach, wie andere das machen, z.B. tripo, hunyan, meshai … haben wir eine Chance gegen die?“) — `Architekturai2d3dandere`.{% endcomment %}
+<h2 id="andere">7. Wie andere es machen — und ob wir eine Chance haben</h2>
+<p>Aus der eigenen Recherche (Hilfe → Recherche → meshy.ai, 08.10.2026; Mesh3D-AI, 23.10.2026) und einer Websuche am 24.10.2026. Was nicht „gemessen“ heißt, ist Angabe der Quelle.</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Anbieter</th><th>Was er liefert</th><th>Genesis-Modell?</th><th>Offen?</th><th>Beleg</th><th>Quelle</th></tr></thead>
+  <tbody>{% for a in andere %}<tr><td>{{ a.name }}</td><td>{{ a.liefert }}</td><td>{{ a.genesis }}</td><td>{{ a.offen }}</td><td>{{ a.beleg }}</td>
+    <td><a href="{{ a.adresse }}" target="_blank" rel="noopener">{{ a.quelle }}</a></td></tr>{% endfor %}</tbody>
+</table>
+<h3>Einordnung (eigene Einschätzung)</h3>
+<ul>{% for titel, text in einordnung %}<li><strong>{{ titel }}</strong> {{ text }}</li>{% endfor %}</ul>

@@ -1,0 +1,75 @@
+/* Seiten „2d-3d-AI“ (24.10.2026): leere Kopie der Seiten von Mesh3D-AI — abgeschrieben aus `mesh3dai.css` (Stand 24.10.2026), nur was die leeren Seiten brauchen.
+   Eigene Datei und eigene Klassen (`ai2d3d-*`), damit sich 2d-3d-AI ändern kann, ohne Mesh3D-AI mitzuziehen. */
+
+/* Fester Block oben (wie Mesh3D-AI): bleibt unter der Kopfleiste (`.topbar`, 50 px) stehen, deckender Grund. Mesh3D-AI misst die Höhe der Leiste per Skript;
+   die leere Seite hat keines, `--ai2d3d-leiste` bleibt bei 50 px. Die Zeilenköpfe hängen hier deshalb NICHT fest — ohne gemessene Blockhöhe lägen sie unter dem Block. */
+.ai2d3d-oben { position: sticky; top: var(--ai2d3d-leiste, 50px); z-index: 40; background: var(--bg-primary, #0f0f1a); padding: 4px 0 2px; }
+.ai2d3d-oben > .card { margin: 0 0 4px; padding: 6px 12px; }
+.ai2d3d-oben .ai2d3d-band { padding: 4px 12px; font-size: 0.85rem; }
+.ai2d3d-oben .ai2d3d-probenkopf h2 { font-size: 1.05rem; }
+.ai2d3d-band { border-left: 4px solid var(--text-muted, #8a93a6); }
+
+.ai2d3d-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ai2d3d-zurueckzurliste { color: inherit; text-decoration: none; }
+.ai2d3d-zurueckzurliste:hover { text-decoration: underline; }
+.ai2d3d-pfad { opacity: 0.6; }
+.ai2d3d-jetzt ul { margin: 0 0 6px; padding-left: 1.2em; }
+
+.ai2d3d-probenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ai2d3d-probenkopf h2 { margin: 0; }
+.ai2d3d-probeninfo { font-size: 0.9rem; min-height: 1.4em; }
+.ai2d3d-standkopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.ai2d3d-standkopf h2 { margin: 0; font-size: 1.05rem; }
+
+/* Drei Felder nebeneinander, bei schmalem Fenster untereinander; die Testseite hat zwei. */
+.ai2d3d-bereiche { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .ai2d3d-bereiche { grid-template-columns: minmax(0, 1fr); } }
+.ai2d3d-bereiche.ai2d3d-bereiche-zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .ai2d3d-bereiche.ai2d3d-bereiche-zwei { grid-template-columns: minmax(0, 1fr); } }
+.ai2d3d-bereich { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.ai2d3d-bereich h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.ai2d3d-bereich > .hb-hinweis { margin: 0; }
+.ai2d3d-feld { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ai2d3d-feld h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.ai2d3d-nummer { display: inline-flex; align-items: center; justify-content: center; width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent, #e94560); color: #fff; font-size: 0.85rem; }
+.ai2d3d-leinwand { position: relative; width: 100%; height: clamp(320px, 62vh, 760px); background: #1b1f27; border-radius: 6px; overflow: hidden; }
+.ai2d3d-leinwand .ai2d3d-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a6; font-size: 0.9rem; }
+.ai2d3d-teilzeile .ai2d3d-leinwand { height: clamp(260px, 44vh, 520px); }
+
+.ai2d3d-zeilenkopf { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; margin: 0 0 6px; padding: 4px 0; }
+.ai2d3d-zeilenkopf h2 { margin: 0; }
+.ai2d3d-koerperzeile > .ai2d3d-zeilenkopf { margin: 6px 0 8px; }
+
+/* Jobseite seit 24.10.2026 abends (Fotos · Netz · Genesis-Modell · Ergebnis): vier Felder, Bedienleiste im festen Block, Vergleichskarte. */
+.ai2d3d-band .btn { margin-left: 8px; }
+.ai2d3d-steuerung { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; }
+.ai2d3d-steuergruppe { display: flex; align-items: center; gap: 8px; }
+.ai2d3d-steuername { font-size: 0.85rem; color: var(--text-muted, #8a93a6); }
+.ai2d3d-steuerung .schaltknopf { padding: 4px 10px; }
+.ai2d3d-bereiche.ai2d3d-bereiche-vier { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1300px) { .ai2d3d-bereiche.ai2d3d-bereiche-vier { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .ai2d3d-bereiche.ai2d3d-bereiche-vier { grid-template-columns: minmax(0, 1fr); } }
+.ai2d3d-leinwand canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+/* Texte im Feld (`Mesh3daiansicht.hinweis` trägt die Klasse von Mesh3D-AI). */
+.ai2d3d-leinwand .mesh3dai-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; text-align: center; color: #8a93a6; font-size: 0.9rem; }
+.ai2d3d-fotofeld { background: rgb(25, 26, 46); }
+.ai2d3d-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ai2d3d-ergebnisfeld { display: flex; align-items: center; justify-content: center; background: rgb(25, 26, 46); }
+.ai2d3d-ergebnisfeld canvas.ai2d3d-rendering { position: static; width: auto; height: auto; max-width: 100%; max-height: 100%; }
+.ai2d3d-daumen { display: flex; gap: 4px; flex-wrap: wrap; }
+.ai2d3d-daumen button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px; background: transparent; border: 2px solid transparent; border-radius: 4px; color: inherit; font-size: 0.72rem; cursor: pointer; }
+.ai2d3d-daumen button[aria-pressed="true"] { border-color: var(--accent, #e94560); }
+.ai2d3d-daumen img { height: 64px; width: auto; display: block; }
+.ai2d3d-vergleich { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.ai2d3d-vergleichssumme { flex-basis: 100%; margin: 0; font-weight: 600; }
+.ai2d3d-vergleichsspalte { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.ai2d3d-vergleichsspalte figcaption { font-size: 0.82rem; max-width: 600px; }
+.ai2d3d-vergleichsbilder { display: flex; gap: 4px; }
+.ai2d3d-vergleichsbilder img, .ai2d3d-vergleichsbilder canvas { width: 192px; height: auto; display: block; border-radius: 3px; background: rgb(25, 26, 46); }
+
+/* Tabelle „Kleider und Bestandteile“ der Testseite: durchsichtig mit geerbter Farbe — die Seitenstile legen jeder Tabelle einen dunklen Grund unter (Mesh3D-AI, gesehen 17.10.2026). */
+.ai2d3d-kleider, .ai2d3d-testfaelle { margin-top: 12px; }
+.ai2d3d-kleider-tabelle { width: 100%; margin: 6px 0 10px; }
+.ai2d3d-kleider-tabelle, .ai2d3d-kleider-tabelle thead, .ai2d3d-kleider-tabelle tbody, .ai2d3d-kleider-tabelle tr,
+.ai2d3d-kleider-tabelle th, .ai2d3d-kleider-tabelle td { background: transparent; color: inherit; }
+.ai2d3d-kleider-tabelle th, .ai2d3d-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }

@@ -1,0 +1,75 @@
+{% load dezahl %}
+{% comment %}Abschnitt „Kopf aus der KI“ (24.10.2026, Edgar: „update … inkl. Kopf KI“, „wie kommt es, dass diese Kopf KI vergessen wurde??“, „baue ggf. eine Logik ein NACH dem Kopfnetz …“).
+Daten: `Architekturmesh3daikopf` (Kopfnetz-Lauf, `aufbau.json`, Berichte `_test/<k>/kopf/kopfangleich_<g>.json`).{% endcomment %}
+<h2 id="kopf">Kopf aus der KI: Kopfnetz und Angleichung an das Mesh (Schritt „kopf“)</h2>
+{% with k=kopf %}
+<div class="info-box info-box-blue">
+  <strong>Warum:</strong> Die Prüfung „Gesicht wie der Eingang“ war an edgar_knopf rot — die Form aus dem Formkopf ist im Kern ein Charakter (Matt 0,56), das Gesicht 9 % zu schmal, Augen bis Mund 21 % zu lang.
+  Der Schritt „kopf“ stellt deshalb nur die <strong>Kopfregler</strong> nach: erst das Kopfnetz, dann in Runden gegen das Mesh selbst.<br>
+  <strong>Warum das Kopfnetz vergessen war:</strong> {{ k.vergessen }}
+</div>
+
+<h3>Das Kopfmodell (die Rechnung des Kopfs auf der Grafikkarte)</h3>
+{% if k.kopfmodell %}
+<p><code>Kopfmodell</code> (<code>mesh3dai_kopfnetz_modell.py</code>): {{ k.kopfmodell.kopfpunkte|de }} Kopfpunkte des Genesis-Käfigs, {{ k.kopfmodell.dreiecke|de }} Dreiecke,
+  <strong>{{ k.kopfmodell.kopfregler|de }} Kopfregler</strong> — Regel: {{ k.kopfmodell.regel }}. Je Regler zwei Geraden (Plus- und Minusseite) und die Tabellen der Makro-Regler (Formmaß 2).</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Bereich</th><th>Kopfregler</th></tr></thead>
+  <tbody>{% for b, n in k.kopfmodell.bereiche.items %}<tr><td><code>{{ b }}</code></td><td class="num">{{ n }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+<h3>Das Kopfnetz (Lauf <code>{{ k.lauf }}</code>)</h3>
+{% if k.schichten %}
+<table class="doku">
+  <thead><tr><th>Teil</th><th>Eingabe</th><th>Schichten</th></tr></thead>
+  <tbody>{% for t, ein, s in k.schichten %}<tr><td><strong>{{ t }}</strong></td><td>{{ ein }}</td><td>{{ s }}</td></tr>{% endfor %}</tbody>
+</table>
+<p>{{ k.aufbau.gewichte|de }} Gewichte, <code>netz.pt</code> {{ k.aufbau.datei_mb|de:1 }} MB (gezählt aus der Datei, <code>{{ k.aufbau.quelle }}</code>).
+  {% if k.training %}Training: {{ k.training.schritte|de }} Schritte, Stapel {{ k.training.stapel }}, {{ k.training.dauer_s|de }} s — <strong>nur gewürfelte Genesis-Köpfe</strong> (<code>Kopfwurf</code>), kein Job, kein Tripo-Netz.{% endif %}
+  {% if k.pruefung %}Prüfung auf ungesehenen Würfen (Schritt {{ k.pruefung_schritt|de }}, Kopfform mm, Lage abgezogen): Formnetz {{ k.pruefung.formnetz|de:2 }} → Kopfnetz {{ k.pruefung.kopfnetz|de:2 }},
+  Gesicht {{ k.pruefung.gesicht_formnetz|de:2 }} → {{ k.pruefung.gesicht_kopfnetz|de:2 }}.{% endif %}</p>
+{% else %}<p class="ag-fehlt">Bauart nicht abgelegt (<code>_kopfnetz/laeufe/{{ k.lauf }}/aufbau.json</code>).</p>{% endif %}
+
+<p><strong>Allein taugt es nicht</strong> (gemessen 24.10.2026, <code>_wegwerf/kopfnetz_tripo_wahrheit.py</code>: Kopfform gegen die Regler des Genesis-Exports, Median mm). Der Formkopf hat diese Tripo-Jobs
+  <strong>im Training gesehen</strong> — seine kleinen Werte sind auswendig gelernt; das Kopfnetz verschlechtert sie trotzdem. {{ k.wahrheit_grundfigur }}.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Tripo-Job</th><th>Formkopf → Ziel</th><th>Kopfnetz → Ziel</th></tr></thead>
+  <tbody>{% for z in k.wahrheit %}<tr><td>{{ z.job }}</td><td class="num">{{ z.formkopf|de:2 }}</td><td class="num">{{ z.kopfnetz|de:2 }}</td></tr>{% endfor %}</tbody>
+</table>
+<p>{{ k.edgar }}</p>
+
+<h3>Angleichung an das Mesh (<code>Kopfangleich</code>, <code>mesh3dai_kopfangleich.py</code>)</h3>
+<p>Nach dem Kopfnetz stellt <code>Kopfangleich</code> die {{ k.kopfmodell.kopfregler|default:"523" }} Kopfregler gegen vier Größen — das Tripo-Netz, die Messungen der Nase, des Mundes, der Augen und die
+  Genesis-Regler zusammen:</p>
+<table class="doku">
+  <thead><tr><th>Größe</th><th>was gemessen wird</th></tr></thead>
+  <tbody>{% for g, t in k.groessen %}<tr><td><strong>{{ g }}</strong></td><td>{{ t }}</td></tr>{% endfor %}</tbody>
+</table>
+<ol>{% for a in k.ablauf %}<li>{{ a }}</li>{% endfor %}</ol>
+
+{% for t in k.tests %}
+<h4>{{ t.test }} ({{ t.geschlecht }}){% if t.trocken %} — nur gerechnet, nicht übernommen{% endif %}</h4>
+{% if t.grund %}<p>{{ t.grund }}</p>{% else %}
+<p>{{ t.gerechnet }}: {{ t.sekunden|de:1 }} s; übernommen {{ t.uebernommen|yesno:"ja,nein" }}, {{ t.geaendert|de }} Regler geändert; Haut des Eingangs im Gesicht {{ t.haut.flaechen_haut|de }} Flächen
+  ({{ t.haut.flaeche_cm2|de:1 }} cm²), {{ t.kopfpunkte_vorn|de }} Kopfpunkte vorn.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Stand</th><th>Summe</th><th>Maße</th><th>Punkte</th><th>Fläche</th><th>rot</th><th>Abstand Median / p90 (mm)</th></tr></thead>
+  <tbody>{% for z in t.zeilen %}<tr><td>{{ z.name }}</td><td class="num">{{ z.summe|de:3 }}</td><td class="num">{{ z.masse|de:3 }}</td><td class="num">{{ z.punkte|de:3 }}</td><td class="num">{{ z.flaeche|de:3 }}</td>
+    <td class="num">{{ z.rot }}</td><td class="num">{{ z.abstand_median_mm|de:2 }} / {{ z.abstand_p90_mm|de:2 }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">„vorher“ = Figur ohne Kopfnetz, „start“ = mit Kopfnetz, Runden an der echten Formung (Haltung der KI, vor dem Neubau).</p>
+{% if t.masse %}
+<table class="doku m3a-schmal">
+  <thead><tr><th>Maß</th><th>Eingang (mm)</th><th>Figur vorher</th><th>Figur nachher (gebaut, neue Haltung)</th></tr></thead>
+  <tbody>{% for m in t.masse %}<tr><td>{{ m.name }}</td><td class="num">{{ m.eingang|de:1 }}</td><td class="num">{{ m.vorher|de:1 }}{% if m.rot_vorher %} <strong>rot</strong>{% endif %}</td>
+    <td class="num">{% if m.nachher is not None %}{{ m.nachher|de:1 }}{% if m.rot_nachher %} <strong>rot</strong>{% endif %}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Rot vorher {{ t.rot_vorher }} von {{ t.masse|length }}{% if t.rot_nachher is not None %}, nachher {{ t.rot_nachher }}{% endif %}. Versatz der Gesichtsmitte (Lage, nicht Form; rechts/unten mm):
+  vorher {{ t.versatz_vorher|default:"—" }}{% if t.versatz_nachher %}, nachher {{ t.versatz_nachher }}{% endif %}. Bilder: <code>_test/{{ t.test }}/kopf/gesicht_vorher|nachher_{{ t.geschlecht }}.jpg</code>.</p>
+{% endif %}{% endif %}
+{% empty %}<p class="ag-fehlt">Noch kein Test mit dem Schritt „kopf“ gerechnet.</p>
+{% endfor %}
+<p class="m3a-klein"><strong>Grenze:</strong> gemessen wird gegen das Mesh, nicht gegen die Wahrheit dahinter — Tripo macht Gesichter 4–10 % breiter als das Genesis-Ziel (geeicht an vier Tripo-Jobs,
+  <code>_wegwerf/gesicht_eichung_tripo.py</code>); die Figur zeigt dann das Mesh. Die Setzungen (Gewichte, Runden, Schritte) sind nicht geeicht, gerechnet an einem Test.</p>
+{% endwith %}

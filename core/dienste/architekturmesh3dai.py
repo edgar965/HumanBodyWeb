@@ -17,6 +17,8 @@ from .architekturmesh3daiform import Architekturmesh3daiform
 from .architekturmesh3daiformvergleich import Architekturmesh3daiformvergleich
 from .architekturmesh3daigarmentcode import Architekturmesh3daigarmentcode
 from .architekturmesh3daikette import Architekturmesh3daikette
+from .architekturmesh3daikopf import Architekturmesh3daikopf
+from .architekturmesh3dairechenlauf import Architekturmesh3dairechenlauf
 from .architekturmesh3daigrenzen import Architekturmesh3daigrenzen
 from .architekturmesh3daigroesse import Architekturmesh3daigroesse
 from .architekturmesh3daikleider import Architekturmesh3daikleider
@@ -101,5 +103,8 @@ class Architekturmesh3dai:
             'garmentcode': teil('Kleider-GarmentCode', Architekturmesh3daigarmentcode.kontext),
             # 21.10.2026: Kleider wie das Ziel — der Schichtkopf, trainiert gegen die Zielstücke (Edgar: „wie sieht die KI nicht, welches Zielstück sie bauen soll??“)
             'schicht': teil('Kleider wie das Ziel', Architekturmesh3daischicht.kontext),
+            # 24.10.2026: Rechnen per Knopf (Schritte, Netze, Testfälle, Klassen mit Aufruf-Logik aus dem Code) und der Kopf aus der KI (Edgar: „update … mit dem genauen Code, inkl. Kopf KI“)
+            'rechenlauf': teil('Rechenlauf', Architekturmesh3dairechenlauf.kontext),
+            'kopf': teil('Kopf aus der KI', Architekturmesh3daikopf.kontext),
             'befunde': befunde,
         }

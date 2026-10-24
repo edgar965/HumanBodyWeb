@@ -1,0 +1,35 @@
+{% load dezahl %}
+{% comment %}5. Training und 6. Alles im Speicher und auf der GPU (24.10.2026, Edgar: „alles, aber wirklich alles in der Pipeline soll im RAM und auf GPU laufen“). Daten `Architekturai2d3dmessung`, `…plan.GPU`.{% endcomment %}
+<h2 id="training">5. Training: Figuren aus dem eigenen Bestand, Wahrheit inklusive</h2>
+<p>Edgar, 24.10.2026: „Wir können ja auf allen Genesis-Modellen mit allen Kleidern trainieren, die wir haben.“ Eine Trainingsprobe ist eine zufällige Genesis-Figur — Formregler, Haut, Haltung aus den
+  Posen, Kleider aus dem Katalog —, aus vier Richtungen nach der Regel der Exporte gerendert. Die Wahrheit sind die Parameter, aus denen sie entstand.</p>
+<table class="doku m3a-laeufe m3a-schmal">
+  <thead><tr><th>Bestand</th><th class="num">Anzahl</th></tr></thead>
+  <tbody>
+    <tr><td>Garderobe gesamt</td><td class="num">{{ vorrat.stuecke|de }}</td></tr>
+    <tr><td>davon Kleidung</td><td class="num">{{ vorrat.kleidung|de }}</td></tr>
+    <tr><td>davon Haar</td><td class="num">{{ vorrat.haar|de }}</td></tr>
+    <tr><td>davon Requisiten (nicht im Training)</td><td class="num">{{ vorrat.requisit|de }}</td></tr>
+    <tr><td>Posen ({{ vorrat.posengruppen }} Gruppen)</td><td class="num">{{ vorrat.posen|de }}</td></tr>
+    <tr><td>Formregler</td><td class="num">{{ masse.formregler|de }}</td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Quelle: {{ vorrat.quelle }}. Die Formvarianten und Kleidvarianten von Mesh3D-AI (<code>3DObjects/mesh3dai/Form*</code>, <code>Kleid*</code>) sind dieselbe Art Figur und können mitlaufen.</p>
+<ul>
+  <li><strong>Verlust:</strong> Umriss je Ansicht (Maske des Renderings gegen Maske des Fotos), Farbe in der Figur, Regler, Winkel und Punkte gegen die Wahrheit. Gewichtung: offen.</li>
+  <li><strong>Getrennt halten:</strong> die sechs Exporte und die drei echten Tests nie im Training — sie sind die Prüfung. Bei Mesh3D-AI hatten Teile der Netze die Tripo-Jobs gesehen; ihre Zahlen
+    belegen deshalb nichts über fremde Figuren (Strategiekonzept vom 23.10.2026).</li>
+  <li><strong>Erst EIN Modell:</strong> Training und Anpassung zuerst so, dass OlesiaWalk stimmt, zeigen, dann die übrigen (Projektregel vom 21.10.2026).</li>
+  <li><strong>Echte Fotos:</strong> anderes Licht, Hintergrund, unbekannte Kamera. Dafür Licht und Grund im Generator streuen und den Kamerakopf lernen lassen — Vermutung, nicht gemessen.</li>
+</ul>
+
+<h2 id="gpu">6. Alles im Speicher und auf der GPU</h2>
+<p>Vorgabe Edgar (24.10.2026): <em>„alles, aber wirklich alles in der Pipeline soll im RAM und auf GPU laufen“</em>. Ein Prozess, keine Zwischendateien; auf die Platte nur das Ergebnis (Modell,
+  Messung, Anzeige). Bei Mesh3D-AI lagen Bilder, Netze, Wolken und Proben als Dateien zwischen den Schritten — das entfällt hier.</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Teil</th><th>Wo und wie</th></tr></thead>
+  <tbody>{% for teil, text in gpu %}<tr><td>{{ teil }}</td><td>{{ text }}</td></tr>{% endfor %}</tbody>
+</table>
+<p><strong>Umgebung python10</strong> (Fassungen aus den Paketordnern gelesen):
+  {% for name, fassung in pakete.items %}{{ name }} {{ fassung|default:"fehlt" }}{% if not forloop.last %} · {% endif %}{% endfor %}.
+  Das reicht für Rückgrat, Rendern und Training in einem Prozess; eine Genesis-Figur, die vollständig differenzierbar auf der GPU läuft, gibt es noch nicht als Ganzes (Abschnitt 8, Schritt 4).</p>

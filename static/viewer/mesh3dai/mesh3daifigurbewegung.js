@@ -111,7 +111,7 @@ export class Mesh3daifigurbewegung {
         this.rahmenMm = rahmen.rest_mm;
         this._kleiderBinden();
         modell.hautStuecke = Mesh3daikikleiderfeld.hautStuecke({
-            stuecke: (q.stuecke || []).map(st => ({ id: st.id, art: st.art, ruhe: Mesh3daibewegungskleid.ruhe(st.netz, this._abbildung), dreiecke: st.netz.dreiecke })),
+            stuecke: (q.stuecke || []).map(st => ({ id: st.id, art: st.art, kostuem: st.kostuem, ruhe: Mesh3daibewegungskleid.ruhe(st.netz, this._abbildung), dreiecke: st.netz.dreiecke })),
         });
         this._kleiderAn = true;
         Hautverdeckung.planen(modell);
@@ -196,7 +196,7 @@ export class Mesh3daifigurbewegung {
         if (this._kleiderAn === an) return;
         this._kleiderAn = an;
         for (const k of this.kleider) k.mesh.visible = an || k.art === 'haar';
-        for (const netz of Object.values(this.modell.hautStuecke || {})) netz.visible = an || netz.userData.art === 'haar';
+        for (const netz of Object.values(this.modell.hautStuecke || {})) netz.visible = an || netz.userData.haar;
         Hautverdeckung.planen(this.modell);
     }
 

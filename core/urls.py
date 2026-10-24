@@ -64,6 +64,7 @@ from .urls_engine2d3dkleider import ENGINE2D3DKLEIDER  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
 from .urls_mesh3d import MESH3D  # noqa: E402
 from .urls_mesh3dai import MESH3DAI  # noqa: E402
+from .urls_ai2d3d import AI2D3D  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
 from .urls_blendimport import BLENDIMPORT  # noqa: E402
 from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
@@ -296,3 +297,5 @@ urlpatterns += ENGINE2D3DKLEIDER
 urlpatterns += MESH3D
 # Seite „Mesh3D-AI" (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes, zunächst mit Dummies für Ursula1, `urls_mesh3dai.py`), 14.10.2026.
 urlpatterns += MESH3DAI
+# Seite „2d-3d-AI" (leere Kopie der Seiten von Mesh3D-AI, `urls_ai2d3d.py`), 24.10.2026.
+urlpatterns += AI2D3D

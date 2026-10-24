@@ -226,7 +226,8 @@ export class Hautverdeckung extends Figurhaut {
             // (gemessen 09.10.2026, „cute girl Scham": Strahl allein 111 Punkte, mit Abstandstest 6 mm 353 — die Haut stand
             // sonst neben und unter dem Stück und flimmerte an den Rändern).
             const ersatz = !!netz.userData?.hautTiefe;
-            aus.push({ schluessel, punkte: ruhe ? Hautverdeckung.lage(g) : g.attributes.position.array, tiefe: netz.userData?.hautTiefe || undefined,
+            // `stoffTiefe` (23.10.2026, Kostümstücke von Mesh3D-AI, `Mesh3daikikleiderfeld`): so tief darf der Stoff hinter der Haut liegen — ohne die Sonderregeln eines Ersatzstücks
+            aus.push({ schluessel, punkte: ruhe ? Hautverdeckung.lage(g) : g.attributes.position.array, tiefe: netz.userData?.hautTiefe || netz.userData?.stoffTiefe || undefined,
                        dreiecke: Hautverdeckung.vollerIndex(g), starr: ersatz || Hautverdeckung.starr(schluessel),
                        nahe: ersatz ? Hautverdeckung.NAHE_ERSATZ_M : undefined, ersatz, netz });
         }

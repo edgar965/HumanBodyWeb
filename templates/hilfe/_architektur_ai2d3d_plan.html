@@ -1,0 +1,11 @@
+{% comment %}8. Entscheidungen und Reihenfolge (24.10.2026) — `Architekturai2d3dplan.ENTSCHEIDUNGEN`, `.SCHRITTE`.{% endcomment %}
+<h3>Entscheidungen (Edgar, 24.10.2026)</h3>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Frage</th><th>Entscheidung</th></tr></thead>
+  <tbody>{% for frage, antwort in entscheidungen %}<tr><td>{{ frage }}</td><td>{{ antwort }}</td></tr>{% endfor %}</tbody>
+</table>
+<h3>Reihenfolge</h3>
+<table class="doku m3a-laeufe">
+  <thead><tr><th class="num">Nr</th><th>Schritt</th><th>Inhalt</th><th>Stand</th></tr></thead>
+  <tbody>{% for nr, schritt, inhalt, stand in schritte %}<tr><td class="num">{{ nr }}</td><td>{{ schritt }}</td><td>{{ inhalt }}</td><td>{{ stand }}</td></tr>{% endfor %}</tbody>
+</table>

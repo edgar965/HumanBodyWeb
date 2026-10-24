@@ -24,15 +24,19 @@ __all__ = ['Mesh3daitabelle']
 
 class Mesh3daitabelle:
     SCHLUESSEL = 'mesh3dai'
+    #: Auswahl zum Löschen (23.10.2026, `Mesh3daipapierkorb`, `mesh3dailoeschen.js`) — auch in `Mesh3daitesttabelle`
+    WAHL_SPALTE = {'label': '<input type="checkbox" class="mesh3dai-alle" title="alle auswählen / Auswahl aufheben">', 'key': 'wahl', 'sortAus': True}
     SPALTEN = (
+        WAHL_SPALTE,
         {'label': 'Job', 'key': 'name'},
         {'label': 'Modell', 'key': 'modell', 'titel': 'Das Genesis-Modell, an dem trainiert wird'},
         {'label': 'Zuletzt trainiert', 'key': 'trainiert',
          'titel': 'Ende des jüngsten fertigen Trainings an den Daten dieses Jobs (Zeit von lauf_ergebnis.json): Läufe des Jobs (_laeufe) und gemeinsame Netze der Vorstufe/Form (_vorstufe/laeufe), '
                   'die den Job in ihren Trainingsdaten nennen; Probeläufe zählen nicht. Der Name des Laufs steht im Tooltip der Zelle'},
-        {'label': 'Zuletzt gerechnet', 'key': 'gerechnet',
-         'titel': 'Jüngste Datei, die ein Rechenschritt für diesen Job geschrieben hat — Training, Datensatz, Vorstufe, Form, Ergebnisfigur, Zerlegung, Kleider, künstliche Tripo-Netze '
-                  '(Mesh3dairechendatum). In Klammern der Schritt, im Tooltip die Datei. Einstellungen und Namen zählen nicht'},
+        {'label': 'Gerechnet am', 'key': 'gerechnet',
+         'titel': 'Tag der jüngsten Datei, die ein Rechenschritt für diesen Job geschrieben hat — Training, Datensatz, Vorstufe, Form, Ergebnisfigur, Zerlegung, Kleider, künstliche Tripo-Netze '
+                  '(Mesh3dairechendatum). Im Tooltip Schritt und Datei. Einstellungen und Namen zählen nicht; sortiert nach Tag und Uhrzeit'},
+        {'label': 'Uhrzeit', 'key': 'gerechnet_uhrzeit', 'titel': 'Uhrzeit dazu, in Klammern der Schritt; sortiert nach der Tageszeit'},
         {'label': 'Laufzeit', 'key': 'laufzeit', 'num': True,
          'titel': 'Wie lange die Rechnung gedauert hat, deren Ergebnis die Jobseite zeigt — nur gemessene Zeiten (Mesh3dailaufzeit): beim Grundjob das Training aus „Zuletzt trainiert“ (dauer_s), '
                   'beim Tripo-Job die Kette seines Tests (Vorstufe, Figur bauen, Zerlegung, Kleider). Aufteilung im Tooltip der Zelle'},
@@ -52,13 +56,18 @@ class Mesh3daitabelle:
     def adresse(job):
         return '/mesh-3D-AI/%s/' % job['id']
 
+    @staticmethod
+    def wahl_zelle(kennung):
+        return format_html('<td class="mesh3dai-wahlzelle"><input type="checkbox" class="mesh3dai-wahl" data-id="{}" aria-label="wählen"></td>', kennung)
+
     def zeile(self, job):
         zellen = (
+            self.wahl_zelle(job['id']),
             format_html('<td data-sort="{}"><a href="{}">{}</a></td>', job['name'].lower(), self.adresse(job), job['name']),
             format_html('<td data-sort="{}">{}</td>', job['modell'].lower(), job['modell']),
             self._paartraining(job) if job.get('paar') else self._trainiert(job['ordner']),          # dritte Spalte (Edgar, 18.10.2026)
-            self._gerechnet(job),                                                                      # vierte Spalte (Edgar, 20.10.2026)
-            self.laufzeit_zelle(Mesh3dailaufzeit.job(job)),                                            # fünfte Spalte (Edgar, 20.10.2026 abends)
+            self._gerechnet(job),                                                                      # vierte und fünfte Spalte (Edgar, 20.10.2026; Tag und Uhrzeit getrennt 23.10.2026)
+            self.laufzeit_zelle(Mesh3dailaufzeit.job(job)),                                            # Laufzeit (Edgar, 20.10.2026 abends)
             self._zahl(job['proben']),
             self._zahl(job['training']),
             self._zahl(job['pruefung']),
@@ -119,14 +128,25 @@ class Mesh3daitabelle:
         return format_html('<td data-sort="{}" title="{}">{}</td>', int(letztes['zeit']), titel,
                            datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'))
 
-    @staticmethod
-    def _gerechnet(job):
-        """„20.10.2026 11:02 (Kleider)" (`Mesh3dairechendatum`), Tooltip: Schritt und Datei; ohne Rechnung „—". Sortiert nach der Zeit."""
+    @classmethod
+    def _gerechnet(cls, job):
+        """„20.10.2026“ · „11:02 (Kleider)“ (`Mesh3dairechendatum`), Tooltip: Schritt und Datei; ohne Rechnung zweimal „—“."""
         letztes = Mesh3dairechendatum.letztes(job)
         if not letztes:
-            return mark_safe('<td data-sort="0" title="Noch nichts gerechnet">—</td>')
-        return format_html('<td data-sort="{}" title="Zuletzt gerechnet: {} — {}">{} ({})</td>', int(letztes['zeit']), letztes['was'], letztes['datei'],
-                           datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'), letztes['was'])
+            return cls.datum_zellen(None)
+        return cls.datum_zellen(letztes['zeit'], 'Zuletzt gerechnet: %s — %s' % (letztes['was'], letztes['datei']), letztes['was'])
+
+    @staticmethod
+    def datum_zellen(zeit, titel='', zusatz=''):
+        """Zwei Zellen „23.10.2026“ · „15:19“ aus einer Unix-Zeit (Edgar, 23.10.2026: „das Datumsformat tag-monat-jahr und mache Spalte mit Tag und eine mit Uhrzeit, damit ich die schneller
+        finden kann“). Der Tag sortiert nach der vollen Zeit, die Uhrzeit nach der Tageszeit; `zusatz` (der Schritt) steht hinter der Uhrzeit. Auch für die Tabelle der Tests."""
+        if not zeit:
+            leer = format_html('<td data-sort="0" title="{}">—</td>', titel or 'Noch nichts gerechnet')
+            return leer + leer
+        d = datetime.fromtimestamp(zeit)
+        uhr = d.strftime('%H:%M') + (' (%s)' % zusatz if zusatz else '')
+        return (format_html('<td data-sort="{}" title="{}">{}</td>', int(zeit), titel, d.strftime('%d.%m.%Y'))
+                + format_html('<td data-sort="{}" title="{}">{}</td>', d.hour * 3600 + d.minute * 60 + d.second, titel, uhr))
 
     @staticmethod
     def laufzeit_zelle(laufzeit):
