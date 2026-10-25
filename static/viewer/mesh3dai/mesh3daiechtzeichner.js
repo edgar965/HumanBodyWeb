@@ -24,7 +24,7 @@ export class Mesh3daiechtzeichner {
     static PUNKTGROESSE_DICHT_AUSSCHNITT = 0.0012;
     static GEISTFARBE = 0x8d97ab;
     /** Reihenfolge der Teile in Wolke und Fläche (= `Mesh3daiflaeche.TEILE` auf dem Server). */
-    static TEILE = ['koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd'];
+    static TEILE = ['koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd', 'augen'];
 
     static zeichnen(inhalt, art, d) {
         const z = Mesh3daiechtzeichner;

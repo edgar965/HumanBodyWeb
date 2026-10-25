@@ -30,11 +30,18 @@ export class Ai2d3dvergleich {
         Ai2d3dkamera.stellen(kamera, box, winkel, rahmen, regel.rand);
         kamera.layers.enableAll();
         const grund = new THREE.Color().setRGB(...grundRgb.map(v => v / 255), THREE.SRGBColorSpace).getHex();
+        // Was nur zur Ansicht gehört (das Rig, Knopf „Rig“), kommt nicht ins Rendering — sonst stünde es im Vergleich und in der Umriss-Deckung
+        const versteckt = [];
+        ansicht.szene.traverseVisible(o => { if (o.userData.nurAnsicht) versteckt.push(o); });
         Mesh3daizeichenflaeche.zeichnen(leinwand, breite, hoehe, grund, r => {
             const ersatz = ansicht.szene.overrideMaterial;
             ansicht.szene.overrideMaterial = null;
+            ansicht.licht?.(true);              // echte Materialien unter dem Fotolicht (`Ai2d3dansicht.FOTOLICHT`)
+            for (const o of versteckt) o.visible = false;
             r.render(ansicht.szene, kamera);
+            for (const o of versteckt) o.visible = true;
             ansicht.szene.overrideMaterial = ersatz;
+            ansicht.licht?.(!ersatz);
         });
     }
 

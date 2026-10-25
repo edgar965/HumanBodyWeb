@@ -33,7 +33,7 @@ class Mesh3daiflaeche:
     #: (volles Haar, UV, Material, Hautgewichte) steht einmal je Job in `anzeige/` (`Mesh3daiflaechennetz`).
     FASSUNGEN = (1, 2, 3, 4)
     #: Reihenfolge der Etiketten in `flaeche.npz` (= `Ursula.TEILE` im Datenskript).
-    TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd')
+    TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd', 'augen')         # `augen` seit 24.10.2026 (Figuren der Tests, `Ursula.TEILE`)
 
     @classmethod
     def datei(cls, modell, nr):

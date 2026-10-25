@@ -1,0 +1,27 @@
+{% load dezahl %}
+{% comment %}Abschnitt „Die KIs der Kette“ (24.10.2026 abends, Edgar: „für alle KIs eine einzelne Grafik wie diese: Neuronale Netz - Figur; eine übergeordnete Grafik mit Kästchen und Ablauf, wie die KIs
+aufgerufen werden“). Daten: `Architekturmesh3daikis` (Schritte aus dem Code, Netze aus ki_fassungen.json, Steckbriefe aus den Gewichtsdateien).{% endcomment %}
+<h2 id="kis">Die KIs der Kette: wer wann rechnet</h2>
+{% with k=kis %}
+<p>Ein Test rechnet in elf festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>). Die Grafik zeigt je Schritt, wer rechnet: <strong>unsere KIs</strong> (grün, mit dem Lauf, den
+  <code>ki_fassungen.json</code> einsetzt), <strong>fertige Modelle anderer</strong> (grau: Make-It-Animatable, Sapiens2, SAM 3, MediaPipe) und <strong>eigene Rechnung ohne Gewichte</strong> (blau:
+  Figur aus den Reglern, Winkelanpassung, Kopfangleich, Kostüm-Weg A, Prüfung).</p>
+<div class="m3a-bildrahmen">{{ k.ablauf }}</div>
+
+<h3>Die Netze einzeln</h3>
+<p class="m3a-klein">Je Netz eine Grafik in derselben Bildsprache wie „Neuronales Netz – Figur“ unten (Eingang rot, Bausteine blau, Ausgang grün). Bausteine, Kanäle und Gewichte sind aus der
+  Gewichtsdatei des eingesetzten Laufs gelesen (<code>mesh3dai/mesh3dai_netzsteckbrief.py</code> → <code>{{ k.steckbrief_datei }}</code>, Stand {{ k.steckbrief_stand|default:"—" }}); Eingang und Ausgang
+  stehen in den Docstrings der Netze.</p>
+{% for n in k.kis %}
+<h4 id="ki-{{ n.schluessel }}">{{ n.titel }} <span class="m3a-klein">— <code>{{ n.schluessel }}</code> = <code>{{ n.lauf|default:"—" }}</code>{% if n.in_schritt %}, Schritt {{ n.in_schritt|join:", " }}{% endif %}</span></h4>
+<p class="m3a-klein">{{ n.klasse }}{% if n.gewichte %} · {{ n.gewichte|de }} Gewichte · Datei {{ n.mb|de:1 }} MB{% endif %}</p>
+{% if n.fehler %}<div class="info-box info-box-red">{{ n.fehler }}</div>{% endif %}
+{% if n.bild %}<div class="m3a-bildrahmen">{{ n.bild }}</div>{% endif %}
+{% if n.messung %}
+<table class="doku m3a-schmal">
+  <thead><tr><th>Messung des Laufs</th><th>Wert</th></tr></thead>
+  <tbody>{% for name, wert in n.messung %}<tr><td>{{ name }}</td><td>{{ wert }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+{% endfor %}
+{% endwith %}

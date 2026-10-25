@@ -3,6 +3,8 @@
 
 Wie bei Mesh3D-AI: Jobs haben eine Wahrheit (Exporte), Tests nicht (echte Fotos — Randy, Ed 2026, Zauberer). Die Zellen kommen aus `Mesh3daitesttabelle`/`Mesh3daitabelle`; die Werte von
 Gerechnet, Laufzeit, Punkte, Lauf und Figur gehören zum Mesh3D-AI-Test zum selben Netz (`mesh3dai_test` in der `job.json`) — Messlatte A. Ohne solchen Test: „—“.
+Seit 25.10.2026 gilt vorher der jüngste Lauf der Foto-Kette, wenn der Job einen hat (`Ai2d3dlaeufe`, `<Job>/laeufe/`; Edgar: „hier sehe ich keine aktuellen Läufe“): Ende (oder Start,
+solange er läuft), Laufzeit der Stufen, Stand, Formrest/Kopf/Größe und als Status die Abnahme; alle Läufe im Tooltip von Lauf und Status.
 """
 
 from pathlib import Path
@@ -10,6 +12,7 @@ from pathlib import Path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from .ai2d3dlaeufe import Ai2d3dlaeufe
 from .mesh3daitabelle import Mesh3daitabelle
 from .mesh3daitest import Mesh3daitest
 from .mesh3daitesttabelle import Mesh3daitesttabelle
@@ -19,7 +22,7 @@ __all__ = ['Ai2d3dtesttabelle']
 
 class Ai2d3dtesttabelle:
     SCHLUESSEL = 'ai2d3d-test'
-    MESSLATTE = 'Messlatte A (Mesh3D-AI-Test zum selben Netz): '
+    MESSLATTE = 'Jüngster Lauf der Foto-Kette (<Job>/laeufe/), ohne ihn Messlatte A (Mesh3D-AI-Test zum selben Netz): '
     TITEL = {'mesh': 'Das Netz aus diesen Fotos (Tripo3D/Hunyuan3D-2mv), falls eines zugeordnet ist; die Zahl der Fotos steht im Tooltip'}
 
     @classmethod
@@ -51,7 +54,12 @@ class Ai2d3dtesttabelle:
                            format_html(' <a class="hb-hinweis" href="/mesh-3D-AI/test/{}/" title="Der Mesh3D-AI-Test zum selben Netz">· Mesh3D-AI</a>', job['test']) if t else '')
         zellen = [Mesh3daitabelle.wahl_zelle(job['id']), name,
                   format_html('<td data-sort="{}" title="{} · {}">{}</td>', Path(netz).name.lower() if netz else '', str(netz or 'kein Netz'), fotos, Path(netz).name if netz else '—')]
-        if t:
+        laeufe = Ai2d3dlaeufe.alle(job.get('ordner'))
+        verlauf = Ai2d3dlaeufe.verlauf(laeufe)
+        if laeufe:
+            status = Ai2d3dlaeufe.status(laeufe[0])
+            zellen += cls._lauf_zellen(laeufe[0], verlauf)
+        elif t:
             status = 'Fehler: %s' % t['fehler'] if t.get('fehler') else ('Messlatte A fertig' if t.get('fertig') else 'Messlatte A nicht fertig')
             punkte = int(t.get('netz_punkte') or 0)
             zellen += [Mesh3daitesttabelle._gerechnet(t), Mesh3daitabelle.laufzeit_zelle(Mesh3daitesttabelle._laufzeit(t)),
@@ -62,5 +70,17 @@ class Ai2d3dtesttabelle:
             status = 'nur Fotos' + (' und Netz' if netz else '')
             zellen += [Mesh3daitabelle.datum_zellen(None), Mesh3daitabelle.laufzeit_zelle(None), mark_safe('<td class="num" data-sort="0">—</td>'),
                        mark_safe('<td data-sort="">—</td>'), mark_safe('<td data-sort="">—</td>')]
-        zellen.append(format_html('<td data-sort="{}">{}</td>', status, status))
+        zellen.append(format_html('<td data-sort="{}" title="{}">{}</td>', status, verlauf, status))
         return {'id': job['id'], 'klasse': 'mesh3dai-zeile-test', 'html': mark_safe(''.join(zellen))}
+
+    @staticmethod
+    def _lauf_zellen(lauf, verlauf):
+        """Gerechnet, Uhrzeit, Laufzeit, Punkte, Lauf, Figur aus dem jüngsten Lauf der Foto-Kette."""
+        laeuft = lauf.get('status') == 'läuft'
+        zeit = Ai2d3dlaeufe.zeit(lauf.get('start') if laeuft else (lauf.get('ende') or lauf.get('start')))
+        stand, figur = str(lauf.get('stand') or ''), Ai2d3dlaeufe.figur(lauf)
+        return [Mesh3daitabelle.datum_zellen(zeit, ('Gestartet' if laeuft else 'Fertig') + ' — Foto-Kette, Stand %s' % stand, 'läuft' if laeuft else 'Foto-Kette'),
+                Mesh3daitabelle.laufzeit_zelle(Ai2d3dlaeufe.laufzeit(lauf)),
+                mark_safe('<td class="num" data-sort="0" title="Punkte zählen die eines Netzes — die Foto-Kette rechnet ohne Netz">—</td>'),
+                format_html('<td data-sort="{}" title="{}">{}</td>', stand, verlauf, stand or '—'),
+                format_html('<td data-sort="{}">{}</td>', figur, figur)]

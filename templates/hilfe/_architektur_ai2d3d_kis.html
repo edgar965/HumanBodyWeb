@@ -1,0 +1,11 @@
+{% comment %}Die KIs der Kette, je eine Grafik (24.10.2026, Edgar: „für alle KIs eine einzelne Grafik wie diese: Neuronale Netz - Figur“): `Architekturai2d3dkis` + `Architekturai2d3dnetzbild`.{% endcomment %}
+<h2 id="kis">Die KIs der Kette — je eine Grafik</h2>
+<p>Dieselbe Bildsprache wie „Neuronales Netz – Figur“ auf der Mesh3D-AI-Seite: je Spalte eine Schicht, die große Zahl ist die Breite (so viele Zahlen trägt ein Feld, Punkt oder Texel nach der
+  Schicht), rot die Eingabe, violett ein vortrainierter Rumpf, blau weitere Schichten, grün die Ausgabe, grau was davor oder danach ohne Gewichte geschieht. Keine dieser KIs wird für 2d-3d-AI
+  trainiert — sie laufen als eigene Nachbauten (Ports) in python14 auf der Karte und sind gegen ihre Originale geprüft.
+  {% if kis %}Gewichte je Teil gelesen aus den Gewichtsdateien selbst ({{ kis.gemessen }}, <code>{{ kis.skript }}</code>).{% endif %}</p>
+{% if kis %}{% for k in kis.kis %}
+<h3 id="{{ k.kennung }}">{{ k.titel }}</h3>
+<div class="m3a-bildrahmen">{{ k.svg }}</div>
+<p class="m3a-klein"><strong>Aufgerufen:</strong> {{ k.wo }}</p>
+{% endfor %}{% endif %}

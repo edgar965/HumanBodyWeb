@@ -21,10 +21,23 @@ class Ai2d3dseitendaten:
         paar = job['paar']
         return {
             'id': k, 'name': job['name'], 'art': job['art'], 'wahrheit': job['wahrheit'], 'hinweis': job['hinweis'], 'figur': job['figur'],
-            'fotos': [{'nr': i, 'name': f['name'], 'winkel': f['winkel'], 'adresse': '/api/2d3dai/%s/foto/%d/' % (k, i)} for i, f in enumerate(job['fotos'])],
+            'fotos': [{'nr': i, 'name': f['name'], 'winkel': f['winkel'], 'adresse': '/api/2d3dai/%s/foto/%d/' % (k, i), 'frei': bool(f.get('frei'))} for i, f in enumerate(job['fotos'])],
             'netze': [{'art': n['art'], 'name': n['name'], 'mb': round(n['bytes'] / 1e6, 1), 'adresse': '/api/2d3dai/%s/netz/%s/' % (k, n['art'])} for n in job['netze']],
             'genesis': {'job': paar['kennung'], 'name': paar['name'], 'seite': '/mesh-3D-AI/%s/' % paar['kennung'],
                         'proben': '/api/mesh3dai/%s/proben/' % paar['kennung']} if paar else None,
-            'test': {'kennung': job['test'], 'seite': '/mesh-3D-AI/test/%s/' % job['test']} if job['test'] else None,
+            # `adresse` (24.10.2026, Edgar: „Ich sehe den job nicht mit den bildern“): ohne Paar baut Feld 3 die Ausgabe dieses Tests (`Ai2d3dtestfigur`). Hat der Job eine eigene Figur
+            # (`<Job>/figur/`, 25.10.2026 „das ist doch eine andere Pipeline“), kommt sie von `/api/2d3dai/<job>/figur/` (`eigen`), sonst die Messlatte A des Mesh3D-AI-Tests.
+            'test': cls._test(job),
             'kamera': cls.KAMERA_EXPORT if job['art'] == 'export' else None,
+            # Feld „Körpergröße“ oben auf der Testseite (`Ai2d3dkoerpergroesse`, 24.10.2026); Meter oder None
+            'koerpergroesse_m': job.get('koerpergroesse_m'),
         }
+
+    @staticmethod
+    def _test(job):
+        from .ai2d3dfigur import Ai2d3dfigur
+        eigen = Ai2d3dfigur.adresse(job)
+        if eigen:
+            return {'kennung': job['id'], 'eigen': True, 'seite': None, 'adresse': eigen}
+        t = job['test']
+        return {'kennung': t, 'eigen': False, 'seite': '/mesh-3D-AI/test/%s/' % t, 'adresse': '/api/mesh3dai/test/%s/' % t} if t else None

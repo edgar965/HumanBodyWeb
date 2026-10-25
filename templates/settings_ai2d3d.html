@@ -1,0 +1,66 @@
+{% extends "einstellungsseite.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Einstellungen — 2d-3d-AI{% endblock %}
+
+{% block einstellungen_titel %}2d-3d-AI Einstellungen{% endblock %}
+{% block formular_zusatz %} id="ai2d3d-settings-form"{% endblock %}
+
+{% comment %}
+Einstellungen → 2d-3d-AI (Edgar, 24.10.2026: „Mach auch du eine Seite Einstellungen - 2d-3d-KI wo du sowas einstellen kannst, damit man das später beides ausprobieren kann?“).
+Gespeichert über `Vorgabenformular` in `AppSettings.ui_prefs`, wie Einstellungen → Mesh3D-AI. Werte: `Ai2d3dposewahl`.
+{% endcomment %}
+{% block einstellungen_karten %}
+<div class="settings-section">
+    <h3>Gelenke der Person in den Fotos</h3>
+    <div class="settings-row">
+        <label for="{{ pose_schluessel }}">Gelenke aus:</label>
+        <select name="{{ pose_schluessel }}" id="{{ pose_schluessel }}" data-reihenfolge="fest">
+            {% for q in pose_quellen %}<option value="{{ q.wert }}"{% if q.wert == pose_wert %} selected{% endif %}>{{ q.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ pose_vorgabe }}. Gilt für den nächsten Lauf von Körperlage und Einpassen; ein gerechneter Lauf bleibt, wie er ist.</span>
+    </div>
+    <table class="doku ai2d3d-quellen">
+        <thead><tr><th>Quelle</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for q in pose_quellen %}<tr{% if q.wert == pose_wert %} class="ai2d3d-quelle-gewaehlt"{% endif %}><td><strong>{{ q.text }}</strong></td><td>{{ q.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    <p class="hint">Die Gelenke sind ein Ziel der Körperlage neben Umriss, Haut und Kopf (Hilfe → Architektur → 2d-3d-AI). Im Profil zählt nur die Körperseite zur Kamera.
+        Die Körperteil-Grenzen von Sapiens2 sind keine Wahl mehr: an Edgars nackten Unterarmen markiert Sapiens2 fast den ganzen Unterarm als „Hand“, die Gelenke lagen bis 40 cm daneben.</p>
+</div>
+{% comment %}25.10.2026, Edgar: „in % die Entlichtung ist, bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“ — `Hautentlichtung`, gelesen von `Hautkieinsatz`.{% endcomment %}
+<div class="settings-section">
+    <h3>Haut</h3>
+    <div class="settings-row">
+        <label for="{{ licht_schluessel }}">Entlichtung der Haut (%):</label>
+        <input type="number" name="{{ licht_schluessel }}" id="{{ licht_schluessel }}" value="{{ licht_wert }}" min="{{ licht_minimum }}" max="{{ licht_maximum }}" step="1" required>
+        <span class="hint">Wie viel vom Licht, das im Eingang auf der Haut liegt (Schatten, Glanz, eingebackene Helligkeit), die Haut-KI herausrechnet. 100 % = die ganze Lichtkorrektur der KI
+            (Haut wie unter gleichmäßigem Licht), 0 % = die gesehene Haut mit dem Licht des Eingangs, dazwischen anteilig. Vorgabe {{ licht_vorgabe }} %, erlaubt {{ licht_minimum }}
+            bis {{ licht_maximum }}. Gilt ab dem nächsten Rechnen der Haut (Schritt „haut“); eine gerechnete Haut bleibt, wie sie ist.</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block einstellungen_nachtrag %}
+<style>
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
+.settings-row .hint, .settings-section > .hint { font-size: 0.75rem; color: var(--text-muted); }
+.ai2d3d-quellen { margin: 6px 0 10px; font-size: 0.82rem; }
+.ai2d3d-quellen td { vertical-align: top; }
+.ai2d3d-quelle-gewaehlt td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+</style>
+<script type="module">
+import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+
+Vorgabenformular.anmelden('ai2d3d-settings-form', '2d-3d-AI-Einstellungen gespeichert — gilt ab dem nächsten Lauf.');
+</script>
+{% endblock %}

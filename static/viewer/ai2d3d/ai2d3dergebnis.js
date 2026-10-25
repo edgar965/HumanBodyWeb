@@ -9,7 +9,8 @@ import { Ai2d3dvergleich } from './ai2d3dvergleich.js';
 
 export class Ai2d3dergebnis {
     static KLEIN = [192, 256];
-    static REGEL_OHNE = { fov: 20, rand: 1.08, grund: [25, 26, 46] };
+    /** Echte Fotos: Kamera unbekannt; Grund weiß wie die freigestellten Fotos (24.10.2026, `Ai2d3dseite.grund`). */
+    static REGEL_OHNE = { fov: 20, rand: 1.08, grund: [255, 255, 255] };
 
     /**
      * @param {HTMLElement} feld Feld 4 (Leinwand-Fläche) @param {HTMLElement} info Text unter Feld 4 @param {HTMLElement} karte Inhalt der Vergleichskarte

@@ -13,6 +13,7 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dairechnen.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 {% comment %}Die Animation der Ausgabe ist eine Genesis-Figur aus dem Code der Charakter-Seite (22.10.2026, `Mesh3daifigurbewegung`) — dieselben Angaben wie auf der Jobseite (`mesh3dai.html`):
@@ -54,7 +55,8 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
     </div>
     <div class="mesh3dai-zeilenkopf">
         <h2>Ganzer Körper</h2>
-        <div class="mesh3dai-rigleiste"><button type="button" class="schaltknopf active" id="mesh3dai-test-rig" aria-pressed="true"><i class="fas fa-bone"></i> Rig</button></div>
+        {# Ansichtsarten, Rig, Kleider wie auf den Jobseiten (24.10.2026, Edgar: „es fehlen die View Buttons für Kleider an / aus, usw.“) — `Mesh3daitestansicht`. #}
+        {% include "_mesh3dai_ansichtwahl.html" with ohne_animation=True %}
     </div>
     <p class="hb-hinweis" id="mesh3dai-test-info">Netz ohne Trainingsdaten — es gibt kein Ziel, darum keine Fehlerzahl. Wird geladen …</p>
     <div class="mesh3dai-bereiche mesh3dai-bereiche-zwei">
@@ -70,6 +72,35 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
             {% include "_mesh3dai_figurbewegung.html" with adresse=standardanimation tasten=True %}
             <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
         </div>
+    </div>
+</section>
+
+{% comment %}
+Messpunkte des Körpers (24.10.2026 nachts, Edgar zu randy_tropical: „Du hast doch messmethoden … mach im Job eine zweite Zeile mit den Messungen, so wie hier“ — Vorbild die Testzeile von
+`/2d-3d-AI/test/edgartrip/`): dieselbe Anzeige (`Ai2d3dmesspunkte`, Klassen und CSS von 2d-3d-AI), Daten aus der Kostüm-Prüfung (`Kostuemmesspunkte`, `Mesh3daitestmesspunkte`).
+{% endcomment %}
+<section class="card ai2d3d-messkarte" id="mesh3dai-messpunkte" data-kennung="{{ test.kennung }}">
+    <div class="mesh3dai-zeilenkopf">
+        <h2>Test: Messpunkte des Körpers — Eingang gegen Ergebnis</h2>
+        <div class="schalterleiste">
+            <button type="button" class="schaltknopf" data-messansicht="vorne" aria-pressed="true">vorne</button>
+            <button type="button" class="schaltknopf" data-messansicht="hinten" aria-pressed="false">hinten</button>
+            <button type="button" class="schaltknopf" data-messansicht="links" aria-pressed="false">links</button>
+            <button type="button" class="schaltknopf" data-messansicht="rechts" aria-pressed="false">rechts</button>
+        </div>
+    </div>
+    <p class="hb-hinweis">Gemessen wird mit denselben Detektoren wie bei 2d-3d-AI auf dem Eingang (Mesh) und dem Ergebnis (Figur mit ihren Stücken), beide aus derselben Kamera (orthografisch, ohne
+        Licht): 23 Punkte von ViTPose (Kopf, Gelenke, Füße) und 40 Randpunkte auf dem Umriss, je zwei an 20 Linien quer zu Hals, Rumpf, Armen und Beinen. Jede Linie hängt an den Gelenken des Eingangs
+        und wird in beiden Bildern an derselben Stelle abgeschritten. Blau: Eingang, orange: Ergebnis, rot umrandet: über der Grenze, grau: nicht gewertet. Zeile berühren hebt den Punkt hervor,
+        der Tooltip nennt die Abweichung. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Eingang (Mesh)</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Ergebnis (Figur mit Stücken)</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über dem Eingang</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Eingang</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
     </div>
 </section>
 
@@ -115,7 +146,9 @@ diese Seite zeigt, gegen das Ziel (`Mesh3daitestfaelle`, `mesh3daitestfaelle.js`
 import { Mesh3daitestseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestseite.js' %}";
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 import { Mesh3dairechnen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dairechnen.js' %}";
+import { Mesh3daitestmesspunkte } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestmesspunkte.js' %}";
 Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
+Mesh3daitestmesspunkte.starten(document.getElementById('mesh3dai-messpunkte'));
 Auftragname.binden();
 new Mesh3dairechnen(document.getElementById('mesh3dai-rechnen'));
 </script>

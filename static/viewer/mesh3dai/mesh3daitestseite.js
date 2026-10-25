@@ -3,11 +3,12 @@
  * Edgar: „darin auch eine Jobliste, aber nur Mesh und Ausgabe … testen, wie das bei Meshes ausschaut, wo wir keine Trainingsdaten haben“.
  * Zwei gekoppelte Felder (`Mesh3daiansicht`): Mesh = das Netz im Rahmen des Datensatzes (`…/netz/`, GLB mit Farbe je Punkt), Ausgabe = Ursula1 in der vorhergesagten Haltung — aus der Ruhelage mit den
  * Drehungen des Netzes gehäutet (`Mesh3daihaeutung.ausDrehungen`, dasselbe Anzeigenetz und dieselbe Hautmischung wie das Ergebnis auf der Jobseite). Der Knopf „Rig“ legt das vorhergesagte Rig über beide Felder.
- * Kein Ziel, also keine Fehlerfarben: das Rig trägt die Gruppenfarben.
+ * Kein Ziel, also keine Fehlerfarben: das Rig trägt die Gruppenfarben. Seit 24.10.2026 dieselben Ansichtsarten und der Knopf „Kleider“ wie auf den Jobseiten (`Mesh3daitestansicht`, `Mesh3daiansichtart`).
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Mesh3daiansicht } from './mesh3daiansicht.js';
+import { Mesh3daiansichtart } from './mesh3daiansichtart.js';
 import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
 import { Mesh3daifigurbewegung } from './mesh3daifigurbewegung.js';
 import { Mesh3daifigurbewegungsleiste } from './mesh3daifigurbewegungsleiste.js';
@@ -15,6 +16,7 @@ import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 import { Mesh3dairigzeichner } from './mesh3dairigzeichner.js';
 import { Mesh3daitestfaelle } from './mesh3daitestfaelle.js';
+import { Mesh3daitestansicht } from './mesh3daitestansicht.js';
 import { Mesh3daitestkleider } from './mesh3daitestkleider.js';
 import { Mesh3daitestnetzbau } from './mesh3daitestnetzbau.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -26,10 +28,9 @@ export class Mesh3daitestseite {
     static async starten(wurzel) {
         const seite = new Mesh3daitestseite(wurzel);
         window.__mesh3daitest = seite;
-        // Der Rig-Knopf ist derselbe Eintrag wie auf den Jobseiten (17.10.2026, Edgar: „Die Einstellung des Rig Buttons merkst du dir immer noch nicht, die soll für alle Jobs gelten“) —
+        // Rig, Ansichtsart und Kleider sind derselbe Eintrag wie auf den Jobseiten (17.10.2026, Edgar: „Die Einstellung des Rig Buttons merkst du dir immer noch nicht, die soll für alle Jobs gelten“) —
         // bis dahin hatte die Testseite einen eigenen Zustand, der beim Öffnen immer „an“ war.
-        const stand = await Mesh3daiansichtgedaechtnis.laden();
-        if (typeof stand.rig === 'boolean') seite.rigSetzen(stand.rig, false);
+        seite.ansicht.gemerktSetzen(await Mesh3daiansichtgedaechtnis.laden());
         await seite.laden();
         return seite;
     }
@@ -37,7 +38,6 @@ export class Mesh3daitestseite {
     constructor(wurzel) {
         this.wurzel = wurzel;
         this.kennung = wurzel.dataset.kennung;
-        this.rig = true;
         this.daten = null;
         this.netz = null;          // das Netz des Tests (GLB-Szene)
         this.figur = null;         // Ursula1 in der vorhergesagten Haltung
@@ -52,11 +52,8 @@ export class Mesh3daitestseite {
             this.bewegung = new Mesh3daifigurbewegung(feld, () => this._bewegungsquelle());
             new Mesh3daifigurbewegungsleiste(leiste, this.bewegung, { tasten: true }).wahlLaden(leiste.dataset.adresse);
         }
-        this.rigknopf = wurzel.querySelector('#mesh3dai-test-rig');
-        this.rigknopf.addEventListener('click', () => {
-            Mesh3daiansichtgedaechtnis.merken({ rig: !this.rig });
-            this.rigSetzen(!this.rig);
-        });
+        // „Kleider“ baut die Figur neu (die Haut unter den Stücken kommt zurück), Rig und Ansichtsart zeichnen nur neu.
+        this.ansicht = new Mesh3daitestansicht(wurzel.querySelector('.mesh3dai-ansichtwahl'), was => (was === 'kleider' ? this.figurNeu() : this.zeigen()));
         Mesh3daiflaechennetz.nachLaden = () => this.zeigen();
         // Geschlecht der Figur (16.10.2026 abends): der Server nimmt unter den Figuren dieses Geschlechts die mit dem kleinsten Rest — gerechnet ist schon alles, die Seite lädt nur neu.
         this.wahl = wurzel.querySelector('#mesh3dai-test-geschlecht');
@@ -68,13 +65,6 @@ export class Mesh3daitestseite {
         const testfaelle = document.getElementById('mesh3dai-testfaelle');
         this.testfaelle = testfaelle ? new Mesh3daitestfaelle(testfaelle) : null;
         this.matrizen = null;
-    }
-
-    rigSetzen(an, zeichnen = true) {
-        this.rig = an;
-        this.rigknopf.classList.toggle('active', an);
-        this.rigknopf.setAttribute('aria-pressed', String(an));
-        if (zeichnen) this.zeigen();
     }
 
     async geschlechtSetzen(wert) {
@@ -109,6 +99,7 @@ export class Mesh3daitestseite {
         if (!d?.figur_genesis) return null;
         const stuecke = [];
         for (const st of this.kleider?.liste?.stuecke ?? []) {
+            if (!this.ansicht.kleider && st.art !== 'haar') continue;          // Knopf „Kleider“ aus: nur das Haar bewegt sich mit
             const netz = st.art !== 'haut' && st.wahl !== 'aus' ? this.kleider.netze.get(`${st.wahl}/${st.id}`) : null;
             if (netz) stuecke.push({ id: st.id, art: st.art, netz: await netz.catch(() => null) });
         }
@@ -219,16 +210,17 @@ export class Mesh3daitestseite {
         const netz = (await this.kleider?.hautNetz()) || this.figurNetz;
         if (netz && this.matrizen) {
             this.figur?.geometry.dispose();          // nur die Geometrie: Materialien und Attribute teilt sie mit dem Anzeigenetz
-            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, this.kleider?.verdeckt(netz.material.length));
+            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, this.kleider?.verdeckt(netz.material.length, !this.ansicht.kleider));
         }
         this.zeigen();
     }
 
     _zeichnen(inhalt, art) {
+        const modus = this.ansicht.modus;
         const objekt = art === 'eingabe' ? this.netz : this.figur;
-        if (objekt) inhalt.add(objekt);
-        if (art === 'ausgabe' && this.figur && this.kleider) for (const o of this.kleider.sichtbare()) inhalt.add(o);
-        if (this.rig && this.daten) {
+        if (objekt) inhalt.add(Mesh3daiansichtart.anwenden(objekt, modus));
+        if (art === 'ausgabe' && this.figur && this.kleider) for (const o of this.kleider.sichtbare(!this.ansicht.kleider)) inhalt.add(Mesh3daiansichtart.anwenden(o, modus));
+        if (this.ansicht.rig && this.daten) {
             const beschr = this.daten.rig;
             inhalt.add(Mesh3dairigzeichner.zeichnen(beschr, beschr.knochen.map((_k, j) => j), this.daten.ausgabe));
         }

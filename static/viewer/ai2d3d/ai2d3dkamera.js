@@ -11,6 +11,8 @@ import * as THREE from 'three';
 export class Ai2d3dkamera {
     /** Höchstens so viele Punkte je Netz für die Hülle (wie `Modellansichten.PROBEN`): jeder Punkt wird gehäutet. */
     static PROBEN = 80000;
+    /** Ausschnitt „Kopf“ (24.10.2026): die Punkte im obersten Anteil der Figurhöhe — Kopf und etwas Hals (Kopfhöhe ≈ 1/7,5 der Körperhöhe). */
+    static KOPF = 0.14;
 
     /** Richtung von der Figur zur Kamera im Rahmen der Fotos: 0° vorne (+Z), 90° links (+X, die linke Körperseite), 180° hinten, 270° rechts. */
     static richtung(winkel) {
@@ -20,21 +22,29 @@ export class Ai2d3dkamera {
 
     /**
      * Die Hülle der sichtbaren Netze unter `wurzel` im Rahmen der Fotos — gehäutet und mit Morphs (`getVertexPosition`), wie `Modellansichten._huelle`.
-     * @param {THREE.Object3D} wurzel @param {THREE.Quaternion} rahmen Fotos → Welt @returns {THREE.Box3}
+     * @param {THREE.Object3D} wurzel @param {THREE.Quaternion} rahmen Fotos → Welt @param {number} ab nur Punkte ab dieser Höhe (Rahmen der Fotos) @returns {THREE.Box3}
      */
-    static huelle(wurzel, rahmen) {
+    static huelle(wurzel, rahmen, ab = -Infinity) {
         wurzel.updateMatrixWorld(true);
         const box = new THREE.Box3(), umkehr = rahmen.clone().invert(), p = new THREE.Vector3();
         wurzel.traverseVisible(o => {
             const lage = o.geometry?.getAttribute?.('position');
-            if (!o.isMesh || !lage) return;
+            // Ein Rig (`nurAnsicht`, Knopf „Rig“) ist keine Figur — seine Kugeln sind Instanzen einer Einheitskugel um den Ursprung und blähten die Hülle sonst auf 1 m auf
+            if (!o.isMesh || !lage || o.userData.nurAnsicht) return;
             const schritt = Math.max(1, Math.floor(lage.count / Ai2d3dkamera.PROBEN));
             for (let i = 0; i < lage.count; i += schritt) {
                 o.getVertexPosition(i, p);
-                box.expandByPoint(p.applyMatrix4(o.matrixWorld).applyQuaternion(umkehr));
+                p.applyMatrix4(o.matrixWorld).applyQuaternion(umkehr);
+                if (p.y >= ab) box.expandByPoint(p);
             }
         });
         return box;
+    }
+
+    /** Die Hülle des Kopfs: die Punkte im obersten `KOPF`-Anteil der ganzen Hülle. */
+    static kopfhuelle(wurzel, rahmen) {
+        const ganz = Ai2d3dkamera.huelle(wurzel, rahmen);
+        return ganz.isEmpty() ? ganz : Ai2d3dkamera.huelle(wurzel, rahmen, ganz.max.y - Ai2d3dkamera.KOPF * (ganz.max.y - ganz.min.y));
     }
 
     /**
@@ -57,11 +67,14 @@ export class Ai2d3dkamera {
         return ziel;
     }
 
-    /** Ein Feld (`Mesh3daiansicht`) auf den Winkel stellen: Kamera und Drehpunkt der Steuerung. Liefert `false`, wenn nichts Sichtbares im Feld liegt. */
-    static feldStellen(ansicht, winkel, rahmen, rand = 1.08) {
-        const box = Ai2d3dkamera.huelle(ansicht.inhalt, rahmen);
+    /** Ein Feld (`Mesh3daiansicht`) auf den Winkel stellen: Kamera und Drehpunkt der Steuerung; `kopf`: nur der Kopf. Liefert `false`, wenn nichts Sichtbares im Feld liegt. */
+    static feldStellen(ansicht, winkel, rahmen, rand = 1.08, kopf = false) {
+        const box = kopf ? Ai2d3dkamera.kopfhuelle(ansicht.inhalt, rahmen) : Ai2d3dkamera.huelle(ansicht.inhalt, rahmen);
         if (box.isEmpty()) return false;
         const ziel = Ai2d3dkamera.stellen(ansicht.kamera, box, winkel, rahmen, rand);
+        // Für das gekoppelte Drehen (`Ai2d3dansicht._uebernehmen`): Größe der gezeigten Hülle und Rahmen dieses Felds.
+        ansicht.groesse = box.max.y - box.min.y;
+        ansicht.rahmen = rahmen.clone();
         ansicht.steuerung.target.copy(ziel);
         ansicht.steuerung.update();
         ansicht.zeichnen();

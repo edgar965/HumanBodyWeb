@@ -22,8 +22,9 @@ from .v069 import FASSUNG as V069
 from .v070 import FASSUNG as V070
 from .v071 import FASSUNG as V071
 from .v072 import FASSUNG as V072
+from .v073 import FASSUNG as V073
 
 #: Neueste zuerst — so rendert die Seite den Block. (`v064.py` lag seit dem
 #: 24.09.2026 im Ordner, stand aber nicht in dieser Liste — Hilfe → Versionen
 #: zeigte 0.64 deshalb nicht; `test_versionshistorie` fand es am 30.09.)
-ALLE = [V072, V071, V070, V069, V068, V067, V066, V065, V064, V063, V062, V061, V060, V059, V058, V057]
+ALLE = [V073, V072,V071, V070, V069, V068, V067, V066, V065, V064, V063, V062, V061, V060, V059, V058, V057]

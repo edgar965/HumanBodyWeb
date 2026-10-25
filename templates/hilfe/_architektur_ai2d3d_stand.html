@@ -1,0 +1,29 @@
+{% load dezahl %}
+{% comment %}Stand am Beispiel EdgarTrip (24.10.2026): `Architekturai2d3dstand` liest die Ergebnisdateien der Läufe; keine Zahl von Hand.{% endcomment %}
+<h2 id="stand">Stand am Beispiel EdgarTrip</h2>
+{% if stand.einpassung %}{% with e=stand.einpassung %}
+<h3>Körper einpassen (gerechnet {{ e.gerechnet }})</h3>
+<p>Angabe {{ e.soll_m|de:2 }} m{% if e.gewicht_kg %}, {{ e.gewicht_kg|de }} kg (Volumen-Soll {{ e.volumen_soll|de:4 }} m³){% endif %} → gebaute Figur {{ e.figur.hoehe_m|de:3 }} m,
+  {{ e.figur.volumen_m3|de:4 }} m³, {% if e.gueltig %}gültig{% else %}nicht gültig{% endif %}; Umriss-Deckung im Mittel {{ e.deckung|de:3 }}.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Runde</th><th class="num">Deckung (Mittel)</th><th class="num">Höhe m</th><th class="num">Volumen m³</th><th>übernommen</th></tr></thead>
+  <tbody>{% for r, d, f, u in e.runden %}<tr><td>{{ r }}</td><td class="num">{{ d|de:3 }}</td><td class="num">{{ f.hoehe_m|de:3 }}</td><td class="num">{{ f.volumen_m3|de:4 }}</td>
+    <td>{{ u|yesno:"ja,nein" }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Kameras nach der Einpassung (Abstand zum Drehpunkt / Höhe über dem Boden): {% for f, k in e.kameras.items %}{{ f }} {{ k.abstand_m|de:2 }} m / {{ k.hoehe_m|de:2 }} m{% if not forloop.last %} · {% endif %}{% endfor %}
+  — die Probe gegen eine unabhängige Größe: ein Telefon in Hand- oder Brusthöhe.</p>
+{% endwith %}{% endif %}
+
+<h3>Prüfung über das Rendering: Foto ↔ Rendering, dieselben Detektoren</h3>
+<p>Deckung = Schnitt durch Vereinigung der Pixel, die Sapiens2 auf Foto und Rendering derselben Gruppe zuordnet, im Mittel über die vier Fotos; Gelenke = Median des Abstands der ViTPose-Punkte
+  (mm über den Maßstab der Kamera). Größer ist besser bei der Deckung, kleiner bei den Gelenken.</p>
+{% if stand.pruefungen %}
+<table class="doku m3a-schichten">
+  <thead><tr><th>Stand</th>{% for g in stand.gruppen %}<th class="num">{{ g }}</th>{% endfor %}<th class="num">Gelenke mm</th><th class="num">Abweichungen über den Grenzen</th></tr></thead>
+  <tbody>{% for p in stand.pruefungen %}<tr><td>{{ p.text }}</td>{% for d in p.deckung %}<td class="num">{{ d|de:2 }}</td>{% endfor %}<td class="num">{{ p.gelenke_mm|de:1 }}</td>
+    <td class="num">{% if p.abnahme %}{{ p.abnahme.fehler }}{% else %}–{% endif %}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<p>Noch kein gemessener Stand.</p>{% endif %}
+
+<h3>Was am 24.10.2026 dazukam</h3>
+<ul>{% for t, text in stand.heute %}<li><strong>{{ t }}:</strong> {{ text }}</li>{% endfor %}</ul>

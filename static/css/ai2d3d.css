@@ -8,6 +8,10 @@
 .ai2d3d-oben .ai2d3d-band { padding: 4px 12px; font-size: 0.85rem; }
 .ai2d3d-oben .ai2d3d-probenkopf h2 { font-size: 1.05rem; }
 .ai2d3d-band { border-left: 4px solid var(--text-muted, #8a93a6); }
+/* Feld „Körpergröße“ im Band oben (24.10.2026, `ai2d3dkoerpergroesse.js`) */
+.ai2d3d-groesse { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; flex-wrap: wrap; }
+.ai2d3d-groesse input { width: 5.5em; padding: 2px 6px; }
+.ai2d3d-groesse .hb-hinweis { margin: 0; }
 
 .ai2d3d-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ai2d3d-zurueckzurliste { color: inherit; text-decoration: none; }
@@ -32,7 +36,7 @@
 .ai2d3d-feld { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .ai2d3d-feld h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
 .ai2d3d-nummer { display: inline-flex; align-items: center; justify-content: center; width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent, #e94560); color: #fff; font-size: 0.85rem; }
-.ai2d3d-leinwand { position: relative; width: 100%; height: clamp(320px, 62vh, 760px); background: #1b1f27; border-radius: 6px; overflow: hidden; }
+.ai2d3d-leinwand { position: relative; width: 100%; height: clamp(320px, 62vh, 760px); background: var(--ai2d3d-grund, #1b1f27); border-radius: 6px; overflow: hidden; }
 .ai2d3d-leinwand .ai2d3d-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a6; font-size: 0.9rem; }
 .ai2d3d-teilzeile .ai2d3d-leinwand { height: clamp(260px, 44vh, 520px); }
 
@@ -52,9 +56,9 @@
 .ai2d3d-leinwand canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 /* Texte im Feld (`Mesh3daiansicht.hinweis` trägt die Klasse von Mesh3D-AI). */
 .ai2d3d-leinwand .mesh3dai-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; text-align: center; color: #8a93a6; font-size: 0.9rem; }
-.ai2d3d-fotofeld { background: rgb(25, 26, 46); }
+.ai2d3d-fotofeld { background: var(--ai2d3d-grund, rgb(25, 26, 46)); }
 .ai2d3d-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.ai2d3d-ergebnisfeld { display: flex; align-items: center; justify-content: center; background: rgb(25, 26, 46); }
+.ai2d3d-ergebnisfeld { display: flex; align-items: center; justify-content: center; background: var(--ai2d3d-grund, rgb(25, 26, 46)); }
 .ai2d3d-ergebnisfeld canvas.ai2d3d-rendering { position: static; width: auto; height: auto; max-width: 100%; max-height: 100%; }
 .ai2d3d-daumen { display: flex; gap: 4px; flex-wrap: wrap; }
 .ai2d3d-daumen button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px; background: transparent; border: 2px solid transparent; border-radius: 4px; color: inherit; font-size: 0.72rem; cursor: pointer; }
@@ -65,7 +69,7 @@
 .ai2d3d-vergleichsspalte { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .ai2d3d-vergleichsspalte figcaption { font-size: 0.82rem; max-width: 600px; }
 .ai2d3d-vergleichsbilder { display: flex; gap: 4px; }
-.ai2d3d-vergleichsbilder img, .ai2d3d-vergleichsbilder canvas { width: 192px; height: auto; display: block; border-radius: 3px; background: rgb(25, 26, 46); }
+.ai2d3d-vergleichsbilder img, .ai2d3d-vergleichsbilder canvas { width: 192px; height: auto; display: block; border-radius: 3px; background: var(--ai2d3d-grund, rgb(25, 26, 46)); }
 
 /* Tabelle „Kleider und Bestandteile“ der Testseite: durchsichtig mit geerbter Farbe — die Seitenstile legen jeder Tabelle einen dunklen Grund unter (Mesh3D-AI, gesehen 17.10.2026). */
 .ai2d3d-kleider, .ai2d3d-testfaelle { margin-top: 12px; }
@@ -73,3 +77,38 @@
 .ai2d3d-kleider-tabelle, .ai2d3d-kleider-tabelle thead, .ai2d3d-kleider-tabelle tbody, .ai2d3d-kleider-tabelle tr,
 .ai2d3d-kleider-tabelle th, .ai2d3d-kleider-tabelle td { background: transparent; color: inherit; }
 .ai2d3d-kleider-tabelle th, .ai2d3d-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }
+
+/* Karte „Kopf (KopfKI)“ (24.10.2026): Messwerte des Kopfs und die drei Messbilder — die Bilder sind groß, ein Klick öffnet sie ganz. */
+.ai2d3d-urteil { font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #8a5a00; color: #fff; vertical-align: middle; }
+.ai2d3d-kopftabelle { margin: 6px 0; }
+.ai2d3d-kopftabelle, .ai2d3d-kopftabelle thead, .ai2d3d-kopftabelle tbody, .ai2d3d-kopftabelle tr, .ai2d3d-kopftabelle th, .ai2d3d-kopftabelle td { background: transparent; color: inherit; }
+.ai2d3d-kopftabelle th, .ai2d3d-kopftabelle td { padding: 4px 10px; border-bottom: 1px solid var(--border, #3a4254); }
+.ai2d3d-kopftabelle tr.ai2d3d-eigen td { font-weight: 700; }
+.ai2d3d-kopfbilder { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.ai2d3d-kopfbild { margin: 0; flex: 1 1 300px; max-width: 520px; }
+.ai2d3d-kopfbild img { width: 100%; height: auto; display: block; border-radius: 4px; }
+.ai2d3d-kopfbild figcaption { font-size: 0.82rem; margin-top: 4px; }
+.ai2d3d-kopfbild-breit { flex-basis: 100%; max-width: 1400px; }
+/* Foto Vorlage - Ergebnis (24.10.2026): je Foto eine Zeile, links Foto, rechts Ergebnis */
+.ai2d3d-kopfbild-zeile { flex: 0 0 100%; max-width: none; }
+.ai2d3d-kopfbild-zeile img { width: auto; max-width: min(100%, 900px); }
+/* Testzeile „Messpunkte des Körpers“ (24.10.2026, `Ai2d3dmesspunkte`): drei Ansichten mit Punkten, daneben die Tabelle (so hoch wie die Ansichten, rollt) */
+.ai2d3d-messkarte { margin-top: 12px; }
+.ai2d3d-messkarte h2 { margin: 0 0 4px; }
+.ai2d3d-messkarte > .hb-hinweis { margin: 0 0 6px; }
+.ai2d3d-mess-warnung { color: #ffb84d; font-weight: 700; }
+.ai2d3d-messzeile { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(420px, 1.25fr); gap: 12px; align-items: start; }
+@media (max-width: 1400px) { .ai2d3d-messzeile { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ai2d3d-messtabelle { grid-column: 1 / -1; } }
+.ai2d3d-messansicht { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.ai2d3d-messansicht figcaption { align-self: stretch; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; }
+.ai2d3d-messansicht canvas { display: block; border-radius: 4px; background: #fff; }
+.ai2d3d-messtabelle { max-height: 680px; overflow-y: auto; font-size: 0.82rem; }
+.ai2d3d-messtabelle table { width: 100%; margin: 0; }
+.ai2d3d-messtabelle thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+.ai2d3d-messtabelle td, .ai2d3d-messtabelle th { padding: 2px 8px; }
+.ai2d3d-messtabelle td:nth-child(3), .ai2d3d-messtabelle td:nth-child(4) { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Die Karte ist weiß (gemessen: Grund rgb(255, 255, 255), Schrift rgb(33, 37, 41)) */
+.ai2d3d-messtabelle tr[data-nummern]:hover td { background: rgba(28, 126, 214, 0.12); }
+.ai2d3d-messtabelle tr.ai2d3d-mess-ueber td { background: rgba(224, 49, 49, 0.12); color: #a51d1d; font-weight: 600; }
+.ai2d3d-messtabelle tr.ai2d3d-mess-offen td { color: #6c757d; font-style: italic; }
+.ai2d3d-messtabelle tr.ai2d3d-mess-gruppe td { font-weight: 700; padding-top: 8px; color: inherit; }

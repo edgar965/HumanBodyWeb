@@ -6,12 +6,19 @@ Darstellung des neuronalen Netzes“. Teile: Grafik und Netz (`Architekturai2d3d
 dazu die Jobs von der Platte (`Ai2d3djobs`). Gelesen wird beim Aufruf; was nicht gelesen werden kann, steht als Befund oben auf der Seite.
 """
 
+import logging
+
 from .ai2d3djobs import Ai2d3djobs
 from .architekturai2d3dandere import Architekturai2d3dandere
 from .architekturai2d3dbild import Architekturai2d3dbild
+from .architekturai2d3dkette import Architekturai2d3dkette
+from .architekturai2d3dkis import Architekturai2d3dkis
 from .architekturai2d3dmessung import Architekturai2d3dmessung
 from .architekturai2d3dnetz import Architekturai2d3dnetz
 from .architekturai2d3dplan import Architekturai2d3dplan
+from .architekturai2d3dstand import Architekturai2d3dstand
+
+logger = logging.getLogger('core')
 
 __all__ = ['Architekturai2d3d']
 
@@ -20,7 +27,18 @@ class Architekturai2d3d:
     @classmethod
     def kontext(cls):
         befunde = []
+
+        def teil(name, rechnung):
+            """Ein Teil darf die Seite nicht mitnehmen — der Grund steht oben als Befund und im Log (wie die Mesh3D-AI-Seite)."""
+            try:
+                return rechnung()
+            except Exception as fehler:     # noqa: BLE001 - Grund steht auf der Seite und im Log
+                logger.exception('Hilfe 2d-3d-AI: Teil %s', name)
+                befunde.append('%s: %s: %s' % (name, type(fehler).__name__, fehler))
+                return None
+
         jobs = Ai2d3djobs.alle()
+        edgar = next((j for j in jobs if j['id'] == 'edgartrip'), None)
         vergleich = Architekturai2d3dmessung.netzvergleich()
         if vergleich is None:
             befunde.append('Der Netzvergleich OlesiaWalk (_bild3d/OlesiaWalk_tripovergleich/vergleich.json) fehlt — die Tabelle in Abschnitt 1 bleibt leer.')
@@ -29,6 +47,12 @@ class Architekturai2d3d:
         if fehlt:
             befunde.append('In python10 fehlt: %s.' % ', '.join(fehlt))
         return {
+            # 24.10.2026 abends: die gebaute Kette zuerst (Edgar: „eine übergeordnete Grafik mit Kästchen und Ablauf“, „für alle KIs eine einzelne Grafik“, „Mach die KopfKI, Haut KI rein“)
+            'kette': teil('Kette', Architekturai2d3dkette.uebersicht), 'kopfki_bild': teil('KopfKI', Architekturai2d3dkette.kopfki),
+            'fotokopf': ((edgar or {}).get('kopf') or {}).get('fotokopf'),
+            'kis': teil('KIs (architekturai2d3dnetze.json)', Architekturai2d3dkis.kontext),
+            'stand': {'einpassung': teil('Einpassung', Architekturai2d3dstand.einpassung), 'pruefungen': teil('Prüfung', Architekturai2d3dstand.pruefungen) or [],
+                      'gruppen': Architekturai2d3dstand.GRUPPEN, 'heute': Architekturai2d3dstand.HEUTE},
             'bild': Architekturai2d3dbild.svg(),
             'schichten': Architekturai2d3dnetz.schichten(),
             'gewichte': Architekturai2d3dnetz.summe(),

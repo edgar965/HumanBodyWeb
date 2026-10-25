@@ -44,7 +44,8 @@ Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DO
     <h2>Test</h2>
     <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/ai2d3d/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="mesh3dai-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Echte Fotos <strong>ohne Wahrheit</strong> (Randy, Ed 2026, Zauberer …). Ein Klick öffnet den Test mit denselben vier Feldern wie ein Job; ohne bekannte Kamera gibt es Renderings,
-        aber keine Zahl. Gerechnet, Laufzeit, Punkte, Lauf und Figur gehören zum Mesh3D-AI-Test zum selben Netz (Messlatte A).</p>
+        aber keine Zahl. Gerechnet, Laufzeit, Lauf und Figur zeigen den jüngsten Lauf der Foto-Kette (Formrest, Kopf, Größe; Status = Abnahmetabelle grün/rot; alle Läufe im Tooltip),
+        ohne ihn den Mesh3D-AI-Test zum selben Netz (Messlatte A).</p>
     {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
 </div>
 {% comment %}Neuer Test aus Fotos (24.10.2026) — Gegenstück zu „Neuer Test aus einem Mesh“ auf /mesh-3D-AI/ (`Ai2d3dfotoneu`). Gerechnet wird noch nichts: 2d-3d-AI hat noch keine eigene KI.{% endcomment %}

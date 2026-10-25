@@ -51,10 +51,15 @@ class Blendimportnetz:
         ziel = self.ablage.arbeit(self.DATEI)
         ziel.parent.mkdir(parents=True, exist_ok=True)
         self.melden(0.4, 'Netz auf Menschenhöhe' if faktor != 1.0 else 'Netz kopieren')
-        geschrieben = self._kopieren(quelle, ziel) if faktor == 1.0 else self._skaliert_schreiben(quelle, ziel, daten, faktor)
+        if faktor == 1.0 and not self._basisknoten(daten):
+            geschrieben = self._kopieren(quelle, ziel)
+        else:
+            geschrieben = self._skaliert_schreiben(quelle, ziel, daten, faktor)
+        self.melden(0.8, 'Netz nachlesen')
+        gelesen = self._pruefen(ziel, hoehe * faktor)
         self.melden(1.0, 'Netz bereit')
         bericht = {'weg': Blendimportweg.NETZ, 'datei': self.DATEI, 'punkte': flaechen['punkte'], 'dreiecke': flaechen['dreiecke'], 'augen': 0,
-                   'hoehe_m_original': round(hoehe, 4), 'faktor': round(faktor, 4), 'hoehe_m': round(hoehe * faktor, 4), 'soll_m': self.SOLL_M,
+                   'hoehe_m_original': round(hoehe, 4), 'faktor': round(faktor, 4), 'hoehe_m': round(hoehe * faktor, 4), 'hoehe_m_gelesen': round(gelesen, 4), 'soll_m': self.SOLL_M,
                    'material': len(daten.get('materials') or []), 'bilder': [b.get('name') or b.get('mimeType') for b in daten.get('images') or []],
                    'unveraendert': not geschrieben, 'groesse_mb': round(ziel.stat().st_size / 1e6, 1), 'dauer_s': round(time.perf_counter() - t0, 1)}
         logger.info('Mesh-3D %s: Netz %d Punkte, %d Dreiecke, %.3f m → %.3f m (Faktor %.4f)', self.ablage.kennung, bericht['punkte'], bericht['dreiecke'], hoehe, bericht['hoehe_m'], faktor)
@@ -133,10 +138,32 @@ class Blendimportnetz:
         os.replace(nebendatei, str(ziel))
         return True
 
+    #: Name des Basisrahmens von trimesh (`trimesh/exchange/gltf.py`, 4.11.5: `base_frame = "world"`, „file contains a `world` node, we may stomp on it“). Ein Knoten dieses Namens fällt beim Lesen
+    #: mit dem Basisrahmen zusammen, seine Matrix geht verloren. trimesh selbst schreibt seine Wurzel so (`m.export`) — die gedrehte Kopie der Vorstufe (`eingabe_aufrecht.glb`) hatte die Streckung
+    #: 2,04 an „world“, „Mesh to 3D“ las 0,98 m statt 2,00 m (zauberer_fantasy, 25.10.2026: Figur in der Hocke, 0,94 m hoch).
+    BASISRAHMEN = 'world'
+
+    @classmethod
+    def _basisknoten(cls, daten):
+        return [i for i, k in enumerate(daten.get('nodes') or []) if k.get('name') == cls.BASISRAHMEN]
+
+    @staticmethod
+    def _pruefen(ziel, soll):
+        """Höhe von `ziel`, wie trimesh sie liest (der Leser von Pose, Segmentierung und „Mesh to 3D“: `Meshfigurscan`, `Mesh3dansicht`) — weicht sie um mehr als 0,5 % von `soll` ab, bricht der Schritt ab."""
+        import trimesh
+
+        tief, hoch = trimesh.load(str(ziel), force='scene', process=False).bounds
+        gelesen = float(hoch[1] - tief[1])
+        if abs(gelesen - soll) > 0.005 * soll:
+            raise RuntimeError('%s liest sich mit %.3f m statt %.3f m — die Streckung kommt beim Leser nicht an (Knoten der GLB prüfen)' % (ziel, gelesen, soll))
+        return gelesen
+
     @classmethod
     def _skaliert_schreiben(cls, quelle, ziel, daten, faktor):
         """GLB mit neuem JSON-Block: jeder Wurzelknoten der Szene um `faktor` gestreckt (um den Ursprung); der Rest der Datei (Puffer, Bilder) wird unverändert übernommen. `True`, wenn die Datei geschrieben wurde
-        (gleicher Inhalt wie schon dort: unangetastet, `_kopieren`)."""
+        (gleicher Inhalt wie schon dort: unangetastet, `_kopieren`). Ein Knoten mit dem Namen des Basisrahmens von trimesh wird umbenannt (`BASISRAHMEN`)."""
+        for i in cls._basisknoten(daten):
+            daten['nodes'][i]['name'] = '%s_%d' % (cls.BASISRAHMEN, i)
         szene = (daten.get('scenes') or [{}])[daten.get('scene', 0)]
         for index in szene.get('nodes') or []:
             knoten = daten['nodes'][index]

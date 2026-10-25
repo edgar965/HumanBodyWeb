@@ -86,11 +86,15 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         self.ausfuehren()
         # Die Bestandteile über Textbegriffe (SAM 3, `Blendimportbegriffe`): Stab, Bart, Tasche … — dasselbe Abstimm-Netz, dieselben Renderings. Ein Zusatz: scheitert er, steht der Grund im Bericht.
         self.lauf.melden(0.88, 'Segmentierung: Bestandteile (SAM 3)')
-        self._begriffe = Blendimportbegriffe(self).ausfuehren()
+        self._begriffe = self.begriffe_rechnen()
         if proxy is not None:
             self.lauf.melden(0.97, 'Segmentierung: Stimmen auf das volle Netz übertragen')
             self._uebertragen(glb)
         return self._bericht(proxy)
+
+    def begriffe_rechnen(self):
+        """SAM 3 über die Begriffe als eigener Prozess in python12 (`Blendimportbegriffe`). Mesh3D-AI rechnet ihn im eigenen python14-Prozess mit dem Port (`mesh3dai/mesh3dai_bilderkennung.py`)."""
+        return Blendimportbegriffe(self).ausfuehren()
 
     #: Ab so vielen Dreiecken stimmt ein Abstimm-Netz ab (darunter deckt jede Fläche mehrere Pixel), und so viele hat es (Setzung: bei 56.560 cm² Netzfläche rund 3,8 cm² je Fläche, ~100 Pixel).
     PROXY_AB = 400_000

@@ -23,7 +23,8 @@
   <li><strong>Form:</strong> die {{ masse.formregler|de }} Formregler von Mesh3D-AI. Ihre Wirkung je Regler liegt als Tabelle vor (<code>formregler_wirkung_v6.npz</code>): Form = Grundfigur + Σ Regler ×
     Wirkung. Das ist linear und darum leicht auf der GPU und rückwärts zu rechnen.</li>
   <li><strong>Haut:</strong> zuerst ein Hautton auf der Grundhaut; später die Hautkacheln des Hautkopfs von Mesh3D-AI (Farbe je Texel aus den Fotos gelernt).</li>
-  <li><strong>Kleider:</strong> je Stück der Garderobe „getragen“ und Farbe — eine Wahl aus dem Katalog, keine eigene Form (Edgar, 24.10.2026: „Kleider sind nicht 100 % wichtig“). Für die
-    Rückwärtsrechnung zählt nur die Farbe; welches Stück, lernt das Netz aus der Wahrheit der Trainingsfiguren.</li>
+  <li><strong>Kleider:</strong> ursprünglich geplant als Wahl aus dem Katalog + Farbe (Entscheidung 4 vom 24.10.2026). Am Abend desselben Tages verworfen (Edgar: „bei den kleidern machen wir das
+    doch nicht mehr mit Katalogstücken — schau nach bei Mesh3d-AI“): Kleider werden aus den Fotos ausgeschnitten wie beim Kostüm-Weg A von Mesh3D-AI; ein Netz für Weg B müsste sie als Schicht auf dem
+    Genesis-Käfig ausgeben (wie Weg g dort).</li>
   <li><strong>Kamera</strong> (nur echte Fotos): Abstand, Öffnungswinkel, Versatz je Foto. Bei Exporten gilt die Regel der Charakter-Seite.</li>
 </ul>

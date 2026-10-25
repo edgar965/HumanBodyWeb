@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}{% load jsfassung %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load l10n %}
 {% block title %}{{ job.name }} · 2d-3d-AI{% endblock %}
 
 {% comment %}
@@ -11,6 +11,7 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
 <meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
@@ -22,7 +23,9 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 {% block content %}
 <div class="page-header">
     <h1><i class="fas fa-image"></i> <a href="{% url 'ai2d3d' %}" class="ai2d3d-zurueckzurliste" title="Alle Jobs">2d-3d-AI</a> <span class="ai2d3d-pfad">›</span>
-        {% if ist_test %}<a href="{% url 'ai2d3d' %}#test" class="ai2d3d-zurueckzurliste" title="Alle Tests">Test</a> <span class="ai2d3d-pfad">›</span> {% endif %}{{ job.name }}</h1>
+        {% if ist_test %}<a href="{% url 'ai2d3d' %}#test" class="ai2d3d-zurueckzurliste" title="Alle Tests">Test</a> <span class="ai2d3d-pfad">›</span>
+        {# Name änderbar (24.10.2026, Stift wie bei Mesh3D-AI: `gemeinsam/auftragname.js`, `Mesh3dainame` → name.json im Testordner) #}
+        <span id="auftrag-name" data-adresse="{% url 'ai2d3d_name' job.id %}">{{ job.name }}</span>{% else %}{{ job.name }}{% endif %}</h1>
 </div>
 
 <div class="ai2d3d-oben" id="ai2d3d-oben">
@@ -32,34 +35,109 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
     {% if job.paar %} Genesis-Modell heute: Messlatte A — <a href="/mesh-3D-AI/{{ job.paar.kennung }}/">Mesh3D-AI · {{ job.paar.name }}</a> (Tripo-Netz → KI).{% endif %}
     {% if job.test %} Messlatte A steht auf der <a href="/mesh-3D-AI/test/{{ job.test }}/">Mesh3D-AI-Testseite {{ job.test }}</a>.{% endif %}
     <a href="{% url 'ai2d3d' %}" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
+    {% comment %} 24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“ — echte Fotos haben keinen Maßstab (dritter Einpass-Lauf: Figur 1,710 → 1,435 m). `Ai2d3dkoerpergroesse`. {% endcomment %}
+    {% if ist_test %}<form class="ai2d3d-groesse" id="ai2d3d-groesse" data-job="{{ job.id }}"
+          title="Größe der Person auf den Fotos, Scheitel bis Sohle. Fotos tragen keinen Maßstab — ohne Angabe kann die Einpassung die Figur beliebig groß oder klein machen.">
+        <label for="ai2d3d-groesse-wert"><i class="fas fa-ruler-vertical"></i> Körpergröße</label>
+        <input type="number" id="ai2d3d-groesse-wert" name="koerpergroesse_m" min="1.00" max="2.30" step="0.01" placeholder="unbekannt"
+               value="{{ job.koerpergroesse_m|default_if_none:''|unlocalize }}"> m
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
 </div>
 <div class="card ai2d3d-steuerung" id="ai2d3d-steuerung"></div>
 </div>
 
+{% comment %} 24.10.2026, Edgar: „die zweite 3D Ansicht ‚Netz‘ ist ja nur zu Testzwecken da, kannst du die unter der ersten Zeile machen, sonst verwirrt sie“ — erste Zeile Fotos · Genesis-Modell ·
+Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, es fließt in keine Rechnung des Genesis-Modells ein. {% endcomment %}
 <div class="ai2d3d-zeile ai2d3d-koerperzeile">
-    <div class="ai2d3d-bereiche ai2d3d-bereiche-vier">
+    <div class="ai2d3d-bereiche">
         <section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">1</span> Fotos</h2>
             <div class="ai2d3d-leinwand ai2d3d-fotofeld" data-feld="fotos"></div>
             <div class="ai2d3d-daumen" id="ai2d3d-daumen"></div>
         </section>
         <section class="card ai2d3d-bereich">
-            <h2><span class="ai2d3d-nummer">2</span> Netz</h2>
-            <div class="ai2d3d-leinwand" data-feld="netz"></div>
-            <p class="hb-hinweis">{% for n in netze %}{{ n.name }} ({{ n.mb }} MB){% if not forloop.last %} · {% endif %}{% empty %}Kein Netz aus diesen Fotos.{% endfor %}</p>
-        </section>
-        <section class="card ai2d3d-bereich">
-            <h2><span class="ai2d3d-nummer">3</span> Genesis-Modell</h2>
+            <h2><span class="ai2d3d-nummer">2</span> Genesis-Modell</h2>
             <div class="ai2d3d-leinwand" data-feld="genesis"></div>
             <p class="hb-hinweis" id="ai2d3d-genesisinfo"></p>
         </section>
         <section class="card ai2d3d-bereich">
-            <h2><span class="ai2d3d-nummer">4</span> Ergebnis</h2>
+            <h2><span class="ai2d3d-nummer">3</span> Ergebnis</h2>
             <div class="ai2d3d-leinwand ai2d3d-ergebnisfeld" data-feld="ergebnis"></div>
             <p class="hb-hinweis" id="ai2d3d-ergebnisinfo"></p>
         </section>
     </div>
 </div>
+{% comment %} 24.10.2026, Edgar: „Erkläre mir, was du misst. Mach eine Testzeile unter der ersten Zeile mit den 3 Views, wo du zusätzlich in jeder View alle Messpunkte des Körpers einblendest,
+mit Zahlen, in einer Tabelle daneben die Messpunkte und 2 Spalten für Vorlage und Ergebnis“ — `Ai2d3dmesspunkte`, Daten aus `koerperpruefung_lauf.py --seite` (`Koerpermesspunkte`). {% endcomment %}
+{% if ist_test %}<section class="card ai2d3d-messkarte" id="ai2d3d-messpunkte">
+    <h2>Test: Messpunkte des Körpers — was die Abnahme misst</h2>
+    <p class="hb-hinweis">Gemessen wird mit denselben Detektoren auf Foto und Rendering: 23 Punkte von ViTPose (Kopf, Gelenke, Füße) und 40 Randpunkte auf dem Umriss der Person (Sapiens2),
+        je zwei an 20 Linien quer zu Hals, Rumpf, Armen und Beinen. Jede Linie hängt an den Gelenken der Vorlage und wird in Foto und Rendering an derselben Stelle abgeschritten — beide teilen
+        die Kamera der Einpassung. Blau: Vorlage, orange: Ergebnis, rot umrandet: über der Grenze, grau: nicht gewertet. Jede Zahl der Tabelle ist die Länge einer Linie: am Umriss die Linie
+        von der Knochenachse bis zum Rand (blau im Foto, orange im Rendering), bei Kopf, Gelenken und Füßen die Linie vom blauen zum orangen Punkt. Zeile berühren zeigt die Stelle in Feld 3
+        vergrößert, mit jeder Linie und ihrer Zahl.</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Fotos — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+{% comment %} 25.10.2026, Edgar: „mach nach der Messung für den Körper auch eine neue Messung nur für den Kopf … Nase, die Ohren, Mund, Augen, Augenbrauen“ — `Kopfmesspunkte`. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="ai2d3d-kopfmesspunkte">
+    <h2>Test: Messpunkte des Kopfes</h2>
+    <p class="hb-hinweis">Dieselben Detektoren wie beim Körper, nur am Kopf und vergrößert: die 68 Gesichtspunkte von ViTPose (Kinnlinie, Augenbrauen, Nase, Augen, Mund) und die Ohren —
+        eine Zeile je Gruppe, ihre Zahl ist die mittlere Länge der Linien vom blauen Punkt (Foto) zum orangen (Rendering). Dazu der Kopfumriss (Sapiens2): der Scheitel über den Ohren und
+        Breiten quer zur Kopfachse auf Höhe von Stirn, Schläfen, Ohren und Wangen, je Seite eine Linie von der Achse bis zum Rand (blau Foto, orange Rendering). Zeile berühren zeigt die
+        Stelle in Feld 3 vergrößert.</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte des Kopfes werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>{% endif %}
+<div class="ai2d3d-zeile">
+    <div class="ai2d3d-bereiche">
+        <section class="card ai2d3d-bereich">
+            <h2>Test: Netz aus den Fotos</h2>
+            <div class="ai2d3d-leinwand" data-feld="netz"></div>
+            <p class="hb-hinweis">{% for n in netze %}{{ n.name }} ({{ n.mb }} MB){% if not forloop.last %} · {% endif %}{% empty %}Kein Netz aus diesen Fotos.{% endfor %} — nur zum Vergleich
+                (Messlatte A), fließt in keine Rechnung des Genesis-Modells ein.</p>
+        </section>
+    </div>
+</div>
+
+{% if job.kopf %}{% with k=job.kopf %}
+<div class="card ai2d3d-kopfkarte" id="ai2d3d-kopf">
+    <h2>{{ k.titel }} <span class="ai2d3d-urteil" title="Gegenprobe mit Wahrheit unten">{{ k.urteil }}</span></h2>
+    <p class="hb-hinweis">Nur die {{ k.regler_geaendert }} geänderten Kopfregler; der Körper ist der des Mesh3D-AI-Tests <a href="/mesh-3D-AI/test/{{ k.test }}/">{{ k.test }}</a> (Feld 3, Knopf „Kopf“ zoomt hin).
+        Abgleich an 1.jpg und 3.jpg, 4.jpg ist nur geprüft. Gerechnet {{ k.gerechnet }}, {{ k.sekunden }} s auf der Grafikkarte.</p>
+    <table class="ai2d3d-kopftabelle">
+        <thead><tr><th>Kopf</th>{% for s in k.spalten %}<th class="num">{{ s }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for z in k.zeilen %}<tr{% if z.eigen %} class="ai2d3d-eigen"{% endif %}><td>{{ z.name }}</td>{% for t in z.texte %}<td class="num">{{ t }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table>
+    <p class="hb-hinweis">{{ k.einheit }}. Kleiner ist näher am Foto.</p>
+    <p class="hb-hinweis"><strong>Gegenprobe mit Wahrheit</strong> (Exporte der Charakter-Seite, Regler bekannt): {% for g in k.gegenprobe %}{{ g.job }}: Fotofehler vorne {{ g.texte.vorne_vorher_prozent }} → {{ g.texte.vorne_nachher_prozent }},
+        Abstand zur wahren Kopfform {{ g.texte.vorher_mm }} → {{ g.texte.nachher_mm }} (der wahre Kopf selbst misst vorne {{ g.texte.wahrheit_vorne_prozent }}){% if not forloop.last %} · {% endif %}{% endfor %}.
+        {{ k.befund }}</p>
+    {% if k.fotokopf %}<h3>{{ k.fotokopf.titel }} <span class="hb-hinweis">(gerechnet {{ k.fotokopf.gerechnet }}, {{ k.fotokopf.sekunden }} s; Feld 3 zeigt das Ergebnis)</span></h3>
+    <ul class="ai2d3d-fotokopf">{% for p in k.fotokopf.punkte %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+    {% if k.bilder_titel %}<h3>{{ k.bilder_titel }}</h3>{% endif %}
+    <div class="ai2d3d-kopfbilder">{% for b in k.bilder %}
+        <figure class="ai2d3d-kopfbild{% if b.breit %} ai2d3d-kopfbild-breit{% endif %}{% if b.zeile %} ai2d3d-kopfbild-zeile{% endif %}"><a href="/api/2d3dai/{{ job.id }}/kopf/{{ forloop.counter0 }}/" target="_blank" title="Bild in voller Größe"><img src="/api/2d3dai/{{ job.id }}/kopf/{{ forloop.counter0 }}/" alt="{{ b.titel }}" loading="lazy"></a>
+            <figcaption><strong>{{ b.titel }}</strong> — {{ b.legende }}</figcaption></figure>{% endfor %}
+    </div>
+</div>
+{% endwith %}{% endif %}
 
 <div class="card" id="ai2d3d-vergleichskarte">
     <h2>Vergleich aus allen Perspektiven</h2>
@@ -79,6 +157,10 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 {% block extra_scripts %}
 <script type="module">
 import { Ai2d3dseite } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dseite.js' %}";
-Ai2d3dseite.aufbauen();
+{% if ist_test %}import { Ai2d3dkoerpergroesse } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dkoerpergroesse.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
+Ai2d3dkoerpergroesse.binden(document.getElementById('ai2d3d-groesse'));
+Auftragname.binden();
+{% endif %}Ai2d3dseite.aufbauen();
 </script>
 {% endblock %}

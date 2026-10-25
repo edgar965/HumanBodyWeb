@@ -32,7 +32,8 @@ __all__ = ['Mesh3dairechenlauf']
 class Mesh3dairechenlauf:
     #: (Schlüssel, Klartext, Skript und Argumente — {k} Kennung, {…} aus den KI-Fassungen)
     SCHRITTE = (
-        ('rig', 'Rig und A-Pose (Make-It-Animatable, Netz der Vorstufe)', ['-u', 'mesh3dai_vorstufe.py', 'test', '{k}', '--weg', 'mia', '--netz-mia', '{vorstufe_mia_pfad}']),
+        ('rig', 'Rig und A-Pose (Make-It-Animatable, Netz der Vorstufe)', ['-u', 'mesh3dai_vorstufe.py', 'test', '{k}', '--weg', 'mia', '--netz-mia', '{vorstufe_mia_pfad}',
+                                                                                  '--netz', '{vorstufe_pfad}']),
         ('haltung', 'Haltung aus der KI', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form.py', '--vorhersagen', '--lauf', '{haltung}', '--nur', '{k}']),
         ('form', 'Form aus der KI (Genesis-Regler)', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form_apose.py', '--lauf', '{formkopf}', '--als-form', '--nur', '{k}']),
         ('figur', 'Figur bauen', ['mesh3dai_formfigur.py', '--parallel', '2', '--nur', '{k}']),
@@ -46,8 +47,16 @@ class Mesh3dairechenlauf:
         # Messungen der Nase usw. und den Genesis reglern“): Kopfnetz, dann die Kopfregler gegen Gesichtsmaße, Landmarken und Haut des Eingangs (`Kopfangleich`); braucht Haltung und Zerlegung,
         # baut bei Übernahme die Figur neu und rechnet „anpassen“ und „haltung2“ selbst nach — die Haut danach liegt schon auf dem neuen Kopf
         ('kopf', 'Kopf an das Mesh angleichen (Kopfnetz, Gesichtsmaße, Haut — in Runden)', ['-u', 'mesh3dai_kopfangleich_lauf.py', '--nur', '{k}', '--geschlecht', '{g}', '--kopfnetz', '{kopfnetz}']),
+        # Haltung an den Eingang (24.10.2026 nachts, Edgar zu randy: „rumpf nun zu groß … mit mediapipe, rechne das aus … und korrigiere“): ViTPose an Eingang und Figur aus vier Richtungen,
+        # Versatz je Gelenk in die Ziele der Winkelanpassung, in Runden (`Lageangleich`); NACH „kopf“, weil dessen Neubau die Ziele ändert (die Korrektur gilt nur für die gemessenen)
+        ('lage', 'Haltung an den Eingang angleichen (Messpunkte an Eingang und Figur, in Runden)', ['-u', 'mesh3dai_lageangleich_lauf.py', '--nur', '{k}']),
+        # Körper in die Außenmaße des Eingangs (25.10.2026, Edgar: „Körper muss in die aussenmasse reinkommen“, „Warum machst du keine Angleichungen für den Körper??“): Körperregler,
+        # Proportionen und Haltung gegen Umriss, Haut und anliegenden Stoff des Eingangs (`Koerperangleich`); NACH „lage“ (er schreibt die Haltung selbst, eine Winkelanpassung danach nähme sie
+        # zurück) und VOR „haut“ (die Haut-KI liest die Figur)
+        ('koerper', 'Körper in die Außenmaße des Eingangs (Form, Proportionen, Haltung — in Runden)', ['-u', 'mesh3dai_koerperangleich_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # `--hautki` (24.10.2026 abends): steht in den KI-Fassungen ein Lauf der Haut-KI im Bildraum, schreibt sie die Hautkacheln (`Hautkieinsatz`), sonst das Netz `haut` von Stufe 2
         ('haut', 'Haut aus der KI (Stufe 2: Farbe je Texel)', ['-u', 'mesh3dai_stufe2_lauf.py', '--nur-einsatz', '{stufe2}', '--fassung', '{stufe2_fassung}', '--test', '{k}', '--job', '',
-                                                                '--geschlecht', '{g}']),
+                                                                '--geschlecht', '{g}', '--hautki', '{hautki}']),
         ('kleider', 'Kleider und Haar aus dem Mesh ausschneiden und auflegen, Hautmasken, Prüfung', ['-u', 'mesh3dai_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}']),
     )
     #: Was ein Schritt im Log schreibt, wenn er scheitert, ohne mit einem Fehlercode zu enden (die Kostüm-Kette fängt Fehler je Test ab)
@@ -118,7 +127,8 @@ class Mesh3dairechenlauf:
         return 'weiblich'
 
     def _argumente(self, roh, f):
-        werte = dict(f, k=self.kennung, vorstufe_mia_pfad=str(Mesh3daikifassungen.vorstufe_pfad(f['vorstufe_mia'])))
+        werte = dict(f, k=self.kennung, vorstufe_mia_pfad=str(Mesh3daikifassungen.vorstufe_pfad(f['vorstufe_mia'])),
+                     vorstufe_pfad=str(Mesh3daikifassungen.vorstufe_pfad(f['vorstufe'])))
         if any('{g}' in a for a in roh):
             werte['g'] = self._geschlecht()
         return [a.format(**{x: str(y) for x, y in werte.items()}) for a in roh]
@@ -166,10 +176,38 @@ class Mesh3dairechenlauf:
         logger.info('Mesh3D-AI Rechenlauf %s fertig in %.0f s', self.kennung, stand['dauer_s'])
         return stand
 
+    @classmethod
+    def _skriptdienst(cls):
+        """`Skriptdienstruf` aus dem Rechencode (24.10.2026: ein Dauerprozess je Umgebung, Importe einmal geladen) — geladen über den Dateipfad, ohne `sys.path` des Arbeitsprozesses zu ändern."""
+        import importlib.util
+        name = 'mesh3dai_skriptdienstruf'
+        if name not in sys.modules:
+            spec = importlib.util.spec_from_file_location(name, cls.kette() / (name + '.py'))
+            modul = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(modul)
+            sys.modules[name] = modul
+        return sys.modules[name].Skriptdienstruf
+
     def _schritt(self, befehl, aus):
-        """Einen Schritt rechnen, Ausgabe ins Log. → (letzte Zeilen, Rückgabewert)."""
+        """Einen Schritt rechnen, Ausgabe ins Log. → (letzte Zeilen, Rückgabewert). Ein Skript aus `Skriptdienstruf.ERLAUBT` rechnet der Skriptdienst von python14; ohne ihn ein eigener Prozess."""
         import os
         env = dict(os.environ, PYTHONIOENCODING='utf-8')
+        roh = [a for a in befehl[1:] if a != '-u']
+        if roh and roh[0].endswith('.py'):
+            letzte = []
+
+            def zeile(z):
+                aus.write(z + '\n')
+                aus.flush()
+                letzte.append(z)
+                del letzte[:-200]
+            try:
+                erg = self._skriptdienst().ausfuehren('python14', roh[0], roh[1:], cwd=self.kette(), ausgabe=zeile, env=env)
+            except Exception as fehler:      # noqa: BLE001 — der Dienst ist eine Beschleunigung, kein Weg: ohne ihn rechnet der Schritt wie bisher
+                logger.warning('Mesh3D-AI Rechenlauf %s: Skriptdienst nicht nutzbar (%s) — eigener Prozess', self.kennung, fehler)
+                erg = None
+            if erg is not None:
+                return letzte, erg[0]
         p = subprocess.Popen(befehl, cwd=str(self.kette()), env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              text=True, encoding='utf-8', errors='replace')
         letzte = []

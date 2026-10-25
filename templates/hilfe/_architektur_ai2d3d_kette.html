@@ -1,0 +1,24 @@
+{% comment %}Die Kette heute (24.10.2026, Edgar: „eine übergeordnete Grafik mit Kästchen und Ablauf, wie die KIs aufgerufen werden“, „Mach die KopfKI … rein“): `Architekturai2d3dkette`.{% endcomment %}
+<h2 id="kette">Die Kette heute: Fotos → Genesis-Modell, wie die KIs aufgerufen werden</h2>
+<p>Gebaut und an EdgarTrip gerechnet — ohne eigenes trainiertes Netz: vier vortrainierte KIs erkennen, was in den Fotos ist (Sapiens2, SAM 3, ViTPose, MediaPipe), die Haut-KI von Mesh3D-AI malt
+  die Haut, und die Genesis-Figur wird in Runden an die Fotos angepasst. Kein Wert aus dem Tripo-Netz fließt ein (Edgar: „die sollen gar nicht in die Berechnung einfliessen!!!“). Die Schritte laufen
+  heute als Skripte nacheinander (<code>ProjektTemp/_wegwerf/ai2d3d/</code>), nicht per Knopf; alle im selben Python (python14) auf der Grafikkarte, jeder unter der Gpusperre.</p>
+{% if kette %}<div class="m3a-bildrahmen">{{ kette }}</div>{% endif %}
+<ol class="m3a-kurz">
+  <li><strong>Fotos und Angaben:</strong> die Fotos des Jobs, dazu Körpergröße und Gewicht aus der job.json (Feld oben auf der Testseite) — sie stellen den Maßstab, den ein Foto nicht hat.</li>
+  <li><strong>Erkennen:</strong> je Foto die Masken (Sapiens2, SAM 3), die Gelenke (ViTPose) und die Gesichtspunkte (MediaPipe) — einmal, im selben Prozess.</li>
+  <li><strong>Kopf:</strong> die KopfKI (Grafik unten) — der einzige Teil, der schon in einer Schleife mit Rendering arbeitet.</li>
+  <li><strong>Körper einpassen:</strong> Körperregler, Haltung und eine Kamera je Foto zugleich, drei Runden; nach jeder Runde wird die Figur echt gebaut und an ihr gemessen. Größe, Volumen (aus dem
+    Gewicht) und Kopfform halten feste Terme.</li>
+  <li><strong>Haut, Kleider, Haar:</strong> Haut-KI und Texel aus den Fotos, Kleider aus den Fotos ausgeschnitten, Haar mit dem Kopf versetzt, Haut unter dem Stoff ausgeblendet.</li>
+  <li><strong>Prüfen:</strong> die Figur in jede Fotokamera rendern und Foto und Rendering durch DIESELBEN Detektoren schicken — so wie beim Kopf. Beim Körper misst das heute nur; zurück in
+    die Einpassung führt es noch nicht (roter Pfeil).</li>
+</ol>
+
+<h3 id="kopfki">KopfKI: der Kopf aus den Fotos</h3>
+{% if kopfki_bild %}<div class="m3a-bildrahmen">{{ kopfki_bild }}</div>{% endif %}
+<p>Warum mit Rendering: ohne Rendering lief der Kopf an den Testfiguren mit bekannter Wahrheit von ihr weg (OlesiaWalk 0,45 → 2,97 mm, Matt1 0,24 → 9,66 mm), weil MediaPipe die Punkte je Gesicht
+  anders setzt, als die Landmarkentabelle sie auf das Netz legt; mit demselben Detektor auf Foto und Rendering bleiben nahe Starts bei der Wahrheit (Docstring <code>KopfKI/kopfbildangleich.py</code>,
+  gemessen 24.10.2026). An Edgar: Rendering ↔ Foto 2,71 % → 1,65 % des Augenabstands.</p>
+{% if fotokopf %}<ul>{% for p in fotokopf.punkte %}<li>{{ p }}</li>{% endfor %}</ul>
+<p class="m3a-klein">Aus <code>3DObjects/ai2d3d/EdgarTrip/kopfki/ergebnis.json</code> (gerechnet {{ fotokopf.gerechnet }}).</p>{% endif %}

@@ -1,0 +1,21 @@
+{% comment %}Abschnitt „Kleider heute: Kostüm-Weg A“ (24.10.2026 abends, Edgar: „hier steht z.B. bei Kleidern noch die ‚Katalogwelt‘, und die Änderungen von heute sind nicht drin“).
+Von Hand, Quelle: Docstrings von `mesh3dai/mesh3dai_kostuem_lauf.py`, `…_erkennen.py`, `…_hautfarbe.py`, `…_rueckhaeutung.py`, `…_pruefung.py`; die Testfälle selbst liest „Rechnen per Knopf“ aus dem Code.{% endcomment %}
+<h2 id="kostuem">Kleider und Haar heute: Kostüm-Weg A (Schritt „kleider“)</h2>
+<div class="info-box info-box-blue">
+  <strong>Kein Katalog, kein Schnitt, keine Schicht:</strong> Kleider, Haar, Hut und Requisiten kommen seit 23.10.2026 aus dem Mesh selbst. Das ist die Ausnahme von „Ergebnis nur aus der KI“, die
+  Edgar am 23.10.2026 angenommen hat: die <em>Form</em> eines Stücks kommt aus dem Eingang, das <em>Erkennen</em> machen Sapiens2 und SAM 3 — Körperform und Haltung bleiben unsere KI.
+  Die früheren Wege (Katalogwahl, GarmentCode-Schnitt, Schichtkopf) stehen unten unter „Frühere Wege für Kleider“; die Kette ruft sie nicht mehr auf.
+</div>
+<ol>
+  <li><strong>Erkennen</strong> (<code>Kostuemerkennung</code>, Fassung 6): je Fläche des Eingangs die Pixel der vier Ansichten — Sapiens2 (28 Klassen) und SAM 3 (Begriffe aus
+    <code>Kleidung/begriffsvorrat.json</code>). Runde 1 Haut / Haar / Kostüm (Haut nur bei klarer Mehrheit), Runde 2 die Art des Kostüms (Oberteil, Hose, Schuh, Kopfbedeckung, Requisit, Freie Form).
+    Danach die Farbregeln (<code>Kostuemhautfarbe</code>): Kostüm im Hautton wird Haut, hautfarbene Inseln im Kostüm werden Kostüm, Säume beider Richtungen. Seit 24.10.2026 abends liegt das Urteil
+    der Bildmodelle vor den Regeln in <code>kostuem/erkennung.npz</code> (<code>art_bild</code>, <code>kostuem_stimme</code>) — die Prüfung „Erkennung wie die Bildmodelle“ misst, ob die Regeln es
+    umwerfen, wo die Bildmodelle sich einig waren (baron: Kniehose als Haut).</li>
+  <li><strong>Ausschneiden</strong> (<code>Kostuemschnitt</code>): je Art die zusammenhängenden Flächen des Eingangs als Stück, mit Textur.</li>
+  <li><strong>Auflegen</strong> (Stufe 1, <code>Kostuemrueckhaeutung</code>): jedes Stück bleibt genau dort, wo es im Eingang liegt — jeder Punkt bekommt Knochen und Gewichte der nächsten Hautstelle
+    der Figur und seine Ruhelage so, dass die Häutung ihn wieder an seine Stelle legt. Folge: steht ein Glied der Figur nicht im Glied des Eingangs, sieht man es doppelt (Prüfung „Glied im Eingang“).</li>
+  <li><strong>Hautmasken</strong>: Haut unter einem Stück wird ausgeblendet (<code>Kostuemszene</code>).</li>
+  <li><strong>Prüfung</strong> (<code>Kostuempruefung</code>): Eingang und Ergebnis nebeneinander, Testfälle siehe <a href="#rechenlauf">Rechnen per Knopf</a> — jeder gemeldete Fehler wurde zuerst ein
+    Testfall, am Ziel geeicht und am damaligen Ergebnis rot.</li>
+</ol>

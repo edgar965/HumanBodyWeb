@@ -39,7 +39,7 @@ __all__ = ['Mesh3daiflaechennetz']
 class Mesh3daiflaechennetz:
     ORDNER = 'anzeige'
     FASSUNGEN = (1,)
-    TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd')
+    TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd', 'augen')         # `augen` seit 24.10.2026 (Figuren der Tests, `Ursula.TEILE`)
     MATERIALWERTE = ('rauheit', 'glanz', 'metall', 'relief')
     _ablage = {}
 

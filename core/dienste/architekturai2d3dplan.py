@@ -12,7 +12,8 @@ class Architekturai2d3dplan:
         ('Eingabe', 'Exporte der Charakter-Seite (mit Wahrheit) UND echte Fotos (Randy, Ed 2026, Zauberer).'),
         ('Weg', 'B (Fotos direkt → KI → Genesis) ist das Ziel; A (Fotos → Hunyuan/Tripo → Mesh3D-AI → Genesis) bleibt die Messlatte.'),
         ('Anpassen beim Rechnen', 'erlaubt: nach der KI wird die Figur noch an die EINGABEFOTOS angepasst — nie an einer Wahrheit.'),
-        ('Kleider', 'zuerst Katalogstück + Farbe; „genau so aussehen“ gilt für den Körper.'),
+        ('Kleider', 'zuerst Katalogstück + Farbe; „genau so aussehen“ gilt für den Körper. Abends geändert: „bei den kleidern machen wir das doch nicht mehr mit Katalogstücken“ — '
+                    'ausgeschnitten aus den Fotos wie der Kostüm-Weg A von Mesh3D-AI.'),
         ('Oberfläche', 'Jobseite mit Fotos · Netz · Genesis-Modell · Ergebnis, Ansichtsarten und Kleider wie bei Mesh3D-AI; Zeilen Gesicht, Hände, Kleider später.'),
         ('Speicher', '„alles, aber wirklich alles in der Pipeline soll im RAM und auf GPU laufen“ — keine Zwischendateien, ein Prozess; auf die Platte nur das Ergebnis.'),
     )
@@ -24,7 +25,14 @@ class Architekturai2d3dplan:
         (4, 'Genesis auf der GPU', 'Formregler → Punkte (Wirkung linear), Winkel → Skelett → Häutung, Kleider anziehen — differenzierbar, in python10', 'Bausteine da, als Ganzes nicht geprüft'),
         (5, 'Datengenerator im Speicher', 'Figuren × Kleider × Posen zufällig, vier Renderings je Probe direkt in den Trainingsstapel (keine Bilddateien)', 'nicht gebaut'),
         (6, 'Ein Modell', 'Training und Anpassung zuerst an EINEM Job (OlesiaWalk), zeigen, dann erst die übrigen', 'nicht gebaut'),
-        (7, 'Echte Fotos', 'Maske (Sapiens2), Kamerakopf, Licht; Randy, Ed 2026, Zauberer', 'nicht gebaut'),
+        (7, 'Echte Fotos', 'Maske (Sapiens2), Kamerakopf, Licht; Randy, Ed 2026, Zauberer',
+         'Kopf als Versuch 24.10.2026 (`A:\\3dTools\\KopfKI`: Profillinie als eigener Sapiens-Nachbau, 8–11 ms statt 330 ms; 523 Kopfregler an Frontfoto + Profil). Ohne Rendering '
+         'an der Wahrheit widerlegt (OlesiaWalk 0,45 → 2,97 mm, Matt1 0,24 → 9,66 mm). Mit eigenem Rendering in torch (`Kopfbild`, Detektor auf beiden Seiten): nahe Starts bleiben bei '
+         'der Wahrheit, ein ferner Start erklärt die Fotos wie die Wahrheit (1,43 gegen 1,33 %), die Tiefe bleibt offen (2,79 → 4,09 mm); Edgar Rendering ↔ Foto 2,71 → 1,65 %. '
+         'Fotos freigestellt (BiRefNet wie 2D3D Kleider). Seit 24.10.2026 nachmittags: Sapiens2 und SAM 3 als Ports in python14 (`Sapiens2Torch`, `Sam3Torch`, gegen die Originale '
+         'gleich), Kopfhaut aus den Fotos mit der Haut-KI von Mesh3D-AI + Falten + Bart, Haar aus den Fotos ausgeschnitten (Haarschale), Ohren mit SAM 3 „ear“ angeglichen '
+         '(9,48 → 4,16 mm). Abends der Körper aus den Fotos: Einpassung perspektivisch mit Größe und Gewicht, Haut aus den Fotos, Kleider ausgeschnitten, Messung über das Rendering '
+         '(Abschnitt „Die Kette heute“ und „Stand“)'),
     )
     #: Was im Speicher und auf der GPU läuft — und was dafür fehlt.
     GPU = (
@@ -36,7 +44,7 @@ class Architekturai2d3dplan:
         ('Hunyuan / Tripo', 'NICHT in diesem Prozess: Hunyuan3D-2mv läuft in einer eigenen Umgebung, Tripo ist ein Dienst — darum bleibt Weg A Messlatte und gehört nicht in die Schleife'),
     )
     OFFEN = (
-        'Breite der Merkmale von Sapiens2-0.4B — für die Rechnung auf 1.024 gesetzt, nicht nachgelesen.',
+        'Breite der Merkmale von Sapiens2-0.4B: 1.024 — seit 24.10.2026 aus der Gewichtsdatei gelesen (Abschnitt „Die KIs der Kette“), die Setzung stimmt.',
         'Ob eine differenzierbare Genesis-Figur mit allen Kleidern in den Grafikspeicher passt (Batch, vier Ansichten) — nicht gemessen.',
         'Licht: die Jobseite rendert mit dem Licht der Felder, nicht mit dem der Charakter-Szene — der Farbabstand ist deshalb auch bei der Wahrheit 37–61 / 255 und taugt noch nicht als Maß.',
         'Netzstufe: die Seite zeigt die Figur grob (schnelle Anzeige wie Mesh3D-AI), die Exporte sind fein — ein Teil der fehlenden 2 % der Gegenprobe; nicht getrennt gemessen.',

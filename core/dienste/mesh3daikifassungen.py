@@ -23,6 +23,8 @@ class Mesh3daikifassungen:
     #: Schichtlauf, mit dem sie trainiert ist (`netz.pt` → `schichtlauf`); die Kleider der Testseite kommen weiter aus dem Kostüm-Weg (Sapiens2 + SAM 3).
     VORGABE = {
         'vorstufe_mia': '2026.10.18.16.22_vorstufe_apose9_mia_ab_alle4',
+        # 24.10.2026 nachts: Netz des ALTEN Wegs (MeshToRigToPose), wenn MIAs Prüfung durchfällt — bis dahin las die Kette es aus `_vorstufe/gewaehlt.json` → `lauf`; 14 von 27 Tests rechnen so
+        'vorstufe': '2026.10.17.11.20_vorstufe_apose3_mix_ab_alle4',
         'haltung': '2026.10.17.14.18_form_pose80_v3',
         'formkopf': '2026.10.19.18.04_vorstufe_form2_grenze_paare_compile',
         'zerlegung': '2026.10.20.17.18_zerlegung_b3d_job_tripo6_stelle_eineki',
@@ -33,9 +35,14 @@ class Mesh3daikifassungen:
         'kostuem_stufe': 1,
         # 24.10.2026: Start des Schritts „kopf“ (`Kopfangleich`) — das einzige trainierte Kopfnetz (21.10.2026, gewürfelte Köpfe); allein schlechter als der Formkopf an Tripo-Jobs mit Wahrheit
         'kopfnetz': '2026.10.21.17.51_kopf1',
+        # 24.10.2026 abends: Haut-KI im Bildraum (`KoerperKI_alle.hautki`, Lauf unter `_hautki/laeufe/`) — leer = die Haut kommt weiter aus dem Netz `haut` von Stufe 2;
+        # ein Lauf kommt erst nach Edgars Wort und einer Nachricht an 2d-3d-AI hierher — 24.10.2026 spätabends freigegeben (Edgar: „haut ist einigermaßen OK, also gib sie frei“):
+        # Lauf mit Rand-Lernen (`Hautkitraining.RAND_LERNEN`), Naht in der Haut an edgar_knopf grün
+        'hautki': '2026.10.24.15.19_hautki_rand',
     }
     TEXTE = {
         'vorstufe_mia': 'Rig und A-Pose: Netz der Vorstufe (Weg MIA)',
+        'vorstufe': 'Rig und A-Pose: Netz der Vorstufe (alter Weg, wenn MIA durchfällt)',
         'haltung': 'Haltung: gemeinsames Netz auf Posen',
         'formkopf': 'Form: Formkopf auf der A-Pose-Wolke',
         'zerlegung': 'Zerlegung: welcher Punkt des Netzes Haut, Haar oder welches Kleidungsstück ist',
@@ -43,6 +50,7 @@ class Mesh3daikifassungen:
         'stufe2_fassung': 'Haut: Soll-Fassung des Stufe-2-Laufs (Bau und Soll, mit denen er trainiert ist)',
         'kostuem_stufe': 'Kleider und Haar aus dem Mesh: Stufe (1 = an der Stelle des Eingangs, Rückhäutung)',
         'kopfnetz': 'Kopf: Kopfnetz als Start der Angleichung an das Mesh',
+        'hautki': 'Haut: Haut-KI im Bildraum (übernimmt Gesehenes, erzeugt Ungesehenes); leer = Haut aus Stufe 2',
     }
 
     @staticmethod

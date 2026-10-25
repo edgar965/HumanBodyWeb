@@ -5,15 +5,18 @@ Eine Reihe Schaltknöpfe (`schaltknoepfe.css`, wie in „Mesh to 3D“ über der
 (eine Liste, kein zweiter Satz Namen im Template).
 Daneben der Schaltknopf „Rig“ (Edgar: „Rig soll ein Toggle-Button sein für alle Ansichten“): ein Ein/Aus-Knopf, der das Genesis-9-Rig über JEDE Ansichtsart legt (`Mesh3dairigzeichner`).
 Und die Animationsleiste der Zeile (Edgar: „bei Taste / Klick auf Play in den einzelnen Zeilen möchte ich die animiert sehen“, Standardanimation „Spagat“): Play/Pause, Regler, Bildzähler (`Mesh3daianimationsleiste`).
+Die Testseite nimmt dieselbe Reihe ohne die Leiste „Spagat“ (`ohne_animation`, 24.10.2026 — ihre Figur hat die eigene Standardanimation); die Knöpfe baut dort `Mesh3daitestansicht`.
 {% endcomment %}
 <div class="mesh3dai-ansichtwahl">
     <span class="mesh3dai-ansichtname">Ansicht</span>
     <div class="schalterleiste mesh3dai-ansicht" role="group" aria-label="Ansichtsart dieser Zeile"></div>
     <div class="schalterleiste mesh3dai-rigleiste" role="group" aria-label="Rig über der Ansicht"></div>
+    {% if not ohne_animation %}
     <div class="mesh3dai-animation" role="group" aria-label="Animation dieser Zeile">
         <span class="mesh3dai-ansichtname">Animation</span>
         <button type="button" class="schaltknopf mesh3dai-play" title="Die Bewegung „Spagat“ in dieser Zeile abspielen (Leertaste: die Zeile unter dem festen Block)"><i class="fas fa-play"></i> Play</button>
         <input type="range" class="mesh3dai-bildregler" min="0" max="1000" step="1" value="0" aria-label="Bild der Animation">
         <span class="mesh3dai-bildzaehler" aria-live="off"></span>
     </div>
+    {% endif %}
 </div>

@@ -24,9 +24,10 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
 
   <div class="info-box info-box-blue">
     <strong>Worum es geht:</strong> Eine KI bekommt ein 3D-Netz einer Figur und soll daraus ein Genesis-9-Modell machen: die <strong>Haltung</strong> (138 Knochen als Daz-Winkel in den Grenzen von Genesis)
-    und die <strong>Form</strong> (Genesis-Form-Regler, seit 16.10.2026 abends; im Bezugslauf {{ form_regler.anzahl|default:"—" }}). Kleider und Haar gibt sie seit 21.10.2026 als
-    <strong>Schicht auf dem Genesis-Käfig</strong> selbst aus, trainiert gegen die Zielstücke (<a href="#schicht">Kleider wie das Ziel</a>); davor über Zerlegen, Ausschneiden und GarmentCode
-    (<a href="#garmentcode">Kleider-GarmentCode</a>, als Wege k, s, f weiter wählbar). Mimik gibt sie nicht aus. Trainiert wird auf vier Jobs (<a href="/mesh-3D-AI/ursula1/">Ursula1</a>,
+    und die <strong>Form</strong> (Genesis-Form-Regler, seit 16.10.2026 abends; im Bezugslauf {{ form_regler.anzahl|default:"—" }}), dazu den <strong>Kopf</strong> (Kopf-KI + Angleichung an das Mesh)
+    und die <strong>Haut</strong> (Haut-KI im Bildraum). Kleider und Haar kommen seit 23.10.2026 aus dem Mesh selbst (<a href="#kostuem">Kostüm-Weg A</a>: erkannt von Sapiens2 und SAM 3,
+    ausgeschnitten, an der Stelle des Eingangs aufgelegt); die früheren Wege (Schichtkopf, GarmentCode, Katalog) stehen zugeklappt unter <a href="#fruehere-kleider">Frühere Wege für Kleider</a>.
+    Welche KI wann rechnet: <a href="#kis">Die KIs der Kette</a>. Mimik gibt sie nicht aus. Trainiert wird auf vier Jobs (<a href="/mesh-3D-AI/ursula1/">Ursula1</a>,
     <a href="/mesh-3D-AI/damira0/">Damira0</a>, <a href="/mesh-3D-AI/mann1/">Mann1</a>, <a href="/mesh-3D-AI/matt0/">Matt0</a>) und {{ form_varianten.zahl|default:"—" }} Formvarianten; fremde Netze ohne Soll zeigt der Reiter
     <a href="/mesh-3D-AI/#test">Test</a>. Bezugslauf dieser Seite: <code>{{ lauf_name|default:"—" }}</code>.
     Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.<br>
@@ -41,25 +42,30 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
   </div>
   {% endif %}
 
+  {# 24.10.2026 abends: zuerst die Übersicht, wie die KIs aufgerufen werden, und je KI eine Grafik (Edgar: „für alle KIs eine einzelne Grafik … eine übergeordnete Grafik mit Kästchen und Ablauf“) #}
+  {% if kis %}{% include "hilfe/_architektur_mesh3dai_kis.html" %}{% endif %}
   {% include "hilfe/_architektur_mesh3dai_kurz.html" %}
-  {# 24.10.2026: der heutige Ablauf zuerst — Rechnen per Knopf, Kopf aus der KI, alle Klassen mit Aufruf-Logik (ohne Nummer, wie Schicht und GarmentCode) #}
+  {# 24.10.2026: der heutige Ablauf zuerst — Rechnen per Knopf, Kopf aus der KI, Kleider heute (Kostüm-Weg A), alle Klassen mit Aufruf-Logik (ohne Nummer) #}
   {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_rechenlauf.html" %}{% endif %}
   {% if kopf %}{% include "hilfe/_architektur_mesh3dai_kopf.html" %}{% endif %}
+  {% include "hilfe/_architektur_mesh3dai_kostuem.html" %}
   {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_klassen.html" %}{% endif %}
   {% include "hilfe/_architektur_mesh3dai_vorstufe.html" %}
   {% include "hilfe/_architektur_mesh3dai_netz.html" %}
   {% include "hilfe/_architektur_mesh3dai_form.html" %}
   {% include "hilfe/_architektur_mesh3dai_test.html" %}
-  {# 21.10.2026: Kleider wie das Ziel (Schichtkopf, Weg g) — vor GarmentCode, ohne Nummer #}
-  {% include "hilfe/_architektur_mesh3dai_schicht.html" %}
-  {# 20.10.2026: Kleider-GarmentCode — sichtbar, ohne Nummer, damit die Verweise „Abschnitt 5–8“ der übrigen Teile stimmen #}
-  {% include "hilfe/_architektur_mesh3dai_garmentcode.html" %}
+  {# 24.10.2026 abends (Edgar: „bei Kleidern noch die ‚Katalogwelt‘“): die früheren Kleiderwege ruft die Kette nicht mehr auf — zugeklappt, nichts gelöscht #}
+  <h2 id="fruehere-kleider">Frühere Wege für Kleider (nicht mehr in der Kette)</h2>
+  <p class="m3a-klein">Bis 23.10.2026 entstanden Kleider aus dem Netz über einen Schichtkopf (Weg g), über GarmentCode-Schnitte (Wege s, f) oder als Wahl aus dem Katalog. Die Kette rechnet heute
+    Kostüm-Weg A (<a href="#kostuem">oben</a>); die Abschnitte bleiben zum Nachlesen, ihre Zahlen sind von damals.</p>
+  <details class="m3a-mehr" id="schicht-klappe"><summary>Kleider wie das Ziel: der Schichtkopf (Weg g, 21.10.2026)</summary>{% include "hilfe/_architektur_mesh3dai_schicht.html" %}</details>
+  <details class="m3a-mehr" id="garmentcode-klappe"><summary>Kleider-GarmentCode und der Katalog (20.10.2026)</summary>{% include "hilfe/_architektur_mesh3dai_garmentcode.html" %}</details>
 
   <h2 id="einzelheiten">Einzelheiten (zum Aufklappen)</h2>
   <details class="m3a-mehr" id="grenzen-klappe"><summary>5. Warum die Finger brachen — Ausgabe als Daz-Winkel</summary>{% include "hilfe/_architektur_mesh3dai_grenzen.html" %}</details>
   <details class="m3a-mehr"><summary>6. Plan: Posen, Zeiten, Entscheidungen</summary>{% include "hilfe/_architektur_mesh3dai_plan.html" %}</details>
   <details class="m3a-mehr"><summary>7. Vorgehen: Datensatz, Training, Ergebnis, Befunde</summary>{% include "hilfe/_architektur_mesh3dai_vorgehen.html" %}</details>
-  <details class="m3a-mehr"><summary>8. Kleider, Haar und ihre Morphs — und ob sie ein eigenes Netz brauchen</summary>{% include "hilfe/_architektur_mesh3dai_kleider.html" %}</details>
+  <details class="m3a-mehr"><summary>8. Kleider, Haar und ihre Morphs — und ob sie ein eigenes Netz brauchen (Stand 16.10.2026, früherer Weg)</summary>{% include "hilfe/_architektur_mesh3dai_kleider.html" %}</details>
 
 </div>
 {% endblock %}

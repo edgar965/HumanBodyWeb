@@ -21,11 +21,13 @@ Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …and
   <h1>2d-3d-AI: Fotos → Genesis-Modell</h1>
 
   <div class="info-box info-box-blue">
-    <strong>Worum es geht:</strong> Eine KI bekommt Fotos einer Person von mehreren Seiten und soll daraus ein Genesis-9-Modell machen — <strong>Haltung</strong> ({{ masse.knochen }} Knochen als
-    Daz-Winkel), <strong>Form</strong> ({{ masse.formregler|de }} Genesis-Formregler), <strong>Haut</strong> und <strong>Kleider</strong> (Katalogstück + Farbe). Gelernt wird daraus, dass die Figur, aus
-    denselben Perspektiven gerendert, <strong>so aussieht wie die Fotos</strong>; im Training kommt die Wahrheit dazu, denn die Fotos der Exporte sind selbst Renderings einer bekannten Genesis-Figur.
-    Jobs mit Wahrheit: <a href="/2d-3d-AI/">{{ jobs|length }} Exporte</a>; Tests mit echten Fotos: <a href="/2d-3d-AI/#test">{{ tests|length }}</a>. Heute zeigen die Jobseiten das Genesis-Modell von
-    Mesh3D-AI (Fotos → Tripo-Netz → KI, die <strong>Messlatte A</strong>). Das Netz unten ist ein <strong>Vorschlag (Weg B)</strong>, nicht gebaut und nicht trainiert.
+    <strong>Worum es geht:</strong> aus Fotos einer Person von mehreren Seiten ein Genesis-9-Modell machen — <strong>Haltung</strong> ({{ masse.knochen }} Knochen als Daz-Winkel),
+    <strong>Form</strong> (Genesis-Formregler), <strong>Haut</strong>, <strong>Haar</strong> und <strong>Kleider</strong> —, das aus denselben Perspektiven gerendert <strong>so aussieht wie die
+    Fotos</strong>. Jobs mit Wahrheit: <a href="/2d-3d-AI/">{{ jobs|length }} Exporte</a>; Tests mit echten Fotos: <a href="/2d-3d-AI/#test">{{ tests|length }}</a>.<br>
+    <strong>Gebaut (24.10.2026):</strong> die Kette nur aus Fotos (<a href="#kette">Abschnitt „Die Kette heute“</a>) — KopfKI und Körper aus den Fotos mit vier vortrainierten KIs und der
+    Haut-KI von Mesh3D-AI, je eine Grafik unter <a href="#kis">„Die KIs der Kette“</a>, gemessen an EdgarTrip unter <a href="#stand">„Stand“</a>. Kleider werden aus den Fotos
+    <strong>ausgeschnitten</strong> wie beim Kostüm-Weg von Mesh3D-AI, nicht aus dem Katalog gewählt (Edgar, 24.10.2026).<br>
+    <strong>Nicht gebaut:</strong> ein eigenes Netz Fotos → Genesis (<a href="#kurz">Vorschlag Weg B</a>, weiter unten); Messlatte A bleibt Mesh3D-AI (Fotos → Tripo-Netz → KI).
     Zahlen liest die Seite beim Aufruf von der Platte; festgehaltene Messungen nennen Datum und Quelle.
   </div>
 
@@ -36,6 +38,10 @@ Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …and
   </div>
   {% endif %}
 
+  {# 24.10.2026 abends: zuerst, was gebaut ist — Kette (Übersicht + KopfKI), die KIs je eine Grafik, der gemessene Stand; danach der Vorschlag Weg B #}
+  {% include "hilfe/_architektur_ai2d3d_kette.html" %}
+  {% include "hilfe/_architektur_ai2d3d_kis.html" %}
+  {% include "hilfe/_architektur_ai2d3d_stand.html" %}
   {% include "hilfe/_architektur_ai2d3d_kurz.html" %}
   {% include "hilfe/_architektur_ai2d3d_eingabe.html" %}
   {% include "hilfe/_architektur_ai2d3d_netz.html" %}

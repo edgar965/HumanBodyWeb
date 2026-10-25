@@ -18,6 +18,7 @@ from .api.mesh3daistandardanimation import Mesh3daistandardanimationendpunkte
 from .api.mesh3daitest import Mesh3daitestendpunkte
 from .api.mesh3daitestfaelle import Mesh3daitestfaelleendpunkte
 from .api.mesh3daitestkleider import Mesh3daitestkleiderendpunkte
+from .api.mesh3daitestmesspunkte import Mesh3daitestmesspunkteendpunkte
 
 __all__ = ['MESH3DAI']
 
@@ -42,6 +43,9 @@ MESH3DAI = [
     path('api/mesh3dai/test/<str:kennung>/modell/<str:geschlecht>/', Mesh3daitestkleiderendpunkte.modell, name='mesh3dai_testmodell'),
     # 22.10.2026: Testfälle der Kleider-KI (FEHLER von Prüfungen je Prio) — Testseite und Jobseite des Trainingsjobs (`Mesh3daitestfaelle`)
     path('api/mesh3dai/test/<str:kennung>/testfaelle/<str:geschlecht>/', Mesh3daitestfaelleendpunkte.test, name='mesh3dai_testfaelle'),
+    # 24.10.2026 nachts: Zeile „Messpunkte des Körpers“ wie bei 2d-3d-AI (`Kostuemmesspunkte`, `Mesh3daitestmesspunkte`)
+    path('api/mesh3dai/test/<str:kennung>/messpunkte/', Mesh3daitestmesspunkteendpunkte.daten, name='mesh3dai_testmesspunkte'),
+    path('api/mesh3dai/test/<str:kennung>/messpunkte/bild/<str:art>/<int:nr>/', Mesh3daitestmesspunkteendpunkte.bild, name='mesh3dai_testmesspunktbild'),
     # Standardanimation der Ergebnisfigur (22.10.2026, wie Mesh-3D: Vorgabe A_Results/DanceKurz, `Mesh3daianimationswahl`) — Test hier, Job unten.
     path('api/mesh3dai/test/<str:kennung>/standardanimation/', Mesh3daistandardanimationendpunkte.test, name='mesh3dai_teststandardanimation'),
     # Reiter „Formtraining“ (18.10.2026): die Seite je Trainingslauf; Reiter „Lauf Aktuell“: was gerade rechnet (vor `<job>`, damit `lauf-aktuell` nie als Job gelesen wird).

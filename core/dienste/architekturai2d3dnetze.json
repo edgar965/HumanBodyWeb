@@ -1,0 +1,926 @@
+{
+ "gemessen": "2026-10-24T18:42:37",
+ "skript": "ProjektTemp/_wegwerf/ai2d3d/netze_vermessen.py",
+ "netze": [
+  {
+   "name": "Sapiens2 0.4B Segmentierung",
+   "datei": "A:\\3dTools\\hf_home\\sapiens\\sapiens2_0.4b_seg.safetensors",
+   "gewichte": 406601709,
+   "gruppen": {
+    "backbone.blocks.#": {
+     "gewichte": 394652672,
+     "bloecke": 24
+    },
+    "backbone.cls_token": {
+     "gewichte": 1024,
+     "bloecke": 0
+    },
+    "backbone.ln1.weight": {
+     "gewichte": 1024,
+     "bloecke": 0
+    },
+    "backbone.patch_embed.projection": {
+     "gewichte": 787456,
+     "bloecke": 0
+    },
+    "backbone.storage_tokens": {
+     "gewichte": 8192,
+     "bloecke": 0
+    },
+    "decode_head.conv_layers.#": {
+     "gewichte": 8320,
+     "bloecke": 2
+    },
+    "decode_head.conv_seg.bias": {
+     "gewichte": 29,
+     "bloecke": 0
+    },
+    "decode_head.conv_seg.weight": {
+     "gewichte": 1856,
+     "bloecke": 0
+    },
+    "decode_head.deconv_layers.#": {
+     "gewichte": 11141120,
+     "bloecke": 4
+    },
+    "backbone.rope_embed.periods": {
+     "gewichte": 16,
+     "bloecke": 0
+    }
+   },
+   "beispiele": {
+    "backbone.patch_embed.projection.weight": [
+     1024,
+     3,
+     16,
+     16
+    ],
+    "decode_head.conv_layers.0.weight": [
+     64,
+     64,
+     1,
+     1
+    ],
+    "decode_head.conv_seg.bias": [
+     29
+    ],
+    "decode_head.conv_seg.weight": [
+     29,
+     64,
+     1,
+     1
+    ],
+    "decode_head.deconv_layers.0.weight": [
+     1024,
+     512,
+     4,
+     4
+    ]
+   }
+  },
+  {
+   "name": "ViTPose-H WholeBody",
+   "datei": "A:\\3dTools\\VideoToBVH\\FootMR\\inputs\\checkpoints\\vitpose\\vitpose-h-wholebody.pth",
+   "gewichte": 637239687,
+   "gruppen": {
+    "backbone.pos_embed": {
+     "gewichte": 247040,
+     "bloecke": 0
+    },
+    "backbone.patch_embed.proj": {
+     "gewichte": 984320,
+     "bloecke": 0
+    },
+    "backbone.blocks.#": {
+     "gewichte": 629678080,
+     "bloecke": 32
+    },
+    "backbone.last_norm.weight": {
+     "gewichte": 1280,
+     "bloecke": 0
+    },
+    "backbone.last_norm.bias": {
+     "gewichte": 1280,
+     "bloecke": 0
+    },
+    "keypoint_head.deconv_layers.#": {
+     "gewichte": 6293506,
+     "bloecke": 4
+    },
+    "keypoint_head.final_layer.weight": {
+     "gewichte": 34048,
+     "bloecke": 0
+    },
+    "keypoint_head.final_layer.bias": {
+     "gewichte": 133,
+     "bloecke": 0
+    }
+   },
+   "beispiele": {
+    "backbone.patch_embed.proj.weight": [
+     1280,
+     3,
+     16,
+     16
+    ],
+    "backbone.blocks.0.attn.qkv.weight": [
+     3840,
+     1280
+    ],
+    "keypoint_head.deconv_layers.0.weight": [
+     1280,
+     256,
+     4,
+     4
+    ],
+    "keypoint_head.deconv_layers.1.weight": [
+     256
+    ],
+    "keypoint_head.deconv_layers.3.weight": [
+     256,
+     256,
+     4,
+     4
+    ],
+    "keypoint_head.deconv_layers.4.weight": [
+     256
+    ],
+    "keypoint_head.final_layer.weight": [
+     133,
+     256,
+     1,
+     1
+    ],
+    "keypoint_head.final_layer.bias": [
+     133
+    ]
+   }
+  },
+  {
+   "name": "SAM 3",
+   "datei": "A:\\3dTools\\VideoToBVH\\SAMBody4D\\checkpoints\\sam3\\sam3.pt",
+   "gewichte": 861235128,
+   "gruppen": {
+    "detector.backbone.vision_backbone.trunk": {
+     "gewichte": 447417344,
+     "bloecke": 0
+    },
+    "detector.backbone.vision_backbone.convs": {
+     "gewichte": 7802112,
+     "bloecke": 0
+    },
+    "detector.backbone.language_backbone.encoder": {
+     "gewichte": 353462272,
+     "bloecke": 0
+    },
+    "detector.backbone.language_backbone.resizer": {
+     "gewichte": 262400,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.label_embed.weight": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.cls_embed.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.points_direct_project.weight": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.points_direct_project.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.points_pool_project.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.points_pool_project.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.points_pos_enc_project.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.points_pos_enc_project.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.boxes_direct_project.weight": {
+     "gewichte": 1024,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.boxes_direct_project.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.boxes_pool_project.weight": {
+     "gewichte": 3211264,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.boxes_pool_project.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.boxes_pos_enc_project.weight": {
+     "gewichte": 66048,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.boxes_pos_enc_project.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.final_proj.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.final_proj.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.norm.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.norm.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.img_pre_norm.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.img_pre_norm.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.encode.#": {
+     "gewichte": 4736256,
+     "bloecke": 3
+    },
+    "detector.geometry_encoder.encode_norm.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.geometry_encoder.encode_norm.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.transformer.encoder.layers": {
+     "gewichte": 9472512,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.layers": {
+     "gewichte": 11054592,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.norm": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.bbox_embed": {
+     "gewichte": 132612,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.query_embed": {
+     "gewichte": 51200,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.reference_points": {
+     "gewichte": 800,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.boxRPB_embed_x": {
+     "gewichte": 2824,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.boxRPB_embed_y": {
+     "gewichte": 2824,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.presence_token": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.presence_token_head": {
+     "gewichte": 131841,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.presence_token_out_norm": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "detector.transformer.decoder.ref_point_head": {
+     "gewichte": 197120,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.pixel_decoder.conv_layers": {
+     "gewichte": 1770240,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.pixel_decoder.norms": {
+     "gewichte": 1536,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.mask_predictor.mask_embed": {
+     "gewichte": 197376,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.cross_attend_prompt.in_proj_weight": {
+     "gewichte": 196608,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.cross_attend_prompt.in_proj_bias": {
+     "gewichte": 768,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.cross_attend_prompt.out_proj": {
+     "gewichte": 65792,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.cross_attn_norm.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.cross_attn_norm.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.semantic_seg_head.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.semantic_seg_head.bias": {
+     "gewichte": 1,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.instance_seg_head.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "detector.segmentation_head.instance_seg_head.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.dot_prod_scoring.prompt_mlp.layers": {
+     "gewichte": 1050880,
+     "bloecke": 0
+    },
+    "detector.dot_prod_scoring.prompt_mlp.out_norm": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "detector.dot_prod_scoring.prompt_proj.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "detector.dot_prod_scoring.prompt_proj.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "detector.dot_prod_scoring.hs_proj.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "detector.dot_prod_scoring.hs_proj.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.maskmem_tpos_enc": {
+     "gewichte": 448,
+     "bloecke": 0
+    },
+    "tracker.no_mem_embed": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.no_mem_pos_enc": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.no_obj_ptr": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.no_obj_embed_spatial": {
+     "gewichte": 64,
+     "bloecke": 0
+    },
+    "detector.backbone.vision_backbone.sam2_convs": {
+     "gewichte": 7802112,
+     "bloecke": 0
+    },
+    "tracker.mask_downsample.weight": {
+     "gewichte": 16,
+     "bloecke": 0
+    },
+    "tracker.mask_downsample.bias": {
+     "gewichte": 1,
+     "bloecke": 0
+    },
+    "tracker.transformer.encoder.layers": {
+     "gewichte": 5921792,
+     "bloecke": 0
+    },
+    "tracker.transformer.encoder.norm": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "tracker.maskmem_backbone.mask_downsampler.encoder": {
+     "gewichte": 224096,
+     "bloecke": 0
+    },
+    "tracker.maskmem_backbone.pix_feat_proj.weight": {
+     "gewichte": 65536,
+     "bloecke": 0
+    },
+    "tracker.maskmem_backbone.pix_feat_proj.bias": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.maskmem_backbone.fuser.layers": {
+     "gewichte": 1078272,
+     "bloecke": 0
+    },
+    "tracker.maskmem_backbone.out_proj.weight": {
+     "gewichte": 16384,
+     "bloecke": 0
+    },
+    "tracker.maskmem_backbone.out_proj.bias": {
+     "gewichte": 64,
+     "bloecke": 0
+    },
+    "tracker.sam_prompt_encoder.pe_layer.positional_encoding_gaussian_matrix": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.sam_prompt_encoder.point_embeddings.#": {
+     "gewichte": 1024,
+     "bloecke": 4
+    },
+    "tracker.sam_prompt_encoder.not_a_point_embed.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.sam_prompt_encoder.mask_downscaling.#": {
+     "gewichte": 4684,
+     "bloecke": 5
+    },
+    "tracker.sam_prompt_encoder.no_mask_embed.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.transformer.layers": {
+     "gewichte": 3159040,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.transformer.final_attn_token_to_image": {
+     "gewichte": 131712,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.transformer.norm_final_attn": {
+     "gewichte": 512,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.iou_token.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.mask_tokens.weight": {
+     "gewichte": 1024,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.obj_score_token.weight": {
+     "gewichte": 256,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.output_upscaling.#": {
+     "gewichte": 73952,
+     "bloecke": 3
+    },
+    "tracker.sam_mask_decoder.conv_s0.weight": {
+     "gewichte": 8192,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.conv_s0.bias": {
+     "gewichte": 32,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.conv_s1.weight": {
+     "gewichte": 16384,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.conv_s1.bias": {
+     "gewichte": 64,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.output_hypernetworks_mlps.#": {
+     "gewichte": 559232,
+     "bloecke": 4
+    },
+    "tracker.sam_mask_decoder.iou_prediction_head.layers": {
+     "gewichte": 132612,
+     "bloecke": 0
+    },
+    "tracker.sam_mask_decoder.pred_obj_score_head.layers": {
+     "gewichte": 131841,
+     "bloecke": 0
+    },
+    "tracker.obj_ptr_proj.layers.#": {
+     "gewichte": 197376,
+     "bloecke": 3
+    },
+    "tracker.obj_ptr_tpos_proj.weight": {
+     "gewichte": 16384,
+     "bloecke": 0
+    },
+    "tracker.obj_ptr_tpos_proj.bias": {
+     "gewichte": 64,
+     "bloecke": 0
+    }
+   },
+   "beispiele": {
+    "detector.backbone.vision_backbone.trunk.blocks.0.attn.qkv.weight": [
+     3072,
+     1024
+    ],
+    "detector.backbone.language_backbone.encoder.transformer.resblocks.0.attn.in_proj_weight": [
+     3072,
+     1024
+    ],
+    "detector.transformer.encoder.layers.0.self_attn.in_proj_weight": [
+     768,
+     256
+    ],
+    "detector.transformer.encoder.layers.0.cross_attn_image.in_proj_weight": [
+     768,
+     256
+    ],
+    "detector.transformer.decoder.layers.0.cross_attn.in_proj_weight": [
+     768,
+     256
+    ],
+    "detector.transformer.decoder.layers.0.ca_text.in_proj_weight": [
+     768,
+     256
+    ],
+    "detector.transformer.decoder.layers.0.self_attn.in_proj_weight": [
+     768,
+     256
+    ]
+   }
+  },
+  {
+   "name": "Haut-KI (Mesh3D-AI Stufe 2)",
+   "datei": "A:\\3DTools\\3DObjects\\mesh3dai\\_stufe2\\laeufe\\2026.10.24.04.19_hautwechsel\\netz.pt",
+   "gewichte": 117575374,
+   "gruppen": {
+    "form.punkt.#": {
+     "gewichte": 2432,
+     "bloecke": 2
+    },
+    "form.ort.tafel": {
+     "gewichte": 29360128,
+     "bloecke": 0
+    },
+    "form.kopf.#": {
+     "gewichte": 31105,
+     "bloecke": 3
+    },
+    "farbe.punkt.#": {
+     "gewichte": 2432,
+     "bloecke": 2
+    },
+    "farbe.ort.tafel": {
+     "gewichte": 29360128,
+     "bloecke": 0
+    },
+    "farbe.kopf.#": {
+     "gewichte": 31625,
+     "bloecke": 3
+    },
+    "deckung.punkt.#": {
+     "gewichte": 2496,
+     "bloecke": 2
+    },
+    "deckung.ort.tafel": {
+     "gewichte": 29360128,
+     "bloecke": 0
+    },
+    "deckung.kopf.#": {
+     "gewichte": 31105,
+     "bloecke": 3
+    },
+    "haut.punkt.#": {
+     "gewichte": 2432,
+     "bloecke": 2
+    },
+    "haut.ort.tafel": {
+     "gewichte": 29360128,
+     "bloecke": 0
+    },
+    "haut.kopf.#": {
+     "gewichte": 31235,
+     "bloecke": 3
+    }
+   },
+   "beispiele": {
+    "form.punkt.0.weight": [
+     32,
+     9
+    ],
+    "form.punkt.2.weight": [
+     64,
+     32
+    ],
+    "form.kopf.0.weight": [
+     128,
+     177
+    ],
+    "form.kopf.2.weight": [
+     64,
+     128
+    ],
+    "form.kopf.4.weight": [
+     1,
+     64
+    ],
+    "farbe.punkt.0.weight": [
+     32,
+     9
+    ],
+    "farbe.punkt.2.weight": [
+     64,
+     32
+    ],
+    "farbe.kopf.0.weight": [
+     128,
+     177
+    ],
+    "farbe.kopf.2.weight": [
+     64,
+     128
+    ],
+    "farbe.kopf.4.weight": [
+     9,
+     64
+    ],
+    "deckung.punkt.0.weight": [
+     32,
+     11
+    ],
+    "deckung.punkt.2.weight": [
+     64,
+     32
+    ],
+    "deckung.kopf.0.weight": [
+     128,
+     177
+    ],
+    "deckung.kopf.2.weight": [
+     64,
+     128
+    ],
+    "deckung.kopf.4.weight": [
+     1,
+     64
+    ],
+    "haut.punkt.0.weight": [
+     32,
+     9
+    ],
+    "haut.punkt.2.weight": [
+     64,
+     32
+    ],
+    "haut.kopf.0.weight": [
+     128,
+     177
+    ],
+    "haut.kopf.2.weight": [
+     64,
+     128
+    ],
+    "haut.kopf.4.weight": [
+     3,
+     64
+    ]
+   }
+  },
+  {
+   "name": "MediaPipe face_detector.tflite",
+   "datei": "A:\\3DTools\\VideoToBVH\\MocapNET\\src\\python\\mediapipe\\models\\face_landmarker.task/face_detector.tflite",
+   "gewichte": 101478,
+   "gruppen": {
+    "conv2d": {
+     "gewichte": 1824,
+     "bloecke": 0
+    },
+    "depthwise_conv2d": {
+     "gewichte": 240,
+     "bloecke": 0
+    },
+    "conv2d_1": {
+     "gewichte": 600,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_1": {
+     "gewichte": 240,
+     "bloecke": 0
+    },
+    "conv2d_2": {
+     "gewichte": 700,
+     "bloecke": 0
+    },
+    "channel_padding": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_2": {
+     "gewichte": 280,
+     "bloecke": 0
+    },
+    "conv2d_3": {
+     "gewichte": 928,
+     "bloecke": 0
+    },
+    "channel_padding_1": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_3": {
+     "gewichte": 320,
+     "bloecke": 0
+    },
+    "conv2d_4": {
+     "gewichte": 1188,
+     "bloecke": 0
+    },
+    "channel_padding_2": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_4": {
+     "gewichte": 360,
+     "bloecke": 0
+    },
+    "conv2d_5": {
+     "gewichte": 1554,
+     "bloecke": 0
+    },
+    "channel_padding_3": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_5": {
+     "gewichte": 420,
+     "bloecke": 0
+    },
+    "conv2d_6": {
+     "gewichte": 2064,
+     "bloecke": 0
+    },
+    "channel_padding_4": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_6": {
+     "gewichte": 480,
+     "bloecke": 0
+    },
+    "conv2d_7": {
+     "gewichte": 2744,
+     "bloecke": 0
+    },
+    "channel_padding_5": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_7": {
+     "gewichte": 560,
+     "bloecke": 0
+    },
+    "conv2d_8": {
+     "gewichte": 3648,
+     "bloecke": 0
+    },
+    "channel_padding_6": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_8": {
+     "gewichte": 640,
+     "bloecke": 0
+    },
+    "conv2d_9": {
+     "gewichte": 4680,
+     "bloecke": 0
+    },
+    "channel_padding_7": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_9": {
+     "gewichte": 720,
+     "bloecke": 0
+    },
+    "conv2d_10": {
+     "gewichte": 5840,
+     "bloecke": 0
+    },
+    "channel_padding_8": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_10": {
+     "gewichte": 800,
+     "bloecke": 0
+    },
+    "conv2d_11": {
+     "gewichte": 7128,
+     "bloecke": 0
+    },
+    "channel_padding_9": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_11": {
+     "gewichte": 880,
+     "bloecke": 0
+    },
+    "conv2d_12": {
+     "gewichte": 8544,
+     "bloecke": 0
+    },
+    "channel_padding_10": {
+     "gewichte": 8,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_12": {
+     "gewichte": 960,
+     "bloecke": 0
+    },
+    "conv2d_13": {
+     "gewichte": 9312,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_13": {
+     "gewichte": 960,
+     "bloecke": 0
+    },
+    "conv2d_14": {
+     "gewichte": 9312,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_14": {
+     "gewichte": 960,
+     "bloecke": 0
+    },
+    "conv2d_15": {
+     "gewichte": 9312,
+     "bloecke": 0
+    },
+    "depthwise_conv2d_15": {
+     "gewichte": 960,
+     "bloecke": 0
+    },
+    "conv2d_16": {
+     "gewichte": 9312,
+     "bloecke": 0
+    },
+    "classificator_8": {
+     "gewichte": 178,
+     "bloecke": 0
+    },
+    "classificator_16": {
+     "gewichte": 582,
+     "bloecke": 0
+    },
+    "regressor_8": {
+     "gewichte": 2848,
+     "bloecke": 0
+    },
+    "regressor_16": {
+     "gewichte": 9312,
+     "bloecke": 0
+    }
+   },
+   "beispiele": {}
+  },
+  {
+   "name": "MediaPipe face_landmarks_detector.tflite",
+   "datei": "A:\\3DTools\\VideoToBVH\\MocapNET\\src\\python\\mediapipe\\models\\face_landmarker.task/face_landmarks_detector.tflite",
+   "gewichte": 1199342,
+   "gruppen": {
+    "model_5": {
+     "gewichte": 1199342,
+     "bloecke": 0
+    }
+   },
+   "beispiele": {}
+  }
+ ]
+}

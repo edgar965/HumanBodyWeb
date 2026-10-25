@@ -36,6 +36,9 @@ class Mesh3dailaufbeschreibung:
         # Kleider und Haar
         ('mesh3dai_stufe2_alle', 'Training', 'KI lernt Kleider, Haar und Haut an allen Tripo-Jobs, danach die Testjobs', None),
         ('mesh3dai_stufe2_lauf', 'Training', 'KI lernt Kleider, Haar und Haut an diesem Job', None),
+        ('mesh3dai_hautwechsel_lauf', 'Training', 'KI lernt die Haut (wechselnde Haut, scharfe und unscharfe Eingänge)', None),        # 24.10.2026
+        ('mesh3dai_hautki_lauf', 'Training', 'KI lernt die Haut aus Kachelstücken (übernimmt Gesehenes, erzeugt Ungesehenes)', None),        # 24.10.2026 abends
+        ('mesh3dai_hautki_einsatz', 'Haut', 'Haut der neuen KI für diesen Test', None),
         ('mesh3dai_nachstellen_lauf', 'Kleider', 'Schnittmuster an das ausgeschnittene Stück anpassen', None),
         ('mesh3dai_flaeche_lauf', 'Kleider', 'Schnitt aus der Fläche: Teile flachlegen, nähen und drapieren', None),
         ('mesh3dai_schnitt_katalogdaten', 'Daten', 'Schnittmuster-Beispiele aus dem Katalog nähen', None),
@@ -53,6 +56,7 @@ class Mesh3dailaufbeschreibung:
         ('mesh3dai_probenzerlegung', 'Kleider', 'Kleider und Haar erkennen', None),
         ('mesh3dai_kostuem_lauf', 'Kostüme', 'Kostüm erkennen, ausschneiden, auf die Figur legen und prüfen', None),
         ('mesh3dai_kopfangleich_lauf', 'Form', 'Kopf an das Mesh angleichen: Gesichtsmaße und Haut, in Runden', None),          # 24.10.2026, `Kopfangleich`
+        ('mesh3dai_koerperangleich_lauf', 'Form', 'Körper in die Außenmaße des Mesh: Form, Proportionen, Haltung, in Runden', None),  # 25.10.2026, `Koerperangleich`
         ('mesh3dai_kostuem_segmentierung', 'Kostüme', 'Bildmodelle zerlegen das Netz (Sapiens2, SAM 3)', None),
         ('mesh3dai_kostuem_einpassen', 'Kostüme', 'Körper der KI ins Kostüm einpassen (Variante C)', None),
         ('mesh3dai_kostuem_sichtbar', 'Kostüme', 'Körper-KI sieht nur sichtbaren Körper (Variante B)', None),

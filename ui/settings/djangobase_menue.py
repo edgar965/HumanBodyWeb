@@ -111,6 +111,8 @@ EINSTELLUNGEN_EXTRA = [
     {'label': 'Genesis', 'url': '/settings/genesis/', 'icon': 'bi-person-bounding-box'},
     # Abfragetakt der Statuskarte von Mesh3D-AI (Edgar, 14.10.2026: „Mach eine Seite Einstellungen – Mesh3D-AI").
     {'label': 'Mesh3D-AI', 'url': '/settings/mesh3dai/', 'icon': 'bi-cpu'},
+    # Quelle der Gelenke in den Fotos (Edgar, 24.10.2026: „Mach auch du eine Seite Einstellungen - 2d-3d-KI").
+    {'label': '2d-3d-AI', 'url': '/settings/2d-3d-ai/', 'icon': 'bi-camera'},
 ]
 
 

@@ -71,7 +71,7 @@ class Ai2d3djobs:
             if all(f['pfad'].is_file() for f in fotos):
                 paar = paare.get(beschreibung.resolve())
                 return {'id': ordner.name.lower(), 'name': ordner.name, 'art': 'export', 'figur': cls._figurname(beschreibung), 'fotos': fotos, 'paar': paar,
-                        'test': None, 'wahrheit': True, 'netze': cls._netze(ordner, paar), 'hinweis': ''}
+                        'test': None, 'wahrheit': True, 'netze': cls._netze(ordner, paar), 'hinweis': '', 'koerpergroesse_m': None}
         return None
 
     @staticmethod

@@ -3,6 +3,7 @@
 
 GET /api/2d3dai/<job>/foto/<nr>/     das Foto Nummer `nr` (Reihenfolge des Jobs)
 GET /api/2d3dai/<job>/netz/<art>/    das Netz der Art (`hunyuan3d` | `tripo3d`) als GLB
+GET /api/2d3dai/<job>/kopf/<nr>/     ein Messbild der Karte „Kopf (KopfKI)“
 """
 
 from django.http import FileResponse, Http404
@@ -23,6 +24,17 @@ class Ai2d3ddatenendpunkte:
         if gefunden is None or not 0 <= int(nr) < len(gefunden['fotos']):
             raise Http404('Kein Foto %s in %s' % (nr, job))
         pfad = gefunden['fotos'][int(nr)]['pfad']
+        return FileResponse(open(pfad, 'rb'), content_type=Ai2d3ddatenendpunkte.BILDARTEN.get(pfad.suffix.lower(), 'application/octet-stream'))
+
+    @staticmethod
+    @require_GET
+    def kopfbild(request, job, nr):
+        """Ein Messbild der Karte „Kopf (KopfKI)“ (`Ai2d3dfotojobs.kopf`)."""
+        gefunden = Ai2d3djobs.job(job)
+        bilder = (gefunden.get('kopf') or {}).get('bilder', []) if gefunden else []
+        if not 0 <= int(nr) < len(bilder):
+            raise Http404('Kein Kopfbild %s in %s' % (nr, job))
+        pfad = bilder[int(nr)]['pfad']
         return FileResponse(open(pfad, 'rb'), content_type=Ai2d3ddatenendpunkte.BILDARTEN.get(pfad.suffix.lower(), 'application/octet-stream'))
 
     @staticmethod
