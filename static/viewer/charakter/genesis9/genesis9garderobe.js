@@ -184,7 +184,7 @@ export class Genesis9garderobe {
             variante: wahl?.value || '', stil: felder.stil?.value || '', stile,
             regler: { ...(bisher.regler || {}) },
             farbe: felder.farbe?.wert ?? (bisher.farbe || ''),
-            gruppenfarben: { ...(bisher.gruppenfarben || {}) },
+            gruppenfarben: { ...(bisher.gruppenfarben || {}) }, stoff: bisher.stoff,   // Stoffwerte (`Stueckstoff`) überleben einen Varianten-/Stilwechsel
             griff: Boolean(stueck.griff),
             // Eigene Knochen (Eirgrid: 14 Zöpfe) — das Stück hängt im Browser-Skelett.
             knochen: Boolean(stueck.eigene_knochen),

@@ -15,6 +15,13 @@ export const GERIGGTE_FORMATE = ['glb', 'blend', 'fbx', 'dae'];
 
 export class Modellexportinhalt {
 
+    /**
+     * Eigene Stücke, deren Form erst im Shader entsteht (Schale: Sitz, Brücke, Säume je Pixel; Kragen) — ihre Geometrie ist eine Kopie der HAUT. Exportiert wären sie
+     * eine zweite, ungeschnittene Haut über dem ganzen Körper; darum bleiben sie draußen, mit Warnung, bis sie für den Export ausgebacken werden (Stufe K5,
+     * 25.10.2026). Rock und Rockteil des Kleids (`Eigenrock`) sind echte Geometrie und gehen mit.
+     */
+    static NUR_SHADER = new Set(['oberteil', 'hose', 'socke', 'kleid', 'kragen']);
+
     /** Alle sichtbaren Meshes — Körper zuerst, Assets danach (wenn gewählt). */
     static objekte(inst, { assets = true } = {}) {
         const koerper = [];
@@ -28,6 +35,7 @@ export class Modellexportinhalt {
         };
         inst.group.traverse((obj) => {
             if (!obj.isMesh || obj.visible === false) return;
+            if (Modellexportinhalt.NUR_SHADER.has(obj.userData?.eigenkleid)) return;
             (gehoertZumKoerper(obj) ? koerper : zubehoer).push(obj);
         });
         if (!koerper.length && inst.bodyMesh && inst.bodyMesh.visible !== false) koerper.push(inst.bodyMesh);
@@ -92,6 +100,9 @@ export class Modellexportinhalt {
             warnungen.push('STL kann keine Textur speichern — das Netz bleibt ohne Bildkarte.');
         }
         warnungen.push(...Modellexportinhalt._texturwarnungen(inst, textur));
+        const eigen = new Set();
+        inst?.group?.traverse((obj) => { if (obj.visible !== false && Modellexportinhalt.NUR_SHADER.has(obj.userData?.eigenkleid)) eigen.add(obj.userData.eigenkleid); });
+        if (eigen.size) warnungen.push(`Eigene Kleider (${[...eigen].join(', ')}) werden noch nicht exportiert — ihre Form entsteht erst im Shader; Rock und Rockteil des Kleids gehen mit.`);
         return warnungen;
     }
 

@@ -22,6 +22,7 @@ export class Genesis9vorgabe {
         if (leer(modell.hautmischung)) modell.hautmischung = { ...(eintrag.hautmischung || {}) };
         if (leer(modell.teilmaterial)) modell.teilmaterial = { ...(eintrag.teilmaterial || {}) };
         if (leer(modell.hautebenen)) modell.hautebenen = { ...(eintrag.hautebenen || {}) };
+        if (!modell.groesseHalten && eintrag.groesse_halten) modell.groesseHalten = { ...eintrag.groesse_halten };   // „Größe halten" (R8, `genesis9groessehalten.js`)
         if (!modell.pose) modell.pose = eintrag.pose || '';
         if (!modell.ausdruck) modell.ausdruck = eintrag.ausdruck || '';
         if (leer(modell.kleidung)) modell.kleidung = { ...(eintrag.kleidung || {}) };

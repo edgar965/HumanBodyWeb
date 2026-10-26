@@ -16,6 +16,7 @@ from .architekturmesh3daiergebnis import Architekturmesh3daiergebnis
 from .architekturmesh3daiform import Architekturmesh3daiform
 from .architekturmesh3daiformvergleich import Architekturmesh3daiformvergleich
 from .architekturmesh3daigarmentcode import Architekturmesh3daigarmentcode
+from .architekturmesh3daikarte import Architekturmesh3daikarte
 from .architekturmesh3daikette import Architekturmesh3daikette
 from .architekturmesh3daikis import Architekturmesh3daikis
 from .architekturmesh3daikopf import Architekturmesh3daikopf
@@ -109,5 +110,7 @@ class Architekturmesh3dai:
             'kopf': teil('Kopf aus der KI', Architekturmesh3daikopf.kontext),
             # 24.10.2026 abends: wer wann rechnet (Übersicht) und je KI eine Grafik aus dem Steckbrief ihrer Gewichtsdatei (Edgar: „für alle KIs eine einzelne Grafik“)
             'kis': teil('Die KIs der Kette', Architekturmesh3daikis.kontext),
+            # 26.10.2026: auf der Karte, ohne Wartepunkte, als CUDA-Graph und reproduzierbar (Edgar: „aktualisiere … mit den neuen Sachen“)
+            'karte': teil('Auf der Karte', Architekturmesh3daikarte.kontext),
             'befunde': befunde,
         }

@@ -4,8 +4,12 @@
     1  Einstellung `Hautentlichtung`: Vorgabe 100, Zahlen 0–100 als Text, alles andere die Vorgabe
     2  `Hautnetz.forward(x, entlichtung)`: 1 ist bitgleich zum Aufruf ohne Wert; bei p gilt linear aus(p) = aus(1) · g^(p−1) (je Texel, bis auf die Klemme von sRGB)
     3  Prüfung „Entlichtung wie die Wahrheit“: innerhalb des Bereichs der sechs Tripo-Jobs ± Rand grün, Faktor 2 (Kunstwert) rot
-    4  „Hautton der Figur“ belichtet die Figur zurück: eine Figur, die genau um g heller ist als der Eingang, hat zurückbelichtet den Ton des Eingangs
-Sabotage (von Hand): in `Hautnetz.forward` `g ** (entlichtung - 1)` → `g ** entlichtung` → Fall 2 rot; `LICHT_RAND` auf 10 → Fall 3 rot; in `figur` die Rückbelichtung streichen → Fall 4 rot.
+    4  „Hautton der Figur“ belichtet die Figur zurück: eine Figur, die genau um g heller ist als der Eingang, hat zurückbelichtet den Ton des Eingangs; ohne Rückbelichtung
+       wäre sie rot (g 2,5/2,2/2,0 an sRGB 90/70/60: ΔE76 17,1, unabhängig nachgerechnet 25.10.2026 `_wegwerf/haut_ki/delta_e_gegenprobe.py`; g 1,5/1,4/1,3 gäbe nur 7,1)
+    5  Mit Ton-KI prüft „Entlichtung wie die Wahrheit“ nur g der Haut-KI (`licht_hautki_median`), nicht g · Faktor; ohne getrenntes g: nicht geprüft (Prüfung Fassung 22)
+    6  „Ton links wie rechts“ (`Kostuemhautseiten.paare`): gleiche Töne → 0, ein abweichendes Ohr → nur das Paar Ohr über 0
+Sabotage (von Hand): in `Hautnetz.forward` `g ** (entlichtung - 1)` → `g ** entlichtung` → Fall 2 rot; `LICHT_RAND` auf 10 → Fall 3 rot; in `figur` die Rückbelichtung streichen → Fall 4 rot;
+in `licht_der_haut_ki` immer `licht_median` → Fall 5 rot; in `paare` `_rechts` durch `_links` ersetzen → Fall 6 rot.
 """
 import sys
 import unittest
@@ -68,7 +72,7 @@ class HautentlichtungNetzTest(unittest.TestCase):
 
         from KoerperKI_alle.hautnetz import Hautnetz
         eingang = torch.tensor([[90.0, 70.0, 60.0]], dtype=torch.float64)
-        g = torch.tensor([1.5, 1.4, 1.3], dtype=torch.float64)
+        g = torch.tensor([2.5, 2.2, 2.0], dtype=torch.float64)
         figur = 255.0 * Hautnetz.srgb(Hautnetz.linear(eingang / 255.0) * g)          # die KI hat um g entlichtet
         h = P.__new__(P)
         h.k = SimpleNamespace(t=torch)
@@ -77,7 +81,28 @@ class HautentlichtungNetzTest(unittest.TestCase):
         h.s = SimpleNamespace(koerper_alle=(None, f, torch.tensor([0])), koerper=(None, None, figur.expand(3, 3)))
         licht = {'licht_median': g.tolist(), 'entlichtung': 1.0}
         self.assertLess(h.figur(licht)['abstand'], 0.5)
-        self.assertGreater(h.figur(None)['abstand'], 10.0)
+        self.assertGreater(h.figur(None)['abstand'], P.HAUTTON_MAX)
+
+    def test_5_licht_der_haut_ki(self):
+        from mesh3dai_kostuem_hautpruefung import Kostuemhautpruefung as P
+        gesamt, g = [2.4, 2.9, 3.1], [1.05, 0.88, 0.83]
+        self.assertEqual(P.licht_der_haut_ki({'licht': {'licht_median': g}}), g)
+        self.assertEqual(P.licht_der_haut_ki({'licht': {'licht_median': gesamt, 'licht_hautki_median': g}, 'hautton': {'lauf': 'x'}}), g)
+        self.assertIsNone(P.licht_der_haut_ki({'licht': {'licht_median': gesamt}, 'hautton': {'lauf': 'x'}}))
+        self.assertIsNone(P.licht_der_haut_ki({}))
+
+    def test_6_ton_links_wie_rechts(self):
+        import torch
+        from mesh3dai_kostuem_hautseiten import Kostuemhautseiten as S
+
+        from KoerperKI_alle.hautteilkarte import Hautteilkarte
+        teile = Hautteilkarte.TEILE
+        toene = torch.full((len(teile), 3), 0.3, dtype=torch.float64)
+        self.assertEqual(set(S.paare(toene, teile).values()), {0.0})
+        toene[teile.index('ohr_rechts')] = torch.tensor([0.05, 0.04, 0.03], dtype=torch.float64)
+        p = S.paare(toene, teile)
+        self.assertGreater(p['ohr'], 10.0)
+        self.assertEqual({k for k, v in p.items() if v > 0}, {'ohr'})
 
 
 if __name__ == '__main__':

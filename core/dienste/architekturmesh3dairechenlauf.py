@@ -55,6 +55,25 @@ class Architekturmesh3dairechenlauf:
                               'Netz, das nicht zur Kamera blickt (`Vorstufenblick`)', 'zauberer_fantasy 124° rot, ballerina_bunt 6°, edgar_knopf 1° (Augen von ViTPose allein: ballerina 132°, Fehlalarm)'),
         ('24.10.2026 nachts', 'Ganze Kette in python14 und in einem Prozess (Skriptdienst, `Stimmenschritt`; Kopf und Lage rufen die Haltung im selben Prozess); open3d durch `Netzausduennung` (GPU) ersetzt',
          'Gegenprobe randy: acht Schritte bitgleich zu python10; Vorschau 61 s → 0,1–1,0 s'),
+        # 26.10.2026 (Edgar: „aktualisiere … mit den neuen Sachen“) — Quelle: Tagebuch 2026-10-25_mesh3dai-koerper-in-die-aussenmasse-und-haut-relativ.md, 2026-10-25_haut-ton-ki-je-koerperteil.md,
+        # 2026-10-26_mesh3dai-alles-auf-der-karte.md; Docstring `Koerperangleich` (Fassung 6)
+        ('25.10.2026', 'Schritt „koerper“ (`Koerperangleich`) nach „lage“: Körperregler, Daz-Proportionen und Haltung gegen Umriss, Haut, Boden, Kopfform und Lage des Gesichts, jede Runde an der echten '
+                       'Formung; übernommen nur, was an der gebauten Figur besser ist', 'zauberer_fantasy ab „figur“: Prio 1 128 → 73 rot, Umriss und Lage des Gesichts grün, Gelenke 33 von 92 rot'),
+        ('25.10.2026', 'Kostüm-Prüfung bis Fassung 21 (Hautton zurückbelichtet, Entlichtung wie die Wahrheit, Haut durch Stück im Tanz, Glieder — die Fassungen stehen unten); Stab nie Haut '
+                       '(Farbregel und „Stück in Hautfarbe“ ohne Requisiten)', 'Zahlen je Fassung in der Fassungsgeschichte'),
+        ('25.10.2026', 'Haut-KI im Ton des Eingangs (Bauart relativ 2, Abholanteil) und Ton-KI je Körperteil (`KoerperKI_alle`, Prüfung `Hautkitoene` Fassung 5)',
+         'ballerina_bunt Hautton 20,1 → 13,9 (relativ 2); Ton-KI: Tonfälle grün, echter Eingang an OlesiaSitzend und Rainy schlechter — beides nicht eingesetzt'),
+        ('25.10.2026', 'MIA-Nachbau in python14 (`mesh3dai_miaeigen*`, Dauerprozess über `Miadienst`; Rückfall das Original in python11_mia); Sapiens2, SAM 3 und ViTPose als python14-Ports', '—'),
+        ('26.10.2026 nachts', 'Eigenregler-KI Fassung 1 (je Punkt ein kleines Netz für Gewicht und Korrektur, Anfasser per Ausgleichsrechnung)',
+         'sechs Tripo-Jobs: nichts tun 6,87 mm, KI 7,28 mm — schlechter als nichts tun, nicht angewandt'),
+        ('26.10.2026', 'Schritt „koerper“ Fassung 6: die Anfasser der Körper-Eigenregler (Katalog von 2d-3d-AI) als zweite Stellgröße neben den Reglern (`Koerperangleichstellen`)',
+         'randy, trocken: 389 Anfasser bewegt, übernommen Runde 2'),
+        ('26.10.2026', 'Auf der Karte statt CPU: Rendern in torch (`Kostuemraster` statt pyrender), Löcher und Inseln (`Kostuemmaske`), ViTPose-Bild, Formmass2-Tafeln; Wartepunkte entfernt, '
+                       'Körper und Kopf als CUDA-Graph — Abschnitt „Auf der Karte“', 'koerper 115 → 60 s, kopf 103 → 63 s, bitgleich; Rendern 0,08–0,47 → 0,02–0,03 s je Bild'),
+        ('26.10.2026', 'Reproduzierbar: `Determinismus` (torch deterministisch, cuBLAS, feste Samen, PYTHONHASHSEED) in jedem Prozess der Kette',
+         'ohne: derselbe Code in zwei Prozessen 862 von 2.275 Werten verschieden (koerper); mit: 0'),
+        ('26.10.2026', 'Augen im Skriptdienst: der Zwischenspeicher der Augäpfel (`Koerperanhaenge`) kannte die Eigenregler nicht — ein Bau mit gleichen Daz-Werten bekam die Augen des vorigen',
+         'EdgarTrip im Dienst 247 statt 226 Abnahmefehler (gemessen von der 2d-3d-AI-Sitzung)'),
     )
 
     @staticmethod
@@ -100,25 +119,46 @@ class Architekturmesh3dairechenlauf:
                           for n, z in sorted((nachher.get('tests') or {}).items(), key=lambda kv: (kv[1].get('prio', 9), kv[0]))]}
 
     @staticmethod
-    def _wert(knoten, quelle, ordner):
-        """Wie `ast.literal_eval`, dazu `**Klasse.TEXTE` in einem Wörterbuch (seit Prüfung Fassung 15 stehen Testfälle in eigenen Klassen): die Klasse über ihren Import
-        (`from <modul> import <Klasse>`) in `ordner/<modul>.py` suchen und deren Literal lesen — ohne Import des Rechencodes. Rekursiv (seit Fassung 18 trägt
-        `Kostuemmesspunkte.TEXTE` selbst `**Kostuemblick.TEXTE`; mit einer Ebene fiel der ganze Abschnitt aus: „malformed node or string: None“)."""
-        if not isinstance(knoten, ast.Dict) or all(s is not None for s in knoten.keys):
-            return ast.literal_eval(knoten)
-        module = {a.asname or a.name: n.module for n in ast.parse(quelle).body if isinstance(n, ast.ImportFrom) and n.module for a in n.names}
-        aus = {}
-        for schl, wert in zip(knoten.keys, knoten.values, strict=True):
-            if schl is not None:
-                aus[ast.literal_eval(schl)] = ast.literal_eval(wert)
-                continue
-            if not (isinstance(wert, ast.Attribute) and isinstance(wert.value, ast.Name) and wert.value.id in module):
-                raise ValueError('Testfälle: **%s nicht lesbar' % ast.unparse(wert))
-            fremd = (ordner / (module[wert.value.id] + '.py')).read_text(encoding='utf-8')
-            kl = next(k for k in ast.parse(fremd).body if isinstance(k, ast.ClassDef) and k.name == wert.value.id)
-            ziel = next(k.value for k in kl.body if isinstance(k, ast.Assign) and len(k.targets) == 1 and isinstance(k.targets[0], ast.Name) and k.targets[0].id == wert.attr)
-            aus.update(Architekturmesh3dairechenlauf._wert(ziel, fremd, ordner))
-        return aus
+    def _konstanten(koerper):
+        return {k.targets[0].id: k.value for k in koerper if isinstance(k, ast.Assign) and len(k.targets) == 1 and isinstance(k.targets[0], ast.Name)}
+
+    @classmethod
+    def _wert(cls, knoten, quelle, ordner, klasse=None):
+        """Wert eines Ausdrucks im Quelltext, ohne Import des Rechencodes: Literale, `**Klasse.TEXTE` in einem Wörterbuch (seit Prüfung Fassung 15 stehen Testfälle in eigenen Klassen — die
+        Klasse über ihren Import `from <modul> import <Klasse>` in `ordner/<modul>.py`, rekursiv: seit Fassung 18 trägt `Kostuemmesspunkte.TEXTE` selbst `**Kostuemblick.TEXTE`), Namen (Konstanten
+        der Klasse oder des Moduls), `Klasse.KONSTANTE` und `'…' % (…)`. Seit 25.10.2026 schreibt `Kostuemtanz.TEXTE = {NAME: (1, '… %d Bilder …' % (Kostuemtanzbilder.BILDER, DURCH_MM, ROT_MIN))}`
+        — mit Literalen allein fiel der ganze Abschnitt aus („malformed node or string … Name(id='NAME')“, gefunden 26.10.2026)."""
+        baum = ast.parse(quelle)
+        module = {a.asname or a.name: n.module for n in baum.body if isinstance(n, ast.ImportFrom) and n.module for a in n.names}
+        namen = cls._konstanten(baum.body)
+        namen.update(cls._konstanten(klasse.body) if klasse is not None else {})
+
+        def auswerten(k):
+            if isinstance(k, ast.Constant):
+                return k.value
+            if isinstance(k, ast.Name) and k.id in namen:
+                return auswerten(namen[k.id])
+            if isinstance(k, ast.Attribute) and isinstance(k.value, ast.Name) and k.value.id in module:
+                fremd = (ordner / (module[k.value.id] + '.py')).read_text(encoding='utf-8')
+                kl = next(c for c in ast.parse(fremd).body if isinstance(c, ast.ClassDef) and c.name == k.value.id)
+                return cls._wert(cls._konstanten(kl.body)[k.attr], fremd, ordner, kl)
+            if isinstance(k, ast.BinOp) and isinstance(k.op, (ast.Mod, ast.Add)):
+                links, rechts = auswerten(k.left), auswerten(k.right)
+                return links % rechts if isinstance(k.op, ast.Mod) else links + rechts
+            if isinstance(k, ast.UnaryOp) and isinstance(k.op, ast.USub):
+                return -auswerten(k.operand)
+            if isinstance(k, (ast.Tuple, ast.List)):
+                return (tuple if isinstance(k, ast.Tuple) else list)(auswerten(e) for e in k.elts)
+            if isinstance(k, ast.Dict):
+                aus = {}
+                for schl, wert in zip(k.keys, k.values, strict=True):
+                    if schl is None:
+                        aus.update(auswerten(wert))
+                    else:
+                        aus[auswerten(schl)] = auswerten(wert)
+                return aus
+            raise ValueError('Testfälle: %s nicht lesbar (Zeile %s)' % (ast.unparse(k)[:80], getattr(k, 'lineno', '?')))
+        return auswerten(knoten)
 
     @staticmethod
     def pruefung():
@@ -129,7 +169,7 @@ class Architekturmesh3dairechenlauf:
         werte, zeile_fassung = {}, None
         for k in klasse.body:
             if isinstance(k, ast.Assign) and len(k.targets) == 1 and isinstance(k.targets[0], ast.Name) and k.targets[0].id in ('FASSUNG', 'TEXTE'):
-                werte[k.targets[0].id] = Architekturmesh3dairechenlauf._wert(k.value, quelle, datei.parent)
+                werte[k.targets[0].id] = Architekturmesh3dairechenlauf._wert(k.value, quelle, datei.parent, klasse)
                 if k.targets[0].id == 'FASSUNG':
                     zeile_fassung = k.lineno
         zeilen = quelle.splitlines()[klasse.lineno:zeile_fassung - 1] if zeile_fassung else []

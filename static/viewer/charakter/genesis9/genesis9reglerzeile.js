@@ -2,6 +2,7 @@ import { escapeHtml } from '../utils.js';
 import { Genesis9lauf } from './genesis9lauf.js';
 import { Genesis9skala } from './genesis9skala.js';
 import { Genesis9seiten } from './genesis9seiten.js';
+import { Genesis9groessehalten } from './genesis9groessehalten.js';
 
 /**
  * Genesis9reglerzeile — EIN Regler des Genesis-Bedienfelds: Schieber, Anzeige, Lauf (aus `genesis9eigenschaften.js` herausgelöst, 18.10.2026 — die Datei
@@ -101,7 +102,9 @@ export class Genesis9reglerzeile {
                 else inst.regler[r.name] = w;
             }
         }
-        return inst.reglerSetzen(regler.name, regler.paar ? Math.max(wert, 0) : wert);
+        const w = regler.paar ? Math.max(wert, 0) : wert;
+        // „Größe halten" (R8, 25.10.2026): erst rechnet der Server den Ausgleich, dann baut die Figur EINMAL (`genesis9groessehalten.js`).
+        return Genesis9groessehalten.zug(inst, regler.name, w, () => inst.reglerSetzen(regler.name, w));
     }
 
     /** Nach einem Lauf die Schieber auf den neuen Wert (Liste `g9-` UND Popup „Form" `g9d-` tragen denselben `data-regler`). */

@@ -3,9 +3,9 @@
 aufgerufen werden“). Daten: `Architekturmesh3daikis` (Schritte aus dem Code, Netze aus ki_fassungen.json, Steckbriefe aus den Gewichtsdateien).{% endcomment %}
 <h2 id="kis">Die KIs der Kette: wer wann rechnet</h2>
 {% with k=kis %}
-<p>Ein Test rechnet in elf festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>). Die Grafik zeigt je Schritt, wer rechnet: <strong>unsere KIs</strong> (grün, mit dem Lauf, den
-  <code>ki_fassungen.json</code> einsetzt), <strong>fertige Modelle anderer</strong> (grau: Make-It-Animatable, Sapiens2, SAM 3, MediaPipe) und <strong>eigene Rechnung ohne Gewichte</strong> (blau:
-  Figur aus den Reglern, Winkelanpassung, Kopfangleich, Kostüm-Weg A, Prüfung).</p>
+<p>Ein Test rechnet in {{ k.schritte|length }} festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>). Die Grafik zeigt je Schritt, wer rechnet: <strong>unsere KIs</strong> (grün, mit dem Lauf, den
+  <code>ki_fassungen.json</code> einsetzt), <strong>fertige Modelle anderer</strong> (grau: Make-It-Animatable, Sapiens2, SAM 3, MediaPipe, ViTPose) und <strong>eigene Rechnung ohne Gewichte</strong> (blau:
+  Figur aus den Reglern, Winkelanpassung, Kopfangleich, Lageangleich, Koerperangleich, Entlichtung der Haut, Kostüm-Weg A, Prüfung — Optimierung gegen Messungen, kein trainiertes Netz).</p>
 <div class="m3a-bildrahmen">{{ k.ablauf }}</div>
 
 <h3>Die Netze einzeln</h3>

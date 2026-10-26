@@ -7,8 +7,11 @@
     4  Haut des Eingangs nur nah am Körper (`HAUT_NAH_M` steht, der Grund — der Stab des Zauberers — im Docstring)
     5  Größe „gesicht“ (Fassung 5, `Koerpergesicht`): die Gesichtsmitte folgt dem Knochen `head` starr und dem Mittel der Kopfpunkte; gemessen wird nur in der Bildebene (Tiefe zählt nicht)
     6  Prüfung „Stück in Hautfarbe“ (Fassung 20): Requisiten und Haar zählen nicht, andere Stücke ja
+    7  Anfasser der Eigenregler (Fassung 6, `Koerperangleichstellen`, echte `Eigenbasis` an zwei Kunstspalten): Verschiebung nur um e − e_Stand, Zug gegen den Start der Figur, Klemme ± 0,15 m,
+       bewegt ab 1 mm, Rückschrieb in m (≈ 0 fällt heraus, fremde Regler bleiben); ohne Eigenregler keine Verschiebung und kein Zug
 Sabotage (von Hand): in `_paare` `maske[j]` streichen → Fall 1 rot; in `_regler` die Schwelle 0,005 auf 0 → Fall 2 rot; Schritt „koerper“ vor „lage“ → Fall 3 rot;
-in `Koerpergesicht._mitte` `d[self.h] @` streichen → Fall 5 rot; in `Kostuemhautpruefung.stuecke` die Bedingung `NIE_HAUT` streichen → Fall 6 rot.
+in `Koerpergesicht._mitte` `d[self.h] @` streichen → Fall 5 rot; in `Kostuemhautpruefung.stuecke` die Bedingung `NIE_HAUT` streichen → Fall 6 rot;
+in `Koerperangleichstellen._eigen_schieben` `- self.eigen.verschiebung(e_stand)` streichen → Fall 7 rot.
 """
 import sys
 import unittest
@@ -103,6 +106,35 @@ class KoerperangleichTest(unittest.TestCase):
                                      {'id': 3, 'art': 'haar', 'punkte': None, 'dreiecke': [0], 'farben': None}])
         h._anteil = lambda _p, _d, _f: 0.9
         self.assertEqual(set(h.stuecke()), {2})
+
+    def test_7_anfasser_der_eigenregler(self):
+        t = self.torch
+        sys.path.insert(0, str(settings.TOOLS_ROOT))
+        from KoerperKI_alle.eigenbasis import Eigenbasis
+        eb = Eigenbasis.__new__(Eigenbasis)
+        eb.g, eb.grenze, eb.ohne_kopf = 'cpu', 15.0, 0
+        eb.namen = ['eigenform:regler_bein_links:k0:a', 'eigenform:regler_bein_links:k0:b']
+        eb.basis = t.zeros(2, 3, 3)
+        eb.basis[0, 0, 0] = 0.01                          # Spalte 0: Punkt 0 um 1 cm in x je Einheit
+        eb.basis[1, 1, 1] = 0.01                          # Spalte 1: Punkt 1 um 1 cm in y je Einheit
+        eb.e0 = t.tensor([0.0, 2.0])
+        a = self.a
+        a.eigen, a.e0 = eb, eb.e0.clone()
+        stand, e = t.tensor([0.5, 2.0]), t.tensor([1.0, 2.0])
+        d = a._eigen_schieben(e, stand)
+        self.assertAlmostEqual(float(d[0, 0]), 0.005, places=6)          # nur e − e_Stand (0,5 Einheiten), nicht e − e_Start
+        self.assertAlmostEqual(float(d.abs().sum()), 0.005, places=6)
+        self.assertAlmostEqual(float(a._eigen_zug(e)), self.K.ZUG_EIGEN * 1.0, places=12)
+        self.assertEqual(a._eigen_bewegt(t.tensor([0.05, 3.0]), t.tensor([0.0, 2.0])), 1)
+        weit = t.tensor([20.0, -1.0])
+        a._eigen_klemmen(weit)
+        self.assertEqual(weit.tolist(), [15.0, -1.0])
+        regler = a._eigen_regler(t.tensor([1.0, 0.0]), {'fremd': 1.0, eb.namen[1]: 0.02})
+        self.assertEqual(regler, {'fremd': 1.0, eb.namen[0]: 0.01})       # 1 Einheit = 0,01 m; ≈ 0 fällt heraus
+        a.eigen, a.e0 = None, t.zeros(0)
+        self.assertEqual(a._eigen_schieben(t.zeros(0), t.zeros(0)), 0.0)
+        self.assertEqual(float(a._eigen_zug(t.zeros(0))), 0.0)
+        self.assertEqual(a._eigen_bericht(), {'an': bool(self.K.EIGEN), 'spalten': 0})
 
 
 if __name__ == '__main__':

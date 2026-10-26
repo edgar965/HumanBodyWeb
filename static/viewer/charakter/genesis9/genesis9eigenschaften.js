@@ -13,9 +13,12 @@ import { Genesis9eigenehaut } from '../../gemeinsam/genesis9eigenehaut.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
 import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
+import { Genesis9eigenregler } from './genesis9eigenregler.js';
+import { Genesis9eigengarderobe } from './genesis9eigengarderobe.js';
 import { Genesis9reglerliste } from './genesis9reglerliste.js';
 import { Genesis9reglerzeile } from './genesis9reglerzeile.js';
 import { Genesis9genitalien } from './genesis9genitalien.js';
+import { Genesis9groessehalten } from './genesis9groessehalten.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -68,6 +71,8 @@ export class Genesis9eigenschaften {
             // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
             Genesis9garderobe.fuellen(inst,
                 document.getElementById(Genesis9garderobe.BEREICH)),
+            // Assets → Eigen (Stufe K2a, 25.10.2026): eigene Stücke und die Regler der getragenen — `Genesis9eigengarderobe`.
+            Genesis9eigengarderobe.fuellen(inst, document.getElementById(Genesis9eigengarderobe.BEREICH)),
         ]);
     }
 
@@ -226,7 +231,9 @@ export class Genesis9eigenschaften {
     static _regler(inst, plan) {
         const behaelter = document.getElementById('prop-genesis9-regler');
         if (!behaelter) return;
-        const [liste, genitalien] = Genesis9genitalien.teilen(plan);     // „Genitalien": eigener Bereich unter Genesis, nicht in der Liste (18.10.2026)
+        const [ohneEigen, eigen] = Genesis9eigenregler.teilen(plan);     // „Eigen": eigener Abschnitt unter Genesis, an erster Stelle (25.10.2026)
+        Genesis9eigenregler.fuellen(document.getElementById('prop-genesis9-eigen'), eigen, inst, r => Genesis9eigenschaften._zeile(inst, r));
+        const [liste, genitalien] = Genesis9genitalien.teilen(ohneEigen);     // „Genitalien": eigener Bereich unter Genesis, nicht in der Liste (18.10.2026)
         Genesis9genitalien.fuellen(document.getElementById('prop-genesis9-genitalien'), genitalien, inst, r => Genesis9eigenschaften._zeile(inst, r));
         Genesis9reglerliste.fuellen(behaelter, document.getElementById('prop-genesis9-reglerkopf'), liste,
             r => Genesis9eigenschaften._zeile(inst, r),
@@ -234,6 +241,7 @@ export class Genesis9eigenschaften {
                 Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
                 Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));   // „Nachformung (Ort)": freies Morph-Formular
             });
+        Genesis9groessehalten.fuellen(inst);     // Schalter „Größe halten" über der Werkzeugzeile (R8, 25.10.2026)
     }
 
     /** Der Griff unter der Reglerliste (Edgar, 20.09.2026: „mach unten an der Stelle einen Griff …, merke dir die Position"). Einmal verdrahtet. */

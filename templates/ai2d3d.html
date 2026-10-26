@@ -15,7 +15,8 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
 <meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
-<meta name="schnellanzeige" content="an">
+{% comment %}keine Schnellanzeige (Pixeldichte 1, grobes Netz) — die kam am 24.10.2026 mit der Kopie von mesh3dai.html; Edgar wollte sie nur für Mesh3D-AI (19.10.2026), und hier
+   war das Gesicht oben deshalb schlechter als in den Bildern unten (25.10.2026: Leinwand 668 × 735 bei devicePixelRatio 1,575){% endcomment %}
 <meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
 {% include "_importmap.html" %}
 {% endblock %}
@@ -69,42 +70,10 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
         </section>
     </div>
 </div>
-{% comment %} 24.10.2026, Edgar: „Erkläre mir, was du misst. Mach eine Testzeile unter der ersten Zeile mit den 3 Views, wo du zusätzlich in jeder View alle Messpunkte des Körpers einblendest,
-mit Zahlen, in einer Tabelle daneben die Messpunkte und 2 Spalten für Vorlage und Ergebnis“ — `Ai2d3dmesspunkte`, Daten aus `koerperpruefung_lauf.py --seite` (`Koerpermesspunkte`). {% endcomment %}
-{% if ist_test %}<section class="card ai2d3d-messkarte" id="ai2d3d-messpunkte">
-    <h2>Test: Messpunkte des Körpers — was die Abnahme misst</h2>
-    <p class="hb-hinweis">Gemessen wird mit denselben Detektoren auf Foto und Rendering: 23 Punkte von ViTPose (Kopf, Gelenke, Füße) und 40 Randpunkte auf dem Umriss der Person (Sapiens2),
-        je zwei an 20 Linien quer zu Hals, Rumpf, Armen und Beinen. Jede Linie hängt an den Gelenken der Vorlage und wird in Foto und Rendering an derselben Stelle abgeschritten — beide teilen
-        die Kamera der Einpassung. Blau: Vorlage, orange: Ergebnis, rot umrandet: über der Grenze, grau: nicht gewertet. Jede Zahl der Tabelle ist die Länge einer Linie: am Umriss die Linie
-        von der Knochenachse bis zum Rand (blau im Foto, orange im Rendering), bei Kopf, Gelenken und Füßen die Linie vom blauen zum orangen Punkt. Zeile berühren zeigt die Stelle in Feld 3
-        vergrößert, mit jeder Linie und ihrer Zahl.</p>
-    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte werden geladen …</p>
-    <div class="ai2d3d-messzeile">
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Fotos — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
-        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
-            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
-        </table></div>
-    </div>
-</section>
-{% comment %} 25.10.2026, Edgar: „mach nach der Messung für den Körper auch eine neue Messung nur für den Kopf … Nase, die Ohren, Mund, Augen, Augenbrauen“ — `Kopfmesspunkte`. {% endcomment %}
-<section class="card ai2d3d-messkarte" id="ai2d3d-kopfmesspunkte">
-    <h2>Test: Messpunkte des Kopfes</h2>
-    <p class="hb-hinweis">Dieselben Detektoren wie beim Körper, nur am Kopf und vergrößert: die 68 Gesichtspunkte von ViTPose (Kinnlinie, Augenbrauen, Nase, Augen, Mund) und die Ohren —
-        eine Zeile je Gruppe, ihre Zahl ist die mittlere Länge der Linien vom blauen Punkt (Foto) zum orangen (Rendering). Dazu der Kopfumriss (Sapiens2): der Scheitel über den Ohren und
-        Breiten quer zur Kopfachse auf Höhe von Stirn, Schläfen, Ohren und Wangen, je Seite eine Linie von der Achse bis zum Rand (blau Foto, orange Rendering). Zeile berühren zeigt die
-        Stelle in Feld 3 vergrößert.</p>
-    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte des Kopfes werden geladen …</p>
-    <div class="ai2d3d-messzeile">
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
-        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
-            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
-        </table></div>
-    </div>
-</section>{% endif %}
+{% if ist_test %}{% include "ai2d3d_bloecke.html" %}{% include "ai2d3d_gesichtspunkte.html" %}{% endif %}
+<details class="card ai2d3d-einzeln">
+    <summary>Einzelmessungen und weitere Ansichten — Messpunkte von Körper, Kopf und Reglern, Umrisse aller Regler, Netz aus den Fotos, Vergleich mit allgemeiner Kamera</summary>
+{% include "ai2d3d_einzelmessungen.html" %}
 <div class="ai2d3d-zeile">
     <div class="ai2d3d-bereiche">
         <section class="card ai2d3d-bereich">
@@ -151,6 +120,7 @@ mit Zahlen, in einer Tabelle daneben die Messpunkte und 2 Spalten für Vorlage u
     <div class="ai2d3d-standkopf"><h2>Datensatz und Training</h2></div>
     <p class="hb-hinweis">Noch kein Training für 2d-3d-AI (Weg B: Fotos direkt → KI → Genesis). Plan und Architektur: <a href="/hilfe/architektur/2d-3d-ai/">Hilfe → Architektur → 2d-3d-AI</a>.</p>
 </div>
+</details>
 {{ daten|json_script:"ai2d3d-daten" }}
 {% endblock %}
 

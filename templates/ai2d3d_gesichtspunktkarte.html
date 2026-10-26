@@ -1,0 +1,15 @@
+{% comment %} Eine Karte der Gesichtspunkte (26.10.2026, `ai2d3d_gesichtspunkte.html`): Parameter kennung, daten (Adresse unter abnahme/, `data-gesichtspunkte`), titel, text,
+bild1–bild3 (Beschriftung der Felder), spalte1/spalte2 (Tabellenköpfe). Gezeigt von `Ai2d3dmesspunkte`; `data-nur-deltas`: Feld 3 nur die Linien, ohne Punkte. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="{{ kennung }}" data-gesichtspunkte="{{ daten }}" data-nur-deltas>
+    <h2>{{ titel }}</h2>
+    <p class="hb-hinweis">{{ text }}</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Gesichtspunkte werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> {{ bild1 }}</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> {{ bild2 }}</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> {{ bild3 }}</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Maß · Gruppe</th><th class="num">{{ spalte1 }}</th><th class="num">{{ spalte2 }}</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>

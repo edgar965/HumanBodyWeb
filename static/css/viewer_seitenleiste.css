@@ -174,3 +174,15 @@
     margin: 0 0 6px 28px; padding-left: 8px; border-left: 2px solid var(--einstellung);
 }
 .genesis9-stueckregler .genesis9-reglergruppe > summary.aufklappkopf { color: var(--einstellung); }
+/* Die Zeilen darin (25.10.2026, Edgar: „Abstand zum Geschlechtsteil (mm)“ läuft aus dem Panel, der Wert fehlt, „50 %“ bricht um). Gemessen bei 400 px
+   Panelbreite: Zeile 311 px, Inhalt 368 px — die Beschriftung behielt ihre volle Breite (195 px), der Schieber seine Standardbreite (129 px), der Wert stand bei
+   x 802–830 jenseits des Rands (773), „50 %“ umbrach auf 48 px Höhe. Jetzt bricht die Beschriftung um (höchstens 45 %), der Schieber nimmt den Rest bis
+   hinunter auf 40 px, der Wert bleibt einzeilig. */
+.genesis9-stueckregler .slider-row > label { flex: 0 1 45%; min-width: 0; overflow-wrap: anywhere; line-height: 1.2; }
+.genesis9-stueckregler .slider-row > input[type="range"] { flex: 1 1 40px; width: auto; min-width: 40px; }
+.genesis9-stueckregler .slider-row > .slider-value { flex: 0 0 auto; white-space: nowrap; text-align: right; }
+/* Knopf „Eigen …“ an Daz-Stücken und sein Block (charakter/genesis9/dazeigenblock.js, Stufe K2c, 25.10.2026). */
+.daz-eigen { margin: 2px 0 4px; }
+.daz-eigen > .daz-eigen-knopf { margin-left: 0; font-weight: 600; }
+.daz-eigen > .daz-eigen-block.genesis9-stueckregler { margin-left: 6px; }
+.daz-eigen-meldung { font-size: 0.72rem; margin: 2px 0 4px; }

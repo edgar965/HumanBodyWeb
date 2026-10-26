@@ -29,6 +29,7 @@ from Genesis9.stueckstarr import G9stueckstarr
 
 from .g9anatomiedrapierung import G9anatomiedrapierung
 from .g9lagenanfrage import G9lagenanfrage
+from .g9muldendrapierung import G9muldendrapierung
 
 logger = logging.getLogger('core')
 
@@ -115,8 +116,13 @@ class G9stueckteile:
         # Über einem männlichen Geograft zuletzt der Drapierer (`G9anatomiedrapierung`, 16.10.2026) — nur mit Fläche: ein Ersatz- oder starres Stück
         # wird nicht gehoben.
         drapierung = G9anatomiedrapierung.fuer(innen, formung) if flaeche is not None else None
+        # Über den Mulden der Haut (Brustmitte) die Brücke (`G9muldendrapierung`, 25.10.2026, Stufe K2c) — auf dem KÄFIG, vor der Unterteilung; nur mit Fläche
+        # und nur, wenn „Ausbreitung der Brücke" über 0 steht (Vorgabe 0: nichts ändert sich).
+        mulde = cls._mulde(formung, stufen, rumpf.get('regler_stueck')) if flaeche is not None else None
         netze = []
         for (folger, lage), punkte in zip(teile, kaefige, strict=True):
+            if mulde is not None and lage is None and getattr(folger, 'koerperhaut', False) and len(punkte):
+                punkte = cls._gebrueckt(mulde, folger, punkte, rumpf.get('regler_stueck'))
             hd_werte = dict(formung.morphwerte())
             hd_werte.update(zusatz)
             # Laenge/Weite verschieben den Kaefig am Koerper entlang — die Haut
@@ -136,6 +142,29 @@ class G9stueckteile:
                 netz = cls._drapiert(drapierung, folger, passform, stufen, punkte, netz, rumpf.get('regler_stueck'), bindung)
             netze.append((folger, lage, netz))
         return netze, innen, aussen, hoch
+
+    #: Fehler der Brücke über Mulden lassen das Stück, wie es war (mit Log) — die Antwort geht nicht verloren.
+    MULDE_FEHLER = (ValueError, IndexError, RuntimeError, MemoryError, np.linalg.LinAlgError)
+
+    @classmethod
+    def _mulde(cls, formung, stufen, regler):
+        try:
+            return G9muldendrapierung.fuer(formung, stufen, regler)
+        except cls.MULDE_FEHLER as fehler:
+            logger.warning('Genesis 9: Brücke über Mulden nicht vorbereitet: %s', fehler, exc_info=True)
+            return None
+
+    @classmethod
+    def _gebrueckt(cls, mulde, folger, punkte, regler):
+        u"""Die Käfigpunkte eines Teils über die Brücke gelegt (`G9muldendrapierung.kaefig`); bei einem Fehler unverändert."""
+        try:
+            neu, bilanz = mulde.kaefig(folger, punkte, regler)
+        except cls.MULDE_FEHLER as fehler:
+            logger.warning('Genesis 9: %s nicht über Mulden gebrückt: %s', folger.name, fehler, exc_info=True)
+            return punkte
+        if bilanz.get('gehoben'):
+            logger.info('Genesis 9: %s %s: %s', folger.name, G9muldendrapierung.MELDUNG, bilanz)
+        return neu
 
     @staticmethod
     def _drapiert(drapierung, folger, passform, stufen, kaefig, netz, regler, bindung):

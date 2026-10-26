@@ -13,6 +13,7 @@ from .architekturai2d3dandere import Architekturai2d3dandere
 from .architekturai2d3dbild import Architekturai2d3dbild
 from .architekturai2d3dkette import Architekturai2d3dkette
 from .architekturai2d3dkis import Architekturai2d3dkis
+from .architekturai2d3dkopfnetz import Architekturai2d3dkopfnetz
 from .architekturai2d3dmessung import Architekturai2d3dmessung
 from .architekturai2d3dnetz import Architekturai2d3dnetz
 from .architekturai2d3dplan import Architekturai2d3dplan
@@ -51,6 +52,8 @@ class Architekturai2d3d:
             'kette': teil('Kette', Architekturai2d3dkette.uebersicht), 'kopfki_bild': teil('KopfKI', Architekturai2d3dkette.kopfki),
             'fotokopf': ((edgar or {}).get('kopf') or {}).get('fotokopf'),
             'kis': teil('KIs (architekturai2d3dnetze.json)', Architekturai2d3dkis.kontext),
+            # 26.10.2026 (Edgar: „aktualisiere … damit wir das nicht wieder vergessen“): die Kopf-KI, eigenes Netz aus Teilen der KopfKI
+            'kopfnetz': teil('Kopf-KI', Architekturai2d3dkopfnetz.kontext),
             'stand': {'einpassung': teil('Einpassung', Architekturai2d3dstand.einpassung), 'pruefungen': teil('Prüfung', Architekturai2d3dstand.pruefungen) or [],
                       'gruppen': Architekturai2d3dstand.GRUPPEN, 'heute': Architekturai2d3dstand.HEUTE},
             'bild': Architekturai2d3dbild.svg(),

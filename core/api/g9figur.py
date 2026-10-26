@@ -115,6 +115,7 @@ class G9figur:
                             'hautmischung': dict(eintrag.get('hautmischung') or {}),
                             'teilmaterial': dict(eintrag.get('teilmaterial') or {}),
                             'hautebenen': dict(eintrag.get('hautebenen') or {}),
+                            'groesse_halten': eintrag.get('groesse_halten'),   # „Größe halten“ (R8): {an, soll_m} oder None
                             'brauenstil': eintrag.get('brauenstil') or '',
                             'pose': eintrag.get('pose') or '',
                             'ausdruck': eintrag.get('ausdruck') or '',
@@ -154,6 +155,8 @@ class G9figur:
                 'teilmaterial': figur.get('teilmaterial') or {},
                 # Hautebenen (17.10.2026, `Genesis9hautebenen`): {name: Prozent} — Hautton, Flecken, Muskel-/Fettzeichnung, graue Haare.
                 'hautebenen': figur.get('hautebenen') if isinstance(figur.get('hautebenen'), dict) else {},
+                # „Größe halten“ (R8, 25.10.2026, `genesis9groessehalten.js`): {an, soll_m} — nur mit der Figur gespeichert.
+                'groesse_halten': figur.get('groesse_halten') if isinstance(figur.get('groesse_halten'), dict) else None,
                 'brauenstil': figur.get('brauenstil') or '',
                 'pose': figur.get('pose') or '',
                 'ausdruck': figur.get('ausdruck') or '',

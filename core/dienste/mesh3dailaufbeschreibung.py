@@ -39,6 +39,7 @@ class Mesh3dailaufbeschreibung:
         ('mesh3dai_hautwechsel_lauf', 'Training', 'KI lernt die Haut (wechselnde Haut, scharfe und unscharfe Eingänge)', None),        # 24.10.2026
         ('mesh3dai_hautki_lauf', 'Training', 'KI lernt die Haut aus Kachelstücken (übernimmt Gesehenes, erzeugt Ungesehenes)', None),        # 24.10.2026 abends
         ('mesh3dai_hautki_einsatz', 'Haut', 'Haut der neuen KI für diesen Test', None),
+        ('mesh3dai_hautton_lauf', 'Training', 'KI lernt den Hautton je Körperteil, Licht herausgerechnet', None),        # 25.10.2026, `Hauttontraining`
         ('mesh3dai_nachstellen_lauf', 'Kleider', 'Schnittmuster an das ausgeschnittene Stück anpassen', None),
         ('mesh3dai_flaeche_lauf', 'Kleider', 'Schnitt aus der Fläche: Teile flachlegen, nähen und drapieren', None),
         ('mesh3dai_schnitt_katalogdaten', 'Daten', 'Schnittmuster-Beispiele aus dem Katalog nähen', None),

@@ -112,3 +112,13 @@
 .ai2d3d-messtabelle tr.ai2d3d-mess-ueber td { background: rgba(224, 49, 49, 0.12); color: #a51d1d; font-weight: 600; }
 .ai2d3d-messtabelle tr.ai2d3d-mess-offen td { color: #6c757d; font-style: italic; }
 .ai2d3d-messtabelle tr.ai2d3d-mess-gruppe td { font-weight: 700; padding-top: 8px; color: inherit; }
+/* Ampel und Blöcke (26.10.2026, Seite aufgeräumt, Ai2d3dbloecke) */
+.ai2d3d-ampel { overflow-x: auto; }
+.ai2d3d-ampel td.ai2d3d-ampel-gruen { background: #d3f9d8; cursor: pointer; }
+.ai2d3d-ampel td.ai2d3d-ampel-rot { background: #ffe3e3; color: #c92a2a; font-weight: 600; cursor: pointer; }
+.ai2d3d-ampel td.ai2d3d-ampel-leer { color: #adb5bd; }
+.ai2d3d-fotowahl { display: inline-flex; gap: 4px; margin-left: 12px; vertical-align: middle; }
+.ai2d3d-fotoknopf { font-size: 0.8rem; padding: 2px 8px; border: 1px solid #adb5bd; border-radius: 4px; background: #fff; cursor: pointer; }
+.ai2d3d-fotoknopf.aktiv { background: #e03131; border-color: #e03131; color: #fff; }
+.ai2d3d-einzeln > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.ai2d3d-ergebnisfeld canvas.ai2d3d-rendering.ai2d3d-wiefoto { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; }

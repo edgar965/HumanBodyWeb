@@ -1,0 +1,70 @@
+{% load dezahl %}
+{% comment %}Kopf-KI (26.10.2026, Edgar: „aktualisiere … damit wir das nicht wieder vergessen“): `Architekturai2d3dkopfnetz` — was es für den Kopf schon gibt, die Bausteine der Kopf-KI,
+festgehaltene Befunde, Läufe und Vergleich von der Platte.{% endcomment %}
+<h2 id="kopfnetz">Kopf-KI: ein eigenes Netz für den Kopf (seit 26.10.2026)</h2>
+<p>Edgar: „ich möchte erst Edgar perfekt mit einer KI hinkriegen, erst der Kopf“ — „mach einen allgemeinen Generator, der aber als erstes mit Edgar laufen soll“ — „du hast doch die KopfKI schon,
+  die das alles macht, warum baust du jetzt alles neu???“ — „alles auf GPU, RAM und in einem Prozess“. Die Kopf-KI baut darum nur aus Teilen der KopfKI; neu sind Merkmal, Generator, Netz und Training.</p>
+
+<h3 id="kopfnetz-plan">Plan: die Kopf-KI mit dem Eigenregler-Vergleich (26.10.2026)</h3>
+<p id="kopfnetz-grundsatz"><strong>Grundsatz: allgemeine KI, keine Anpassung an den Job.</strong> {{ kopfnetz.grundsatz.0 }}</p>
+<p>{{ kopfnetz.grundsatz.1 }}</p>
+<p>Edgar: „ich sagte, du sollst eigenregler nutzen! … daran sind wir bisher immer gescheitert, weil der vergleich fehlte mit der Vorlage, die liefern doch den vergleich!!!“ Bis dahin waren
+  die Eigenregler nur Ausgang des Netzes, Eingang blieben MediaPipe und Profillinie, Verlust die Kopfform des Generators; der Vergleich Vorlage gegen Ergebnis (Reglermass) war nie
+  angeschlossen. Das Training nach der Leiter ist darum abgebrochen.</p>
+<p><strong>Kurzfassung:</strong> {{ kopfnetz.kurz }}</p>
+<p><strong>Empfehlung, in dieser Reihenfolge:</strong></p>
+<ol>{% for titel, text in kopfnetz.empfehlung %}<li><strong>{{ titel }}.</strong> {{ text }}</li>{% endfor %}</ol>
+<p>Der Plan im Einzelnen, ergänzt um die Punkte des alten Auftrags EdgarTrip, die ihm fehlten:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Punkt</th><th>Inhalt</th><th>Herkunft</th></tr></thead>
+  <tbody>{% for punkt, text, herkunft in kopfnetz.plan %}<tr><td>{{ punkt }}</td><td>{{ text }}</td><td>{% if herkunft == 'offen' %}<strong>offen</strong>{% else %}{{ herkunft }}{% endif %}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Was es für den Kopf schon gibt — nicht neu bauen</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Was</th><th>Was es tut</th><th>Art</th></tr></thead>
+  <tbody>{% for name, text, art in kopfnetz.vorhanden %}<tr><td>{{ name }}</td><td>{{ text }}</td><td>{{ art }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Bausteine der Kopf-KI</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Klasse</th><th>Datei</th><th>Aufgabe</th></tr></thead>
+  <tbody>{% for k, d, a in kopfnetz.bausteine %}<tr><td>{{ k }}</td><td><code>{{ d }}</code></td><td>{{ a }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Festgehaltene Befunde</h3>
+<ul>{% for datum, quelle, text in kopfnetz.befunde %}<li><strong>{{ datum }}</strong> ({{ quelle }}): {{ text }}</li>{% endfor %}</ul>
+
+<h3>Läufe (von der Platte)</h3>
+{% if kopfnetz.laeufe %}
+<table class="doku m3a-schichten">
+  <thead><tr><th>Lauf</th><th class="num">Proben</th><th class="num">Schritte</th><th class="num">Prüfköpfe: Start → Netz mm</th><th>Generator ↔ Fotos (Edgar)</th>
+    <th>KopfKI-Prüfung an Edgars Fotos (Abgleich vorn Mittel % · Rendering ↔ Foto % · Profil 3.jpg / 4.jpg %)</th>
+    <th class="num">Wahrheit: Kopfform an den Exporten, Netz / Mitte (mm)</th></tr></thead>
+  <tbody>{% for l in kopfnetz.laeufe %}<tr><td>{{ l.name }}<br><span class="m3a-klein">{{ l.gerechnet }}{% if l.gewichte %} · {{ l.gewichte|de }} Gewichte{% endif %}</span></td>
+    <td class="num">{{ l.proben|default:"–" }}</td><td class="num">{{ l.schritte|default:"–" }}</td>
+    <td class="num">{{ l.mitte_mm|de:2 }} → {{ l.pruefung_mm|de:2 }}</td>
+    <td>{% if l.luecke %}vorn {{ l.luecke.vorne_prozent|de:2 }} % · rechts {{ l.luecke.rechts.prozent|de:2 }} % · links {{ l.luecke.links.prozent|de:2 }} %{% else %}–{% endif %}</td>
+    <td>{% for name, m in l.messung.items %}{{ name }}: {{ m.vorne_mittel_prozent|de:2 }} · {{ m.rendering_prozent.0|de:2 }} · {{ m.profil_3_prozent|de:2 }} / {{ m.profil_4_prozent|de:2 }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
+    <td class="num">{% if l.wahrheit %}{{ l.wahrheit.netz_mm|de:2 }} / {{ l.wahrheit.mitte_mm|de:2 }}<br><span class="m3a-klein">{{ l.wahrheit.exporte }} Exporte</span>{% else %}–{% endif %}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Prüfköpfe: Kopfform des Netzes gegen die Wahrheit nach Lage und Maßstab (RMS mm), „Start“ = das Netz sagt den Kopf, um den gewürfelt wurde. Die ersten Läufe vor dem Lageabzug im Merkmal
+  zeigen noch die große Lücke Generator ↔ Fotos.</p>
+{% else %}<p>Noch kein Lauf.</p>{% endif %}
+
+<h3>Edgars Kopf: Face Transfer 2, KopfKI und Kopf-KI mit DEMSELBEN Verfahren</h3>
+{% if kopfnetz.vergleich %}
+<p class="m3a-klein">Gerechnet {{ kopfnetz.vergleich.gerechnet }} (<code>kopfnetz_vergleich.py</code>): Kopf von vorn und aus der Seite gerendert, MediaPipe bzw. Profillinie am Rendering, gemessen mit
+  <code>Kopfpruefung</code> gegen 1.jpg, 3.jpg und 4.jpg — wie Face Transfer 2 am 24.10.2026. Mittel / Median in % (vorn des Augenabstands, Profil der Bandhöhe); kleiner ist besser.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Kopf</th><th class="num">vorn 1.jpg (Mittel / Median)</th><th class="num">vorn ohne Iris und Stirnoval (Mittel / Median)</th><th class="num">Profil 3.jpg (Mittel)</th>
+    <th class="num">Profil 4.jpg (Mittel)</th></tr></thead>
+  <tbody>{% for name, vm, vd, om, od, p3, p4 in kopfnetz.vergleich.zeilen %}<tr><td>{{ name }}</td><td class="num">{{ vm|de:2 }} / {{ vd|de:2 }}</td>
+    <td class="num">{% if om is not None %}{{ om|de:2 }} / {{ od|de:2 }}{% else %}–{% endif %}</td><td class="num">{{ p3|de:2 }}</td><td class="num">{{ p4|de:2 }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">„Ohne Iris und Stirnoval“: dieselben Punkte, die die KopfKI zählt — die Augäpfel des Renderings blicken geradeaus, die obere Hälfte des Gesichtsovals liegt im Foto unter Haar.
+  Alle Fotomaße liegen nahe am Rauschen der Erkenner (der wahre Kopf von OlesiaWalk misst vorn 1,33–1,85 %, im Profil 0,38–0,62 %); ob ein Kopf ähnlicher ist, zeigt erst die Wahrheit in mm.</p>
+{% else %}<p>Noch nicht gerechnet (<code>kopfnetz_vergleich.py</code>).</p>{% endif %}
+
+<h3>Reihenfolge</h3>
+<ol>{% for r in kopfnetz.reihenfolge %}<li>{{ r }}</li>{% endfor %}</ol>

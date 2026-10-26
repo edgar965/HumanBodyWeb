@@ -15,9 +15,11 @@
  * niemand mehr trägt.
  *
  * Die Anziehreihenfolge ist die Einfügereihenfolge von `inst.kleidung`; sie
- * entscheidet nur bei Gleichstand (spätere liegen außen). Ohne Importe, damit
- * `test_js_genesis9lagen` das Modul in Node prüft.
+ * entscheidet nur bei Gleichstand (spätere liegen außen). Ohne Three.js-Importe, damit
+ * `test_js_genesis9lagen` das Modul in Node prüft (`Dazschnittwerte` kommt ohne aus).
  */
+import { Dazschnittwerte } from './dazschnittwerte.js';
+
 export class Genesis9lagen {
 
     /** `[stil, pose, laenge]` eines Stücks ohne Leere. */
@@ -33,7 +35,7 @@ export class Genesis9lagen {
             rang: platz < 0 ? namen.length : platz,
             getragen: namen.filter(k => k !== kennung).map(k => ({
                 kennung: k, stil: Genesis9lagen.stilliste(kleidung[k]),
-                regler_stueck: kleidung[k]?.regler || {},
+                regler_stueck: Dazschnittwerte.ohne(kleidung[k]?.regler),     // Eigen-Schnitt wirkt nur im Browser (K2c, 25.10.2026)
             })),
         };
     }

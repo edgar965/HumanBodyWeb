@@ -20,6 +20,7 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/foto/<int:nr>/', Ai2d3ddatenendpunkte.foto, name='ai2d3d_foto'),
     path('api/2d3dai/<slug:job>/netz/<slug:art>/', Ai2d3ddatenendpunkte.netz, name='ai2d3d_netz'),
     path('api/2d3dai/<slug:job>/kopf/<int:nr>/', Ai2d3ddatenendpunkte.kopfbild, name='ai2d3d_kopfbild'),
+    path('api/2d3dai/<slug:job>/kopfki/beispiel/<int:nr>/', Ai2d3ddatenendpunkte.kopfbeispiel, name='ai2d3d_kopfbeispiel'),
     # Körpergröße der Person eines Tests (24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“) — `Ai2d3dkoerpergroesse`, schreibt in die job.json.
     path('api/2d3dai/<slug:job>/koerpergroesse/', Ai2d3daktionsendpunkte.koerpergroesse, name='ai2d3d_koerpergroesse'),
     # Name eines Tests (24.10.2026, Stift wie bei Mesh3D-AI) — `Mesh3dainame`, schreibt name.json in den Testordner.
@@ -29,6 +30,12 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/abnahme/seite/<int:nr>/', Ai2d3dabnahmeendpunkte.seite, name='ai2d3d_abnahme_seite'),
     path('api/2d3dai/<slug:job>/abnahme/messpunkte/', Ai2d3dabnahmeendpunkte.messpunkte, name='ai2d3d_abnahme_messpunkte'),
     path('api/2d3dai/<slug:job>/abnahme/kopfmesspunkte/', Ai2d3dabnahmeendpunkte.kopfmesspunkte, name='ai2d3d_abnahme_kopfmesspunkte'),
+    path('api/2d3dai/<slug:job>/abnahme/reglermesspunkte/', Ai2d3dabnahmeendpunkte.reglermesspunkte, name='ai2d3d_abnahme_reglermesspunkte'),
+    path('api/2d3dai/<slug:job>/abnahme/reglerumrisse/', Ai2d3dabnahmeendpunkte.reglerumrisse, name='ai2d3d_abnahme_reglerumrisse'),
+    path('api/2d3dai/<slug:job>/abnahme/gesichtspunkte/', Ai2d3dabnahmeendpunkte.gesichtspunkte, name='ai2d3d_abnahme_gesichtspunkte'),
+    path('api/2d3dai/<slug:job>/abnahme/gesichtspunkte/<slug:art>/', Ai2d3dabnahmeendpunkte.gesichtspunkte, name='ai2d3d_abnahme_gesichtspunkte_art'),
+    path('api/2d3dai/<slug:job>/abnahme/block/<slug:name>/', Ai2d3dabnahmeendpunkte.block, name='ai2d3d_abnahme_block'),
+    path('api/2d3dai/<slug:job>/abnahme/ampel/', Ai2d3dabnahmeendpunkte.ampel, name='ai2d3d_abnahme_ampel'),
     path('api/2d3dai/<slug:job>/abnahme/haltungen/', Ai2d3dabnahmeendpunkte.haltungen, name='ai2d3d_abnahme_haltungen'),
     # Die Genesis-Figur aus `<Job>/figur/` (25.10.2026, Edgar: „das ist doch eine andere Pipeline“) — `Ai2d3dfigurendpunkte`; bis dahin über den Mesh3D-AI-Test edgar_foto.
     path('api/2d3dai/<slug:job>/figur/', Ai2d3dfigurendpunkte.daten, name='ai2d3d_figur'),

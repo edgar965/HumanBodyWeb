@@ -27,7 +27,10 @@ Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …and
     <strong>Gebaut (24.10.2026):</strong> die Kette nur aus Fotos (<a href="#kette">Abschnitt „Die Kette heute“</a>) — KopfKI und Körper aus den Fotos mit vier vortrainierten KIs und der
     Haut-KI von Mesh3D-AI, je eine Grafik unter <a href="#kis">„Die KIs der Kette“</a>, gemessen an EdgarTrip unter <a href="#stand">„Stand“</a>. Kleider werden aus den Fotos
     <strong>ausgeschnitten</strong> wie beim Kostüm-Weg von Mesh3D-AI, nicht aus dem Katalog gewählt (Edgar, 24.10.2026).<br>
-    <strong>Nicht gebaut:</strong> ein eigenes Netz Fotos → Genesis (<a href="#kurz">Vorschlag Weg B</a>, weiter unten); Messlatte A bleibt Mesh3D-AI (Fotos → Tripo-Netz → KI).
+    <strong>Im Bau (seit 26.10.2026):</strong> die <a href="#kopfnetz">Kopf-KI</a> — ein eigenes Netz für den Kopf, gebaut nur aus Teilen der KopfKI, zuerst an Edgar (Edgar: „erst Edgar perfekt
+    mit einer KI, erst der Kopf“).<br>
+    <strong>Nicht gebaut:</strong> das Netz Fotos → Genesis für den ganzen Körper (<a href="#kurz">Vorschlag Weg B</a>, weiter unten; Konzept <code>Docu/konzepte/2026-10-26_fotonetz-konzept.md</code>);
+    Messlatte A bleibt Mesh3D-AI (Fotos → Tripo-Netz → KI).
     Zahlen liest die Seite beim Aufruf von der Platte; festgehaltene Messungen nennen Datum und Quelle.
   </div>
 
@@ -40,6 +43,7 @@ Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …and
 
   {# 24.10.2026 abends: zuerst, was gebaut ist — Kette (Übersicht + KopfKI), die KIs je eine Grafik, der gemessene Stand; danach der Vorschlag Weg B #}
   {% include "hilfe/_architektur_ai2d3d_kette.html" %}
+  {% if kopfnetz %}{% include "hilfe/_architektur_ai2d3d_kopfnetz.html" %}{% endif %}
   {% include "hilfe/_architektur_ai2d3d_kis.html" %}
   {% include "hilfe/_architektur_ai2d3d_stand.html" %}
   {% include "hilfe/_architektur_ai2d3d_kurz.html" %}

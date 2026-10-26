@@ -30,7 +30,9 @@ class Koerperanhaenge:
         wer den Körper sucht, nimmt das erste Teil dieser Art; Farbnote und Netznote zählen sie zum Körper. Brauen und
         Wimpern in der Haarfarbe von `modell` (`ModellMitKleidern`)."""
         haarfarbe = (getattr(modell, 'farben', None) or {}).get('haar')
-        schluessel = json.dumps([bau.formung.morphwerte(), haarfarbe], sort_keys=True, default=str)
+        # Mit den fremden Reglern (`G9formung.eigen`: Eigenmorphe, Anfasser `eigenform:…`, hb:/mh:/sx:/uma:) — `morphwerte()` kennt nur die Daz-Formeln, die Augen sitzen aber auf
+        # `morphpunkte` MIT den fremden Morphen. Ohne sie bekam im Skriptdienst ein Bau mit gleichen Daz-Werten die Augen des vorigen (26.10.2026, 2d-3d-AI: ampel1, ampel2 → grundform4r).
+        schluessel = json.dumps([bau.formung.morphwerte(), bau.formung.eigen(), haarfarbe], sort_keys=True, default=str)
         if schluessel not in cls._vorrat:
             cls._vorrat.clear()                      # eine Formung je Lauf: kein Wachsen über Runden
             cls._vorrat[schluessel] = cls._bauen(bau, haarfarbe)

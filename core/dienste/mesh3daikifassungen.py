@@ -39,6 +39,9 @@ class Mesh3daikifassungen:
         # ein Lauf kommt erst nach Edgars Wort und einer Nachricht an 2d-3d-AI hierher — 24.10.2026 spätabends freigegeben (Edgar: „haut ist einigermaßen OK, also gib sie frei“):
         # Lauf mit Rand-Lernen (`Hautkitraining.RAND_LERNEN`), Naht in der Haut an edgar_knopf grün
         'hautki': '2026.10.24.15.19_hautki_rand',
+        # 25.10.2026: Ton-KI (`KoerperKI_alle.hautton`, Lauf unter `_hautki/ton/`) — legt den Ton je Körperteil auf die Kacheln der Haut-KI; leer = ohne. Ein Lauf kommt erst nach Edgars Wort
+        # und einer Nachricht an 2d-3d-AI hierher
+        'hautton': '',
     }
     TEXTE = {
         'vorstufe_mia': 'Rig und A-Pose: Netz der Vorstufe (Weg MIA)',
@@ -51,6 +54,7 @@ class Mesh3daikifassungen:
         'kostuem_stufe': 'Kleider und Haar aus dem Mesh: Stufe (1 = an der Stelle des Eingangs, Rückhäutung)',
         'kopfnetz': 'Kopf: Kopfnetz als Start der Angleichung an das Mesh',
         'hautki': 'Haut: Haut-KI im Bildraum (übernimmt Gesehenes, erzeugt Ungesehenes); leer = Haut aus Stufe 2',
+        'hautton': 'Haut: Ton-KI (Ton je Körperteil, Licht herausgerechnet) auf den Kacheln der Haut-KI; leer = ohne',
     }
 
     @staticmethod

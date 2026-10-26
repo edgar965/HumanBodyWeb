@@ -1,0 +1,50 @@
+{% comment %}Abschnitt „Auf der Karte, ohne ständiges Warten, reproduzierbar“ (26.10.2026, Edgar: „Wichtig ist, dass ein Prozess komplett auf GPU läuft und die CPU sich nicht ständig mit der GPU
+abstimmen muss“, „kette muss Reproduzierbar sein“). Daten: `Architekturmesh3daikarte` (Schalter und Bausteine aus dem Code, Prüfung aus vergleich.json, Messungen von Hand mit Quelle).{% endcomment %}
+<h2 id="karte">Auf der Karte, ohne ständiges Warten, reproduzierbar (26.10.2026)</h2>
+{% with k=karte %}
+<p>Ein Schritt rechnet in <strong>einem</strong> Prozess auf der Grafikkarte; die CPU soll nur Rechnungen anstoßen, nicht nach jeder auf das Ergebnis warten. Drei Dinge gehören dazu:</p>
+<ol>
+  <li><strong>Was auf der CPU rechnete, rechnet auf der Karte:</strong> Rendern in torch statt pyrender (<code>Kostuemraster</code>, nach dem Quelltext von pyrender: MSAA 4×, die vier Abtastpunkte
+    vom Treiber gelesen), Löcher füllen und Inseln zählen ohne scipy (<code>Kostuemmaske</code>), das Bild für ViTPose, die Tafeln von Formmass2.</li>
+  <li><strong>Keine Wartepunkte in den Schleifen:</strong> Ein Index mit Maske (<code>x[maske]</code>) wartet im Vor- und Rückweg auf die Karte (nur sie kennt die Zahl der Treffer) — ersetzt durch
+    einen Index, einmal mit <code>nonzero</code> gebaut; <code>if tensor</code> und <code>float(t)</code> nur noch in der Auswertung. Körper- und Kopfschleife laufen als <strong>CUDA-Graph</strong>:
+    ein Schritt wird einmal aufgenommen und dann als Ganzes wiedergegeben (Körper <code>GRAPH = {{ k.graph.koerper|yesno:"an,aus,—" }}</code>, Kopf <code>GRAPH = {{ k.graph.kopf|yesno:"an,aus,—" }}</code>).</li>
+  <li><strong>Reproduzierbar:</strong> Ohne Schalter rechnete derselbe Code in zwei Prozessen verschieden (Summen in wechselnder Reihenfolge auf der Karte). <code>Determinismus</code> schaltet in jedem
+    Prozess der Kette torch deterministisch, cuDNN ohne Autotuning und feste Samen ({{ k.samen|default:"—" }}) ein — über die Umgebung
+    {% for n, w in k.umgebung.items %}<code>{{ n }}={{ w }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}, die {% if k.lauf_setzt %}der Rechenlauf für jeden Schritt setzt{% else %}<strong>der
+    Rechenlauf NICHT setzt</strong>{% endif %}; Kindprozesse erben sie. Eingeschaltet in {% for r in k.rufer %}<code>{{ r }}</code>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}.
+    Andere Läufe mit der GPU-Sperre (2d-3d-AI, Trainings) bleiben ohne die Variable, wie sie sind.</li>
+</ol>
+
+<h3>Gemessen</h3>
+<table class="doku">
+  <thead><tr><th>Was</th><th>vorher</th><th>nachher</th><th>gemessen an</th></tr></thead>
+  <tbody>{% for was, vor, nach, an in k.messungen %}<tr><td>{{ was }}</td><td>{{ vor }}</td><td>{{ nach }}</td><td class="m3a-klein">{{ an }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Quelle: <code>Docu/tagebuch/2026-10-26_mesh3dai-alles-auf-der-karte.md</code>; Werkzeug <code>ProjektTemp/_wegwerf/koerper_eigen/abstimmung_messen.py</code>
+  (<code>--determ</code>, <code>--starts</code>, <code>--alt</code>), Berichte verglichen mit <code>bericht_vergleich.py</code>.</p>
+
+<h3>Ganze Kette zweimal: rechnet jeder Schritt gleich?</h3>
+{% if k.vergleich %}
+<p>Test „Randy reproduzierbar“ (aus randys Eingangsnetz neu angelegt), die ganze Kette zweimal vom selben Ausgangsstand — der erste Lauf mit frisch gestartetem, der zweite mit warmem
+  Skriptdienst (<code>ProjektTemp/_wegwerf/platte/platte_zweimal.sh</code>) —, jede Datei verglichen (JSON ohne Zeitfelder und Dateistempel, npz Feld für Feld, Bilder
+  Pixel für Pixel). Ergebnis: <strong>{% if k.vergleich.gleich %}jeder Schritt gleich{% else %}nicht gleich{% endif %}</strong>.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Schritt</th><th>Dateien gleich</th><th>anders</th><th>Beispiel</th></tr></thead>
+  <tbody>{% for s in k.vergleich.schritte %}<tr><td>{{ s.schritt }}</td><td>{{ s.gleich }}</td><td>{{ s.anders }}</td><td class="m3a-klein">{{ s.beispiel|default:"" }}</td></tr>{% endfor %}</tbody>
+</table>
+{% if k.vergleich.nur %}<p class="m3a-klein">Nur in einem Lauf: {{ k.vergleich.nur|join:"; " }}</p>{% endif %}
+<p class="m3a-klein">Gelesen aus <code>{{ k.vergleich.datei }}</code> (<code>laeufe_vergleich.py</code>).</p>
+{% else %}
+<p class="m3a-klein">Die Prüfung (<code>ProjektTemp/_wegwerf/reproduzierbar/reproduzierbar_kette.sh</code>) hat noch kein Ergebnis geschrieben.</p>
+{% endif %}
+
+<h3>Die Bausteine</h3>
+<table class="doku">
+  <thead><tr><th>Klasse</th><th>Was sie tut (aus dem Code)</th></tr></thead>
+  <tbody>{% for b in k.bausteine %}<tr><td><code>{{ b.klasse }}</code><br><span class="m3a-klein">{{ b.modul }}.py</span></td><td class="m3a-klein">{{ b.text }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Offen</h3>
+<ul>{% for o in k.offen %}<li>{{ o }}</li>{% endfor %}</ul>
+{% endwith %}

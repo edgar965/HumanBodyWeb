@@ -1,0 +1,50 @@
+/* Bereich „Eigen" des Genesis-Bedienfelds (`genesis9eigenregler.js`, 25.10.2026): Knopf „Formen …" in der Reglerzeile, leere Unterkategorien,
+   Fenster „Profil formen" (`genesis9profilfenster.js`) — Hintergrund frei wie beim Farbdialog, damit man die Figur beim Formen sieht. */
+
+/* `.btn-toggle` setzt width 100 % — in der Zeile nahm der Knopf so 540 px, die Wertanzeige brach um (gemessen im Chrome) */
+.slider-row > button.btn-toggle.g9-eigenregler-knopf { flex: 0 0 auto; width: auto; white-space: nowrap; margin-left: 6px; padding: 1px 8px; font-size: 0.72rem; }
+.g9-eigenregler-leer { margin: 2px 0 4px 6px; font-size: 0.75rem; }
+
+.scene-modal-overlay.g9-profil-huelle {
+    background: none; backdrop-filter: none; pointer-events: none;
+    justify-content: flex-end; align-items: flex-start; padding: 70px 24px 0 0;
+}
+.g9-profil-huelle .g9-profil-dialog { pointer-events: auto; width: min(460px, 94vw); max-height: 88vh; }
+.g9-profil-hinweis { font-size: 0.75rem; margin-bottom: 6px; }
+.g9-profil-svg {
+    display: block; width: 100%; height: min(470px, 56vh); background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+    touch-action: none; outline: none;
+}
+.g9-profil-svg:focus { border-color: var(--accent); }
+.g9-profil-vorher { fill: none; stroke: #8a8a8a; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.g9-profil-nachher { fill: none; stroke: #f07020; stroke-width: 2.5; stroke-linejoin: round; }
+.g9-profil-anfasser { fill: rgba(60, 130, 240, 0.35); stroke: #3c82f0; stroke-width: 1.5; cursor: grab; }
+.g9-profil-anfasser.bewegt { fill: rgba(240, 112, 32, 0.45); }
+.g9-profil-anfasser.gewaehlt { stroke: #ffffff; stroke-width: 2.5; }
+.g9-profil-wahl { margin-top: 6px; font-size: 0.8rem; min-height: 1.2em; }
+.g9-profil-koppeln { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.78rem; cursor: pointer; }
+.g9-profil-koppeln input { accent-color: var(--accent); margin: 0; }
+
+/* Texturregler je Körperteil (`genesis9hautteilregler.js`, `genesis9hautteilfenster.js`, 25.10.2026): Farbtupfer im Knopf, Felder im Fenster */
+.g9-hautteil-tupfer { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--border); border-radius: 2px; }
+.g9-hautteil-felder { display: flex; flex-direction: column; gap: 6px; }
+.g9-hautteil-feld { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+.g9-hautteil-feld > span:first-child { flex: 0 0 5.5em; }
+.g9-hautteil-feld input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--accent); }
+.g9-hautteil-feld .slider-value { flex: 0 0 4.2em; text-align: right; }
+.g9-hautteil-feld input[type="color"] { width: 3.2em; height: 1.8em; padding: 0; border: 1px solid var(--border); background: none; }
+.g9-hautteil-feld .g9-hautteil-muster { width: 5em; }
+.g9-hautteil-feld .btn-toggle { width: auto; flex: 0 0 auto; padding: 1px 8px; }
+.g9-eigenregler-unter { margin: 6px 0 2px 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Assets → Eigen (`genesis9eigengarderobe.js`, `genesis9eigenstueck.js`, Stufe K1/K2a, 25.10.2026): der Kasten eines Stücks trägt `genesis9-stueckregler`
+   (Sortenanteile, Abgleich) — dessen Einzug von 28 px gilt unter der Zeile der Garderobe, hier steht er schon im Klappkasten. */
+.g9-eigenkleid-stueck > .genesis9-stueckregler.genesis9-stueckregler { margin: 0 0 4px 2px; }
+/* Eigene Stücke (`genesis9eigenkleidkasten.js`, K2a): Knöpfe Anlegen/Ablegen nebeneinander, Farbfeld in der Reglerzeile */
+.g9-eigenkleid-inhalt { margin: 2px 0 4px 2px; }
+.g9-eigenkleid-knoepfe { display: flex; align-items: center; gap: 6px; margin: 2px 0 4px; }
+.g9-eigenkleid-knoepfe > .btn-toggle { width: auto; flex: 0 0 auto; padding: 2px 10px; }
+.g9-eigenkleid-meldung { font-size: 0.72rem; }
+.g9-eigenkleid-zeile input[type="color"] { width: 3.2em; height: 1.6em; padding: 0; border: 1px solid var(--border); background: none; }
+/* Felder, die bei den jetzigen Werten nichts bewirken (`Genesis9eigenkleidkasten.ausgrauen`, 26.10.2026: Stehkragen-Höhe ohne Stehkragen …) */
+.g9-ausgegraut { opacity: 0.38; }

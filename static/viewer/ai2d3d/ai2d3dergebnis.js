@@ -4,7 +4,9 @@
  * Feld 4: die Genesis-Figur aus Feld 3, gerendert aus der Perspektive des gewählten Fotos — so, wie die Charakter-Seite ein Exportfoto aufnimmt (`Ai2d3dkamera`). Die Karte: je Foto mit bekanntem Winkel
  * Foto | Rendering | Überlagerung und die Zahlen aus `Ai2d3dvergleich`. Ohne bekannte Kamera (echte Fotos) gibt es das Rendering mit FOV 20°, aber keine Zahl.
  */
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Ai2d3dkamera } from './ai2d3dkamera.js';
+import { Ai2d3dseitenbild } from './ai2d3dseitenbild.js';
 import { Ai2d3dvergleich } from './ai2d3dvergleich.js';
 
 export class Ai2d3dergebnis {
@@ -49,11 +51,45 @@ export class Ai2d3dergebnis {
             this.info.textContent = 'Für dieses Foto ist der Winkel unbekannt — kein Rendering.';
             this.leinwand.hidden = true;
         } else {
-            Ai2d3dvergleich.rendern(ansicht, box, foto.winkel, rahmen, this.leinwand, b, h, this.regel);
-            this.info.textContent = this.daten.kamera ? `${foto.name} · gerendert nach der Regel der Charakter-Seite (20°, Hülle × 1,08).`
-                : `${foto.name} · Kamera der Fotos unbekannt: gerendert mit 20° auf die Hülle der Figur — zum Ansehen, keine Messung.`;
+            // Mit Kameras der Einpassung (26.10.2026, Edgar: „es gibt auch Unterschiede zwischen dem 3D View oben und den Ergebnis fotos, z.B. augen, warum?“): dasselbe Bild wie die
+            // Testzeilen und die Abnahme — vorher stand hier die Figur in der Grundhaltung aus einer Kamera mit 20° auf die Hülle, also aus anderem Abstand, Winkel und mit anderer Haltung
+            const eigen = await this._einpassung(nr).catch(fehler => { console.warn(`Ai2d3dergebnis: ${fehler.message}`); return null; });
+            if (lauf !== this._lauf) return;
+            if (eigen?.figur) {
+                await this._bildZeigen(eigen);
+                this.info.textContent = `${foto.name} · Kamera der Einpassung, Haltung ${eigen.haltung === 'je Foto' ? 'dieses Fotos' : 'gemeinsam'} — dasselbe Bild wie in den Testzeilen.`;
+            } else {
+                this.leinwand.classList.remove('ai2d3d-wiefoto');
+                Ai2d3dvergleich.rendern(ansicht, box, foto.winkel, rahmen, this.leinwand, b, h, this.regel);
+                this.info.textContent = this.daten.kamera ? `${foto.name} · gerendert nach der Regel der Charakter-Seite (20°, Hülle × 1,08).`
+                    : `${foto.name} · Kamera der Fotos unbekannt: gerendert mit 20° auf die Hülle der Figur — zum Ansehen, keine Messung.`;
+            }
         }
         await this._karte(ansicht, box, rahmen, lauf);
+    }
+
+    /** Bild aus Kamera und Haltung der Einpassung für Foto `nr` (0-basiert; `kameras.json` zählt ab 1) — null, wenn der Job keine Kameras hat oder die Seite fehlt. */
+    async _einpassung(nr) {
+        if (!this.seite) return null;
+        this._kameras ??= Promise.all([Serverabruf.json(`/api/2d3dai/${this.daten.id}/abnahme/kameras/`).catch(() => null),
+                                       Serverabruf.json(`/api/2d3dai/${this.daten.id}/abnahme/haltungen/`).catch(() => ({ fotos: {} }))]);
+        const [kameras, haltungen] = await this._kameras;
+        const k = Object.values(kameras?.kameras || {}).find(x => Number(x.nr) === nr + 1);
+        return k ? Ai2d3dseitenbild.inHaltung(this.seite, k, haltungen?.fotos || {}) : null;
+    }
+
+    async _bildZeigen(b) {
+        const bild = new Image();
+        bild.src = b.url;
+        await bild.decode();
+        // so groß wie das Foto in Feld 1 (Edgar 26.10.2026: „mache Vorlage und Ergebnis gleich groß“): dasselbe Bildformat, dieselbe Einpassung in die Fläche (object-fit wie .ai2d3d-foto)
+        Object.assign(this.leinwand, { width: b.breite, height: b.hoehe });
+        this.leinwand.removeAttribute('style');
+        this.leinwand.classList.add('ai2d3d-wiefoto');
+        const c = this.leinwand.getContext('2d');
+        c.fillStyle = '#ffffff';
+        c.fillRect(0, 0, this.leinwand.width, this.leinwand.height);
+        c.drawImage(bild, 0, 0, this.leinwand.width, this.leinwand.height);
     }
 
     /** Größe des Renderings in Feld 4: so groß wie die Fläche erlaubt, im Seitenverhältnis des Fotos. */

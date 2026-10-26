@@ -191,7 +191,8 @@ class Mesh3dairechenlauf:
     def _schritt(self, befehl, aus):
         """Einen Schritt rechnen, Ausgabe ins Log. → (letzte Zeilen, Rückgabewert). Ein Skript aus `Skriptdienstruf.ERLAUBT` rechnet der Skriptdienst von python14; ohne ihn ein eigener Prozess."""
         import os
-        env = dict(os.environ, PYTHONIOENCODING='utf-8')
+        # reproduzierbar (26.10.2026, Edgar: „kette muss Reproduzierbar sein“): `mesh3dai/mesh3dai_determinismus.py` schaltet damit in jedem Prozess der Kette ein, Kindprozesse erben es
+        env = dict(os.environ, PYTHONIOENCODING='utf-8', MESH3DAI_DETERMINISTISCH='1', CUBLAS_WORKSPACE_CONFIG=':4096:8', PYTHONHASHSEED='0')
         roh = [a for a in befehl[1:] if a != '-u']
         if roh and roh[0].endswith('.py'):
             letzte = []

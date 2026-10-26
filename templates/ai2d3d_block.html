@@ -1,0 +1,14 @@
+{% comment %} Ein Block der aufgeräumten Jobseite (26.10.2026, `Abnahmebloecke`, `Ai2d3dbloecke`): Foto · Ergebnis · beide und die Tabelle je Eigenregler. Parameter: block, titel, text. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="ai2d3d-block-{{ block }}" data-block="{{ block }}">
+    <h2>{{ titel }} <span class="ai2d3d-fotowahl" data-fotowahl></span></h2>
+    <p class="hb-hinweis">{{ text }}</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>{{ titel }} wird geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Eigenregler · Messung</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>

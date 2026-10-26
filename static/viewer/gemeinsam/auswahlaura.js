@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Randleuchten } from './randleuchten.js';
+import { Stoffdecke } from './stoffdecke.js';
 
 /**
  * Auswahlaura — wie Auswahl und Hover in der 3D-Ansicht zu sehen sind (Szene, BVH Studio).
@@ -50,6 +51,7 @@ export class Auswahlaura {
     static _composer = null;
     static _auswahl = null;
     static _hover = null;
+    static _decke = null;
     static _groesse = new THREE.Vector2();
     static _geladen = null;
 
@@ -171,6 +173,9 @@ export class Auswahlaura {
             // dunkle Kante den Hover auf einem Stück der gewählten Figur.
             composer.addPass(Auswahlaura._auswahl);
             composer.addPass(Auswahlaura._hover);
+            // Eigene Stücke über das Glühen: ihre Form entsteht im Shader, die Maske der Aura ist die Haut darunter (`Stoffdecke`, 26.10.2026)
+            Auswahlaura._decke = new Stoffdecke(szene, kamera);
+            composer.addPass(Auswahlaura._decke);
             composer.addPass(new OutputPass());
             Auswahlaura._composer = composer;
             Auswahlaura._einstellen();
@@ -191,6 +196,8 @@ export class Auswahlaura {
             pass.renderScene = szene;
             pass.renderCamera = kamera;
         }
+        Auswahlaura._decke.scene = szene;
+        Auswahlaura._decke.camera = kamera;
         return composer;
     }
 

@@ -88,33 +88,40 @@ export class Ai2d3dseitenbild {
         const daten = await Serverabruf.json(`/api/2d3dai/${job}/abnahme/kameras/`);
         // Haltung je Foto (Auftrag EdgarTrip, 24.10.2026): jedes Foto in SEINER Haltung rendern; ohne Ablage (eine Haltung für alle) die Figur, wie sie dasteht
         const haltungen = (await Serverabruf.json(`/api/2d3dai/${job}/abnahme/haltungen/`).catch(() => ({ fotos: {} }))).fotos || {};
-        const figur = seite.genesis?.inHaltung ? seite.genesis : null;
         const aus = [];
         for (const k of Object.values(daten.kameras)) {
-            const h = haltungen[String(k.datei).split('.')[0]];
-            const ersatz = h && figur?.figur?.parent ? await figur.inHaltung(h.dreh, h.ausgabe) : null;
-            if (ersatz) {
-                ersatz.position.copy(figur.figur.position);
-                ersatz.quaternion.copy(figur.figur.quaternion);
-                ersatz.scale.copy(figur.figur.scale);
-                figur.figur.parent.add(ersatz);
-                figur.figur.visible = false;
-            }
-            let b;
-            try {
-                b = Ai2d3dseitenbild.bild(seite.genesisfeld, k);
-            } finally {
-                if (ersatz) {
-                    ersatz.removeFromParent();
-                    ersatz.traverse(o => o.geometry?.dispose());      // nur die Geometrie dieser Haltung; Materialien und Texturen teilt sie mit der Figur
-                    figur.figur.visible = true;
-                }
-            }
+            const b = await Ai2d3dseitenbild.inHaltung(seite, k, haltungen);
             if (!b.figur) throw new Error(`Ai2d3dseitenbild: Foto ${k.nr} (${k.datei}) zeigt keine Figur — Kamera oder Rahmen falsch`);
             const antwort = await Serverabruf.senden(`/api/2d3dai/${job}/abnahme/seite/${k.nr}/`, { bild: b.url });
-            aus.push({ nr: k.nr, datei: k.datei, figur_px: b.figur, groesse: [b.breite, b.hoehe], bytes: antwort.bytes, haltung: ersatz ? 'je Foto' : 'gemeinsam' });
+            aus.push({ nr: k.nr, datei: k.datei, figur_px: b.figur, groesse: [b.breite, b.hoehe], bytes: antwort.bytes, haltung: b.haltung });
         }
         console.info('Ai2d3dseitenbild:', JSON.stringify(aus));
         return aus;
+    }
+
+    /**
+     * Ein Foto: die Figur in SEINER Haltung (Ablage `haltungen`, sonst wie sie dasteht) aus der Kamera `k` → `bild()` plus `haltung` ('je Foto' | 'gemeinsam'). Seit 26.10.2026 auch für
+     * Feld „Ergebnis“ (`Ai2d3dergebnis`), damit es dasselbe Bild zeigt wie die Testzeilen (Edgar: „es gibt auch Unterschiede zwischen dem 3D View oben und den Ergebnis fotos“).
+     */
+    static async inHaltung(seite, k, haltungen) {
+        const figur = seite.genesis?.inHaltung ? seite.genesis : null;
+        const h = haltungen[String(k.datei).split('.')[0]];
+        const ersatz = h && figur?.figur?.parent ? await figur.inHaltung(h.dreh, h.ausgabe) : null;
+        if (ersatz) {
+            ersatz.position.copy(figur.figur.position);
+            ersatz.quaternion.copy(figur.figur.quaternion);
+            ersatz.scale.copy(figur.figur.scale);
+            figur.figur.parent.add(ersatz);
+            figur.figur.visible = false;
+        }
+        try {
+            return { ...Ai2d3dseitenbild.bild(seite.genesisfeld, k), haltung: ersatz ? 'je Foto' : 'gemeinsam' };
+        } finally {
+            if (ersatz) {
+                ersatz.removeFromParent();
+                ersatz.traverse(o => o.geometry?.dispose());      // nur die Geometrie dieser Haltung; Materialien und Texturen teilt sie mit der Figur
+                figur.figur.visible = true;
+            }
+        }
     }
 }

@@ -11,6 +11,12 @@ import { Figurablage } from '../figurablage.js';
  */
 export class Genesis9Figur extends Genesis9Modell {
 
+    constructor(id, daten = {}) {
+        super(id, daten);
+        /** „Größe halten" (R8, 25.10.2026, `genesis9groessehalten.js`): `{an, soll_m}` — kommt nur mit der Figur (Speichern, Rückgängig). */
+        this.groesseHalten = daten.groesse_halten ? { ...daten.groesse_halten } : null;
+    }
+
     toJSON() {
         return {
             ...Figurablage.grunddaten(this),
@@ -25,6 +31,7 @@ export class Genesis9Figur extends Genesis9Modell {
             hautmischung: { ...this.hautmischung },
             teilmaterial: { ...this.teilmaterial },   // Glanz, Rauheit … je Teil (`Genesis9teilmaterial`, 09.10.2026)
             hautebenen: { ...this.hautebenen },       // Hautton, Flecken, Muskel-/Fettzeichnung, graue Haare (`Genesis9hautebenen`, 17.10.2026)
+            groesse_halten: this.groesseHalten?.an ? { an: true, soll_m: this.groesseHalten.soll_m } : null,   // ohne `letzte` (`genesis9groessehalten.js`)
             pose: this.pose,
             ausdruck: this.ausdruck,
             kleidung: { ...this.kleidung },

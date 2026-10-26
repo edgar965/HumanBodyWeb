@@ -85,12 +85,12 @@ class Ai2d3djobs:
 
     @classmethod
     def _netze(cls, ordner, paar):
-        """Die Netze aus den Fotos, Hunyuan3D-2mv zuerst (der Weg des Konzepts), dann Tripo3D. `[{art, name, pfad, bytes}]`."""
+        """Die Netze aus den Fotos: Hunyuan3D-2mv. `[{art, name, pfad, bytes}]`. Tripo3D nicht mehr (26.10.2026, Edgar: „Lösche Tripo Meshes aus allen Jobs … auch als
+        Vergleichsnetz“) — der Ordner `<Job>/tripo3d/` bleibt, er gehört zu Mesh3D-AI."""
         kandidaten = []
         if paar:
             kandidaten.append(('hunyuan3d', cls.mesh3dai() / '_bild3d' / ('%s_tripovergleich' % paar['ordner']) / 'mesh' / 'ergebnis' / 'mesh.glb'))
         kandidaten += [('hunyuan3d', p) for p in sorted((ordner / 'hunyuan3d').glob('*.glb'))]
-        kandidaten += [('tripo3d', p) for p in sorted((ordner / 'tripo3d').glob('*.glb'))]
         return Ai2d3dfotojobs.netze(kandidaten)
 
     @classmethod

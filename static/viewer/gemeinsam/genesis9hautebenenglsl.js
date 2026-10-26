@@ -1,4 +1,5 @@
 import { Genesis9hautrauschenGLSL } from './genesis9hautrauschenglsl.js';
+import { Genesis9hautteileGLSL } from './genesis9hautteileglsl.js';
 
 /**
  * Genesis9hautebenenGLSL — die Shader-Stücke der Hautebenen (17.10.2026, Edgar: „Hautton, Sommersprossen, Altersflecken, graue Haare, Muskel- und Fettzeichnung").
@@ -18,6 +19,8 @@ import { Genesis9hautrauschenGLSL } from './genesis9hautrauschenglsl.js';
  * ZWEITE WELLE (18.10.2026): Struktur, Farbton, Olivton, Sättigung, Helligkeit, Teint, Wangenröte, Augenringe, Äderchen, Pigment, Muttermale, Weißflecken, Pickel und die
  * Beulenschicht (Cellulite, Aknenarben) stehen in `Genesis9hautrauschenGLSL`; hier werden sie in die Farbe und hinter `normal_fragment_maps` eingesetzt. Jeder Teil ist mit
  * seinem Uniform abgeschaltet, solange der Regler auf 0 steht.
+ *
+ * TEILE (25.10.2026): Hautfarbe je Körperteil nach dem Ton, Tattoos vor der Mischung mit der Schminke (`Genesis9hautteileGLSL`, Abschnitt „Eigen“).
  */
 export class Genesis9hautebenenGLSL {
 
@@ -59,35 +62,43 @@ float g9Punkte( vec2 uv, float zelle, float radius, float anteil ) {
      */
     static farbe(mitSchminke) {
         const R = Genesis9hautrauschenGLSL;
+        const T = Genesis9hautteileGLSL;
         return `
 float htPickel = 0.0;
 vec4 htGebietW = vec4( 0.0 );
+vec4 htTe[ 5 ];
+for ( int j = 0; j < 5; j ++ ) htTe[ j ] = vec4( 0.0 );
 {
     vec3 htC = diffuseColor.rgb;
     float htFrei = ${mitSchminke ? '1.0 - g9Schminke' : '1.0'};
 ${R.GEBIET}
     vec3 htL = htC;
+${T.LESEN}
+${T.SCHATTEN}
 ${R.STRUKTUR}
     htL = pow( max( htL, vec3( 0.0005 ) ), vec3( 1.0 + 0.55 * uHtTon ) );
     float htLuma = dot( htL, vec3( 0.2126, 0.7152, 0.0722 ) );
     htL = mix( htL, htL * vec3( 1.10, 0.90, 0.88 ), max( uHtRoetung, 0.0 ) );
     htL = mix( htL, mix( htL, vec3( htLuma ) * vec3( 1.04, 1.0, 0.98 ), 0.6 ), max( -uHtRoetung, 0.0 ) );
 ${R.TON}
+${T.FARBE}
 #ifdef USE_MAP
     if ( uHtGebietAn > 0.5 ) htGebietW = texture2D( uHtGebiet, HT_UV );
 #endif
 ${R.TEINT}
 #ifdef USE_MAP
-    if ( uHtGebietAn > 0.5 && uHtSommer > 0.0 ) {
-        float htS = g9Punkte( HT_UV, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, uHtF4.w ) * mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer;
+    // je Körperteil (htTe[2].y Sommersprossen, .z Altersflecken) auf dem ganzen Teil, nicht nur im Gebiet der Karte (26.10.2026)
+    if ( uHtGebietAn > 0.5 && ( uHtSommer > 0.0 || htTe[ 2 ].y > 0.0 ) ) {
+        float htS = g9Punkte( HT_UV, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, uHtF4.w ) * ( mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer + htTe[ 2 ].y );
         htL *= mix( vec3( 1.0 ), vec3( 0.58, 0.40, 0.30 ), clamp( htS, 0.0, 1.0 ) );
     }
-    if ( uHtGebietAn > 0.5 && uHtAlter > 0.0 ) {
-        float htA = g9Punkte( HT_UV + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * htGebietW.g * uHtAlter;
+    if ( uHtGebietAn > 0.5 && ( uHtAlter > 0.0 || htTe[ 2 ].z > 0.0 ) ) {
+        float htA = g9Punkte( HT_UV + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * ( htGebietW.g * uHtAlter + htTe[ 2 ].z );
         htL *= mix( vec3( 1.0 ), vec3( 0.72, 0.56, 0.42 ), clamp( htA, 0.0, 1.0 ) );
     }
 #endif
 ${R.FLECKEN}
+${T.TATTOO}
     diffuseColor.rgb = mix( htC, htL, htFrei );
 }
 `;
@@ -106,7 +117,7 @@ ${R.FLECKEN}
             .replace('#include <begin_vertex>', '#include <begin_vertex>\nvHtLage = position;\n#ifdef HT_UV_HAUT\nvHtUv = uvHaut;\n#endif');
         shader.fragmentShader = shader.fragmentShader
             .replace('#include <common>', '#include <common>\n#ifdef HT_UV_HAUT\nvarying vec2 vHtUv;\n#define HT_UV vHtUv\n#else\n#define HT_UV vMapUv\n#endif\n'
-                + Genesis9hautebenenGLSL.UNIFORMS + Genesis9hautrauschenGLSL.UNIFORMS
+                + Genesis9hautebenenGLSL.UNIFORMS + Genesis9hautrauschenGLSL.UNIFORMS + Genesis9hautteileGLSL.UNIFORMS
                 + (ebenen.zeichnung ? Genesis9hautebenenGLSL.ZEICHNUNG_UNIFORMS : '') + (ebenen.mimik ? Genesis9hautebenenGLSL.MIMIK_UNIFORMS : ''))
             .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n' + Genesis9hautebenenGLSL.farbe(mitSchminke))
             .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + Genesis9hautrauschenGLSL.BEULEN);

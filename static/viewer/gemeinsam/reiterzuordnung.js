@@ -31,6 +31,7 @@ export class Reiterzuordnung {
         ['gar_', 'assets', 'garment'],
         ['mhk_', 'assets', 'makehuman'],
         ['daz_', 'assets', 'daz'],
+        ['eigen_', 'assets', 'eigen'],                  // eigene Stücke (`Eigenkleidtreffer`, 26.10.2026): Kasten im Block „Eigen“
     ];
 
     /** Wohin ohne Treffer: der Reiter mit den Objekteigenschaften. */

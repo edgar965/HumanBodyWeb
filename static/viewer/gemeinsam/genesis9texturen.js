@@ -205,7 +205,7 @@ export class Genesis9texturen {
         const anwenden = textur => {
             if (!textur) return;
             danach(textur);
-            if (material) { material.userData?.teilnach?.(); material.needsUpdate = true; }   // eigene Materialwerte nach dem Bild wieder auflegen (`Genesis9teilmaterial`)
+            if (material) { material.userData?.teilnach?.(); material.userData?.stoffnach?.(); material.needsUpdate = true; }   // eigene Materialwerte nach dem Bild wieder auflegen (`Genesis9teilmaterial`, `Stoffwerte`)
         };
         if (eintrag.textur.image) anwenden(eintrag.textur);
         else {

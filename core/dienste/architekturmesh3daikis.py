@@ -48,8 +48,11 @@ class Architekturmesh3daikis:
         'segmentierung': (('fremd', 'Sapiens2'), ('fremd', 'SAM 3')),
         'zerlegung': (('ki', 'zerlegung'),),
         'kopf': (('ki', 'kopfnetz'), ('fremd', 'MediaPipe'), ('rechnung', 'Kopfangleich')),
-        'haut': (('ki', 'hautki'), ('ki', 'stufe2')),
-        'kleider': (('rechnung', 'Kostüm-Weg A: erkennen, schneiden, auflegen'), ('rechnung', 'Kostüm-Prüfung')),
+        # 26.10.2026 nachgetragen (die Schritte gibt es seit 24./25.10.): Lageangleich misst über Kostuemmesspunkte (ViTPose), Koerperangleich das Gesicht über Kostuemgesicht (MediaPipe)
+        'lage': (('fremd', 'ViTPose'), ('rechnung', 'Lageangleich')),
+        'koerper': (('fremd', 'MediaPipe'), ('rechnung', 'Koerperangleich')),
+        'haut': (('ki', 'hautki'), ('ki', 'stufe2'), ('rechnung', 'Entlichtung')),
+        'kleider': (('rechnung', 'Kostüm-Weg A: erkennen, schneiden, auflegen'), ('fremd', 'ViTPose'), ('fremd', 'MediaPipe'), ('rechnung', 'Kostüm-Prüfung')),
     }
 
     @classmethod

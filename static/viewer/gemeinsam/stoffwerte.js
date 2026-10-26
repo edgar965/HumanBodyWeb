@@ -1,31 +1,34 @@
-import * as THREE from 'three';
-import { Gewebe } from './gewebe.js';
-import { gewebeart } from './gewebearten.js';
 import { Umfaerbung } from './umfaerbung.js';
+import { Stoffshader } from './stoffshader.js';
 
 /**
- * Stoffwerte — Rauheit, Metallgrad und Gewebe eines Genesis-Stücks (Daz, GC, MB).
+ * Stoffwerte — die Stoffwerte eines Genesis-Stücks (Daz, GC, MB) auf seine Materialien.
  *
  * WARUM (Edgar, 25.09.2026: „auch die Material-Einstellungen fehlen"): Die aus
  * GarmentCode gebackenen Stücke (`G9gcstuecke`) hatten nur noch die Farbe
  * (`Umfaerbung`), der GarmentCode-Reiter dagegen Roughness, Metalness und das
- * Gewebe (`garmentcode_material.js`, `garmentcode_gewebe.js`). Dieselben drei
- * Werte liegen jetzt in den Werten des getragenen Stücks (`werte.stoff =
- * {rauheit, metall, gewebe}`) und gehen damit wie Farbe, Variante und Regler
- * mit der Figur in die Szene.
+ * Gewebe (`garmentcode_material.js`, `garmentcode_gewebe.js`). Die Werte liegen
+ * in den Werten des getragenen Stücks (`werte.stoff`) und gehen damit wie Farbe,
+ * Variante und Regler mit der Figur in die Szene.
  *
- * DAS GEWEBE IST EINE NORMALKARTE und ersetzt die des Stücks — eine Daz-Jeans
- * hat eine eigene. Die bleibt am Material gemerkt (`userData.eigeneNormalen`)
- * und kommt zurück, sobald das Gewebe auf „glatt"/aus steht. Die Kachelgröße
- * braucht das Stoffmaß (Meter je UV-Einheit); das GC-Stück bringt es nicht mit,
- * darum wird es am Netz gemessen (`uvMeter`: 3D-Kantenlänge gegen UV-Kantenlänge).
+ * `werte.stoff` (Form: `Stoffarten.werte`):
+ *   rauheit, metall      am Material (`roughness`, `metalness`)
+ *   relief               Stärke der EIGENEN Normalkarte des Stücks (Daz' Normalen, gebackene Falten) — `normalScale`, wie „Relief“ der
+ *                        Körperteile (`Genesis9teilmaterial`); 1 = wie geliefert
+ *   glanz, saum, saumstreuung, saumfarbe, gewebe {art, faeden, staerke}
+ *                        im Shader (`Stoffshader`, seit 25.10.2026) — ohne Neubau, ohne neue Normalkarte
+ *   stoffart             nur die Vorwahl, von der man ausging (`Stoffarten`)
  *
- * Kacheln wie `Garmentstoff.kachel` (Szene) — hier eigen, weil dieses Modul in
- * `gemeinsam/` liegt (Studio und Szene) und nicht in die Szene greifen darf.
+ * BIS 25.10.2026 WAR DAS GEWEBE EINE NORMALKARTE und ersetzte die des Stücks (Kachel aus `Gewebe.normalfeld`, `userData.eigeneNormalen`).
+ * Damit verschwanden mit dem Gewebe auch die gebackenen Falten (`G9faltenkarte`, `bild.falten_*`) — sie stehen in derselben Karte. Jetzt
+ * liegt die Bindung im Shader über der Normalkarte. Das Stoffmaß (Meter je UV-Einheit) wird wie bisher am Netz gemessen (`uvMeter`).
+ *
+ * SPÄTE BILDER: `Genesis9netz.texturen` setzt beim Eintreffen der Rauheitskarte `roughness = 1` und bei DirectX-Normalen `normalScale.y = −1`
+ * — nach dem ersten Anziehen kommen die Bilder oft erst nach `stueck`. `userData.stoffnach` legt die Werte danach wieder auf
+ * (`Genesis9texturen.holen` ruft es nach jedem Bild, wie `teilnach` bei den Körperteilen).
  */
 export class Stoffwerte {
 
-    static _kacheln = {};
     /** Bis zu so vielen Kanten misst `uvMeter` (jede n-te). */
     static STICHPROBE = 20000;
 
@@ -44,41 +47,38 @@ export class Stoffwerte {
     }
 
     static material(material, stoff, geometrie = null) {
+        const daten = material.userData;
         if (typeof stoff.rauheit === 'number' && 'roughness' in material) {
             material.roughness = stoff.rauheit;
         }
         if (typeof stoff.metall === 'number' && 'metalness' in material) {
             material.metalness = stoff.metall;
         }
-        if (stoff.gewebe && typeof stoff.gewebe === 'object') {
-            Stoffwerte.gewebe(material, stoff.gewebe, geometrie);
-        }
+        if (typeof stoff.relief === 'number') Stoffwerte.relief(material, stoff.relief);
+        if (!(daten.uvMeter > 0) && geometrie?.attributes?.uv) daten.uvMeter = Stoffwerte.uvMeter(geometrie);
+        Stoffshader.setzen(material, stoff, daten.uvMeter);
+        daten.stoffnach = () => Stoffwerte.nach(material, stoff);
         material.needsUpdate = true;
         return 1;
     }
 
-    static gewebe(material, gewebe, geometrie) {
+    /** Nach einem spät geladenen Bild nur das wieder auflegen, was das Bild überschreibt (Rauheit, Relief); der Shader hält den Rest. */
+    static nach(material, stoff) {
+        if (typeof stoff.rauheit === 'number' && 'roughness' in material) material.roughness = stoff.rauheit;
+        if (typeof stoff.relief === 'number') Stoffwerte.relief(material, stoff.relief);
+    }
+
+    /**
+     * Stärke der eigenen Normalkarte. Das Vorzeichen von y gehört der Karte (DirectX-Normalen: −1, `Genesis9netz.texturen`) und wird
+     * gemerkt, solange y nicht 0 ist — bei Relief 0 wäre es sonst verloren.
+     */
+    static relief(material, wert) {
+        const skala = material.normalScale;
+        if (!skala) return;
         const daten = material.userData;
-        if (!('eigeneNormalen' in daten)) daten.eigeneNormalen = material.normalMap || null;
-        const art = gewebeart(gewebe.art);
-        const staerke = Number(gewebe.staerke);
-        const hatUv = !!geometrie?.attributes?.uv;
-        if (!hatUv || !art.hoehe || !(staerke > 0)) {
-            material.normalMap = daten.eigeneNormalen;
-            daten.gewebe = null;
-            return 0;
-        }
-        if (!(daten.uvMeter > 0)) daten.uvMeter = Stoffwerte.uvMeter(geometrie);
-        const karte = Stoffwerte.kachel(gewebe.art).clone();
-        const wie_oft = Gewebe.wiederholung(
-            daten.uvMeter, Gewebe.kachelmeter(Number(gewebe.faeden) || art.faedenJeCm, art.faedenJeKachel));
-        karte.repeat.set(wie_oft, wie_oft);
-        karte.needsUpdate = true;
-        material.normalMap = karte;
-        material.normalScale = new THREE.Vector2(staerke, staerke);
-        if ('sheenRoughness' in material) material.sheenRoughness = art.glanzstreuung;
-        daten.gewebe = { ...gewebe };
-        return wie_oft;
+        if (skala.y !== 0) daten.reliefZeichen = Math.sign(skala.y);
+        const w = Math.max(0, Math.min(2, wert));
+        skala.set(w, w * (daten.reliefZeichen || 1));
     }
 
     /** Meter Stoff je UV-Einheit: Summe der 3D-Kantenlängen durch die der UV-Kanten. */
@@ -99,22 +99,5 @@ export class Stoffwerte {
             flaeche += Math.hypot(uv.getX(a) - uv.getX(b), uv.getY(a) - uv.getY(b));
         }
         return flaeche > 0 ? raum / flaeche : 0;
-    }
-
-    static kachel(artname) {
-        if (Stoffwerte._kacheln[artname]) return Stoffwerte._kacheln[artname];
-        const art = gewebeart(artname);
-        const karte = new THREE.DataTexture(
-            Gewebe.normalfeld(Gewebe.GROESSE, art.faedenJeKachel, Gewebe.STAERKE, art.hoehe),
-            Gewebe.GROESSE, Gewebe.GROESSE, THREE.RGBAFormat);
-        karte.wrapS = THREE.RepeatWrapping;
-        karte.wrapT = THREE.RepeatWrapping;
-        karte.generateMipmaps = true;
-        karte.minFilter = THREE.LinearMipmapLinearFilter;
-        karte.magFilter = THREE.LinearFilter;
-        karte.anisotropy = 16;
-        karte.needsUpdate = true;
-        Stoffwerte._kacheln[artname] = karte;
-        return karte;
     }
 }

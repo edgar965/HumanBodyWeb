@@ -7,6 +7,8 @@ import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Stueckmarkierung } from './stueckmarkierung.js';
 import { Dazkleidung } from './genesis9/dazkleidung.js';
 import { Strangauswahl } from './strangauswahl.js';
+import { Eigenkleider } from '../gemeinsam/eigenkleider.js';
+import { Eigenkleidtreffer } from '../gemeinsam/eigenkleidtreffer.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -34,6 +36,8 @@ export function getSelectableSubMeshes(charId) {
         const hName = inst.hairStyle?.name || inst.hairStyle?.url?.split('/').pop() || 'Hair';
         targets.push({ type: 'hair', key: 'hair', label: `Hair (${hName})`, meshObj: inst.hairMesh, charId });
     }
+    // eigene Stücke (Oberteil, Hose, Socken, Rock, Kleid) — Klick öffnet ihren Kasten im Reiter „Assets“ (Edgar, 26.10.2026)
+    targets.push(...Eigenkleidtreffer.ziele(inst, charId, (figur, art) => Eigenkleider.stueck(figur, art)));
     return targets;
 }
 

@@ -31,8 +31,10 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
     <a href="/mesh-3D-AI/damira0/">Damira0</a>, <a href="/mesh-3D-AI/mann1/">Mann1</a>, <a href="/mesh-3D-AI/matt0/">Matt0</a>) und {{ form_varianten.zahl|default:"—" }} Formvarianten; fremde Netze ohne Soll zeigt der Reiter
     <a href="/mesh-3D-AI/#test">Test</a>. Bezugslauf dieser Seite: <code>{{ lauf_name|default:"—" }}</code>.
     Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.<br>
-    <strong>Heute (24.10.2026):</strong> ein Test rechnet per Knopf in elf festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>), der Kopf wird nach dem Kopfnetz an das Mesh angeglichen
-    (<a href="#kopf">Kopf aus der KI</a>), jede Klasse mit Aufruf-Logik steht unter <a href="#klassen">Alle Klassen</a> — alles beim Aufruf aus dem Code gelesen.
+    <strong>Stand 26.10.2026:</strong> ein Test rechnet per Knopf in {{ rechenlauf.schritte|length|default:"—" }} festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>), seit 25.10. mit
+    „Haltung an den Eingang“ (<code>Lageangleich</code>) und „Körper in die Außenmaße“ (<code>Koerperangleich</code>, seit 26.10. mit den Anfassern der Körper-Eigenregler); der Kopf wird nach dem
+    Kopfnetz an das Mesh angeglichen (<a href="#kopf">Kopf aus der KI</a>). Seit 26.10. rechnet jeder Schritt auf der Karte, Körper und Kopf als CUDA-Graph, und die Kette ist reproduzierbar
+    (<a href="#karte">Auf der Karte</a>). Jede Klasse mit Aufruf-Logik steht unter <a href="#klassen">Alle Klassen</a> — alles beim Aufruf aus dem Code gelesen.
   </div>
 
   {% if befunde %}
@@ -44,9 +46,12 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
 
   {# 24.10.2026 abends: zuerst die Übersicht, wie die KIs aufgerufen werden, und je KI eine Grafik (Edgar: „für alle KIs eine einzelne Grafik … eine übergeordnete Grafik mit Kästchen und Ablauf“) #}
   {% if kis %}{% include "hilfe/_architektur_mesh3dai_kis.html" %}{% endif %}
+  {% include "hilfe/_architektur_mesh3dai_reglerki.html" %}
   {% include "hilfe/_architektur_mesh3dai_kurz.html" %}
   {# 24.10.2026: der heutige Ablauf zuerst — Rechnen per Knopf, Kopf aus der KI, Kleider heute (Kostüm-Weg A), alle Klassen mit Aufruf-Logik (ohne Nummer) #}
   {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_rechenlauf.html" %}{% endif %}
+  {# 26.10.2026: wie die Kette rechnet — auf der Karte, ohne Wartepunkte, als CUDA-Graph, reproduzierbar #}
+  {% if karte %}{% include "hilfe/_architektur_mesh3dai_karte.html" %}{% endif %}
   {% if kopf %}{% include "hilfe/_architektur_mesh3dai_kopf.html" %}{% endif %}
   {% include "hilfe/_architektur_mesh3dai_kostuem.html" %}
   {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_klassen.html" %}{% endif %}

@@ -7,6 +7,7 @@ import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
 import { Genesis9morphformular } from './genesis9morphformular.js';
 import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
 import { Combosortierung } from '../../gemeinsam/combosortierung.js';
+import { Dazeigenblock } from './dazeigenblock.js';
 
 /**
  * Genesis9stueckregler — die Anpassungsregler EINES Daz-Kleidungsstücks.
@@ -77,6 +78,8 @@ export class Genesis9stueckregler {
 
     /** Die Zeilen, Gruppen und das Morph-Formular in den aufgeklappten Kasten. */
     static _zeilen(kasten, inst, stueck, werteLesen) {
+        // Knopf „Eigen …“ (Stufe K2c, 25.10.2026): Ausschnitt/Säume nur wegschneiden, Kragen als Abziehbild, Brücke, Sitz, Stoff (`Dazeigenblock`).
+        if (Dazeigenblock.passt(inst, stueck)) kasten.appendChild(Dazeigenblock.knopf(inst, stueck, werteLesen));
         const gruppen = new Map();
         for (const r of stueck.regler) {
             if (!gruppen.has(r.gruppe)) gruppen.set(r.gruppe, []);

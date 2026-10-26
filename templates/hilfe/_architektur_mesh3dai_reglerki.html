@@ -1,0 +1,52 @@
+{% comment %}Abschnitt „Die neue Regler-KI“ (26.10.2026, Edgar: „baue den plan“, „du sollst eine ganz normale KI trainieren … passe das ggf. an in md und Plan / hilfeseite“).
+Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Hand aus den Gegenproben übernommen (Quelle je Zeile).{% endcomment %}
+<h2 id="regler-ki">Die neue Regler-KI (im Bau seit 26.10.2026, noch nicht in der Kette)</h2>
+<p>Eine KI für Mesh3D-AI und 2d-3d-AI: <strong>Eingang → Messlinien → ein Netz → alle Regler</strong>. Die Regler sind die Daz-Regler von Fassung 7, die 57 Hauptregler
+  der Eigenregler und ihre 754 Anfasser, Kopf und Körper zusammen (2.134 Werte). Die Klassen liegen in <code>KoerperKI_alle/</code>; nur der Eingang ist je Weg eine eigene Klasse
+  (<code>Netzmesslinien</code> für Netze, <code>Fotomesslinien</code> für Fotos, Besitzer 2d-3d-AI).</p>
+
+<h3>Wie trainiert wird</h3>
+<ul>
+  <li>Eine normale KI: ein neuronales Netz, dessen Gewichte das Training an den Trainingsjobs anpasst. Die Trainingsjobs sind die Trainingsdaten.</li>
+  <li>Die Messmethoden zeigen, wie weit das gewünschte Ergebnis (die Wahrheit des Jobs) noch entfernt ist — die Messlinien am Eingang, der Verlust und die Prüfung am Ergebnis.
+    Sie müssen genau stimmen, sonst lernt die KI das Falsche. Darum kommt die Prüfung zuerst, und jede Messung wird gegen G9formung gegengeprüft.</li>
+  <li>Keine Regler, Schwellen oder Startwerte für einen einzelnen Job. Ist ein Job schlecht, wird die Messmethode verbessert und das allgemeine Netz neu trainiert.</li>
+  <li>Ob die KI verallgemeinert, zeigen nur ungesehene Jobs (Prüfformen, Matt1, OlesiaSitzend).</li>
+</ul>
+
+<h3>Stand der Klassen</h3>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Klasse</th><th>Was</th><th>Stand</th></tr></thead>
+  <tbody>
+    <tr><td><code>Reglerraum</code></td><td>alle Regler als ein Vektor, Bereiche, Strafe außerhalb, Reglerwörterbuch hin und zurück</td><td>gebaut</td></tr>
+    <tr><td><code>Formrechnung</code></td><td>Regler → 4.000 Körperpunkte, 5.101 Kopfpunkte, 138 Gelenke auf der Karte; Eigenformen aus dem heutigen Stand der Grundformen</td>
+      <td>gebaut; Grundfigur mit allen Eigenreglern 0,005 mm neben G9formung, an echten Figuren 0,47–0,86 mm (Knochenskalierung, Boden)</td></tr>
+    <tr><td><code>Reglerpruefung</code></td><td>Form gegen Wahrheit je Gruppe (Körper, Hals, Rumpf, Arme, Hände, Beine, Füße, Kopf, Kopfform mit und ohne Maßstab, Gesicht …); schnell genähert oder echt über G9formung</td>
+      <td>gebaut; echt am heutigen Formkopf: Prüfformen Körper 24,7, Kopf 25,2, Kopfform 4,2 mm — gleich wie die Nachrechnung des Formtrainings</td></tr>
+    <tr><td><code>Messlinien</code>, <code>Netzmesslinien</code></td><td>Abstand Eingang − Figur je Linie (Ort, Richtung, Blick, Käfigpunkt, Abstand, gefunden, Sicherheit, Klasse Haut/Stoff/Haar) — gleiche Form für Netz und Fotos</td>
+      <td>gebaut; am exakten Strahl geeicht: Median 1–2,5 mm; liegt die Fläche weiter als 1 cm weg, trifft die Wolke oft eine nähere — darum rechnet die KI in Runden</td></tr>
+    <tr><td><code>Reglerwurf</code>, <code>Netzwurf</code></td><td>gewürfelte Trainingsjobs: Mischung echter Wahrheiten, gestreute Regler, Eigenformen; Fläche exakt über G9formung, Kleider und Haar gewürfelt.
+      Dazu verschobene echte Wolken (<code>nahe</code>, <code>verschieben</code>): eine nahe neue Wahrheit, jeder Punkt der echten Wolke wandert mit seinem nächsten Punkt der wahren
+      Figur — Haltungsrest, Kleider und Haar von MIA bleiben</td>
+      <td>gebaut; 0,6 s je gewürfeltem Job, 0,12 s je verschobener Wolke; Gegenprobe Abstand Wolke → Figur vorher 26,8, nachher 26,3 mm bei 41 mm Verschiebung</td></tr>
+    <tr><td><code>Reglernetz</code>, <code>Reglertraining</code></td><td>Stimmen je Messlinie, Aufmerksamkeit je Regler; Leiter: einen Job, 10, 100 nachbilden, dann ungesehen</td>
+      <td>gebaut; Leiter (genähert): 1 Job 0,7 mm, 10 Jobs 1,6 mm, 100 Jobs 10,4 mm — Ziel 0,2 mm noch nicht erreicht</td></tr>
+  </tbody>
+</table>
+
+<h3>Training (26.10.2026, Läufe <code>allgemein1</code> und <code>allgemein2_verschoben</code>)</h3>
+<p><code>allgemein1</code>: 1.338 echte Trainingswolken und 1.000 gewürfelte Jobs, 20.000 Schritte. <code>allgemein2_verschoben</code>: dasselbe und dazu je echter Wolke zwei verschobene
+  Kopien (2.676 Jobs). Geprüft echt über G9formung an den 22 Prüfformen, die keine der KIs im Training gesehen hat (Mittel der Vorhersagen je Form):</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Zeile</th><th>Körper</th><th>Kopf</th><th>Kopfform</th><th>Gesicht</th><th>Nase</th><th>Mund</th><th>Ohren</th></tr></thead>
+  <tbody>
+    <tr><td>Mitte der Trainingsjobs</td><td>101,9</td><td>144,5</td><td>5,89</td><td>4,95</td><td>4,35</td><td>5,03</td><td>6,80</td></tr>
+    <tr><td>heutiger Formkopf</td><td>24,7</td><td>25,2</td><td>4,23</td><td>3,43</td><td>3,32</td><td>3,33</td><td>4,62</td></tr>
+    <tr><td>neue Regler-KI, <code>allgemein1</code></td><td>28,0</td><td>27,4</td><td>3,25</td><td>2,76</td><td>2,67</td><td>2,56</td><td>3,39</td></tr>
+    <tr><td>neue Regler-KI, <code>allgemein2_verschoben</code></td><td>26,5</td><td>25,9</td><td>3,41</td><td>2,88</td><td>2,78</td><td>2,70</td><td>3,64</td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Werte in mm. Der Kopf ist in beiden Läufen besser als beim Formkopf. Den Körper verallgemeinert das Netz noch nicht: in <code>allgemein1</code> genähert im Training 8,0 mm, an den
+  Prüfformen ab Schritt 6.000 gleichbleibend bei ~24 mm. Die verschobenen Wolken bringen am Körper 1,5 mm (28,0 → 26,5 mm, die Beine mit 17,5 mm besser als der Formkopf); der Kopf wird um
+  0,1–0,25 mm schlechter. Der Körper liegt noch 1,8 mm über dem Formkopf. Je ein Lauf, die Streuung zwischen Läufen ist nicht gemessen. Nicht eingesetzt.</p>
+<p class="m3a-klein">Gegenproben: <code>ProjektTemp/_wegwerf/regler_ki/formrechnung_gegenprobe.py</code>, <code>reglerpruefung_formkopf.py</code> (26.10.2026).</p>

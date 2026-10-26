@@ -1,0 +1,72 @@
+{% comment %} Die Testzeilen bis 26.10.2026 (aus ai2d3d.html verlegt, Aufräumen der Seite) — zugeklappt unter den Blöcken. {% endcomment %}
+{% comment %} 24.10.2026, Edgar: „Erkläre mir, was du misst. Mach eine Testzeile unter der ersten Zeile mit den 3 Views, wo du zusätzlich in jeder View alle Messpunkte des Körpers einblendest,
+mit Zahlen, in einer Tabelle daneben die Messpunkte und 2 Spalten für Vorlage und Ergebnis“ — `Ai2d3dmesspunkte`, Daten aus `koerperpruefung_lauf.py --seite` (`Koerpermesspunkte`). {% endcomment %}
+{% if ist_test %}<section class="card ai2d3d-messkarte" id="ai2d3d-messpunkte">
+    <h2>Test: Messpunkte des Körpers — was die Abnahme misst</h2>
+    <p class="hb-hinweis">Gemessen wird mit denselben Detektoren auf Foto und Rendering: 23 Punkte von ViTPose (Kopf, Gelenke, Füße) und 40 Randpunkte auf dem Umriss der Person (Sapiens2),
+        je zwei an 20 Linien quer zu Hals, Rumpf, Armen und Beinen. Jede Linie hängt an den Gelenken der Vorlage und wird in Foto und Rendering an derselben Stelle abgeschritten — beide teilen
+        die Kamera der Einpassung. Blau: Vorlage, orange: Ergebnis, rot umrandet: über der Grenze, grau: nicht gewertet. Jede Zahl der Tabelle ist die Länge einer Linie: am Umriss die Linie
+        von der Knochenachse bis zum Rand (blau im Foto, orange im Rendering), bei Kopf, Gelenken und Füßen die Linie vom blauen zum orangen Punkt. Zeile berühren zeigt die Stelle in Feld 3
+        vergrößert, mit jeder Linie und ihrer Zahl.</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Fotos — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+{% comment %} 25.10.2026, Edgar: „mach nach der Messung für den Körper auch eine neue Messung nur für den Kopf … Nase, die Ohren, Mund, Augen, Augenbrauen“ — `Kopfmesspunkte`. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="ai2d3d-kopfmesspunkte">
+    <h2>Test: Messpunkte des Kopfes</h2>
+    <p class="hb-hinweis">Dieselben Detektoren wie beim Körper, nur am Kopf und vergrößert: die 68 Gesichtspunkte von ViTPose (Kinnlinie, Augenbrauen, Nase, Augen, Mund) und die Ohren —
+        eine Zeile je Gruppe, ihre Zahl ist die mittlere Länge der Linien vom blauen Punkt (Foto) zum orangen (Rendering). Dazu der Kopfumriss (Sapiens2): der Scheitel über den Ohren und
+        Breiten quer zur Kopfachse auf Höhe von Stirn, Schläfen, Ohren und Wangen, je Seite eine Linie von der Achse bis zum Rand (blau Foto, orange Rendering). Zeile berühren zeigt die
+        Stelle in Feld 3 vergrößert.</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte des Kopfes werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+{% comment %} 25.10.2026 abends, Edgar: „in der Zeile mit den Messungen … anpassen auf die aktuellen Kopfregler? dann sehen wir, wie weit die davon abweichen“ — „und auf die Körperregler?“ —
+„gib den Reglern auch eine ID“ — `Reglermesspunkte`. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="ai2d3d-reglermesspunkte">
+    <h2>Test: Messpunkte der Regler</h2>
+    <p class="hb-hinweis">Gemessen an den Anfassern der Eigenregler (Genesis 9 → Eigen), mit ihren Kennzeichen wie im Bedienfeld — z. B. „BE-03.4“ = Regler BE-03, Anfasser 4. Je Anfasser
+        eine Linie von der Mitte des Teils (bzw. des Merkmals) durch den Anfasser bis zum Rand: blau im Foto, orange im Rendering. Abweichung = Ergebnis − Vorlage (+ die Figur reicht weiter
+        hinaus). Gemessen wird nur, wo der Anfasser in diesem Foto am Umriss steht; Merkmale im Gesicht (Nase, Mund, Augen von vorn) misst die Zeile des Kopfes.</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte der Regler werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Regler · Anfasser</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+{% comment %} 26.10.2026, Edgar: „du solltest die Eigen Regler (die du eingebaut hast) vergleichen an Eingabe und Ausgabe … eine weitere Zeile … mit den Eigen-Umrissen, Zahlen auf
+Vorlage, Ergebnis und dann Vorlage auf Ergebnis“ — `Reglerumrisse`. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="ai2d3d-reglerumrisse">
+    <h2>Test: Umrisse der Eigenregler</h2>
+    <p class="hb-hinweis">Der ganze Umriss jedes Eigenreglers (Genesis 9 → Eigen), nicht nur die Anfasser: blau der Rand der Person im Foto längs des Umrisses, orange derselbe Rand im
+        Rendering; die Zahlen stehen an den Anfassern (Kennzeichen wie im Bedienfeld, z. B. „BE-03.4“). Je Umrisspunkt ein Strahl von der Mitte des Reglers durch den Punkt. Wo der Umriss
+        in diesem Foto nicht am Rand der Person liegt (Augen, Mund, Nase von vorn), bleibt die Linie offen — die Personenmaske sieht dort keinen Rand. Tabelle je Regler: mittlere Länge
+        Mitte → Rand, Abweichung = Mittel (Ergebnis − Vorlage), + die Figur reicht weiter hinaus.</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Umrisse der Eigenregler werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+            <thead><tr><th>Nr</th><th>Regler · Umriss</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>{% endif %}

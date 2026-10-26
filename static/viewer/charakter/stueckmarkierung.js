@@ -33,6 +33,7 @@ export class Stueckmarkierung {
         garment: k => document.querySelector(`#garment-list .garment-item[data-garment-id="${CSS.escape(k)}"]`),
         makehuman: k => document.querySelector(`#mh-list .anim-item[data-garment-id="${CSS.escape(k)}"]`),
         daz: k => document.getElementById(`g9-kleid-${k}`)?.closest('.slider-row'),
+        eigen: k => document.querySelector(`details[data-eigenkleid="${CSS.escape(k)}"]`),     // Kasten des eigenen Stücks (`Genesis9eigenkleidkasten`)
     };
 
     /** Reiter öffnen und das Stück darin markieren; ohne Stück (Abwahl) nur der Reiter. */
@@ -87,6 +88,8 @@ export class Stueckmarkierung {
         if (liste === 'makehuman') this.zustand._selectedMHId = kennung;
         const zeile = await Stueckmarkierung.zeile(liste, kennung);
         if (!zeile) return;
+        // eigenes Stück: der Kasten steckt in aufklappbaren Blöcken („Eigen …“) — die alle auf, sonst bliebe er verborgen
+        if (liste === 'eigen') for (let d = zeile.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
         Stueckmarkierung.hervorheben(zeile, liste === 'garment' ? 'active' : 'selected');
         if (liste === 'makehuman') fn.mhAuswahlGeaendert?.();
     }

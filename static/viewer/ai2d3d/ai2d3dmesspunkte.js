@@ -10,6 +10,7 @@
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Ai2d3dmesslupe } from './ai2d3dmesslupe.js';
+import { Ai2d3dmessstrich } from './ai2d3dmessstrich.js';
 
 export class Ai2d3dmesspunkte {
     static HOEHE = 640;
@@ -28,6 +29,7 @@ export class Ai2d3dmesspunkte {
         this.flaechen = [...karte.querySelectorAll('canvas[data-ansicht]')];
         this.tabelle = karte.querySelector('tbody');
         this.hervor = null;
+        this.nurDeltas = 'nurDeltas' in karte.dataset;      // Feld 3 nur die Linien (26.10.2026, Edgar zu den Gesichtspunkten: „im 3. Foto (ganz rechts) nur die Deltas“)
         this.tabelle.addEventListener('mouseover', e => this._hervorheben(e.target.closest('tr[data-nummern]')?.dataset.nummern ?? null));
         this.tabelle.addEventListener('mouseleave', () => this._hervorheben(null));
         this.bereit = Serverabruf.json(this.adressen.daten).then(d => { this.daten = d; })
@@ -64,11 +66,14 @@ export class Ai2d3dmesspunkte {
 
     _info() {
         const f = this.f, d = this.daten, z = Ai2d3dmesspunkte._zahl;
-        const rand = f.zeilen.filter(r => r.art === 'rand'), lage = f.zeilen.filter(r => r.art === 'lage');
+        // Randlinien: „rand“ und die Gruppen je Regler („regler:<Kennzeichen>“, `Reglermesspunkte`)
+        const rand = f.zeilen.filter(r => r.art !== 'lage'), lage = f.zeilen.filter(r => r.art === 'lage');
         const zaehlen = zeilen => [zeilen.filter(r => r.ueber).length, zeilen.filter(r => r.hinweis).length, zeilen.length];
         const [ru, ro, rn] = zaehlen(rand), [lu, , ln] = zaehlen(lage);
-        this.info.textContent = `${f.datei} · Stand ${d.stand}, gemessen ${d.gerechnet.replace('T', ' ')} · Umriss: ${ru} von ${rn} Randpunkten über ${z(d.grenzen.rand_mm)} mm, `
-            + `${ro} nicht gewertet · ${f.texte?.lage_kurz ?? 'Gelenke'}: ${lu} von ${ln} ${f.texte ? 'Gruppen' : 'Punkten'} über ${z(d.grenzen.punkte_mm)} mm · `
+        // Umrisse der Eigenregler (26.10.2026): je Zeile ein Regler, keine Gelenkpunkte — `rand_kurz` benennt die Zeilen, der Teil der Gelenke entfällt ohne Zeilen
+        const gelenke = ln ? `${f.texte?.lage_kurz ?? 'Gelenke'}: ${lu} von ${ln} ${f.texte ? 'Gruppen' : 'Punkten'} über ${z(d.grenzen.punkte_mm)} mm · ` : '';
+        this.info.textContent = `${f.datei} · Stand ${d.stand}, gemessen ${d.gerechnet.replace('T', ' ')} · ${f.texte?.rand_titel ?? 'Umriss'}: ${ru} von ${rn} `
+            + `${f.texte?.rand_kurz ?? 'Randpunkten'} über ${z(d.grenzen.rand_mm)} mm, ${ro} nicht gewertet · ${gelenke}`
             + `${z(f.mm_je_px, 2)} mm je Pixel · ${d.gelenke}, ${d.umriss}.`
             + (f.veraltet ? ' ACHTUNG: Das Rendering ist neuer als die Messung — erst koerperpruefung_lauf.py --seite.' : '');
         this.info.classList.toggle('ai2d3d-mess-warnung', !!f.veraltet);
@@ -100,7 +105,8 @@ export class Ai2d3dmesspunkte {
             tr.title = `Grenze ${z(r.grenze_mm)} mm${r.art === 'lage' ? ` · Lage ab ${ursprung} (x rechts / y oben): Foto ${lage(r.vorlage)}, Rendering ${lage(r.ergebnis)}` : ''}`
                 + `${r.hinweis ? ` · ${r.hinweis}` : ''} · Zeile berühren: Lupe in Feld 3`;
             const zellen = r.art === 'lage' ? ['Punkt', 'Punkt'] : [mm(r.vorlage), mm(r.ergebnis)];
-            const n = r.nummern, nr = n.length > 2 ? `${n[0]}–${n[n.length - 1]}` : n.join('–');     // Gruppe des Kopfes: „1–17“ statt jeder Nummer
+            // Gruppe des Kopfes: „1–17“ statt jeder Nummer; Gesichtspunkte (26.10.2026, `Gesichtsmesspunkte`) bringen die laufende Nummer der Zeile mit
+            const n = r.nummern, nr = r.nr_text ?? (n.length > 2 ? `${n[0]}–${n[n.length - 1]}` : n.join('–'));
             for (const text of [nr, r.name, ...zellen, mm(r.abweichung_mm)]) tr.appendChild(document.createElement('td')).textContent = text;
             zeilen.push(tr);
         }
@@ -133,13 +139,20 @@ export class Ai2d3dmesspunkte {
             c.fillStyle = '#ffffff';
             c.fillRect(0, 0, a.b, a.h);
             const [kx, ky, kx1, ky1] = a.k, q = this.seite.naturalWidth / this.f.groesse[0];
-            if (ansicht !== 'ergebnis') c.drawImage(this.foto, kx, ky, kx1 - kx, ky1 - ky, 0, 0, a.b, a.h);
-            if (ansicht !== 'vorlage') {
+            // Fehler der Gesichtspunkte (26.10.2026, `Gesichtsmesspunkte`): dort liegen auch die blauen Punkte auf dem Rendering
+            const [vb, vq] = this.f.vorlage_bild === 'seite' ? [this.seite, q] : [this.foto, 1];
+            const delta = ansicht === 'beide' && this.nurDeltas;      // Feld 3 = Ergebnis − Eingabe: das Bild der Eingabe blass, nur die Pfeile
+            c.globalAlpha = delta ? 0.35 : 1;
+            if (ansicht !== 'ergebnis') c.drawImage(vb, kx * vq, ky * vq, (kx1 - kx) * vq, (ky1 - ky) * vq, 0, 0, a.b, a.h);
+            c.globalAlpha = 1;
+            if (ansicht !== 'vorlage' && !delta) {
                 c.globalAlpha = ansicht === 'beide' ? 0.5 : 1;
                 c.drawImage(this.seite, kx * q, ky * q, (kx1 - kx) * q, (ky1 - ky) * q, 0, 0, a.b, a.h);
                 c.globalAlpha = 1;
             }
             const auf = p => [(p[0] - kx) * a.s, (p[1] - ky) * a.s];
+            // Umrisse der Eigenregler (26.10.2026, `Reglerumrisse`): die ganze Kette, die Zahlen stehen an den Anfassern
+            if (this.f.umrisse) Ai2d3dmessstrich.umrisse(c, auf, this.f.umrisse, ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht], Ai2d3dmesspunkte.FARBE, this.hervor);
             this._punkte(c, auf, ansicht, status);
             if (ansicht === 'beide' && this.hervorZeile) Ai2d3dmesslupe.zeichnen(c, a, this.foto, this.seite, q, this.hervorZeile, this.f.punkte, Ai2d3dmesspunkte.FARBE);
         }
@@ -157,15 +170,18 @@ export class Ai2d3dmesspunkte {
                 for (const seite of seiten) {
                     if (!p[seite]) continue;
                     c.strokeStyle = F[seite];
-                    Ai2d3dmesspunkte._strich(c, auf(p.achse), auf(p[seite]));
+                    Ai2d3dmessstrich.strich(c, auf(p.achse), auf(p[seite]));
                 }
             }
             // Punkt: die Linie blau → orange in allen drei Feldern (Edgar 25.10.2026: „bei den Messungen überall Linien zeigen“), am Umriss nur in Feld 3
-            if (p.vorlage && p.ergebnis && (ansicht === 'beide' || !p.achse)) {
-                c.strokeStyle = st === 'ueber' ? F.ueber : '#222222';
+            // Gesichtspunkte (`data-nur-deltas`): Felder 1 und 2 nur ihre Punkte, Feld 3 nur der Pfeil Ergebnis − Eingabe (blau → orange)
+            const nurDeltas = ansicht === 'beide' && this.nurDeltas;
+            if (p.vorlage && p.ergebnis && (this.nurDeltas ? nurDeltas : ansicht === 'beide' || !p.achse)) {
+                c.strokeStyle = c.fillStyle = st === 'ueber' ? F.ueber : nurDeltas && st === 'offen' ? F.offen : '#222222';
                 c.lineWidth = 2;
-                Ai2d3dmesspunkte._strich(c, auf(p.vorlage), auf(p.ergebnis));
+                (nurDeltas ? Ai2d3dmessstrich.pfeil : Ai2d3dmessstrich.strich)(c, auf(p.vorlage), auf(p.ergebnis));
             }
+            if (nurDeltas) { c.globalAlpha = 1; continue; }
             c.lineWidth = 1;
             for (const seite of seiten) {
                 if (!p[seite]) continue;
@@ -180,26 +196,10 @@ export class Ai2d3dmesspunkte {
                     c.stroke();
                     c.lineWidth = 1;
                 }
-                if (seite === seiten[0]) Ai2d3dmesspunkte._nummer(c, String(p.nr), x + 4, y - 4, st === 'ueber' ? F.ueber : '#111111', hervor);
+                // 478 Gesichtspunkte: Nummern nur an der berührten Zeile, sonst decken sie das Gesicht zu (`ohne_nummern`)
+                if (seite === seiten[0] && (!this.f.ohne_nummern || hervor)) Ai2d3dmessstrich.nummer(c, String(p.nr), x + 4, y - 4, st === 'ueber' ? F.ueber : '#111111', hervor);
             }
             c.globalAlpha = 1;
         }
-    }
-
-    static _strich(c, a, b) {
-        c.beginPath();
-        c.moveTo(a[0], a[1]);
-        c.lineTo(b[0], b[1]);
-        c.stroke();
-    }
-
-    static _nummer(c, text, x, y, farbe, gross) {
-        c.font = `${gross ? 'bold 14px' : '10px'} system-ui, sans-serif`;
-        c.lineWidth = 3;
-        c.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        c.strokeText(text, x, y);
-        c.fillStyle = farbe;
-        c.fillText(text, x, y);
-        c.lineWidth = 1;
     }
 }

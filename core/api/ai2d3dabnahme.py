@@ -60,6 +60,44 @@ class Ai2d3dabnahmeendpunkte:
         return Ai2d3dabnahmeendpunkte._messung(job, 'kopfmesspunkte.json')
 
     @staticmethod
+    @require_GET
+    def reglermesspunkte(request, job):
+        """Die Messlinien an den Anfassern der Eigenregler (25.10.2026 abends, `Reglermesspunkte`; Kennzeichen wie im Bedienfeld) — dritte Testzeile, dieselbe Form."""
+        return Ai2d3dabnahmeendpunkte._messung(job, 'reglermesspunkte.json')
+
+    @staticmethod
+    @require_GET
+    def reglerumrisse(request, job):
+        """Die ganzen Umrisse der Eigenregler in Foto und Rendering (26.10.2026, `Reglerumrisse`) — vierte Testzeile, dieselbe Form plus `umrisse`."""
+        return Ai2d3dabnahmeendpunkte._messung(job, 'reglerumrisse.json')
+
+    @staticmethod
+    @require_GET
+    def gesichtspunkte(request, job, art=''):
+        """Die 478 Gesichtspunkte von MediaPipe im Foto von vorn gegen dieselben Punkte an der Figur (26.10.2026, `Gesichtsmesspunkte`) — die Messung der Kopf-KI, dieselbe Form; mit `art`
+        die Karten ihres Fehlers: `anker` (MediaPipe auf dem Rendering ↔ Netzstellen), `rendering` (MediaPipe am Foto ↔ auf dem Rendering)."""
+        if art not in ('', 'anker', 'rendering'):
+            return JsonResponse({'error': 'Keine Gesichtspunkte %s' % art}, status=404)
+        return Ai2d3dabnahmeendpunkte._messung(job, 'gesichtspunkte%s.json' % ('_' + art if art else ''))
+
+    #: Blöcke der aufgeräumten Seite (26.10.2026, `Abnahmebloecke`) — nur diese Namen, die Adresse wählt keine beliebige Datei
+    BLOECKE = ('kopf_vorne', 'kopf_seitlich', 'koerper_vorne', 'koerper_seitlich')
+
+    @staticmethod
+    @require_GET
+    def block(request, job, name):
+        """Ein Block „Kopf/Körper vorne/seitlich“: Umrisse der Eigenregler und Gesichtsgruppen, dieselbe Form wie die Testzeilen."""
+        if name not in Ai2d3dabnahmeendpunkte.BLOECKE:
+            return JsonResponse({'error': 'Kein Block %s' % name}, status=404)
+        return Ai2d3dabnahmeendpunkte._messung(job, 'block_%s.json' % name)
+
+    @staticmethod
+    @require_GET
+    def ampel(request, job):
+        """Die Ampel: je Eigenregler und Foto die mittlere Abweichung in mm (`Abnahmebloecke`)."""
+        return Ai2d3dabnahmeendpunkte._messung(job, 'ampel.json')
+
+    @staticmethod
     def _messung(job, name):
         gefunden = Ai2d3dabnahmeendpunkte._test(job)
         if gefunden is None:

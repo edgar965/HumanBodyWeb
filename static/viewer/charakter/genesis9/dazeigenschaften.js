@@ -7,6 +7,7 @@ import { Dazkleidung } from './dazkleidung.js';
 import { Stueckfarbe } from './stueckfarbe.js';
 import { Stueckstoff } from './stueckstoff.js';
 import { Gcherkunft } from './gcherkunft.js';
+import { Dazeigenblock } from './dazeigenblock.js';
 
 /**
  * Dazeigenschaften — der Eigenschaften-Bereich eines gewählten Daz-Stücks.
@@ -70,6 +71,11 @@ export class Dazeigenschaften {
         inhalt.appendChild(Stueckstoff.felder(inst, kennung));
         const schnitt = Gcherkunft.knopf(inst, kennung);
         if (schnitt) inhalt.appendChild(schnitt);
+        // Knopf „Eigen …“ (Stufe K2c, 25.10.2026, `Dazeigenblock`) — der Katalogeintrag (Regler, Kategorie) ist nach dem Laden der Garderobe gemerkt.
+        const eintrag = (Genesis9kleidung._stuecke || []).find(s => s.id === kennung);
+        if (Dazeigenblock.passt(inst, eintrag)) {
+            inhalt.appendChild(Dazeigenblock.knopf(inst, eintrag, () => ({ ...(Dazkleidung.kleidung(inst)[kennung] || {}) })));
+        }
         let getroffen = null;
         for (const { schluessel, netz } of Umfaerbung.netze(inst, kennung)) {
             const teil = document.createElement('div');

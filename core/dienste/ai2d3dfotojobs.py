@@ -26,7 +26,9 @@ __all__ = ['Ai2d3dfotojobs']
 
 
 class Ai2d3dfotojobs:
-    NETZNAMEN = {'hunyuan3d': 'Hunyuan3D-2mv', 'tripo3d': 'Tripo3D'}
+    #: ohne Tripo3D (26.10.2026, Edgar: „lösche das Tripo mesh aus dem Job, sonst schummelst du wieder. Lösche Tripo Meshes aus allen Jobs … auch als Vergleichsnetz“) — ein Netz dieser Art
+    #: zeigt und liefert 2d-3d-AI nicht mehr, auch wenn eine job.json oder ein Exportordner (`tripo3d/`) es noch nennt; die Dateien selbst bleiben (Eingang von Mesh3D-AI)
+    NETZNAMEN = {'hunyuan3d': 'Hunyuan3D-2mv'}
     BILDENDUNGEN = ('.jpg', '.jpeg', '.png', '.webp')
 
     @staticmethod

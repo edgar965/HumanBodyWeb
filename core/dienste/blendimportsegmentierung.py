@@ -74,7 +74,7 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         self._glb = glb
         self.lauf.melden(0.0, 'Segmentierung: Netz aus vier Ansichten rendern')
         ziele = {rolle: ordner / ('%s.png' % rolle) for rolle in self.ROLLEN}
-        Mesh3dansicht.rundum(glb, ziele)
+        self.rendern(glb, ziele)
         self._bilder = [{'datei': '%s.png' % rolle, 'stamm': rolle, 'rolle': rolle, 'png': str(pfad)} for rolle, pfad in ziele.items()]
         self._netz, self._arbeit, proxy = glb, ordner, None
         if self.flaechen_von(glb) > self.PROXY_AB:
@@ -91,6 +91,11 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
             self.lauf.melden(0.97, 'Segmentierung: Stimmen auf das volle Netz übertragen')
             self._uebertragen(glb)
         return self._bericht(proxy)
+
+    @staticmethod
+    def rendern(glb, ziele):
+        """Die vier Ansichten (pyrender, `Mesh3dansicht.rundum`). Mesh3D-AI rendert sie in torch auf der Karte, reproduzierbar (`mesh3dai/mesh3dai_bilderkennung.py`, 26.10.2026)."""
+        Mesh3dansicht.rundum(glb, ziele)
 
     def begriffe_rechnen(self):
         """SAM 3 über die Begriffe als eigener Prozess in python12 (`Blendimportbegriffe`). Mesh3D-AI rechnet ihn im eigenen python14-Prozess mit dem Port (`mesh3dai/mesh3dai_bilderkennung.py`)."""

@@ -15,6 +15,7 @@ import { Genesis9ersatz } from './genesis9ersatz.js';
 import { Kleidersichtbarkeit } from './kleidersichtbarkeit.js';
 import { Genesis9hautebenen } from './genesis9hautebenen.js';
 import { Zeichenstand } from './zeichenstand.js';
+import { Dazschnittwerte } from './dazschnittwerte.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -168,7 +169,7 @@ export class Genesis9kleidung {
         const antwort = await Zeichenstand.laden(inst, kennung, Genesis9antwortspeicher.kleid(inst, kennung, Genesis9aufbau.adresse(
             `${inst.constructor.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
                 regler: inst.regler || {}, variante: werte?.variante || '',
-                stil: Genesis9kleidung.stilliste(werte), regler_stueck: werte?.regler || {},
+                stil: Genesis9kleidung.stilliste(werte), regler_stueck: Dazschnittwerte.ohne(werte?.regler),   // `schnitt:` wirkt nur im Browser (K2c)
                 pose: inst.pose, ausdruck: inst.ausdruck, griffe: inst.griffe(),
                 ...(inst.drehung ? { drehung: inst.drehung } : {}),
                 ...Genesis9lagen.anfrage(inst.kleidung, kennung),

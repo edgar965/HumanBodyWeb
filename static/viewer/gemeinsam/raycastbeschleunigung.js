@@ -45,7 +45,8 @@ export class Raycastbeschleunigung {
     static sicherstellen(meshes) {
         for (const mesh of meshes) {
             const geo = mesh?.geometry;
-            if (!geo || Raycastbeschleunigung._fertig.has(geo)) continue;
+            // `eigenerRaycast`: das Netz rechnet seine Treffer selbst (eigene Stücke, `Eigenkleidtreffer`) — kein Suchbaum, `raycast` bleibt
+            if (!geo || mesh.userData?.eigenerRaycast || Raycastbeschleunigung._fertig.has(geo)) continue;
             Raycastbeschleunigung._fertig.add(geo);
             try {
                 geo.computeBoundsTree();

@@ -16,6 +16,8 @@ export class Eigenschaftenbereiche {
 
     static PAARE = [['prop-empty', 'prop-content'], ['assets-empty', 'assets-content']];
     static GENESIS9 = 'assets-genesis9-section';
+    /** Assets → Eigen (Stufe K2a, 25.10.2026, `Genesis9eigengarderobe`): nur bei einer Genesis-9-Figur, nicht bei HumanBody mit Daz-Garderobe. */
+    static GENESIS9_EIGEN = 'assets-genesis9-eigen-section';
     /** HumanBody-Bereiche, die eine Genesis-9-Figur AUCH bekommt (19.09.2026: Haar —
      *  die GLB-Frisuren legt `Genesis9frisur` auf den Genesis-Kopf). */
     static GENESIS9_AUCH = ['hair'];
@@ -83,8 +85,10 @@ export class Eigenschaftenbereiche {
         const eigener = document.getElementById(Eigenschaftenbereiche.GENESIS9);
         if (!inhalt || !eigener) return;
         eigener.classList.toggle('hb-versteckt', !figur);
+        const eigen = document.getElementById(Eigenschaftenbereiche.GENESIS9_EIGEN);
+        eigen?.classList.toggle('hb-versteckt', !figur);
         for (const bereich of inhalt.querySelectorAll(':scope > .panel-section')) {
-            if (bereich === eigener) continue;
+            if (bereich === eigener || bereich === eigen) continue;
             if (Eigenschaftenbereiche.GENESIS9_AUCH.includes(bereich.dataset.panelKey)) continue;
             if (figur) {
                 if (bereich.classList.contains('hb-versteckt')) continue;

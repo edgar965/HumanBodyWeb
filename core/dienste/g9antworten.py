@@ -100,6 +100,8 @@ class G9antworten(G9antwortvorrat):
                'HumanBodyWeb/core/dienste/g9hbstoffkorrektur.py',
                # Der Drapierer über dem männlichen Geograft (16.10.2026); `Genesis9/` mit `drapierer.py` steht oben.
                'HumanBodyWeb/core/dienste/g9anatomiedrapierung.py',
+               # Die Brücke über Mulden an Oberteilen (25.10.2026, K2c); Hindernis und Querschnitte liegen in `Genesis9/`.
+               'HumanBodyWeb/core/dienste/g9muldendrapierung.py',
                'HumanBodyWeb/core/dienste/g9hbstrang.py',
                'HumanBodyWeb/core/dienste/g9hbteilhaut.py',
                # Die Stoffkorrektur von GarmentCode, die `g9hbstoffkorrektur` aufruft.

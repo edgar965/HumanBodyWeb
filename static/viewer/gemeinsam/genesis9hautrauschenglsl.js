@@ -147,9 +147,10 @@ vec3 g9Beule( vec3 p, vec3 n, float h, float seite ) {
         htL = mix( htL, min( pow( max( htL, vec3( 0.0005 ) ), vec3( 0.55 ) ) * vec3( 1.0, 0.90, 0.88 ), vec3( 0.80 ) ), htVi );
     }
 #ifdef USE_MAP
-    if ( uHtF3.w > 0.0 ) {
+    if ( uHtF3.w > 0.0 || htTe[ 3 ].z > 0.0 ) {
         float htPkG = 0.75 * htKopf + 0.35 * htRumpf * smoothstep( 0.62, 0.72, htY ) + 0.06 * ( htArme + htBeine + htRumpf );
-        htPickel = g9Punkte( HT_UV + vec2( 9.1, 1.7 ), 0.022 / uHtMeterUV, 0.10, uHtF3.w * htPkG );
+        // je Körperteil (htTe[3].z, Genesis9hautteilmerkmale) auf dem ganzen Teil
+        htPickel = g9Punkte( HT_UV + vec2( 9.1, 1.7 ), 0.022 / uHtMeterUV, 0.10, uHtF3.w * htPkG + htTe[ 3 ].z );
         htL *= mix( vec3( 1.0 ), vec3( 1.0, 0.60, 0.58 ), htPickel );
     }
 #endif
@@ -157,22 +158,23 @@ vec3 g9Beule( vec3 p, vec3 n, float h, float seite ) {
 
     /** Die Beulenschicht hinter `normal_fragment_maps`: Höhe in Metern, je Anteil ausgeblendet, wenn er kleiner als ein Bildpunkt wird. */
     static BEULEN = `
-    if ( uHtB1.x + uHtB1.y + uHtB1.z > 0.0 ) {
+    // + die Zuschläge je Körperteil (htTe aus dem Farbblock, Genesis9hautteilmerkmale: [3].z Pickel, [3].w Cellulite, [4].x Aknenarben — auf dem ganzen Teil)
+    if ( uHtB1.x + uHtB1.y + uHtB1.z + htTe[ 3 ].z + htTe[ 3 ].w + htTe[ 4 ].x > 0.0 ) {
 ${Genesis9hautrauschenGLSL.GEBIET}
         float htFw = length( fwidth( vHtLage ) );
         float htH = 0.0;
-        if ( uHtB1.x > 0.0 ) {
+        if ( uHtB1.x > 0.0 || htTe[ 3 ].w > 0.0 ) {
             float htCg = ( htRumpf + htBeine ) * smoothstep( 0.28, 0.34, htY ) * ( 1.0 - smoothstep( 0.55, 0.60, htY ) );
             // Weiche Dellen: breite Schwelle (0,38 … 0,72 ≈ ±1,5 Streuungen), 14-mm-Rauschen, 1 mm tief — mit 0,50 … 0,70, 11 mm und 1,5 mm sah es im Chrome zerklüftet aus.
-            htH -= uHtB1.x * htCg * 0.0010 * smoothstep( 0.38, 0.72, g9Fbm( vHtLage / 0.014 + 5.0 ) ) * ( 1.0 - smoothstep( 0.002, 0.005, htFw ) );
+            htH -= ( uHtB1.x * htCg + htTe[ 3 ].w ) * 0.0010 * smoothstep( 0.38, 0.72, g9Fbm( vHtLage / 0.014 + 5.0 ) ) * ( 1.0 - smoothstep( 0.002, 0.005, htFw ) );
         }
 #ifdef USE_MAP
-        if ( uHtB1.y > 0.0 ) {
+        if ( uHtB1.y > 0.0 || htTe[ 4 ].x > 0.0 ) {
             float htNb = g9Punkte( HT_UV + vec2( 4.4, 8.8 ), 0.006 / uHtMeterUV, 0.32, 0.55 );
-            htH -= uHtB1.y * htKopf * ( 0.35 + 0.65 * htGebietW.b ) * 0.0005 * htNb * ( 1.0 - smoothstep( 0.0006, 0.0015, htFw ) );
+            htH -= ( uHtB1.y * htKopf * ( 0.35 + 0.65 * htGebietW.b ) + htTe[ 4 ].x ) * 0.0005 * htNb * ( 1.0 - smoothstep( 0.0006, 0.0015, htFw ) );
         }
 #endif
-        htH += uHtB1.z * htPickel * 0.0004 * ( 1.0 - smoothstep( 0.001, 0.003, htFw ) );
+        htH += ( uHtB1.z + htTe[ 3 ].z ) * htPickel * 0.0004 * ( 1.0 - smoothstep( 0.001, 0.003, htFw ) );
         normal = g9Beule( - vViewPosition, normal, htH, faceDirection );
     }
 `;

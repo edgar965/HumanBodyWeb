@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { Mesh3daiansicht } from '../mesh3dai/mesh3daiansicht.js';
 import { Mesh3daigenesisfigur } from '../mesh3dai/mesh3daigenesisfigur.js';
 import { Ai2d3dansicht } from './ai2d3dansicht.js';
+import { Ai2d3dbloecke } from './ai2d3dbloecke.js';
 import { Ai2d3dergebnis } from './ai2d3dergebnis.js';
 import { Ai2d3dfotos } from './ai2d3dfotos.js';
 import { Ai2d3dgenesis } from './ai2d3dgenesis.js';
@@ -51,6 +52,7 @@ export class Ai2d3dseite {
         this.netz = new Ai2d3dnetz(text => { this.netzfeld.hinweis.hidden = false; this.netzfeld.hinweis.textContent = text; }, () => this._netzZeigen(true));
         this.netzfeld = new Ai2d3dansicht(feld('netz'), 'eingabe', this.netz, Ai2d3dseite.KAMERA);
         this.ergebnis = new Ai2d3dergebnis(feld('ergebnis'), document.getElementById('ai2d3d-ergebnisinfo'), document.getElementById('ai2d3d-vergleich'), daten, this.fotos);
+        this.ergebnis.seite = this;          // Feld „Ergebnis“ aus Kamera und Haltung der Einpassung, wenn der Job sie hat (26.10.2026, `Ai2d3dergebnis._einpassung`)
         this.genesis = daten.genesis ? new Ai2d3dgenesis(daten.genesis) : daten.test?.adresse ? new Ai2d3dtestfigur(daten.test) : null;
         this.genesisfeld = new Ai2d3dansicht(feld('genesis'), 'ausgabe', this.genesis ?? { zeichnen: inhalt => { inhalt.userData.hinweis = Ai2d3dseite.ohneGenesis(daten); } }, Ai2d3dseite.KAMERA);
         this.genesisInfo = document.getElementById('ai2d3d-genesisinfo');
@@ -61,9 +63,17 @@ export class Ai2d3dseite {
         if (this.genesis instanceof Ai2d3dtestfigur) this.genesis.nachgeladen = () => { clearTimeout(this._uhr); this._uhr = setTimeout(() => this._vergleich(), 500); };
         // Testzeilen „Messpunkte des Körpers“ und (25.10.2026) „… des Kopfes“ (nur Tests aus Fotos; Karten stehen nur dann im Template) — folgen der Wahl des Fotos
         const messkarte = document.getElementById('ai2d3d-messpunkte'), kopfkarte = document.getElementById('ai2d3d-kopfmesspunkte');
-        const seite = nr => `/api/2d3dai/${daten.id}/abnahme/seite/${nr}/`;
-        this.messpunkte = [messkarte && new Ai2d3dmesspunkte(messkarte, daten.id, daten.fotos),
-                           kopfkarte && new Ai2d3dmesspunkte(kopfkarte, daten.id, daten.fotos, { daten: `/api/2d3dai/${daten.id}/abnahme/kopfmesspunkte/`, seite })].filter(Boolean);
+        const reglerkarte = document.getElementById('ai2d3d-reglermesspunkte');     // 25.10.2026 abends: an den Anfassern der Eigenregler (`Reglermesspunkte`)
+        const umrisskarte = document.getElementById('ai2d3d-reglerumrisse');        // 26.10.2026: die ganzen Umrisse der Eigenregler (`Reglerumrisse`)
+        // 26.10.2026: die 478 Punkte von MediaPipe — Messung der Kopf-KI und die zwei Karten ihres Fehlers (`Gesichtsmesspunkte`); `data-gesichtspunkte` = Adresse der Daten
+        const gesichtskarten = [...document.querySelectorAll('[data-gesichtspunkte]')];
+        const seite = nr => `/api/2d3dai/${daten.id}/abnahme/seite/${nr}/`, zeile = (karte, name) => karte
+            && new Ai2d3dmesspunkte(karte, daten.id, daten.fotos, { daten: `/api/2d3dai/${daten.id}/abnahme/${name}/`, seite });
+        this.messpunkte = [messkarte && new Ai2d3dmesspunkte(messkarte, daten.id, daten.fotos), zeile(kopfkarte, 'kopfmesspunkte'),
+                           zeile(reglerkarte, 'reglermesspunkte'), zeile(umrisskarte, 'reglerumrisse'),
+                           ...gesichtskarten.map(k => zeile(k, k.dataset.gesichtspunkte))].filter(Boolean);
+        // Ampel und Blöcke Kopf/Körper vorne/seitlich (26.10.2026, Seite aufgeräumt) — mit eigener Fotowahl, sie folgen der Leiste nicht
+        if (document.querySelector('[data-block]')) this.bloecke = new Ai2d3dbloecke(daten);
         this.fotos.waehlen(this.steuerung.foto);
         for (const m of this.messpunkte) m.zeigen(this.steuerung.foto);
         this._netzZeigen(true);
@@ -122,7 +132,7 @@ export class Ai2d3dseite {
         const d = this._auftrag();
         this.genesisfeld.zeigen(d);
         const fertig = this.genesis.fertig(d);
-        this.genesisInfo.textContent = fertig ? (this.genesis.text ?? '') : 'Genesis-Figur wird gebaut …';
+        this.genesisInfo.textContent = fertig ? '' : 'Genesis-Figur wird gebaut …';      // die Beschreibung der Figur steht nicht mehr unter dem Feld (Edgar 26.10.2026: „entferne den Text“)
         if (!fertig) return;
         const neueFigur = this._gezeigt !== `${d.quelle}|${d.zeile}|${d.kleider}`;
         this._gezeigt = `${d.quelle}|${d.zeile}|${d.kleider}`;

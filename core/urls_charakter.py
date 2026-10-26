@@ -38,11 +38,14 @@ from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9garderobepflege import G9garderobepflegeapi
 from .api.g9hautebenen import G9hautebenenapi
+from .api.g9koerperkoordinaten import G9koerperkoordinatenapi
 from .api.g9hautmaskenapi import G9hautmaskenapi
 from .api.g9hautfalten import G9hautfaltenapi
 from .api.g9hautmischung import G9hautmischungapi
 from .api.g9materialnetzapi import G9materialnetzapi
 from .api.g9morphformular import G9morphformularapi
+from .api.g9eigenregler import G9eigenreglerapi
+from .api.g9groessehalten import G9groessehaltenapi
 from .api.g9texturbuendel import G9texturbuendelapi
 from .api.g9vorschau import G9vorschau
 from .api.g9stoff import G9stoffapi
@@ -215,6 +218,11 @@ CHARAKTER = [
          G9morphformularapi.stueck, name='g9_figur_stueckmorph'),
     path('api/character/genesis9-figur/morph/', G9morphformularapi.koerper, name='g9_figur_koerpermorph'),
     path('api/character/genesis9-figur/landmarken/', G9morphformularapi.landmarken, name='g9_figur_landmarken'),
+    # Eigenregler (25.10.2026, core/api/g9eigenregler.py): Abschnitt „Eigen", Fenster „… formen".
+    path('api/character/genesis9-figur/eigenregler/<str:kennung>/ansicht/', G9eigenreglerapi.ansicht, name='g9_figur_eigenregler_ansicht'),
+    path('api/character/genesis9-figur/eigenregler/<str:kennung>/formen/', G9eigenreglerapi.formen, name='g9_figur_eigenregler_formen'),
+    # Größe halten (R8, 25.10.2026, core/api/g9groessehalten.py): Ausgleich über Proportion Legs Length, nur im Speicher.
+    path('api/character/genesis9-figur/groesse-halten/', G9groessehaltenapi.halten, name='g9_figur_groesse_halten'),
     # Texturmischung (21.09.2026, core/api/g9hautmischung.py): Bilder eines Hautsatzes.
     path('api/character/genesis9-figur/haut/<str:preset>/bilder/',
          G9hautmischungapi.bilder, name='g9_figur_hautbilder'),
@@ -228,6 +236,8 @@ CHARAKTER = [
          G9hautebenenapi.stand, name='g9_figur_hautebenen'),
     path('api/character/genesis9-figur/hautebenen/<str:produkt>/<str:geschlecht>/<int:kachel>.png',
          G9hautebenenapi.bild, name='g9_figur_hautebenen_bild'),
+    # Körperkoordinaten der eigenen Kleider (25.10.2026, Stufe K2a, core/api/g9koerperkoordinaten.py): Kette, Anteil, Höhe, Winkel je Texel, nur im Speicher.
+    path('api/character/genesis9-figur/koerperkoordinaten.png', G9koerperkoordinatenapi.bild, name='g9_figur_koerperkoordinaten'),
     # Die gerechneten Karten des Anatomie-Stücks dauerhaft (19.10.2026, core/api/g9anatomiekartenapi.py, `gemeinsam/anatomievorrat.js`).
     path('api/character/genesis9-figur/anatomiekarten/<str:schluessel>/', G9anatomiekartenapi.eintrag, name='g9_figur_anatomiekarten'),
     path('api/character/genesis9-figur/anatomiekarten/<str:schluessel>/<str:art>.png', G9anatomiekartenapi.bild, name='g9_figur_anatomiekarten_bild'),
