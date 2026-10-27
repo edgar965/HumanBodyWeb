@@ -28,6 +28,7 @@ MESH3DAI = [
     path('mesh-3D-AI/test/<str:kennung>/', Mesh3daitestendpunkte.seite, name='mesh3dai_test'),
     path('api/mesh3dai/test/<str:kennung>/', Mesh3daitestendpunkte.daten, name='mesh3dai_testdaten'),
     path('api/mesh3dai/test/<str:kennung>/netz/', Mesh3daitestendpunkte.netz, name='mesh3dai_testnetz'),
+    path('api/mesh3dai/test/<str:kennung>/linien/<int:nr>/', Mesh3daitestendpunkte.linien, name='mesh3dai_testlinien'),
     path('api/mesh3dai/test/<str:kennung>/geschlecht/', Mesh3daitestendpunkte.geschlecht, name='mesh3dai_testgeschlecht'),
     # Name ändern (19.10.2026, Stift wie bei Mesh-3D, `Mesh3dainame`) — für Tests hier, für Jobs unten.
     path('api/mesh3dai/test/<str:kennung>/name/', Mesh3dainameendpunkte.test, name='mesh3dai_testname'),
@@ -46,6 +47,7 @@ MESH3DAI = [
     # 24.10.2026 nachts: Zeile „Messpunkte des Körpers“ wie bei 2d-3d-AI (`Kostuemmesspunkte`, `Mesh3daitestmesspunkte`)
     path('api/mesh3dai/test/<str:kennung>/messpunkte/', Mesh3daitestmesspunkteendpunkte.daten, name='mesh3dai_testmesspunkte'),
     path('api/mesh3dai/test/<str:kennung>/messpunkte/bild/<str:art>/<int:nr>/', Mesh3daitestmesspunkteendpunkte.bild, name='mesh3dai_testmesspunktbild'),
+    path('api/mesh3dai/test/<str:kennung>/messpunkte/gesicht/', Mesh3daitestmesspunkteendpunkte.gesicht, name='mesh3dai_testgesichtspunkte'),
     # Standardanimation der Ergebnisfigur (22.10.2026, wie Mesh-3D: Vorgabe A_Results/DanceKurz, `Mesh3daianimationswahl`) — Test hier, Job unten.
     path('api/mesh3dai/test/<str:kennung>/standardanimation/', Mesh3daistandardanimationendpunkte.test, name='mesh3dai_teststandardanimation'),
     # Reiter „Formtraining“ (18.10.2026): die Seite je Trainingslauf; Reiter „Lauf Aktuell“: was gerade rechnet (vor `<job>`, damit `lauf-aktuell` nie als Job gelesen wird).
@@ -56,6 +58,7 @@ MESH3DAI = [
     path('api/mesh3dai/formvariante/<str:figur>/', Mesh3daiformvarianteendpunkte.daten, name='mesh3dai_formvariante_daten'),
     path('api/mesh3dai/formvariante/<str:figur>/wolke/<int:nr>/<int:k>/', Mesh3daiformvarianteendpunkte.wolke, name='mesh3dai_formvariante_wolke'),
     path('api/mesh3dai/formvariante/<str:figur>/figur/<str:was>/', Mesh3daiformvarianteendpunkte.figur, name='mesh3dai_formvariante_figur'),
+    path('api/mesh3dai/formvariante/<str:figur>/linien/<int:nr>/', Mesh3daiformvarianteendpunkte.linien, name='mesh3dai_formvariante_linien'),
     path('api/mesh3dai/formvariante/<str:figur>/koerper/', Mesh3daiformvarianteendpunkte.koerper, name='mesh3dai_formvariante_koerper'),
     path('api/mesh3dai/formvariante/<str:figur>/bild/<str:name>', Mesh3daiformvarianteendpunkte.bild, name='mesh3dai_formvariante_bild'),
     path('mesh-3D-AI/<str:job>/', Mesh3daiendpunkte.seite, name='mesh3dai_job'),

@@ -59,6 +59,12 @@ class Mesh3dairechenlauf:
                                                                 '--geschlecht', '{g}', '--hautki', '{hautki}']),
         ('kleider', 'Kleider und Haar aus dem Mesh ausschneiden und auflegen, Hautmasken, Prüfung', ['-u', 'mesh3dai_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}']),
     )
+    #: Schritt „form“ aus der Regler-KI statt aus dem Formkopf — nur für einen Test, dessen `einstellung.json` es nennt (`form_ki`: {"art": "reglerki", "lauf": <Lauf unter
+    #: `_reglerki/laeufe`>}), nie als Vorgabe (27.10.2026, Edgar: „ich will bei einem Trainings oder Testjob mal ergebnisse sehen“)
+    FORM_REGLERKI = ('form', 'Form aus der Regler-KI (Genesis-Regler, Hauptregler und Anfasser)', ['-u', 'mesh3dai_reglerki_test.py', '--lauf', '{reglerki_lauf}', '--als-form', '--nur', '{k}'])
+    #: Rückfall (27.10.2026, Edgar: „In der Kette automatisch auf den Formkopf zurückfallen, sobald MIA durchfällt“): die Regler-KI kennt nur MIAs A-Pose; stammt die jüngste A-Pose vom Rig
+    #: (MIAs Prüfung nicht bestanden) und hat der gewählte Lauf den Weg „Rig“ nicht gelernt (`reglerki_wege`), rechnet der Schritt „form“ mit dem Formkopf der KI-Fassungen
+    RUECKFALL_TEXT = 'Form aus der KI (Formkopf) — Rückfall: MIAs A-Pose ist durch die Prüfung gefallen, die Regler-KI kennt nur MIAs A-Pose'
     #: Was ein Schritt im Log schreibt, wenn er scheitert, ohne mit einem Fehlercode zu enden (die Kostüm-Kette fängt Fehler je Test ab)
     FEHLERZEILEN = ('GESCHEITERT', 'Traceback (most recent call last)')
     HAUT = 'Haut: aus der KI (Stufe 2, Lauf in den KI-Fassungen) für das eingestellte Geschlecht; das andere Geschlecht trägt die Grundhaut.'
@@ -74,6 +80,37 @@ class Mesh3dairechenlauf:
         """Ordner des Rechencodes (Arbeitsverzeichnis jedes Schritts)."""
         return Path(settings.TOOLS_ROOT) / 'mesh3dai'
 
+    def form_ki(self):
+        """`{'art': 'reglerki', 'lauf': …}` aus `einstellung.json` des Tests oder None (dann der Formkopf der KI-Fassungen)."""
+        try:
+            wahl = json.loads((self.test / 'einstellung.json').read_text(encoding='utf-8')).get('form_ki')
+        except (OSError, ValueError):
+            return None
+        return wahl if isinstance(wahl, dict) and wahl.get('art') == 'reglerki' and wahl.get('lauf') else None
+
+    def schritte(self):
+        """Die Schritte dieses Tests: `SCHRITTE`, mit `FORM_REGLERKI`, wenn der Test die Regler-KI wählt."""
+        if self.form_ki() is None:
+            return self.SCHRITTE
+        return tuple(self.FORM_REGLERKI if s[0] == 'form' else s for s in self.SCHRITTE)
+
+    def mia_apose(self):
+        """Ob die jüngste A-Pose der Vorstufe von MIA stammt (`apose.npz` → `weg` = 'mia'); dieselbe Kette wie `Kleiderzerlegung.kette`, die auch die Regler-KI liest."""
+        import numpy as np
+        ketten = sorted(p.parent for p in (self.test / 'vorstufe').glob('*/apose.npz'))
+        if not ketten:
+            return False
+        with np.load(ketten[-1] / 'apose.npz') as ap:
+            return 'weg' in ap.files and str(ap['weg']) == 'mia'
+
+    def reglerki_wege(self):
+        """Die Wege der A-Pose, die der gewählte Lauf der Regler-KI gelernt hat (`lauf_ergebnis.json` → `wege`; Läufe bis 27.10.2026 nur MIA)."""
+        try:
+            datei = Path(settings.OBJECTS_ROOT) / 'mesh3dai' / '_reglerki' / 'laeufe' / self.form_ki()['lauf'] / 'lauf_ergebnis.json'
+            return list(json.loads(datei.read_text(encoding='utf-8')).get('wege') or ['mia'])
+        except (OSError, ValueError, TypeError):
+            return ['mia']
+
     def stand(self):
         try:
             return json.loads((self.ordner / 'stand.json').read_text(encoding='utf-8'))
@@ -87,14 +124,14 @@ class Mesh3dairechenlauf:
     def vorbereiten(self, status='wartet', ab=None):
         """Stand „wartet“ mit allen Schritten — vor dem Start, damit die Seite sofort die Liste zeigt. `ab` (Schlüssel eines Schritts): die Schritte davor rechnet der Lauf nicht neu, ihr Ergebnis
         liegt schon im Testordner (23.10.2026 nachts: ein neuer Haut-Schritt soll nicht das Rig von 4 min wiederholen)."""
-        schluessel = [s for s, _t, _a in self.SCHRITTE]
+        schluessel = [s for s, _t, _a in self.schritte()]
         if ab is not None and ab not in schluessel:
             raise ValueError('Schritt „%s“ gibt es nicht (%s)' % (ab, ', '.join(schluessel)))
         alt = {s.get('schluessel'): s for s in (self.stand() or {}).get('schritte', [])} if ab else {}
         vor = set(schluessel[:schluessel.index(ab)]) if ab else set()
         stand = {'kennung': self.kennung, 'status': status, 'angefragt': time.strftime('%Y-%m-%dT%H:%M:%S'), 'fassungen': Mesh3daikifassungen.lesen(), 'haut': self.HAUT, 'ab': ab,
                  'schritte': [dict(alt.get(s) or {}, schluessel=s, text=t, status='fertig', uebernommen=True) if s in vor else {'schluessel': s, 'text': t, 'status': 'offen'}
-                              for s, t, _a in self.SCHRITTE]}
+                              for s, t, _a in self.schritte()]}
         self._schreiben(stand)
         self._warteschlange_eintragen()
         return stand
@@ -108,7 +145,7 @@ class Mesh3dairechenlauf:
             plan = json.loads(datei.read_text(encoding='utf-8')) if datei.is_file() else {'ketten': []}
             log = os.path.relpath(self.ordner / 'lauf.log', datei.parent).replace('\\', '/')
             schritte = [{'marke': '== %d %s' % (nr + 1, text), 'titel': text,
-                         'prozess': next((a[:-3] for a in roh if a.endswith('.py') and a != 'mesh3dai_stimmen_lauf.py'), roh[0])} for nr, (_s, text, roh) in enumerate(self.SCHRITTE)]
+                         'prozess': next((a[:-3] for a in roh if a.endswith('.py') and a != 'mesh3dai_stimmen_lauf.py'), roh[0])} for nr, (_s, text, roh) in enumerate(self.schritte())]
             eintrag = {'skript': 'mesh3dai_rechnen', 'titel': 'Rechnen per Knopf: Test „%s“' % self.kennung, 'log': log, 'ende': 'RECHENLAUF FERTIG', 'schritte': schritte}
             plan['ketten'] = [k for k in plan.get('ketten', []) if k.get('log') != log] + [eintrag]
             AtomarSchreiber.json_schreiben(datei, plan)
@@ -131,6 +168,8 @@ class Mesh3dairechenlauf:
                      vorstufe_pfad=str(Mesh3daikifassungen.vorstufe_pfad(f['vorstufe'])))
         if any('{g}' in a for a in roh):
             werte['g'] = self._geschlecht()
+        if any('{reglerki_lauf}' in a for a in roh):
+            werte['reglerki_lauf'] = self.form_ki()['lauf']
         return [a.format(**{x: str(y) for x, y in werte.items()}) for a in roh]
 
     def ausfuehren(self):
@@ -143,11 +182,14 @@ class Mesh3dairechenlauf:
         t_alles = time.perf_counter()
         with open(log, 'a', encoding='utf-8') as aus:
             aus.write('\n==== Lauf %s, KI-Fassungen %s\n' % (time.strftime('%Y-%m-%d %H:%M:%S'), json.dumps(f, ensure_ascii=False)))
-            for nr, (schluessel, text, roh) in enumerate(self.SCHRITTE):
+            for nr, (schluessel, text, roh) in enumerate(self.schritte()):
                 eintrag = stand['schritte'][nr]
                 if eintrag.get('uebernommen'):
                     aus.write('== %d %s %s (übernommen, nicht neu gerechnet)\n' % (nr + 1, text, time.strftime('%H:%M:%S')))
                     continue
+                if roh is self.FORM_REGLERKI[2] and not self.mia_apose() and 'rig' not in self.reglerki_wege():
+                    text, roh = self.RUECKFALL_TEXT, next(s[2] for s in self.SCHRITTE if s[0] == 'form')
+                    eintrag['text'] = text
                 eintrag.update(status='laeuft', beginn=time.strftime('%H:%M:%S'))
                 stand['schritt'] = nr + 1
                 self._schreiben(stand)

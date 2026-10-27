@@ -51,11 +51,12 @@ class Mesh3daiformvariantefigur:
 
     @classmethod
     def regler(cls, vektor, liste):
+        """`schwelle` und `faktor` je Regler, wo die Liste sie trägt (Regler-KI: Anfasser im Vektor in cm, in G9formung in m, `mesh3dai_reglerki_ablage.py`)."""
         aus = {}
         for v, r in zip(vektor, liste, strict=True):
             v = float(np.clip(v, r['min'], r['max']))
-            if abs(v) >= cls.SCHWELLE:
-                aus[r['name']] = v
+            if abs(v) >= r.get('schwelle', cls.SCHWELLE):
+                aus[r['name']] = v * r.get('faktor', 1.0)
         return aus
 
     @classmethod

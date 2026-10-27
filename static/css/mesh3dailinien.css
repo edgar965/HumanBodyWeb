@@ -1,0 +1,7 @@
+/* Messlinien der Regler-KI (27.10.2026, `_mesh3dai_linien.html`, `mesh3dailinien.js`): Leiste über den drei Feldern; Farben wie die Messpunkte der 2d-3d-AI (blau Vorlage, schwarz Ergebnis, rot Abweichung). */
+.mesh3dai-ll-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 8px; }
+.mesh3dai-ll-titel { font-size: 0.85rem; opacity: 0.8; margin-right: 2px; }
+.mesh3dai-ll-punkt { display: inline-block; width: 8px; height: 8px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+.mesh3dai-ll-vorlage { background: #1c7ed6; }
+.mesh3dai-ll-ergebnis { background: #000000; outline: 1px solid #868e96; }
+.mesh3dai-ll-strich { display: inline-block; width: 16px; height: 2px; background: #e03131; margin-right: 6px; vertical-align: middle; }

@@ -13,7 +13,9 @@ from django.test import TestCase
 sys.path.insert(0, str(settings.TOOLS_ROOT))
 
 from KoerperKI_Fotos.fotogelenke import Fotogelenke  # noqa: E402
+from KoerperKI_Fotos.gesichtserkenner import Gesichtserkenner  # noqa: E402
 
+from core.dienste.ai2d3dgesichtswahl import Ai2d3dgesichtswahl  # noqa: E402
 from core.dienste.ai2d3dposewahl import Ai2d3dposewahl  # noqa: E402
 
 
@@ -53,3 +55,25 @@ class DieEinstellungsseite(TestCase):
 
     def test_im_menue_der_einstellungen(self):
         self.assertIn('href="%s"' % self.ADRESSE, self._seite())
+
+    # 27.10.2026, Edgar: „in den Einstellungen umschaltbar zwischen Insight und MediaPipe. MediaPipe soll weiter lauffähig bleiben“ — durch alle Schichten bis zum Erkenner des Laufs
+
+    def test_erkenner_der_gesichtspunkte_vorgabe_insightface(self):
+        html = self._seite()
+        self.assertIn('name="%s"' % Ai2d3dgesichtswahl.SCHLUESSEL, html)
+        self.assertIn('<option value="insightface" selected>', html)
+        self.assertIn('<option value="mediapipe">', html)
+        self.assertEqual(Gesichtserkenner.gewaehlt(), 'insightface')
+
+    def test_gespeicherter_erkenner_gilt_fuer_seite_und_lauf(self):
+        antwort = self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dgesichtswahl.SCHLUESSEL: 'mediapipe'}), content_type='application/json')
+        self.assertEqual(antwort.status_code, 200)
+        self.assertIn('<option value="mediapipe" selected>', self._seite())
+        self.assertEqual(Gesichtserkenner.gewaehlt(), 'mediapipe')
+        ge = Gesichtserkenner(geraet='cpu')
+        self.assertEqual((ge.art, ge.n, ge.schema.FAECHER), ('mediapipe', 478, (0,)))
+
+    def test_unbekannter_erkenner_faellt_auf_insightface(self):
+        self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dgesichtswahl.SCHLUESSEL: 'dlib'}), content_type='application/json')
+        ge = Gesichtserkenner(geraet='cpu')
+        self.assertEqual((ge.art, ge.n, ge.schema.FAECHER), ('insightface', 106, (0, 1, 3)))

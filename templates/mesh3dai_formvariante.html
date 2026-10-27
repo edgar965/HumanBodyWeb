@@ -12,6 +12,7 @@ Server `core/api/mesh3daiformvariante.py` (`Mesh3daiformvariante`, `Mesh3daiform
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3daiformlauf.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3daiformvariante.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dailinien.css' %}">
 {% include "_importmap.html" %}
 {% endblock %}
 
@@ -48,7 +49,7 @@ Server `core/api/mesh3daiformvariante.py` (`Mesh3daiformvariante`, `Mesh3daiform
     <div class="mesh3dai-bereiche">
         <div class="mesh3dai-bereich">
             <h2><span class="mesh3dai-nummer">1</span> Start</h2>
-            <p class="hb-hinweis">Die Wolke, die der Formkopf sieht: die Probe nach der Vorstufe in der A-Pose.</p>
+            <p class="hb-hinweis">Die Wolke, die {{ ki_der }} sieht: die Probe nach der Vorstufe in der A-Pose.</p>
             <div class="mesh3dai-leinwand" data-art="eingabe"></div>
             <div class="mesh3dai-bereichsinfo" data-info="eingabe"></div>
         </div>
@@ -60,13 +61,15 @@ Server `core/api/mesh3daiformvariante.py` (`Mesh3daiformvariante`, `Mesh3daiform
         </div>
         <div class="mesh3dai-bereich">
             <h2><span class="mesh3dai-nummer">3</span> Ergebnis</h2>
-            <p class="hb-hinweis">Der Körper aus den Reglern, die der Formkopf vorhersagt.</p>
+            <p class="hb-hinweis">Der Körper aus den Reglern, die {{ ki_der }} vorhersagt.</p>
             <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
             <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
             <div class="mesh3dai-fv-legende" data-legende hidden><span>0</span><span class="mesh3dai-fv-verlauf"></span><span>≥ 60 mm</span></div>
         </div>
     </div>
 </section>
+
+{% include "_mesh3dai_linien.html" %}
 
 <section class="card">
     <h2>Wie gut?</h2>

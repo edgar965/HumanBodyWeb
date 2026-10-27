@@ -3,7 +3,8 @@
  * Ergebnis noch von der Vorlage ist … Vorne, seitlich, so wie diese Eigenregler für den Kopf aufgebaut sind. Das Gleiche für den Körper“).
  *
  * Daten: `Abnahmebloecke` (koerperpruefung_lauf.py --seite) — `ampel.json` (je Eigenregler und Foto die mittlere Abweichung in mm) und `block_<id>.json` in der Form der Testzeilen.
- * Jeder Block ist eine `Ai2d3dmesspunkte`-Zeile mit eigener Fotowahl (er folgt nicht der Leiste oben: der Kopf von vorn gibt es nur in 1.jpg). Eine Zelle der Ampel wählt das Foto im Block.
+ * Jeder Block zeigt JEDES seiner Fotos in einer eigenen `Ai2d3dmesspunkte`-Zeile untereinander (27.10.2026, Edgar: „mach eine Zeile für jedes Bild, so dass ich nicht klicken muss“;
+ * bis dahin eine Zeile mit Fotowahl). Er folgt nicht der Leiste oben: den Kopf von vorn gibt es nur in 1.jpg. Eine Zelle der Ampel springt zur Zeile ihres Fotos.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Ai2d3dmesspunkte } from './ai2d3dmesspunkte.js';
@@ -11,39 +12,43 @@ import { Ai2d3dmesspunkte } from './ai2d3dmesspunkte.js';
 export class Ai2d3dbloecke {
     constructor(daten) {
         this.daten = daten;
-        const seite = nr => `/api/2d3dai/${daten.id}/abnahme/seite/${nr}/`;
+        this.seite = nr => `/api/2d3dai/${daten.id}/abnahme/seite/${nr}/`;
         this.bloecke = new Map([...document.querySelectorAll('[data-block]')].map(karte => {
-            const m = new Ai2d3dmesspunkte(karte, daten.id, daten.fotos, { daten: `/api/2d3dai/${daten.id}/abnahme/block/${karte.dataset.block}/`, seite });
-            m.bereit.then(() => this._fotowahl(karte, m));
-            return [karte.dataset.block, { karte, m }];
+            const m = new Ai2d3dmesspunkte(karte, daten.id, daten.fotos, { daten: `/api/2d3dai/${daten.id}/abnahme/block/${karte.dataset.block}/`, seite: this.seite });
+            const b = { karte, zeilen: new Map() };
+            m.bereit.then(() => this._zeilen(b, m));
+            return [karte.dataset.block, b];
         }));
         const ampel = document.getElementById('ai2d3d-ampel');
         if (ampel) this._ampel(ampel).catch(fehler => { ampel.querySelector('[data-info]').textContent = `Keine Ampel: ${fehler.message}`; });
     }
 
-    _fotowahl(karte, m) {
-        const nrn = Object.keys(m.daten?.fotos || {}).map(Number).sort((a, b) => a - b);
+    /** Je Foto des Blocks eine Zeile: die der Vorlage nimmt das erste, für die übrigen eine Kopie (Info, drei Felder, Tabelle) mit derselben Datenquelle. */
+    _zeilen(b, m) {
+        const nrn = Object.keys(m.daten?.fotos || {}).map(Number).sort((x, y) => x - y);
         if (!nrn.length) {
             if (m.daten) m.info.textContent = 'Für diesen Block liegen keine Messungen vor — erst koerperpruefung_lauf.py --seite.';
             return;
         }
-        const leiste = karte.querySelector('[data-fotowahl]');
-        leiste.replaceChildren(...nrn.map(nr => Object.assign(document.createElement('button'),
-            { type: 'button', className: 'ai2d3d-fotoknopf', textContent: m.daten.fotos[nr].datei, title: `Bild ${nr}` })));
-        leiste.querySelectorAll('button').forEach((k, i) => { k.dataset.nr = nrn[i]; });
-        leiste.addEventListener('click', e => {
-            const nr = Number(e.target.closest('button[data-nr]')?.dataset.nr);
-            if (nr) this.waehlen(karte.dataset.block, nr);
+        const vorlage = b.karte.querySelector('.ai2d3d-messzeile');
+        nrn.forEach((nr, i) => {
+            let zeile = m, element = vorlage;
+            if (i > 0) {
+                element = Object.assign(document.createElement('div'), { className: 'ai2d3d-blockzeile' });
+                const kopie = vorlage.cloneNode(true);
+                kopie.querySelector('tbody').replaceChildren();
+                element.append(m.info.cloneNode(false), kopie);
+                b.karte.append(element);
+                zeile = new Ai2d3dmesspunkte(element, this.daten.id, this.daten.fotos, { daten: m.daten, seite: this.seite });
+            }
+            b.zeilen.set(nr, element);
+            zeile.zeigen(nr - 1);
         });
-        this.waehlen(karte.dataset.block, nrn[0]);
     }
 
-    /** Block `block` zeigt Bild `nr` (ab 1, Reihenfolge der Abnahme). */
+    /** Zur Zeile von Bild `nr` (ab 1, Reihenfolge der Abnahme) im Block `block` springen. */
     waehlen(block, nr) {
-        const b = this.bloecke.get(block);
-        if (!b) return null;
-        for (const k of b.karte.querySelectorAll('button[data-nr]')) k.classList.toggle('aktiv', Number(k.dataset.nr) === nr);
-        return b.m.zeigen(nr - 1);
+        this.bloecke.get(block)?.zeilen.get(nr)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     async _ampel(karte) {
@@ -72,14 +77,12 @@ export class Ai2d3dbloecke {
                 td.className = `num ${w ? (w.ueber ? 'ai2d3d-ampel-rot' : 'ai2d3d-ampel-gruen') : 'ai2d3d-ampel-leer'}`;
                 td.textContent = w ? `${z.format(w.mm)} mm` : '—';
                 if (w) Object.assign(td.dataset, { block: w.block, nr: w.nr });
-                if (w) td.title = `Grenze ${w.grenze_mm} mm · anklicken: Block zeigt ${a.dateien[nr]}`;
+                if (w) td.title = `Grenze ${w.grenze_mm} mm · anklicken: zur Zeile von ${a.dateien[nr]} im Block`;
             }
         }
         rumpf.addEventListener('click', e => {
             const td = e.target.closest('td[data-block]');
-            if (!td) return;
-            this.waehlen(td.dataset.block, Number(td.dataset.nr));
-            this.bloecke.get(td.dataset.block)?.karte.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (td) this.waehlen(td.dataset.block, Number(td.dataset.nr));
         });
         karte.querySelector('[data-ampel]').replaceChildren(tabelle);
     }

@@ -28,6 +28,24 @@ Gespeichert über `Vorgabenformular` in `AppSettings.ui_prefs`, wie Einstellunge
     <p class="hint">Die Gelenke sind ein Ziel der Körperlage neben Umriss, Haut und Kopf (Hilfe → Architektur → 2d-3d-AI). Im Profil zählt nur die Körperseite zur Kamera.
         Die Körperteil-Grenzen von Sapiens2 sind keine Wahl mehr: an Edgars nackten Unterarmen markiert Sapiens2 fast den ganzen Unterarm als „Hand“, die Gelenke lagen bis 40 cm daneben.</p>
 </div>
+{% comment %}27.10.2026, Edgar: „mach A, aber in den Einstellungen umschaltbar zwischen Insight und MediaPipe“ — `Ai2d3dgesichtswahl`, gelesen von `Gesichtserkenner`.{% endcomment %}
+<div class="settings-section">
+    <h3>Gesichtspunkte</h3>
+    <div class="settings-row">
+        <label for="{{ gesicht_schluessel }}">Erkenner:</label>
+        <select name="{{ gesicht_schluessel }}" id="{{ gesicht_schluessel }}" data-reihenfolge="fest">
+            {% for q in gesicht_erkenner %}<option value="{{ q.wert }}"{% if q.wert == gesicht_wert %} selected{% endif %}>{{ q.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ gesicht_vorgabe }}. Misst das Gesicht für die Kopf-KI (Eingang und Verlust) und für Feld 3 der Abnahme. Gilt ab dem nächsten Lauf; ein Netz der
+            Kopf-KI gehört zu dem Erkenner, mit dem es trainiert wurde.</span>
+    </div>
+    <table class="doku ai2d3d-quellen">
+        <thead><tr><th>Erkenner</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for q in gesicht_erkenner %}<tr{% if q.wert == gesicht_wert %} class="ai2d3d-quelle-gewaehlt"{% endif %}><td><strong>{{ q.text }}</strong></td><td>{{ q.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
 {% comment %}25.10.2026, Edgar: „in % die Entlichtung ist, bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“ — `Hautentlichtung`, gelesen von `Hautkieinsatz`.{% endcomment %}
 <div class="settings-section">
     <h3>Haut</h3>

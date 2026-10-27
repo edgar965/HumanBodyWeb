@@ -6,6 +6,7 @@ GET /api/mesh3dai/test/<kennung>/          Rig, Drehungen, Ruhezentren, Kennzahl
 GET /api/mesh3dai/test/<kennung>/netz/     das Netz im Rahmen des Datensatzes (GLB, ~100.000 Dreiecke)
 POST /api/mesh3dai/test/<kennung>/geschlecht/  {"geschlecht": "weiblich" | "maennlich"} — welche Figuren die Ausgabe nehmen darf (16.10.2026 abends)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/netz/        Anzeigenetz der vorhergesagten Figur (Binärpaket wie `/api/mesh3dai/<job>/flaeche/netz/`, `Mesh3daiflaechennetz`)
+GET /api/mesh3dai/test/<kennung>/linien/0/   Messlinien der Regler-KI aus dem Formschritt (Binärpaket `Mesh3dailinien`, 27.10.2026)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/bild/<name>  ein Bild dieser Figur (Haut) — die Kachel der KI, wenn Stufe 2 die Haut gerechnet hat (`Mesh3daitesthaut`), sonst die Grundhaut
 Die Liste steht im Reiter „Test“ der Seite `/mesh-3D-AI/` (`Mesh3daiendpunkte.liste`).
 """
@@ -30,7 +31,8 @@ class Mesh3daitestendpunkte:
         ordner = Mesh3daitest.pfad(kennung) or Mesh3daitest.angelegt(kennung)
         if ordner is None:
             raise Http404('Kein Test %s' % kennung)
-        info = next((t for t in Mesh3daitest.alle() if t.get('kennung') == kennung), None) or Mesh3daitest.anlage(ordner)
+        # mit den Tripo-Jobs (Ordner mit `ziel/`): sonst fiel ihre Seite auf `anlage` zurück und zeigte die Kennung statt des Namens (27.10.2026)
+        info = next((t for t in Mesh3daitest.alle(mit_tripo=True) if t.get('kennung') == kennung), None) or Mesh3daitest.anlage(ordner)
         # Die Animation der Ausgabe baut eine Genesis-Figur (22.10.2026): Bilder wie auf der Jobseite (`Mesh3daitexturwahl`).
         from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
         return render(request, 'mesh3dai_test.html', {'test': info, 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
@@ -61,6 +63,16 @@ class Mesh3daitestendpunkte:
         if datei is None:
             raise Http404('Kein Netz für Test %s' % kennung)
         return Auftragsdatei.antwort(request, datei, kennung=request.GET.get('v'))
+
+    @staticmethod
+    @require_GET
+    def linien(request, kennung, nr):
+        from ..dienste.mesh3dailinien import Mesh3dailinien
+        ordner = Mesh3daitest.pfad(kennung)
+        paket = Mesh3dailinien.test(ordner, kennung) if ordner is not None and int(nr) == 0 else None
+        if paket is None:
+            raise Http404('Keine Messlinien für Test %s — der Formschritt der Kette schreibt sie (Regler-KI, seit 27.10.2026)' % kennung)
+        return HttpResponse(paket, content_type='application/octet-stream')
 
     @staticmethod
     @require_GET

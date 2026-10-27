@@ -1,0 +1,49 @@
+{% comment %}
+Messlinien der Regler-KI (27.10.2026, Edgar: „Zeig mir den Input, den Output und die ganzen Linien, die du errechnet hast“) — auf der Seite „Formvariante“ (je Prüfprobe) und eines Testjobs.
+Gezeichnet wie die Messpunkte der 2d-3d-AI: blau = Vorlage (Treffer auf der Wolke), schwarz = Ergebnis (Figurpunkt), rot = Abweichung. `static/viewer/mesh3dai/mesh3dailinien.js`,
+CSS `css/mesh3dailinien.css`. `kennung`: nur auf der Seite eines Testjobs.
+{% endcomment %}
+<section class="card mesh3dai-zeile" id="mesh3dai-linien"{% if kennung %} data-kennung="{{ kennung }}"{% endif %}>
+    <h2>Messlinien: was die Regler-KI misst</h2>
+    <div class="mesh3dai-ll-leiste">
+        <span class="schalterleiste" title="Woher die Wolke kommt: MIA (A-Pose des Eingangs) oder das Rig (Ruhe der Rig-Figur, wenn MIAs Prüfung durchfällt)">
+            <span class="mesh3dai-ll-titel">Weg:</span>
+            <button type="button" class="schaltknopf active" data-weg="mia" aria-pressed="true">MIA (A-Pose)</button>
+            <button type="button" class="schaltknopf" data-weg="rig" aria-pressed="false">Rig (Ruhe)</button>
+        </span>
+        <span class="schalterleiste">
+            <span class="mesh3dai-ll-titel">Zeigen:</span>
+            <button type="button" class="schaltknopf active" data-zeige="vorlage" aria-pressed="true"><i class="mesh3dai-ll-punkt mesh3dai-ll-vorlage"></i>Vorlage</button>
+            <button type="button" class="schaltknopf active" data-zeige="ergebnis" aria-pressed="true"><i class="mesh3dai-ll-punkt mesh3dai-ll-ergebnis"></i>Ergebnis</button>
+            <button type="button" class="schaltknopf active" data-zeige="verbindung" aria-pressed="true"><i class="mesh3dai-ll-strich"></i>Abweichung</button>
+            <button type="button" class="schaltknopf" data-zeige="wolke" aria-pressed="false" title="Alle Punkte der Wolke (blass)">ganze Wolke</button>
+        </span>
+        <span class="schalterleiste" title="Welche Linien: was die Messung auf der Wolke getroffen hat. Auf Stoff und Haar ist eine Abweichung kein Fehler der Form.">
+            <span class="mesh3dai-ll-titel">Linien zu:</span>
+            <button type="button" class="schaltknopf active" data-klasse="1" aria-pressed="true">Haut</button>
+            <button type="button" class="schaltknopf active" data-klasse="2" aria-pressed="true">Stoff</button>
+            <button type="button" class="schaltknopf active" data-klasse="3" aria-pressed="true">Haar</button>
+        </span>
+    </div>
+    <p class="hb-hinweis" data-info="linien-kopf">Wird geladen …</p>
+    <div class="mesh3dai-bereiche">
+        <div class="mesh3dai-bereich">
+            <h2><span class="mesh3dai-nummer">1</span> Eingang: von der Grundfigur aus</h2>
+            <p class="hb-hinweis">Diese Linien bekommt die KI: schwarz die Grundfigur (alle Regler 0), blau die Wolke.</p>
+            <div class="mesh3dai-leinwand" data-art="linien-start"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="linien-start"></div>
+        </div>
+        <div class="mesh3dai-bereich">
+            <h2><span class="mesh3dai-nummer">2</span> Ausgang: von der Figur der KI aus</h2>
+            <p class="hb-hinweis">Schwarz die Figur, die die KI vorhersagt, blau die Wolke: was danach noch fehlt.</p>
+            <div class="mesh3dai-leinwand" data-art="linien-ergebnis"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="linien-ergebnis"></div>
+        </div>
+        <div class="mesh3dai-bereich">
+            <h2><span class="mesh3dai-nummer">3</span> Bezug: von der wahren Figur aus</h2>
+            <p class="hb-hinweis">So sähe es aus, wenn die KI genau richtig läge: an der Haut kaum Rot, an Stoff und Haar außen.</p>
+            <div class="mesh3dai-leinwand" data-art="linien-ziel"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="linien-ziel"></div>
+        </div>
+    </div>
+</section>

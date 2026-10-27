@@ -7,6 +7,7 @@
 import { Mesh3daiansicht } from './mesh3daiansicht.js';
 import { GRUPPE, Mesh3daiformvariantetabellen as T } from './mesh3daiformvariantetabellen.js';
 import { Mesh3daiformvariantezeichner as Z } from './mesh3daiformvariantezeichner.js';
+import { Mesh3dailinien } from './mesh3dailinien.js';
 
 const de = (n, s = 0) => Number(n).toLocaleString('de-DE', { minimumFractionDigits: s, maximumFractionDigits: s });
 const KAMERA = { position: [1.7, 1.5, 3.4], ziel: [0, 0.95, 0], boden: true };
@@ -40,7 +41,9 @@ export class Mesh3daiformvariante {
         this._auftrag = 0;
         const zeichner = { zeichnen: (inhalt, art) => this._zeichnen(inhalt, art) };
         this.ansichten = ['eingabe', 'soll', 'ausgabe'].map(art => new Mesh3daiansicht(wurzel.querySelector(`.mesh3dai-leinwand[data-art="${art}"]`), art, zeichner, KAMERA));
-        Mesh3daiansicht.koppeln(this.ansichten);
+        const linien = document.getElementById('mesh3dai-linien');
+        this.linien = linien ? new Mesh3dailinien(linien, this.basis, this.laufParam, KAMERA) : null;
+        Mesh3daiansicht.koppeln([...this.ansichten, ...(this.linien?.ansichten ?? [])]);
         Z.nachLaden = () => this.zeigen();
         wurzel.querySelector('[data-wahl="lauf"]').addEventListener('change', e => {
             const adresse = new URL(window.location.href);
@@ -113,6 +116,7 @@ export class Mesh3daiformvariante {
         const d = this.daten;
         if (!d.lauf) {
             this._text('kopf', d.hinweis);
+            this.linien?.probe(null);
             this.zeigen();
             return;
         }
@@ -140,6 +144,7 @@ export class Mesh3daiformvariante {
         const auftrag = ++this._auftrag;
         const was = this._was();
         const p = this.probe;
+        this.linien?.probe(p?.nr ?? null, this.k);
         const [w, e] = await Promise.allSettled([p ? this._wolke(p.nr, this.k) : Promise.reject(new Error('keine Probe mit Wolke in diesem Lauf')), this._figur(was)]);
         if (auftrag !== this._auftrag) return;           // inzwischen etwas anderes gewählt
         this.wolke = w.status === 'fulfilled' ? w.value : null;
@@ -180,7 +185,8 @@ export class Mesh3daiformvariante {
         const l = d.lauf;
         const m = d.modell || {};
         const zahl = g => d.proben.filter(p => p.gruppe === g).length;
-        const teile = [`Lauf ${l.name}${l.fertig ? '' : ' (läuft noch)'}: ${l.epochen ?? '?'} Epochen, ${l.formregler ? de(l.formregler) : '?'} Formregler (${l.formregler_datei || '?'}), Eingang ${l.eingang}, Wolken ${l.wolken.join(', ')}.`,
+        const umfang = l.schritte ? `${de(l.schritte)} Schritte` : `${l.epochen ?? '?'} Epochen`;
+        const teile = [`Lauf ${l.name}${l.fertig ? '' : ' (läuft noch)'}: ${l.ki || 'Formkopf'}, ${umfang}, ${l.formregler ? de(l.formregler) : '?'} ${l.schritte ? 'Regler' : 'Formregler'} (${l.formregler_datei || '?'}), Eingang ${l.eingang}, Wolken ${l.wolken.join(', ')}.`,
             `${d.figur}: Grundlage ${d.grundlage}${m.geschlecht ? ', ' + (GESCHLECHT[m.geschlecht] ?? m.geschlecht) : ''}${m.gruppe ? ', ' + (GRUPPE[m.gruppe] ?? m.gruppe) : ''}`
             + `${m.mblab_vorlage ? ', MB-Lab-Vorlage ' + m.mblab_vorlage : ''}${m.lebensalter_jahre ? ', ' + de(m.lebensalter_jahre, 0) + ' Jahre' : ''}${m.weites_stueck ? ', weites Stück ' + m.weites_stueck : ''}.`,
             `${d.proben.length} Proben in diesem Lauf (${zahl('training')} Training, ${zahl('pruefung')} Prüfung).`];

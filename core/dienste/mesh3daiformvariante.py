@@ -69,14 +69,24 @@ class Mesh3daiformvariante:
         cls._schluessel[str(datei)] = (stand, namen)
         return namen
 
+    @staticmethod
+    def wurzeln():
+        """Formläufe (`_vorstufe/laeufe`) und Läufe der neuen Regler-KI (`_reglerki/laeufe`, nur Prüfformen, `mesh3dai/mesh3dai_reglerki_ablage.py`)."""
+        return (Mesh3daiformtraining.ordner(), Mesh3daidatensatz.ordner('') / '_reglerki' / 'laeufe')
+
+    @classmethod
+    def ordner_von(cls, lauf_name):
+        """Der Ordner eines Laufs aus `laeufe` (der Name stammt von dort, nie aus der Adresse)."""
+        return next((w / lauf_name for w in cls.wurzeln() if (w / lauf_name).is_dir()), None)
+
     @classmethod
     def laeufe(cls, name):
-        wurzel = Mesh3daiformtraining.ordner()
-        if not wurzel.is_dir():
-            return []
-        aus = [p for p in wurzel.iterdir() if p.is_dir() and '%s_soll_form' % name in cls._dateien(p)]
-        return [{'name': p.name, 'kurz': p.name[17:] if Mesh3daiformtraining._start(p.name) else p.name, 'pfad': p}
-                for p in sorted(aus, key=lambda p: p.name, reverse=True)]
+        aus = []
+        for n, wurzel in enumerate(cls.wurzeln()):
+            if wurzel.is_dir():
+                aus += [(p, n) for p in wurzel.iterdir() if p.is_dir() and '%s_soll_form' % name in cls._dateien(p)]
+        return [{'name': p.name, 'kurz': ('Regler-KI ' if n else '') + (p.name[17:] if Mesh3daiformtraining._start(p.name) else p.name), 'pfad': p, 'reglerki': bool(n)}
+                for p, n in sorted(aus, key=lambda x: x[0].name, reverse=True)]
 
     @classmethod
     def mit_seite(cls, lauf):
@@ -128,8 +138,8 @@ class Mesh3daiformvariante:
         info['grundlage'] = modell.get('grundlage') or name
         if not laeufe:
             return dict(info, lauf=None, proben=[], hinweis='Kein Formlauf unter _vorstufe/laeufe trägt %s (formen_vorhersagen.npz → %s_soll_form).' % (name, name))
-        # Vorgabe wie in der Tabelle der Formvarianten: der jüngste FERTIGE Lauf ohne Probelauf (`…_probe`), sonst der jüngste.
-        vorgabe = next((x for x in laeufe if not x['kurz'].endswith('_probe') and (x['pfad'] / 'lauf_ergebnis.json').is_file()), laeufe[0])
+        # Vorgabe wie in der Tabelle der Formvarianten: der jüngste FERTIGE Formlauf ohne Probelauf (`…_probe`), sonst der jüngste. Die Regler-KI nur auf Wahl (`?lauf=`).
+        vorgabe = next((x for x in laeufe if not x['reglerki'] and not x['kurz'].endswith('_probe') and (x['pfad'] / 'lauf_ergebnis.json').is_file()), laeufe[0])
         gewaehlt = next((x for x in laeufe if x['name'] == lauf_name), vorgabe)
         lauf = gewaehlt['pfad']
         e = cls._json(lauf / 'lauf_ergebnis.json') or {}
@@ -155,8 +165,10 @@ class Mesh3daiformvariante:
         werte = [{'gruppe': g, 'schluessel': k, 'name': N.name(k), 'wert': v, 'fehler': N.fehler(k)}
                  for g, w in je.items() if isinstance(w, dict) for k, v in N.flach(w).items() if isinstance(v, (int, float))]
         echt =((cls._json(lauf / 'formen_pruefung_echt.json') or {}).get('ergebnis') or {}).get(name)
-        return dict(info, lauf={'name': lauf.name, 'kurz': gewaehlt['kurz'], 'eingang': eingang, 'wolken': wolken, 'epochen': e.get('epochen'), 'formregler': e.get('formkopf'),
-                                'formregler_datei': e.get('formregler_datei') or f.get('formregler'), 'fertig': (lauf / 'lauf_ergebnis.json').is_file()},
+        rk = gewaehlt['reglerki']
+        return dict(info, lauf={'name': lauf.name, 'kurz': gewaehlt['kurz'], 'eingang': eingang, 'wolken': wolken, 'epochen': e.get('epochen'), 'schritte': e.get('schritte') if rk else None,
+                                'formregler': len(cls.liste(lauf) or []) if rk else e.get('formkopf'), 'ki': 'Regler-KI' if rk else 'Formkopf',
+                                'formregler_datei': 'Reglerraum Fassung 8' if rk else e.get('formregler_datei') or f.get('formregler'), 'fertig': (lauf / 'lauf_ergebnis.json').is_file()},
                     gruppen=gruppen, proben=sorted(proben, key=lambda p: p['nr']), werte=werte, echt=echt, regler=regler,
                     fremde=list((e.get('fremde_regler') or {}).get(name) or []), hinweis='')
 

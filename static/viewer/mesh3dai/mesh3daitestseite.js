@@ -131,7 +131,13 @@ export class Mesh3daitestseite {
             const schritt = zs?.ohne_vorstufe ? ' Zwischenschritt A-Pose: aus (Einstellungen → Mesh3D-AI) — gezeigt wird das Ergebnis des Netzes direkt auf der Pose.'
                 : zs?.fehlt ? ' Zwischenschritt A-Pose ist ausgeschaltet, für diesen Test liegt aber kein Ergebnis ohne Vorstufe vor — gezeigt wird das mit Vorstufe.'
                 : zs?.andere_methode ? ` Eingestellt ist ${zs.eingestellt} — dieses Testnetz ist nur mit ${zs.methode} gerechnet; gezeigt wird das.` : '';
-            info.textContent = `Netz ohne Trainingsdaten (${i.quelle}) — gerechnet mit dem Netz des Laufs ${form ? i.form?.lauf : i.lauf} (trainiert an ${trainiert}).${weg}${schritt}${wahl} Es gibt kein Ziel, darum keine Fehlerzahl.`;
+            // Form aus der Regler-KI (27.10.2026, `mesh3dai_reglerki_test.py`): trainiert an den Formvarianten, nicht an den vier Jobs; mit Wahrheit (Tripo-Job) die echte Prüfung dazu
+            const rk = form && i.form?.reglerki_lauf ? i.form.reglerki : null;
+            const ziel = rk?.wahrheit_echt_mm ? ` Gegen die Wahrheit (G9formung, ohne Ausrichtung; der Eingang steht auf der mittleren Höhe ${de(rk.hoehe_m, 3)} m, nicht auf der wahren): `
+                + ['Grundfigur', 'Regler-KI'].map(z => `${z === 'Regler-KI' ? 'Regler-KI (Ausgabe vor dem Umlegen aufs Geschlecht)' : z} Körper ${de(rk.wahrheit_echt_mm[z].koerper, 1)} · Kopfform ${de(rk.wahrheit_echt_mm[z].kopf_form, 1)} · Gelenke ${de(rk.wahrheit_echt_mm[z].gelenke, 1)} mm`).join('; ')
+                + `. Eingang zur Figur (Median): Grundfigur ${de(rk.abstand_wolke_figur_mm['Grundfigur'], 1)}, Regler-KI ${de(rk.abstand_wolke_figur_mm['Regler-KI'], 1)} mm.` : ' Es gibt kein Ziel, darum keine Fehlerzahl.';
+            info.textContent = rk ? `Netz ohne Trainingsdaten (${i.quelle}) — Form aus der Regler-KI (Lauf ${i.form.reglerki_lauf}, trainiert an den Trainingsformen, dieses Netz nie gesehen), Haltung aus dem Netz des Laufs ${i.lauf}.${weg}${schritt}${ziel}`
+                : `Netz ohne Trainingsdaten (${i.quelle}) — gerechnet mit dem Netz des Laufs ${form ? i.form?.lauf : i.lauf} (trainiert an ${trainiert}).${weg}${schritt}${wahl} Es gibt kein Ziel, darum keine Fehlerzahl.`;
             this._text('eingabe', `Das Netz, auf ${de(i.hoehe_m, 3)} m Höhe gebracht (Maßstab ${de(i.massstab, 3)}${i.weg ? ' aus der Höhe der Rig-Figur' : ''}, Mitte des Umrisses auf die Achse, Boden auf 0)${i.weg ? '' : ' — so sieht es das Netz von Mesh3D-AI'}; `
                 + `${de(i.netz_punkte)} Punkte, hier auf ${de(i.vorschau_dreiecke)} Dreiecke verkleinert. Das Netz bekommt davon 16.384 Punkte mit ihren Texturfarben (im Training: 5 flache Teilfarben).\n`
                 + 'Rig (Knopf „Rig“): das Rig, das Mesh3D-AI in dieses Netz legt.');

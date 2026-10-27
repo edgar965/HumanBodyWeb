@@ -74,8 +74,9 @@ class Ai2d3dabnahmeendpunkte:
     @staticmethod
     @require_GET
     def gesichtspunkte(request, job, art=''):
-        """Die 478 Gesichtspunkte von MediaPipe im Foto von vorn gegen dieselben Punkte an der Figur (26.10.2026, `Gesichtsmesspunkte`) — die Messung der Kopf-KI, dieselbe Form; mit `art`
-        die Karten ihres Fehlers: `anker` (MediaPipe auf dem Rendering ↔ Netzstellen), `rendering` (MediaPipe am Foto ↔ auf dem Rendering)."""
+        """Die Gesichtspunkte des eingestellten Erkenners (seit 27.10.2026 insightface oder MediaPipe) in den Fotos mit Gesicht gegen dieselben Punkte an der Figur (26.10.2026,
+        `Gesichtsmesspunkte`) — die Messung der Kopf-KI, dieselbe Form; mit `art` die Karten ihres Fehlers: `anker` (Erkenner auf dem Rendering ↔ Netzstellen), `rendering` (Erkenner
+        am Foto ↔ auf dem Rendering)."""
         if art not in ('', 'anker', 'rendering'):
             return JsonResponse({'error': 'Keine Gesichtspunkte %s' % art}, status=404)
         return Ai2d3dabnahmeendpunkte._messung(job, 'gesichtspunkte%s.json' % ('_' + art if art else ''))

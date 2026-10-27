@@ -1,9 +1,86 @@
 {% comment %}Abschnitt „Die neue Regler-KI“ (26.10.2026, Edgar: „baue den plan“, „du sollst eine ganz normale KI trainieren … passe das ggf. an in md und Plan / hilfeseite“).
 Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Hand aus den Gegenproben übernommen (Quelle je Zeile).{% endcomment %}
-<h2 id="regler-ki">Die neue Regler-KI (im Bau seit 26.10.2026, noch nicht in der Kette)</h2>
+<h2 id="regler-ki">Die neue Regler-KI (seit 26.10.2026; in der Kette bei Tests, die sie wählen)</h2>
 <p>Eine KI für Mesh3D-AI und 2d-3d-AI: <strong>Eingang → Messlinien → ein Netz → alle Regler</strong>. Die Regler sind die Daz-Regler von Fassung 7, die 57 Hauptregler
   der Eigenregler und ihre 754 Anfasser, Kopf und Körper zusammen (2.134 Werte). Die Klassen liegen in <code>KoerperKI_alle/</code>; nur der Eingang ist je Weg eine eigene Klasse
   (<code>Netzmesslinien</code> für Netze, <code>Fotomesslinien</code> für Fotos, Besitzer 2d-3d-AI).</p>
+
+<h3 id="regler-ki-umfang">Was die Regler-KI umfasst und was nicht</h3>
+<p>Die Regler-KI ist <strong>ein</strong> Netz und liefert nur die <strong>Form</strong>: Körper und Kopf zusammen als Genesis-Regler. Sie ersetzt im Schritt „Form“ den Formkopf.
+  Haltung, Zerlegung, Haut, Haar und Kleider rechnen andere Schritte, jeder mit eigenem Netz oder ohne Netz (Grafik in <a href="#kis">Die KIs der Kette</a>; sie zeigt die Vorgabe
+  aus <code>ki_fassungen.json</code>, also den Formkopf).</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Schritt</th><th>Wer rechnet</th><th>Art</th></tr></thead>
+  <tbody>
+    <tr><td>Rig und A-Pose</td><td>Make-It-Animatable (Nachbau) und das Netz der Vorstufe (<code>vorstufe</code>)</td><td>fremdes Modell und unser Netz</td></tr>
+    <tr><td>Haltung</td><td>Netz <code>haltung</code></td><td>unser Netz</td></tr>
+    <tr><td><strong>Form</strong> (Körper und Kopf)</td><td><strong>Regler-KI</strong> (<code>allgemein5_formgraph</code>, alle 2.134 Regler); ohne Wahl der Formkopf (<code>formkopf</code>)</td><td>unser Netz</td></tr>
+    <tr><td>Figur, Figur in die Haltung legen, Haltung aus Gelenken und Enden</td><td>G9formung, Winkelanpassung</td><td>Rechnung ohne Gewichte</td></tr>
+    <tr><td>Bilderkennung</td><td>Sapiens2 und SAM 3</td><td>fremde Modelle</td></tr>
+    <tr><td>Zerlegung</td><td>Netz <code>zerlegung</code>: je Punkt des Eingangs Haut, Haar oder Kleidungsstück</td><td>unser Netz</td></tr>
+    <tr><td>Kopf</td><td>Kopfnetz (<code>kopfnetz</code>) rechnet eine Korrektur der 523 Kopfregler auf die Form; danach Runden gegen Gesichtsmaße, Landmarken und Haut des Eingangs.
+      Übernommen nur, wenn es an der echten Formung besser ist als vorher</td><td>unser Netz und Optimierung je Test</td></tr>
+    <tr><td>Lage, Körper</td><td>Angleich an Messpunkte (ViTPose) und an die Außenmaße des Eingangs</td><td>Optimierung je Test, keine Gewichte</td></tr>
+    <tr><td>Haut</td><td>Stufe 2 (<code>stufe2</code>) und Haut-KI (<code>hautki</code>), Entlichtung</td><td>unsere Netze</td></tr>
+    <tr><td>Kleider und Haar</td><td>Kostüm-Weg A: mit Sapiens2 und SAM 3 erkennen, aus dem Eingang ausschneiden, auf die Figur übertragen (Rückhäutung)</td>
+      <td>fremde Modelle und Rechnung, kein eigenes Netz</td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Am Ergebnis der ganzen Kette ist darum nicht die Regler-KI allein zu sehen: Kopf-, Lage- und Körperangleich ändern die Form danach noch. Die Form, wie die Regler-KI sie
+  ausgibt, zeigen die Prüfformen unten.</p>
+<p><strong>Umbau beschlossen (27.10.2026, Edgar):</strong> je Teil eine eigene KI. Die Regler-KI liefert dann nur noch den Körper. Der Kopf kommt aus der KopfKI von 2d-3d-AI statt aus dem
+  Kopfteil der Regler-KI und dem alten Kopfnetz <code>kopf1</code>. Das Haar kommt aus der HaarKI, sobald sie trainiert ist. Die Kleider: die Stücke, die Sapiens2 und SAM 3 ausschneiden,
+  gehen in den GarmentCode-Schnittkopf (Stück, Form und Regler je Stück). Plan und Stand: Konzept <code>Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md</code>, Abschnitt 9.</p>
+<ul>
+  <li><strong>Körper, gebaut:</strong> <code>Reglerauslese</code> (<code>KoerperKI_alle/reglerauslese.py</code>) legt fest, welche Regler die KI ausgibt. Das Netz gibt an den übrigen Stellen 0 aus (<code>Reglernetz.frei</code>),
+    die Wahrheiten der Trainingsjobs werden genauso umgerechnet. Von 2.134 Reglern bleiben 1.147 frei:
+    <ul>
+      <li>823 gehören zum Kopf: die 523 Kopfregler und 300 Haupt- und Anfasserwerte der Kopf-Eigenregler. Abgegrenzt wie die KopfKI; die 523 Namen sind dieselben wie in <code>kopfki5</code>.</li>
+      <li>149 weitere haben laut Wirksamkeitstabelle keine Wirkung oder sind an den Messlinien nicht sichtbar.</li>
+      <li>15 sind doppelt. Bei 8 geht der Wert auf den Partner über; bei 7 ist der Partner ein Kopfregler, dort fällt der Wert weg.</li>
+    </ul>
+    Das Training <code>allgemein6_koerper_rig</code> (mit dem Weg „Rig“, unten) lief am 27.10.2026; Ergebnis in der Tabelle unten.</li>
+  <li><strong>Kopf, Haar, Kleider:</strong> noch nicht gebaut.</li>
+</ul>
+
+<h3 id="regler-ki-kette">In der Kette (seit 27.10.2026)</h3>
+<ul>
+  <li>Ein Test rechnet die Form mit der Regler-KI, wenn seine <code>einstellung.json</code> sie nennt: <code>"form_ki": {"art": "reglerki", "lauf": "&lt;Lauf&gt;"}</code>
+    (<code>Mesh3dairechenlauf.FORM_REGLERKI</code>). Ohne den Eintrag rechnet der Formkopf. Die übrigen Schritte bleiben gleich, auch die drei Angleiche.</li>
+  <li>27.10.2026: Gerechnet werden zuerst fünf Tests, über die Warteschlange wie der Knopf „Rechnen“: ballerina_bunt, edgar, randy_tropical, koenigin1 und venus. Ihre Ergebnisse
+    ersetzen die bisherigen (Formkopf) auf der Testseite. Ergebnisse folgen.</li>
+  <li><strong>Die Regler-KI rechnet nur auf MIAs A-Pose.</strong> Fällt MIAs Prüfung durch, nimmt die Kette die A-Pose des Rigs, und der Schritt „Form“ bricht ab. Bei mann_gold war das so:
+    Knie 48°, Ellbogen 68°, 79 % der Fläche abgerissen. Bei 14 von 35 Tests stammt die jüngste A-Pose vom Rig; sie rechnen darum weiter mit dem Formkopf (kein <code>form_ki</code>).
+    Darunter sind mann_gold und zauberer_fantasy, dafür kamen koenigin1 und venus in die erste Runde. mann_gold rechnet mit dem Formkopf neu, weil sein Ordner seit dem abgebrochenen Lauf
+    eine neue Kette und Haltung, aber die alte Form trägt.</li>
+  <li><strong>Rückfall (seit 27.10.2026):</strong> Stammt die A-Pose vom Rig und hat der gewählte Lauf diesen Weg nicht gelernt, rechnet der Schritt „Form“ mit dem Formkopf. Auf der Testseite
+    steht der Schritt dann als „Form aus der KI (Formkopf) — Rückfall …“ (<code>Mesh3dairechenlauf.RUECKFALL_TEXT</code>, <code>reglerki_wege</code>). Alle Tests stehen darum wieder auf der
+    Regler-KI. Der Rückfall greift erst im nächsten Arbeitsprozess der Rechenschlange, der laufende hat den alten Code geladen.</li>
+  <li><strong>Weg „Rig“ im Training (gebaut 27.10.2026, noch nicht trainiert):</strong> <code>Rigwolke</code> (<code>mesh3dai/mesh3dai_rigwolke.py</code>) stellt den Rig-Weg aus den echten
+    Trainingswolken nach, auf der Karte und ohne Dateien.
+    <ul>
+      <li>Ein echter Rig-Lauf je Probe hätte über 70 h gekostet (~180 s je Netz).</li>
+      <li>Rig-Figur ist eine nahe andere Wahrheit (Formfehler). Ihre Haltung ist die A-Pose der Wolke mit verrauschten Knochen: 0,5–1,5° je Knochen, die Kette hinab fortgesetzt.</li>
+      <li>Jeder Wolkenpunkt nimmt die Bewegung seines nächsten Punkts der Rig-Figur (Summe der Knochen nach den Hautgewichten) und wird damit umgekehrt in deren Ruhe gebracht, wie in der
+        Kette (<code>Vorstufenhaut</code>). Den Boden setzen die Knochen der Rig-Figur, nicht die Wolke. Gemessen wird dann an der Figur in Ruhe, wie im Einsatz.</li>
+      <li>Nicht nachgestellt: Die echte Kette häutet aus der Originalhaltung zurück, und es gibt Risse und gefüllte Löcher.</li>
+      <li>Vor dem Training prüft eine Nullprobe (<code>rigwolke_probe.py</code>): Ohne Rauschen und mit der wahren Figur muss die Wolke in Ruhe so nah an der Wahrheit liegen wie in der
+        A-Pose (höchstens +1 mm), und die Rig-Figur selbst muss hin und zurück auf ihren Platz fallen (p95 höchstens 0,5 mm).
+        <ul>
+          <li>Erster Stand am 27.10.2026 rot: 27,08 mm in Ruhe gegen 21,06 mm in der A-Pose. Zwei Ursachen, gemessen mit <code>rigwolke_zerlegung.py</code> an 21 Prüfwolken:</li>
+          <li>Der Rückweg mittelte die umgekehrten Knochen. An den Figurpunkten selbst lag er p95 10,1 mm daneben; die umgekehrte Bewegung trifft 0,0 mm.</li>
+          <li>Danach wurde die Wolke auf die Bodenhöhe der A-Pose-Wolke gestellt. Diese steht im Mittel 11,7 mm über dem Boden der Figur. Ohne diesen Schritt: 20,80 mm.</li>
+          <li>Nach dem Umbau grün: ohne Rauschen 21,06 mm, mit Rauschen 21,98 mm, mit Formfehler 22,25 mm; hin und zurück 0,000 mm.</li>
+        </ul></li>
+    </ul>
+    Training <code>allgemein6_koerper_rig</code> (<code>--rig 1</code>, 27.10.2026); sein <code>netz.pt</code> trägt <code>wege</code> = mia, rig.</li>
+  <li>Der Körperangleich verlangte die Reglerliste von Fassung 6 und brach an ballerina_bunt mit der Regler-KI ab. Er rechnet ohnehin über die Namen der Regler
+    (alle Regler außerhalb von Fassung 6 bleiben, wie die KI sie gesetzt hat). Seit 27.10.2026 prüft er die Liste darum nur noch beim Formkopf; die Gegenprobe gegen die gebaute Figur
+    bleibt (<code>mesh3dai/mesh3dai_koerperangleich.py</code>). Danach lief edgar durch: Übernahme nach Runde 2, 340 Regler geändert, ganze Kette 860 s. ballerina_bunt rechnet ab
+    „Körper“ neu.</li>
+  <li>Die sechs Tests mit Wahrheit (Matt1, OlesiaSitzend, OlesiaWalk, Rainy, Damira0Tripo, DamiraAlt) kann die Kette nicht rechnen: Der erste Schritt bricht mit „Kein Testnetz“ ab, weil
+    sie kein <code>anlage.json</code> haben.</li>
+</ul>
 
 <h3>Wie trainiert wird</h3>
 <ul>
@@ -20,7 +97,9 @@ Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Ha
   <tbody>
     <tr><td><code>Reglerraum</code></td><td>alle Regler als ein Vektor, Bereiche, Strafe außerhalb, Reglerwörterbuch hin und zurück</td><td>gebaut</td></tr>
     <tr><td><code>Formrechnung</code></td><td>Regler → 4.000 Körperpunkte, 5.101 Kopfpunkte, 138 Gelenke auf der Karte; Eigenformen aus dem heutigen Stand der Grundformen</td>
-      <td>gebaut; Grundfigur mit allen Eigenreglern 0,005 mm neben G9formung, an echten Figuren 0,47–0,86 mm (Knochenskalierung, Boden)</td></tr>
+      <td>gebaut; seit 27.10.2026 zusammengesetzt wie G9formung (<code>Formstruktur</code>: Morphe, Alter aufgelöst, Knochenskalierung über die Haut): an den Wahrheiten der
+        22 Prüfformen Körper 0,39 / Gelenke 0,40 / Kopf 0,39 mm neben G9formung (vorher 6,7 / 10,2 / 7,9), an den Vorhersagen von <code>allgemein4</code> noch 7,1 / 7,8 / 9,2 mm;
+        seit dem <code>Formgraph</code> (Daz' Formelgraph Kanal für Kanal, Klemme nach der Summe) Wahrheiten 0,00 und Vorhersagen 0,01 mm</td></tr>
     <tr><td><code>Reglerpruefung</code></td><td>Form gegen Wahrheit je Gruppe (Körper, Hals, Rumpf, Arme, Hände, Beine, Füße, Kopf, Kopfform mit und ohne Maßstab, Gesicht …); schnell genähert oder echt über G9formung</td>
       <td>gebaut; echt am heutigen Formkopf: Prüfformen Körper 24,7, Kopf 25,2, Kopfform 4,2 mm — gleich wie die Nachrechnung des Formtrainings</td></tr>
     <tr><td><code>Messlinien</code>, <code>Netzmesslinien</code></td><td>Abstand Eingang − Figur je Linie (Ort, Richtung, Blick, Käfigpunkt, Abstand, gefunden, Sicherheit, Klasse Haut/Stoff/Haar) — gleiche Form für Netz und Fotos</td>
@@ -34,9 +113,27 @@ Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Ha
   </tbody>
 </table>
 
-<h3>Training (26.10.2026, Läufe <code>allgemein1</code> und <code>allgemein2_verschoben</code>)</h3>
+<h3>Messung an der Figur in der A-Pose des Eingangs (seit 26.10.2026 abends)</h3>
+<p>Die Messlinien vergleichen den Eingang mit der Figur. Bis <code>allgemein2</code> stand dabei der Eingang in MIAs A-Pose (von MIA geriggt und gestellt), die Figur aber in der Ruhe von
+  Genesis. Selbst an der Wahrheit war die Haut darum nicht bei 0 (7–24 mm), und in rund der Hälfte der Bein- und Fußwolken lag die Wahrheit nicht näher am Eingang als die Grundfigur.
+  Außerdem war jede Wolke mit der Größe der WAHREN Figur gestreckt (Faktor 0,937–1,160, <code>Vorstufemiadaten.wolke</code>) — die Wahrheit steckte im Eingang.</p>
+<ul>
+  <li><code>Aposehaltung</code> (<code>mesh3dai/mesh3dai_aposehaltung.py</code>): feste A-Pose als Mittel über die Trainingswahrheiten, dazu je Eingang die Abweichung von MIAs Skelett
+    gegen sein eigenes Mittel. Die Figur wird damit gestellt (Kabsch je Knochen, eigene Knochenlängen, Gewichte von <code>G9haut</code>). Kein Wert kommt aus der Wahrheit des Jobs.</li>
+  <li>Die Wolken werden auf die Größe des Eingangs zurückgerechnet (<code>--massstab-wahrheit</code> lässt sie wie früher).</li>
+  <li>Nullprobe an 2 Proben je Prüfform (<code>aposehaltung_gegenprobe.py</code>): Wahrheit näher als die Grundfigur 363 von 534 (Ruhe 329 von 537), gefunden 0,967 (0,919);
+    Füße 6 statt 13–15 mm, Unterschenkel 10–11 statt 22 mm. Schultern schlechter (14–17 statt 8,5–13 mm).</li>
+  <li>Aufgerichtete Wolken (121 von 1.338 Trainings-, 10 von 201 Prüfwolken) nehmen seit 26.10.2026 nachts MIAs Skelett aus <code>mia_v2</code>: MIAs Ruhe hängt nicht an der
+    Aufrichte-Matrix (gemessen ≤ 0,0004 mm, <code>mia_v2_ruhe_probe.py</code>).</li>
+  <li>Die gewürfelten Jobs (<code>Netzwurf</code>) stehen in der A-Pose je einer echten Trainingswolke und werden wie die echten gemessen; Nullprobe: Hautlinien an der Wahrheit
+    3,4 mm (Rauschen 1,5 mm), an der Grundfigur 5,6 mm.</li>
+  <li>Offen: Schultern; Farben und MediaPipe gehen nicht in die Messung ein.</li>
+</ul>
+
+<h3>Training (26.10.2026, Läufe <code>allgemein1</code>, <code>allgemein2_verschoben</code>, <code>allgemein3_apose</code>)</h3>
 <p><code>allgemein1</code>: 1.338 echte Trainingswolken und 1.000 gewürfelte Jobs, 20.000 Schritte. <code>allgemein2_verschoben</code>: dasselbe und dazu je echter Wolke zwei verschobene
-  Kopien (2.676 Jobs). Geprüft echt über G9formung an den 22 Prüfformen, die keine der KIs im Training gesehen hat (Mittel der Vorhersagen je Form):</p>
+  Kopien (2.676 Jobs). <code>allgemein3_apose</code>: wie <code>allgemein2</code>, gemessen an der Figur in der A-Pose des Eingangs, Wolken ohne Maßstab aus der Wahrheit.
+  Geprüft echt über G9formung an den 22 Prüfformen, die keine der KIs im Training gesehen hat (Mittel der Vorhersagen je Form):</p>
 <table class="doku m3a-schmal">
   <thead><tr><th>Zeile</th><th>Körper</th><th>Kopf</th><th>Kopfform</th><th>Gesicht</th><th>Nase</th><th>Mund</th><th>Ohren</th></tr></thead>
   <tbody>
@@ -44,9 +141,67 @@ Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Ha
     <tr><td>heutiger Formkopf</td><td>24,7</td><td>25,2</td><td>4,23</td><td>3,43</td><td>3,32</td><td>3,33</td><td>4,62</td></tr>
     <tr><td>neue Regler-KI, <code>allgemein1</code></td><td>28,0</td><td>27,4</td><td>3,25</td><td>2,76</td><td>2,67</td><td>2,56</td><td>3,39</td></tr>
     <tr><td>neue Regler-KI, <code>allgemein2_verschoben</code></td><td>26,5</td><td>25,9</td><td>3,41</td><td>2,88</td><td>2,78</td><td>2,70</td><td>3,64</td></tr>
+    <tr><td>neue Regler-KI, <code>allgemein3_apose</code></td><td>25,8</td><td>27,1</td><td>3,25</td><td>2,82</td><td>2,56</td><td>2,56</td><td>3,48</td></tr>
+    <tr><td>neue Regler-KI, <code>allgemein4_apose_wurf</code></td><td>28,5</td><td>30,8</td><td>3,19</td><td>2,81</td><td>2,62</td><td>2,55</td><td>3,34</td></tr>
+    <tr><td>neue Regler-KI, <code>allgemein5_formgraph</code> (27.10.2026)</td><td>21,5</td><td>18,0</td><td>3,19</td><td>2,78</td><td>2,67</td><td>2,56</td><td>3,38</td></tr>
+    <tr><td>neue Regler-KI, <code>allgemein6_koerper_rig</code>, Weg MIA (27.10.2026)</td><td>22,5</td><td>20,4</td><td>3,60</td><td>3,00</td><td>2,73</td><td>2,88</td><td>3,95</td></tr>
+    <tr><td>dieselbe, Weg Rig</td><td>21,8</td><td>19,0</td><td>3,36</td><td>2,74</td><td>2,37</td><td>2,53</td><td>3,80</td></tr>
   </tbody>
 </table>
+<p class="m3a-klein"><code>allgemein4_apose_wurf</code>: wie <code>allgemein3</code>, dazu die gewürfelten Jobs in der A-Pose und die aufgerichteten Wolken mit MIAs Skelett. Genähert besser
+  (Prüfformen Körper 23,1 statt 24,7 mm), echt schlechter (28,5 statt 25,8). <strong>Befund (26.10.2026 nachts):</strong> der Verlust des Trainings rechnet die Figur mit der Näherung
+  <code>Formrechnung</code>, und die liegt schon an den Wahrheiten der Prüfformen 6,7 mm (Körper) / 10,2 mm (Gelenke) neben G9formung, an den Vorhersagen 9,0 (<code>allgemein3</code>)
+  und 12,5 mm (<code>allgemein4</code>) — ganz aus dem Daz-Teil (Eigen-Teil 0,01 mm). Jeder Daz-Regler allein liegt unter 1 mm; der Fehler entsteht im Zusammenspiel, z. B. Form014
+  mit <code>ProportionHeight</code> −0,36: zusammen 9,3 mm, Summe der einzelnen 1,6 mm (die Knochenskalierung wirkt in G9formung auf alle anderen Morphe). Die Schwelle 0,01 der echten
+  Prüfung erklärt nur 0,5–0,8 mm. Messung zuerst richtig machen, dann weiter trainieren (<code>ProjektTemp/_wegwerf/regler_ki/naeherung_abweichung.py</code>,
+  <code>naeherung_einzeln.py</code>, <code>naeherung_luecke.py</code>).
+  <strong>Stand 27.10.2026:</strong> die <code>Formrechnung</code> setzt die Figur jetzt wie G9formung zusammen (<code>Formstruktur</code>, Tabellen je Regler aus G9formung, 211 s beim
+  ersten Aufbau): an den Wahrheiten Körper 0,39 / Gelenke 0,40 mm. An den Vorhersagen bleibt eine Lücke — <code>allgemein3</code> 4,1 / 4,6, <code>allgemein4</code> 7,1 / 7,8 mm; mit
+  halben Werten die Hälfte (3,7), ohne Daz-Werte unter 0,05 noch 2,5, nur die Figur-Charaktere 1,3 mm; die vier Regler mit Drehkanälen erklären sie nicht (7,1). Die Vorhersagen setzen
+  je Form im Median 414 Regler, die Wahrheiten 40. <strong>Ursache (gemessen 27.10.2026):</strong> jeder Daz-Regler einzeln liegt bei 0,05 mm, zusammen 13–17 mm — Daz klemmt
+  jeden Kanal erst nach der Summe aller Formeln. Viele Charaktere zugleich treiben gemeinsame Kanäle über die Grenze (<code>BaseMasculine_body_bs_Body</code> additiv 1,018, Daz 0,902), und
+  die Kopfskalierung folgt diesen Werten. Darum rechnet die Formstruktur die Daz-Regler jetzt über den <code>Formgraph</code> (Daz' Formelgraph auf der Karte, 1.290 Kanäle in 6 Ebenen):
+  Wahrheiten 0,00, Vorhersagen von <code>allgemein3</code> und <code>allgemein4</code> 0,01 mm (<code>luecke_je_regler.py</code>, <code>kanal_zusammenspiel.py</code>,
+  <code>naeherung_abweichung_graph.log</code>). Die bisherigen Läufe haben mit der additiven Näherung gelernt.
+  <strong><code>allgemein5_formgraph</code></strong> (27.10.2026): dieselben Daten und Einstellungen wie <code>allgemein4</code>, nur die Formrechnung über den Graphen — echt an den 22
+  Prüfformen Körper 21,5 mm (allgemein4 28,5, Formkopf 24,7), Hals 18,6, Rumpf 21,2, Arme 25,5, Beine 16,3, Kopflage 18,0 (Formkopf 25,2), Gelenke 20,8 (Formkopf 24,3); Kopfform 3,19 wie
+  allgemein4 (Formkopf 4,23), mit Maßstab 2,75 (Formkopf 2,62). Zum ersten Mal ist die Regler-KI am Körper besser als der Formkopf. Training 2.974 s (1.000 Schritte 72–90 s statt 33 s).
+  <strong><code>allgemein6_koerper_rig</code></strong> (27.10.2026, 3.440 s): zwei Änderungen zugleich gegen allgemein5 — Auslese (1.147 freie Regler, Kopf aus) und Weg „Rig“ im Training. Am Körper
+  1,0 mm schlechter als allgemein5 (22,5 statt 21,5), auf dem Weg Rig 21,8; Gelenke 22,1 (20,8). Der Kopf gibt jetzt keine Kopfregler mehr aus; gegen die ebenso ausgelesene Wahrheit liegt die
+  Kopfform bei 3,17 mm (Formkopf 4,75). Welche der beiden Änderungen den Körper kostet, ist nicht gemessen. Nicht in die Kette übernommen.</p>
 <p class="m3a-klein">Werte in mm. Der Kopf ist in beiden Läufen besser als beim Formkopf. Den Körper verallgemeinert das Netz noch nicht: in <code>allgemein1</code> genähert im Training 8,0 mm, an den
   Prüfformen ab Schritt 6.000 gleichbleibend bei ~24 mm. Die verschobenen Wolken bringen am Körper 1,5 mm (28,0 → 26,5 mm, die Beine mit 17,5 mm besser als der Formkopf); der Kopf wird um
-  0,1–0,25 mm schlechter. Der Körper liegt noch 1,8 mm über dem Formkopf. Je ein Lauf, die Streuung zwischen Läufen ist nicht gemessen. Nicht eingesetzt.</p>
+  0,1–0,25 mm schlechter. <code>allgemein3_apose</code> bekommt die wahre Größe nicht mehr mit und ist trotzdem am Körper besser (25,8 mm; Rumpf 27,1 statt 28,9, Arme 30,5 statt 30,8),
+  der Kopf wieder bei 3,25; Beine (18,2 statt 17,5), Lage des Kopfes (27,1 statt 25,9) und Gelenke (26,5 statt 24,9) schlechter. Der Körper liegt noch 1,1 mm über dem Formkopf — der aber lernte und
+  prüfte an den Wolken in der Größe der WAHREN Figur (<code>mesh3dai_formdaten2.py</code> liest <code>punkte</code> ohne Rücknahme des Maßstabs); der Vergleich ist darum nicht
+  gleichwertig. Je ein Lauf, die Streuung zwischen Läufen ist nicht gemessen. Nicht eingesetzt.</p>
+<p><strong>Ansehen:</strong> Seite der Formvariante mit Lauf der Regler-KI (Start = Wolke, Ziel = Wahrheit, Ergebnis = Vorhersage der KI für eine Probe oder das Mittel; die Liste der Läufe
+  oben auf der Seite schaltet zum Formkopf um). Prüfformen von <code>allgemein3_apose</code>:
+  <a href="/mesh-3D-AI/formvariante/Form007/?lauf=2026.10.26.20.23_allgemein3_apose">Form007</a>, <a href="/mesh-3D-AI/formvariante/Form014/?lauf=2026.10.26.20.23_allgemein3_apose">Form014</a>,
+  <a href="/mesh-3D-AI/formvariante/Form021/?lauf=2026.10.26.20.23_allgemein3_apose">Form021</a>, <a href="/mesh-3D-AI/formvariante/Form028/?lauf=2026.10.26.20.23_allgemein3_apose">Form028</a>,
+  <a href="/mesh-3D-AI/formvariante/Form035/?lauf=2026.10.26.20.23_allgemein3_apose">Form035</a>, <a href="/mesh-3D-AI/formvariante/Form042/?lauf=2026.10.26.20.23_allgemein3_apose">Form042</a>,
+  <a href="/mesh-3D-AI/formvariante/Form049/?lauf=2026.10.26.20.23_allgemein3_apose">Form049</a>, <a href="/mesh-3D-AI/formvariante/Form070/?lauf=2026.10.26.20.23_allgemein3_apose">Form070</a>,
+  <a href="/mesh-3D-AI/formvariante/Form084/?lauf=2026.10.26.20.23_allgemein3_apose">Form084</a>, <a href="/mesh-3D-AI/formvariante/Form091/?lauf=2026.10.26.20.23_allgemein3_apose">Form091</a>,
+  <a href="/mesh-3D-AI/formvariante/Form098/?lauf=2026.10.26.20.23_allgemein3_apose">Form098</a>, <a href="/mesh-3D-AI/formvariante/Form105/?lauf=2026.10.26.20.23_allgemein3_apose">Form105</a>,
+  <a href="/mesh-3D-AI/formvariante/Form112/?lauf=2026.10.26.20.23_allgemein3_apose">Form112</a>, <a href="/mesh-3D-AI/formvariante/Form119/?lauf=2026.10.26.20.23_allgemein3_apose">Form119</a>,
+  <a href="/mesh-3D-AI/formvariante/Form126/?lauf=2026.10.26.20.23_allgemein3_apose">Form126</a>, <a href="/mesh-3D-AI/formvariante/Form133/?lauf=2026.10.26.20.23_allgemein3_apose">Form133</a>,
+  <a href="/mesh-3D-AI/formvariante/Form140/?lauf=2026.10.26.20.23_allgemein3_apose">Form140</a>, <a href="/mesh-3D-AI/formvariante/Form147/?lauf=2026.10.26.20.23_allgemein3_apose">Form147</a>,
+  <a href="/mesh-3D-AI/formvariante/Form154/?lauf=2026.10.26.20.23_allgemein3_apose">Form154</a>, <a href="/mesh-3D-AI/formvariante/Form161/?lauf=2026.10.26.20.23_allgemein3_apose">Form161</a>,
+  <a href="/mesh-3D-AI/formvariante/Form168/?lauf=2026.10.26.20.23_allgemein3_apose">Form168</a>, <a href="/mesh-3D-AI/formvariante/Form175/?lauf=2026.10.26.20.23_allgemein3_apose">Form175</a>.
+  Die Seite misst Ergebnis ↔ Ziel über alle 25.182 Daz-Punkte ohne Ausrichtung (RMS): an Form007 / 014 / 021 Regler-KI 10,7 / 13,3 / 12,0 mm, eingesetzter Formkopf
+  (<code>grenze_paare_compile</code>, Mittel seiner abgelegten Vorhersagen) 13,2 / 19,8 / 18,1 mm — ein anderes Maß als die Tabelle oben.</p>
+<p><strong>Messlinien ansehen (27.10.2026):</strong> Auf derselben Seite steht unter Start · Ziel · Ergebnis die Reihe „Messlinien: was die Regler-KI misst“. Sie zeigt je Prüfprobe (Wolke 0) die Wolke, wie die KI sie sah, also ohne den Maßstab der Wahrheit, dazu alle 9.101 Linien in drei Feldern:</p>
+  <ul>
+    <li><strong>Eingang:</strong> gemessen von der Grundfigur aus. Diese Linien bekommt die KI.</li>
+    <li><strong>Ausgang:</strong> gemessen von der Figur der KI aus. So viel fehlt danach noch.</li>
+    <li><strong>Bezug:</strong> gemessen von der wahren Figur aus.</li>
+  </ul>
+<p>Für die Wolke gibt es zwei Wege: MIA (Figur in der A-Pose des Eingangs) und Rig (die Wolke in der Ruhe einer nachgestellten Rig-Figur, wie im Training mit <code>--rig</code>). Farben wie in der Testzeile von 2d-3d-AI: blau der getroffene Punkt der Wolke
+  (Vorlage, also der Eingang), schwarz der Messpunkt an der Figur (Ergebnis), rot die Linie dazwischen; Knöpfe schalten Haut, Stoff und Haar einzeln. Unter jedem Feld stehen je Klasse die Zahl der Linien und der Median |Abstand|.
+  Seit 27.10.2026 legt auch der Schritt „form“ der Kette diese Reihe für einen Test ab (<code>reglerki_linien.npz</code>, nur Wolke 0, ohne Wahrheit), die Testseite zeigt sie über der Zeile „Messpunkte“.
+  Gerechnet wird auf der Karte mit <code>mesh3dai/mesh3dai_reglerki_linien.py --lauf &lt;Lauf&gt;</code>; die Ablage liegt in <code>&lt;Lauf&gt;/linien/</code> und wird vom Server mit <code>Mesh3dailinien</code> gelesen. Das Ergebnis auf dem Weg MIA rechnet das Skript neu und prüft es gegen die gespeicherte Vorhersage des Laufs.</p>
+<p><strong>Was das Training misst, was die Testseite misst:</strong> Die Regler-KI bekommt nur die 9.101 Messlinien (4.000 Körper, 5.101 Kopf) als Eingang; ihr Verlust ist der Abstand der Figur aus den
+  vorhergesagten Reglern zur wahren Figur über alle 4.000 Körperpunkte (RMS in mm) und die Form des Kopfes ohne seine Lage. MediaPipe und ViTPose kommen im Training nicht vor. Die Zeilen „Messpunkte“
+  (23 ViTPose-Punkte, 40 Randpunkte, Gerippe von ViTPose in Feld 1 und 2) und „Gesichtspunkte (MediaPipe)“ (478 Punkte) der Testseite gehören zur Kostüm-Prüfung am Ende der Kette, siehe
+  <a href="#kostuem">Kostüm-Weg A</a>.</p>
 <p class="m3a-klein">Gegenproben: <code>ProjektTemp/_wegwerf/regler_ki/formrechnung_gegenprobe.py</code>, <code>reglerpruefung_formkopf.py</code> (26.10.2026).</p>

@@ -2,6 +2,10 @@
 {% load static %}{% load fassung %}
 {% block title %}Einstellungen — Genesis{% endblock %}
 
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'djangobase/css/tabellen.css' %}">
+{% endblock %}
+
 {% block einstellungen_titel %}Genesis Einstellungen{% endblock %}
 {% block formular_zusatz %} id="genesis-settings-form"{% endblock %}
 
@@ -25,6 +29,24 @@
 {% endblock %}
 
 {% block einstellungen_nachtrag %}
+<div class="settings-section genesis-regler-abschnitt">
+    <h3>Regler der Regler-KI</h3>
+    {% if regler_kopf %}
+    <p class="hint">{{ regler_kopf.anzahl }} Regler (Reglerraum Fassung 8: Daz- und Familienregler, Hauptregler, Anfasser in cm), gemessen am {{ regler_kopf.erzeugt }}
+        mit der Formrechnung, jeder Regler allein am Ende seines Bereichs. <strong>Wirksamkeit</strong>: größte Verschiebung eines Hautpunkts (4.000 Körper-, 5.101 Kopfpunkte) oder
+        Gelenks; der Tooltip zeigt Körper, Kopf, Gelenke und was die Pipelines davon sehen. <strong>Empfehlung</strong> „nutzen“, wenn der Regler wirkt (≥ {{ regler_kopf.schwellen.stumm_mm|floatformat:"0" }} mm),
+        nicht doppelt ist (ein anderer Regler macht dieselbe Form bis auf {{ regler_kopf.schwellen.doppelt_mm|floatformat:"0" }} mm) und am Eingang der Pipeline sichtbar ist —
+        Mesh3D-AI: entlang der Messlinien des Netzes ≥ {{ regler_kopf.schwellen.netz_mm|floatformat:"0" }} mm; 2d-3d-AI: quer zum Umriss (vorn, Seite) oder im Gesicht von vorn
+        ≥ {{ regler_kopf.schwellen.foto_mm|floatformat:"0" }} mm. Die Schwellen sind Setzungen; die Fotoseite ist eine Näherung (ohne Verdeckung), nicht das Messwerk von 2d-3d-AI.
+        Ohne Wirkung: {{ regler_kopf.ohne_wirkung }}, doppelt: {{ regler_kopf.doppelt }}, nutzen Mesh3D-AI: {{ regler_kopf.mesh3dai }}, nutzen 2d-3d-AI: {{ regler_kopf.ai2d3d }}.
+        „Gesetzt in Prüfformen“: {{ regler_kopf.pruefformen }} Wahrheiten aus dem Lauf {{ regler_kopf.lauf }}. Ablage <code>{{ regler_kopf.datei }}</code>, neu messen:
+        <code>{{ regler_befehl }}</code>.</p>
+    {% if regler_kopf.andere %}<p class="hint hb-schlecht">Daneben liegen Ablagen eines anderen Reglerraums: {{ regler_kopf.andere|join:", " }} — gezeigt ist die jüngste.</p>{% endif %}
+    {% else %}
+    <p class="hint hb-schlecht">Noch nicht gemessen — <code>{{ regler_befehl }}</code> (GPU, einige Sekunden).</p>
+    {% endif %}
+    {% include "djangobase/_tabelle.html" with tabelle=regler_tabelle %}
+</div>
 <style>
 .settings-section { margin-bottom: 24px; }
 .settings-section h3 {
@@ -37,10 +59,18 @@
 .settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
 .settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+.genesis-regler-abschnitt .hint { font-size: 0.8rem; color: var(--text-muted); }
+.genesis-regler .regler-klein { font-size: 0.75rem; color: var(--text-muted); }
 </style>
 <script type="module">
 import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
 
 Vorgabenformular.anmelden('genesis-settings-form', 'Genesis-Einstellungen gespeichert — gilt ab dem nächsten Import.');
+</script>
+<script type="module">
+import { TabellenSortierung } from "{% fassungspfad 'djangobase/js/tabellen_sortierung.js' %}";
+import { TabellenBreiten } from "{% fassungspfad 'djangobase/js/tabellen_breiten.js' %}";
+document.querySelectorAll('table[data-sort-key]').forEach(t => new TabellenBreiten([t], t.dataset.sortKey).binden());
+TabellenSortierung.binden();
 </script>
 {% endblock %}

@@ -15,12 +15,19 @@ import { Ai2d3dmessstrich } from './ai2d3dmessstrich.js';
 export class Ai2d3dmesspunkte {
     static HOEHE = 640;
     static RAND = 0.04;
-    static FARBE = { vorlage: '#1c7ed6', ergebnis: '#f76707', ueber: '#e03131', offen: '#868e96' };
+    static FARBE = { vorlage: '#1c7ed6', ergebnis: '#000000', ueber: '#e03131', offen: '#868e96', verbindung: '#e03131',
+        ergebnis_linie: '#000000' };      // verbindung: Edgar 27.10.2026 erst „grau“, dann „mach die grauen linien rot“; Linie des Ergebnisses „schwarz statt orange“,
+                                          // danach auch die Punkte („und warum noch orangene Punkte, ich verstehe das nicht“)
 
     /** @param {HTMLElement} karte die Karte `#ai2d3d-messpunkte` @param {string} job Kennung @param {{adresse: string}[]} fotos Fotos der Seite in ihrer Reihenfolge
      *  @param {{daten: string, seite: (nr: number) => string}} [adressen] Daten und Rendering je Foto (ab 1) — Vorgabe die Abnahme von 2d-3d-AI; Mesh3D-AI nimmt die Kostüm-Prüfung
      *  (`Mesh3daitestmesspunkte`, 24.10.2026 nachts) */
-    constructor(karte, job, fotos, adressen = null) {
+    constructor(karte, job, fotos, adressen = null, optionen = {}) {
+        // Mesh3D-AI (27.10.2026, Edgar: „Blau Eingang, Schwarz Ausgang und Rot beim letzten Bild zwischen den Linien Eingang und Ausgang … orange Linien brauche ich nicht mehr“):
+        // eigene Farben (`farbe`), Feld 3 nur die roten Verbindungen (`nurRot`), das Gerippe des Erkenners (`gerippe`: Paare von Punktnummern) in Feld 1 und 2. Ohne Optionen wie bisher.
+        this.farbe = { ...Ai2d3dmesspunkte.FARBE, ...(optionen.farbe ?? {}) };
+        this.nurRot = !!optionen.nurRot;
+        this.gerippe = optionen.gerippe ?? null;
         this.karte = karte;
         this.job = job;
         this.fotos = fotos;
@@ -32,7 +39,9 @@ export class Ai2d3dmesspunkte {
         this.nurDeltas = 'nurDeltas' in karte.dataset;      // Feld 3 nur die Linien (26.10.2026, Edgar zu den Gesichtspunkten: „im 3. Foto (ganz rechts) nur die Deltas“)
         this.tabelle.addEventListener('mouseover', e => this._hervorheben(e.target.closest('tr[data-nummern]')?.dataset.nummern ?? null));
         this.tabelle.addEventListener('mouseleave', () => this._hervorheben(null));
-        this.bereit = Serverabruf.json(this.adressen.daten).then(d => { this.daten = d; })
+        // `adressen.daten` darf schon die Daten sein (27.10.2026, `Ai2d3dbloecke`: eine Zeile je Bild teilt sich EINEN Abruf)
+        const holen = typeof this.adressen.daten === 'string' ? Serverabruf.json(this.adressen.daten) : Promise.resolve(this.adressen.daten);
+        this.bereit = holen.then(d => { this.daten = d; })
             .catch(fehler => { this.info.textContent = `Keine Messpunkte: ${fehler.message}`; });
     }
 
@@ -93,8 +102,8 @@ export class Ai2d3dmesspunkte {
                 const k = kopf();
                 // Jede Zahl ist die Länge einer Linie im Bild (Edgar 25.10.2026: „es muss doch für jede Zahl eine Linie kommen“); die Lage der Punkte ab Hüftmitte steht im Tooltip
                 // Texte der Kopfzeile (`Kopfmesspunkte.TEXTE`) kommen mit den Daten, die des Körpers stehen hier
-                k.firstChild.textContent = this.f.texte?.[art] ?? (art === 'lage' ? 'Kopf, Gelenke, Füße (ViTPose): Abweichung = Linie vom blauen Punkt (Foto) zum orangen (Rendering)'
-                    : 'Umriss (Sapiens2): Vorlage = blaue Linie Knochenachse → Rand im Foto (Feld 1), Ergebnis = orange Linie bis zum Rand im Rendering (Feld 2), '
+                k.firstChild.textContent = this.f.texte?.[art] ?? (art === 'lage' ? 'Kopf, Gelenke, Füße (ViTPose): Abweichung = Linie vom blauen Punkt (Foto) zum schwarzen (Rendering)'
+                    : 'Umriss (Sapiens2): Vorlage = blaue Linie Knochenachse → Rand im Foto (Feld 1), Ergebnis = schwarze Linie bis zum Rand im Rendering (Feld 2), '
                       + 'Abweichung = Ergebnis − Vorlage (+ zu breit, − zu schmal)');
                 zeilen.push(k);
             }
@@ -121,7 +130,14 @@ export class Ai2d3dmesspunkte {
 
     /** Ausschnitt um beide Personen (Pixel des Fotos) und Maßstab auf die Fläche. */
     _ausschnitt(flaeche) {
-        const [x0, y0, x1, y1] = this.f.kasten_px, [b, h] = this.f.groesse, r = Ai2d3dmesspunkte.RAND * (y1 - y0);
+        // Kasten um die Personen UND alle gezeichneten Punkte (27.10.2026, Edgar: „mach die Ansicht so, dass ich alle Linien sehe“ — unter dem Kinn lief die Linie aus dem Bild)
+        let [x0, y0, x1, y1] = this.f.kasten_px;
+        const alle = [...(this.f.umrisse ?? []).flatMap(u => [...u.vorlage, ...u.ergebnis]), ...this.f.punkte.flatMap(p => [p.vorlage, p.ergebnis, p.achse])];
+        for (const p of alle) {
+            if (!p) continue;
+            x0 = Math.min(x0, p[0]), y0 = Math.min(y0, p[1]), x1 = Math.max(x1, p[0]), y1 = Math.max(y1, p[1]);
+        }
+        const [b, h] = this.f.groesse, r = Ai2d3dmesspunkte.RAND * (y1 - y0);
         const k = [Math.max(0, x0 - r), Math.max(0, y0 - r), Math.min(b, x1 + r), Math.min(h, y1 + r)];
         const breite = flaeche.parentElement.clientWidth || 300;
         const s = Math.min(breite / (k[2] - k[0]), Ai2d3dmesspunkte.HOEHE / (k[3] - k[1]));
@@ -151,21 +167,40 @@ export class Ai2d3dmesspunkte {
                 c.globalAlpha = 1;
             }
             const auf = p => [(p[0] - kx) * a.s, (p[1] - ky) * a.s];
+            const nurRot = ansicht === 'beide' && this.nurRot;
             // Umrisse der Eigenregler (26.10.2026, `Reglerumrisse`): die ganze Kette, die Zahlen stehen an den Anfassern
-            if (this.f.umrisse) Ai2d3dmessstrich.umrisse(c, auf, this.f.umrisse, ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht], Ai2d3dmesspunkte.FARBE, this.hervor);
+            if (this.f.umrisse && !nurRot) Ai2d3dmessstrich.umrisse(c, auf, this.f.umrisse, ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht], this.farbe, this.hervor,
+                (this.daten.grenzen?.rand_mm ?? Infinity) / this.f.mm_je_px);
+            if (!nurRot) Ai2d3dmessstrich.ketten(c, auf, this.f.zeilen, this.f.punkte, ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht], this.farbe, this.hervor);
+            if (this.gerippe && ansicht !== 'beide') this._gerippe(c, auf, ansicht);
             this._punkte(c, auf, ansicht, status);
-            if (ansicht === 'beide' && this.hervorZeile) Ai2d3dmesslupe.zeichnen(c, a, this.foto, this.seite, q, this.hervorZeile, this.f.punkte, Ai2d3dmesspunkte.FARBE);
+            if (ansicht === 'beide' && this.hervorZeile) Ai2d3dmesslupe.zeichnen(c, a, this.foto, this.seite, q, this.hervorZeile, this.f.punkte, this.farbe);
         }
     }
 
+    /** Gerippe des Erkenners (`gerippe`: Paare von Punktnummern, z. B. ViTPose) in der Farbe der Seite — zeigt, woran die Messlinien hängen. */
+    _gerippe(c, auf, seite) {
+        const nach = new Map(this.f.punkte.map(p => [p.nr, p[seite]]));
+        c.strokeStyle = this.farbe[`${seite}_linie`] ?? this.farbe[seite];
+        c.lineWidth = 1.5;
+        c.globalAlpha = 0.7;
+        for (const [a, b] of this.gerippe) {
+            const pa = nach.get(a), pb = nach.get(b);
+            if (pa && pb) Ai2d3dmessstrich.strich(c, auf(pa), auf(pb));
+        }
+        c.globalAlpha = 1;
+        c.lineWidth = 1;
+    }
+
     _punkte(c, auf, ansicht, status) {
-        const F = Ai2d3dmesspunkte.FARBE, seiten = ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht];
+        const F = this.farbe, seiten = ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht];
         c.lineWidth = 1;
         for (const p of this.f.punkte) {
             const st = status.get(p.nr), hervor = this.hervor?.has(p.nr);
             if (this.hervor && !hervor) c.globalAlpha = 0.35;
             // Randpunkt: die Zahl der Tabelle ist die Länge der Linie Knochenachse → Rand (blau Foto, orange Rendering); Punkt: Linie blau → orange in Feld 3
-            if (p.achse) {
+            // `nurRot` (Mesh3D-AI): in Feld 3 keine Achslinien, nur die rote Verbindung
+            if (p.achse && !(ansicht === 'beide' && this.nurRot)) {
                 c.lineWidth = 2;
                 for (const seite of seiten) {
                     if (!p[seite]) continue;
@@ -175,10 +210,12 @@ export class Ai2d3dmesspunkte {
             }
             // Punkt: die Linie blau → orange in allen drei Feldern (Edgar 25.10.2026: „bei den Messungen überall Linien zeigen“), am Umriss nur in Feld 3
             // Gesichtspunkte (`data-nur-deltas`): Felder 1 und 2 nur ihre Punkte, Feld 3 nur der Pfeil Ergebnis − Eingabe (blau → orange)
+            // 27.10.2026, Edgar: „mach diese komischen Linien alle weg … graue dünne Linien zwischen orange und blau“ — die Linie Foto → Figur nur noch in Feld 3, dünn und grau;
+            // über der Grenze steht in der Tabelle (rote Zeile), nicht mehr im Bild
             const nurDeltas = ansicht === 'beide' && this.nurDeltas;
-            if (p.vorlage && p.ergebnis && (this.nurDeltas ? nurDeltas : ansicht === 'beide' || !p.achse)) {
-                c.strokeStyle = c.fillStyle = st === 'ueber' ? F.ueber : nurDeltas && st === 'offen' ? F.offen : '#222222';
-                c.lineWidth = 2;
+            if (p.vorlage && p.ergebnis && ansicht === 'beide') {
+                c.strokeStyle = c.fillStyle = F.verbindung;
+                c.lineWidth = 1;
                 (nurDeltas ? Ai2d3dmessstrich.pfeil : Ai2d3dmessstrich.strich)(c, auf(p.vorlage), auf(p.ergebnis));
             }
             if (nurDeltas) { c.globalAlpha = 1; continue; }
@@ -188,16 +225,11 @@ export class Ai2d3dmesspunkte {
                 const [x, y] = auf(p[seite]);
                 c.fillStyle = st === 'offen' ? F.offen : F[seite];
                 c.beginPath();
-                c.arc(x, y, hervor ? 6 : 3, 0, 2 * Math.PI);
+                c.arc(x, y, hervor ? 6 : ansicht === 'beide' ? 1.5 : 3, 0, 2 * Math.PI);      // Feld 3 kleine Punkte: sonst decken sie die Linie zu
                 c.fill();
-                if (st === 'ueber') {
-                    c.strokeStyle = F.ueber;
-                    c.lineWidth = 2;
-                    c.stroke();
-                    c.lineWidth = 1;
-                }
-                // 478 Gesichtspunkte: Nummern nur an der berührten Zeile, sonst decken sie das Gesicht zu (`ohne_nummern`)
-                if (seite === seiten[0] && (!this.f.ohne_nummern || hervor)) Ai2d3dmessstrich.nummer(c, String(p.nr), x + 4, y - 4, st === 'ueber' ? F.ueber : '#111111', hervor);
+                // 478 Gesichtspunkte: Nummern nur an der berührten Zeile, sonst decken sie das Gesicht zu (`ohne_nummern`); Feld 3 ganz ohne Nummern, dort zählen die Linien
+                // Vorlage → Ergebnis (Edgar 26.10.2026: „mach im ergebnis feld des jobs die Zahlen weg“)
+                if (seite === seiten[0] && ansicht !== 'beide' && (!this.f.ohne_nummern || hervor)) Ai2d3dmessstrich.nummer(c, String(p.nr), x + 4, y - 4, st === 'ueber' ? F.ueber : '#111111', hervor);
             }
             c.globalAlpha = 1;
         }

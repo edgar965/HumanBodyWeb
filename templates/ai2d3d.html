@@ -90,7 +90,7 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
     <h2>{{ k.titel }} <span class="ai2d3d-urteil" title="Gegenprobe mit Wahrheit unten">{{ k.urteil }}</span></h2>
     <p class="hb-hinweis">Nur die {{ k.regler_geaendert }} geänderten Kopfregler; der Körper ist der des Mesh3D-AI-Tests <a href="/mesh-3D-AI/test/{{ k.test }}/">{{ k.test }}</a> (Feld 3, Knopf „Kopf“ zoomt hin).
         Abgleich an 1.jpg und 3.jpg, 4.jpg ist nur geprüft. Gerechnet {{ k.gerechnet }}, {{ k.sekunden }} s auf der Grafikkarte.</p>
-    <table class="ai2d3d-kopftabelle">
+    <table class="ai2d3d-kopftabelle" data-sort-aus data-sort-key="ai2d3d-kopfregler">
         <thead><tr><th>Kopf</th>{% for s in k.spalten %}<th class="num">{{ s }}</th>{% endfor %}</tr></thead>
         <tbody>{% for z in k.zeilen %}<tr{% if z.eigen %} class="ai2d3d-eigen"{% endif %}><td>{{ z.name }}</td>{% for t in z.texte %}<td class="num">{{ t }}</td>{% endfor %}</tr>{% endfor %}</tbody>
     </table>

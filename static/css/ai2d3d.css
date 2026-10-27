@@ -118,6 +118,8 @@
 .ai2d3d-ampel td.ai2d3d-ampel-rot { background: #ffe3e3; color: #c92a2a; font-weight: 600; cursor: pointer; }
 .ai2d3d-ampel td.ai2d3d-ampel-leer { color: #adb5bd; }
 .ai2d3d-fotowahl { display: inline-flex; gap: 4px; margin-left: 12px; vertical-align: middle; }
+/* eine Zeile je Bild im Block (27.10.2026, Ai2d3dbloecke._zeilen) */
+.ai2d3d-blockzeile { margin-top: 12px; padding-top: 8px; border-top: 1px solid #dee2e6; }
 .ai2d3d-fotoknopf { font-size: 0.8rem; padding: 2px 8px; border: 1px solid #adb5bd; border-radius: 4px; background: #fff; cursor: pointer; }
 .ai2d3d-fotoknopf.aktiv { background: #e03131; border-color: #e03131; color: #fff; }
 .ai2d3d-einzeln > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }

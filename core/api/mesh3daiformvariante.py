@@ -5,6 +5,7 @@ GET /mesh-3D-AI/formvariante/<figur>/[?lauf=<lauf>]                 die Seite (V
 GET /api/mesh3dai/formvariante/<figur>/[?lauf=]                     Lauf, Läufe, Proben mit ihrer Zeile, Werte des Laufs, Regler mit der größten Abweichung (`Mesh3daiformvariante.lesen`)
 GET /api/mesh3dai/formvariante/<figur>/wolke/<nr>/<k>/[?lauf=]      die A-Pose-Wolke, die der Lauf gelesen hat (`<eingang>_<k>.npz`: 16.384 Punkte, Farbe 0–255, Teil)
 GET /api/mesh3dai/formvariante/<figur>/figur/<was>/[?lauf=]         Lage der Körperpunkte (Binärpaket, `Mesh3daiformvariantefigur.paket`); was = ziel | mittel | Probennummer
+GET /api/mesh3dai/formvariante/<figur>/linien/<nr>/[?lauf=]        Messlinien der Regler-KI an Probe nr (Binärpaket `Mesh3dailinien`, gerechnet von `mesh3dai_reglerki_linien.py`)
 GET /api/mesh3dai/formvariante/<figur>/koerper/                     Dreiecke, UV, Material des Körpers (Haut der Grundlage, einmal je Seite)
 GET /api/mesh3dai/formvariante/<figur>/bild/<name>                  ein Bild der Haut (`m<Zahl>.jpg` aus dem Anzeigenetz der Grundlage, ETag/304)
 
@@ -21,9 +22,9 @@ from django.views.decorators.http import require_GET
 
 from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.mesh3daiflaechennetz import Mesh3daiflaechennetz
-from ..dienste.mesh3daiformtraining import Mesh3daiformtraining
 from ..dienste.mesh3daiformvariante import Mesh3daiformvariante
 from ..dienste.mesh3daiformvariantefigur import Mesh3daiformvariantefigur
+from ..dienste.mesh3dailinien import Mesh3dailinien
 
 __all__ = ['Mesh3daiformvarianteendpunkte']
 
@@ -41,7 +42,10 @@ def _lauf(daten):
     """Der Ordner des gewählten Laufs — sein Name stammt aus der Liste der Läufe (`Mesh3daiformvariante.laeufe`), nie aus der Adresse."""
     if not daten.get('lauf'):
         raise Http404('Kein Formlauf trägt %s' % daten['figur'])
-    return Mesh3daiformtraining.ordner() / daten['lauf']['name']
+    ordner = Mesh3daiformvariante.ordner_von(daten['lauf']['name'])
+    if ordner is None:
+        raise Http404('Lauf %s nicht gefunden' % daten['lauf']['name'])
+    return ordner
 
 
 class Mesh3daiformvarianteendpunkte:
@@ -49,8 +53,9 @@ class Mesh3daiformvarianteendpunkte:
     @require_GET
     def seite(request, figur):
         daten = _lesen(request, figur)
-        return render(request, 'mesh3dai_formvariante.html', {'figur': daten['figur'], 'lauf': (daten.get('lauf') or {}).get('name') or '', 'modell': daten['modell'],
-                                                              'laeufe': daten['laeufe']})
+        lauf = daten.get('lauf') or {}
+        return render(request, 'mesh3dai_formvariante.html', {'figur': daten['figur'], 'lauf': lauf.get('name') or '', 'modell': daten['modell'], 'laeufe': daten['laeufe'],
+                                                              'ki_der': 'die Regler-KI' if lauf.get('ki') == 'Regler-KI' else 'der Formkopf'})
 
     @staticmethod
     @require_GET
@@ -87,6 +92,16 @@ class Mesh3daiformvarianteendpunkte:
         paket = Mesh3daiformvariantefigur.paket(lauf, figur, was, liste, daten['proben']) if liste else None
         if paket is None:
             raise Http404('Keine Figur „%s“ für %s im Lauf %s' % (was, figur, lauf.name))
+        return HttpResponse(paket, content_type='application/octet-stream')
+
+    @staticmethod
+    @require_GET
+    def linien(request, figur, nr):
+        daten = _lesen(request, figur)
+        lauf = _lauf(daten)
+        paket = Mesh3dailinien.paket(lauf, daten['figur'], int(nr))
+        if paket is None:
+            raise Http404('Keine Messlinien für Probe %s von %s im Lauf %s — für diesen Lauf nicht gerechnet' % (nr, figur, lauf.name))
         return HttpResponse(paket, content_type='application/octet-stream')
 
     @staticmethod

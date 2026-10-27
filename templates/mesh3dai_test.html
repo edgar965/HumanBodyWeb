@@ -14,6 +14,7 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dairechnen.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dailinien.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 {% comment %}Die Animation der Ausgabe ist eine Genesis-Figur aus dem Code der Charakter-Seite (22.10.2026, `Mesh3daifigurbewegung`) — dieselben Angaben wie auf der Jobseite (`mesh3dai.html`):
@@ -75,6 +76,8 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
     </div>
 </section>
 
+{% include "_mesh3dai_linien.html" with kennung=test.kennung %}
+
 {% comment %}
 Messpunkte des Körpers (24.10.2026 nachts, Edgar zu randy_tropical: „Du hast doch messmethoden … mach im Job eine zweite Zeile mit den Messungen, so wie hier“ — Vorbild die Testzeile von
 `/2d-3d-AI/test/edgartrip/`): dieselbe Anzeige (`Ai2d3dmesspunkte`, Klassen und CSS von 2d-3d-AI), Daten aus der Kostüm-Prüfung (`Kostuemmesspunkte`, `Mesh3daitestmesspunkte`).
@@ -91,15 +94,34 @@ Messpunkte des Körpers (24.10.2026 nachts, Edgar zu randy_tropical: „Du hast 
     </div>
     <p class="hb-hinweis">Gemessen wird mit denselben Detektoren wie bei 2d-3d-AI auf dem Eingang (Mesh) und dem Ergebnis (Figur mit ihren Stücken), beide aus derselben Kamera (orthografisch, ohne
         Licht): 23 Punkte von ViTPose (Kopf, Gelenke, Füße) und 40 Randpunkte auf dem Umriss, je zwei an 20 Linien quer zu Hals, Rumpf, Armen und Beinen. Jede Linie hängt an den Gelenken des Eingangs
-        und wird in beiden Bildern an derselben Stelle abgeschritten. Blau: Eingang, orange: Ergebnis, rot umrandet: über der Grenze, grau: nicht gewertet. Zeile berühren hebt den Punkt hervor,
-        der Tooltip nennt die Abweichung. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).</p>
+        und wird in beiden Bildern an derselben Stelle abgeschritten. Blau: Eingang, schwarz: Ergebnis, dünne Linien: das Gerippe von ViTPose (daran hängen die Messlinien), grau: nicht gewertet;
+        Feld 3 nur die rote Abweichung je Punkt. Zeile berühren hebt den Punkt hervor, der Tooltip nennt die Abweichung. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).
+        Diese Punkte prüfen das fertige Ergebnis der Kette — das Training der Regler-KI misst nicht hier, sondern an den 9.101 Messlinien oben.</p>
     <p class="hb-hinweis ai2d3d-mess-info" data-info>Messpunkte werden geladen …</p>
     <div class="ai2d3d-messzeile">
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Eingang (Mesh)</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Ergebnis (Figur mit Stücken)</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über dem Eingang</figcaption><canvas data-ansicht="beide"></canvas></figure>
-        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle">
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle" data-sort-aus data-sort-key="mesh3dai-messpunkte">
             <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Eingang</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+
+{% comment %} Gesichtspunkte (27.10.2026, Edgar: „Es fehlt eine Zeile mit dem MediaPipe oder der ViTPose, je nachdem was du gerade gerechnet hast“): MediaPipe der Kostüm-Prüfung
+(`Kostuemgesicht`, abgelegt von `Kostuemgesichtszeile`), dieselbe Anzeige wie die Gesichtspunkte von 2d-3d-AI. {% endcomment %}
+<section class="card ai2d3d-messkarte" id="mesh3dai-gesichtspunkte" data-kennung="{{ test.kennung }}" data-nur-deltas>
+    <h2>Test: Gesichtspunkte (MediaPipe) — Eingang gegen Ergebnis</h2>
+    <p class="hb-hinweis">Kamera frontal auf den Kopf der Figur (orthografisch, ohne Licht). Blau: die 478 Punkte, die MediaPipe auf dem Eingang (Mesh mit Textur) findet. Schwarz: dieselben Punkte am
+        Käfig der Figur — nicht erkannt, sondern an festen Stellen des Netzes (der Käfig hat keine Augäpfel, MediaPipe erkennt auf ihm kein Gesicht). Feld 3: je Punkt ein roter Pfeil vom Eingang
+        zum Ergebnis. Die Tabelle nennt die Maße der Kostüm-Prüfung „Gesicht wie der Eingang“. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).</p>
+    <p class="hb-hinweis ai2d3d-mess-info" data-info>Gesichtspunkte werden geladen …</p>
+    <div class="ai2d3d-messzeile">
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Eingang (Mesh) — MediaPipe</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Ergebnis (Figur) — feste Netzstellen</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Abweichung: Pfeil Eingang → Ergebnis</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle" data-sort-aus data-sort-key="mesh3dai-gesichtspunkte">
+            <thead><tr><th>Nr</th><th>Maß · Gruppe</th><th class="num">Eingang</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
         </table></div>
     </div>
 </section>
@@ -147,8 +169,11 @@ import { Mesh3daitestseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitest
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 import { Mesh3dairechnen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dairechnen.js' %}";
 import { Mesh3daitestmesspunkte } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestmesspunkte.js' %}";
+import { Mesh3dailinien } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailinien.js' %}";
 Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
+Mesh3dailinien.testStarten(document.getElementById('mesh3dai-linien'));
 Mesh3daitestmesspunkte.starten(document.getElementById('mesh3dai-messpunkte'));
+Mesh3daitestmesspunkte.gesichtStarten(document.getElementById('mesh3dai-gesichtspunkte'));
 Auftragname.binden();
 new Mesh3dairechnen(document.getElementById('mesh3dai-rechnen'));
 </script>
