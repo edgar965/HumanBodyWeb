@@ -15,23 +15,24 @@ export class Ai2d3dergebnis {
     static REGEL_OHNE = { fov: 20, rand: 1.08, grund: [255, 255, 255] };
 
     /**
-     * @param {HTMLElement} feld Feld 4 (Leinwand-Fläche) @param {HTMLElement} info Text unter Feld 4 @param {HTMLElement} karte Inhalt der Vergleichskarte
+     * @param {HTMLElement|null} feld Feld 4 (Leinwand-Fläche) @param {HTMLElement|null} info Text unter Feld 4 @param {HTMLElement} karte Inhalt der Vergleichskarte
      * @param {object} daten Seitendaten (`kamera`, `fotos`) @param {import('./ai2d3dfotos.js').Ai2d3dfotos} fotos
+     * Ohne `feld` (27.10.2026: mit gerechneter Figur steht oben kein Ergebnis-Feld, `Ai2d3dtrainingfigur`) nur die Vergleichskarte; die Meldungen stehen dann über ihr.
      */
     constructor(feld, info, karte, daten, fotos) {
         this.feld = feld;
-        this.info = info;
+        this.info = info ?? karte.parentElement.insertBefore(Object.assign(document.createElement('p'), { className: 'hb-hinweis' }), karte);
         this.karte = karte;
         this.daten = daten;
         this.fotos = fotos;
         this.regel = daten.kamera ?? Ai2d3dergebnis.REGEL_OHNE;
-        this.leinwand = feld.appendChild(document.createElement('canvas'));
-        this.leinwand.className = 'ai2d3d-rendering';
+        this.leinwand = feld ? feld.appendChild(document.createElement('canvas')) : null;
+        if (this.leinwand) this.leinwand.className = 'ai2d3d-rendering';
         this._lauf = 0;
     }
 
     leeren(text) {
-        this.leinwand.hidden = true;
+        if (this.leinwand) this.leinwand.hidden = true;
         this.info.textContent = text;
         this.karte.replaceChildren(Object.assign(document.createElement('p'), { className: 'hb-hinweis', textContent: text }));
     }
@@ -44,6 +45,13 @@ export class Ai2d3dergebnis {
         const lauf = ++this._lauf;
         const box = Ai2d3dkamera.huelle(ansicht.inhalt, rahmen);
         if (box.isEmpty()) return this.leeren('Keine sichtbare Genesis-Figur.');
+        if (this.leinwand) await this._feld(ansicht, box, rahmen, nr, lauf);
+        if (lauf !== this._lauf) return;
+        await this._karte(ansicht, box, rahmen, lauf);
+    }
+
+    /** Feld 4: die Figur aus der Perspektive des Fotos `nr`. */
+    async _feld(ansicht, box, rahmen, nr, lauf) {
         const foto = this.daten.fotos[nr];
         const [b, h] = this._groesse(nr);
         this.leinwand.hidden = false;
@@ -65,7 +73,6 @@ export class Ai2d3dergebnis {
                     : `${foto.name} · Kamera der Fotos unbekannt: gerendert mit 20° auf die Hülle der Figur — zum Ansehen, keine Messung.`;
             }
         }
-        await this._karte(ansicht, box, rahmen, lauf);
     }
 
     /** Bild aus Kamera und Haltung der Einpassung für Foto `nr` (0-basiert; `kameras.json` zählt ab 1) — null, wenn der Job keine Kameras hat oder die Seite fehlt. */

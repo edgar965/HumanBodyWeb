@@ -99,6 +99,18 @@ class Ai2d3dabnahmeendpunkte:
         return Ai2d3dabnahmeendpunkte._messung(job, 'ampel.json')
 
     @staticmethod
+    @require_GET
+    def training(request, job):
+        """Die Geometrie, die das Training misst — Feld 4 der Kopfzeilen (27.10.2026, `Traininggeometrie` im Lauf der Kopf-KI, ohne Übernahme und Kette)."""
+        return Ai2d3dabnahmeendpunkte._messung(job, 'training.json')
+
+    @staticmethod
+    @require_GET
+    def trainingfigur(request, job):
+        """Die gerechnete Figur in 3D — Feld 2 der oberen Zeile (27.10.2026, `Trainingfigur` im Lauf: Punkte je Foto in dessen Haltung, Dreiecke, Kamera der Einpassung)."""
+        return Ai2d3dabnahmeendpunkte._messung(job, 'training_figur.json')
+
+    @staticmethod
     def _messung(job, name):
         gefunden = Ai2d3dabnahmeendpunkte._test(job)
         if gefunden is None:

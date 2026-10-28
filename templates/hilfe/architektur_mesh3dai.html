@@ -32,7 +32,8 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
     <a href="/mesh-3D-AI/#test">Test</a>. Bezugslauf dieser Seite: <code>{{ lauf_name|default:"—" }}</code>.
     Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.<br>
     <strong>Stand 26.10.2026:</strong> ein Test rechnet per Knopf in {{ rechenlauf.schritte|length|default:"—" }} festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>), seit 25.10. mit
-    „Haltung an den Eingang“ (<code>Lageangleich</code>) und „Körper in die Außenmaße“ (<code>Koerperangleich</code>, seit 26.10. mit den Anfassern der Körper-Eigenregler); der Kopf wird nach dem
+    „Haltung an den Eingang“ (<code>Lageangleich</code>) und „Körper in die Außenmaße“ (<code>Koerperangleich</code>, seit 26.10. mit den Anfassern der Körper-Eigenregler, seit 27.10. mit einer
+    Schlussrunde für Hals und Kopf, die das Gesicht auf das des Meshs legt — <code>Koerperangleichhaltung</code>; die Prüfung „Lage des Gesichts“ ist seitdem ab 2 statt 20 mm rot); der Kopf wird nach dem
     Kopfnetz an das Mesh angeglichen (<a href="#kopf">Kopf aus der KI</a>). Seit 26.10. rechnet jeder Schritt auf der Karte, Körper und Kopf als CUDA-Graph, und die Kette ist reproduzierbar
     (<a href="#karte">Auf der Karte</a>). Jede Klasse mit Aufruf-Logik steht unter <a href="#klassen">Alle Klassen</a> — alles beim Aufruf aus dem Code gelesen.
   </div>

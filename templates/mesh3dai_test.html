@@ -113,13 +113,14 @@ Messpunkte des Körpers (24.10.2026 nachts, Edgar zu randy_tropical: „Du hast 
 <section class="card ai2d3d-messkarte" id="mesh3dai-gesichtspunkte" data-kennung="{{ test.kennung }}" data-nur-deltas>
     <h2>Test: Gesichtspunkte (MediaPipe) — Eingang gegen Ergebnis</h2>
     <p class="hb-hinweis">Kamera frontal auf den Kopf der Figur (orthografisch, ohne Licht). Blau: die 478 Punkte, die MediaPipe auf dem Eingang (Mesh mit Textur) findet. Schwarz: dieselben Punkte am
-        Käfig der Figur — nicht erkannt, sondern an festen Stellen des Netzes (der Käfig hat keine Augäpfel, MediaPipe erkennt auf ihm kein Gesicht). Feld 3: je Punkt ein roter Pfeil vom Eingang
-        zum Ergebnis. Die Tabelle nennt die Maße der Kostüm-Prüfung „Gesicht wie der Eingang“. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).</p>
+        Käfig der Figur — nicht erkannt, sondern an festen Stellen des Netzes (der Käfig hat keine Augäpfel, MediaPipe erkennt auf ihm kein Gesicht). Die dünnen Linien in Feld 1 und 2 verbinden die
+        Merkmale wie MediaPipe selbst (Lippen, Augen, Brauen, Nase, Umriss). Feld 3: je Punkt eine rote Linie zwischen Eingang und Ergebnis. Die Tabelle nennt die Maße der Kostüm-Prüfung
+        „Gesicht wie der Eingang“. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).</p>
     <p class="hb-hinweis ai2d3d-mess-info" data-info>Gesichtspunkte werden geladen …</p>
     <div class="ai2d3d-messzeile">
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Eingang (Mesh) — MediaPipe</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Ergebnis (Figur) — feste Netzstellen</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Abweichung: Pfeil Eingang → Ergebnis</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Abweichung: rote Linie Eingang – Ergebnis</figcaption><canvas data-ansicht="beide"></canvas></figure>
         <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle" data-sort-aus data-sort-key="mesh3dai-gesichtspunkte">
             <thead><tr><th>Nr</th><th>Maß · Gruppe</th><th class="num">Eingang</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
         </table></div>

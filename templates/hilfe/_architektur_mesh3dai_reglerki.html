@@ -109,7 +109,29 @@ Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Ha
       Figur — Haltungsrest, Kleider und Haar von MIA bleiben</td>
       <td>gebaut; 0,6 s je gewürfeltem Job, 0,12 s je verschobener Wolke; Gegenprobe Abstand Wolke → Figur vorher 26,8, nachher 26,3 mm bei 41 mm Verschiebung</td></tr>
     <tr><td><code>Reglernetz</code>, <code>Reglertraining</code></td><td>Stimmen je Messlinie, Aufmerksamkeit je Regler; Leiter: einen Job, 10, 100 nachbilden, dann ungesehen</td>
-      <td>gebaut; Leiter (genähert): 1 Job 0,7 mm, 10 Jobs 1,6 mm, 100 Jobs 10,4 mm — Ziel 0,2 mm noch nicht erreicht</td></tr>
+      <td>gebaut; Leiter (genähert, Messung vom 26.10.2026 mittags): 1 Job 0,7 mm, 10 Jobs 1,6 mm, 100 Jobs 10,4 mm — Ziel 0,2 mm noch nicht erreicht</td></tr>
+    <tr><td><code>Reglerauswendig</code></td><td>Pflichttest vor jedem Training (seit 27.10.2026 abends): ein frisches Netz lernt EINEN Job auswendig. Bei festem Eingang kann ein Netz jede Ausgabe
+      lernen, darum muss der Verlust bis auf seine Untergrenze fallen (Verlust an der Wahrheit); fällt er nicht, ist die Messung im Training kaputt, nicht das Netz
+      (Karpathy, „A Recipe for Training Neural Networks“, 2019). Nicht bestanden = kein Training. Der Test prüft Verlust und Ziel, nicht den Eingang (der ist bei einem Job fest).</td>
+      <td>gebaut; mit der heutigen Messung (A-Pose des Eingangs, nur Körper, Auslese) an Form001: Untergrenze 0,002; 2.000 Schritte Körper 0,071 / Kopf 0,069 mm, Verlust 0,263,
+        noch fallend; 6.000 Schritte 0,038 / 0,007 mm, Verlust 0,093 — bestanden. Die Leiter vom 26.10. (alte Messung, Form180) blieb mit einem Job bei 0,7–1,2 mm.</td></tr>
+    <tr><td><code>Reglernullprobe</code></td><td>Sperre vor dem Training (seit 27.10.2026 abends): Messlinien an der WAHREN Figur echter Trainingswolken müssen nahe 0 liegen (Grenze 4 mm, Setzung) — sonst
+      ist der Eingang kaputt, nicht das Netz. Bis dahin lief die Nullprobe nur an gewürfelten Jobs (2,9 mm); die stellt dieselbe Rechnung wie die Figur und sieht den Rest der echten Wolken nicht.</td>
+      <td>gebaut, <strong>rot</strong>: 64 Trainingswolken 9,5 mm an der Wahrheit, 11,4 mm an der Grundfigur. An 201 Prüfwolken zerlegt: 10,4 mm; wahre Gelenke statt MIAs Skelett 8,7 mm;
+        dazu je Wolke die beste Streckung 5,9 mm; Punkt für Punkt (Wolke gegen dieselbe Stelle der gestellten Wahrheit) Median 11,6 mm, bei MIA-Gelenkfehlern über 27 mm 18,8 mm.
+        Der größte Teil steckt in der Wolke selbst: MIA bringt den Eingang aus seiner Pose mit eigenen Gewichten in die A-Pose, die Figur kommt mit unseren aus der Ruhe.</td></tr>
+    <tr><td><code>Eingangshaltung</code></td><td>Haltungs-KI im Eingang (seit 27.10.2026 nachts): die Genesis-Gelenke in der Pose des EINGANGS aus MIAs Skelett und den Wolkenpunkten
+      rings um jedes Gelenk, gelernt an allen Trainingsproben mit den wahren Gelenken. Damit misst die Regler-KI an der unverformten Wolke statt in MIAs A-Pose.</td>
+      <td>gebaut (Fassung 2: Normalen und ganzer Körper im Eingang, Rumpf und Kopf im Verlust stärker); <code>eh5_rauschen</code> an 191 Proben ungesehener Formen Gelenkfehler
+        Median 7,6 mm (MIAs Anker 38,8 mm). Nullprobe in der Pose des Eingangs (64 Prüfwolken): mit wahren Gelenken 1,8 mm an der Wahrheit gegen 8,0 mm an der Grundfigur (Wahrheit
+        immer näher), mit den Gelenken der KI 5,5 gegen 8,5 mm (72 %) — in MIAs A-Pose waren es 10,4 gegen 12,9 mm. Die Grenze der Sperre (4 mm) ist noch nicht erreicht.</td></tr>
+    <tr><td><code>Reglerdateneingang</code>, <code>Reglerkieingang</code></td><td>Trainingsjobs und Einsatz der Regler-KI in der Pose des Eingangs (<code>--eingang</code>):
+      Wolke <code>eingabe.npz</code> bzw. die Punkte der A-Pose-Wolke zurück im Netz der Datei, Figur nach den Gelenken der Haltungs-KI gestellt; die Trainingsproben bekommen die
+      Gelenke eines Netzes, das ihre Form nicht gesehen hat. Die Seite der Messlinien zeigt den Weg „Pose des Eingangs“ mit dem Netz der Datei.</td>
+      <td>gebaut; Lauf <code>eingang1_eh5</code> (eine Saat, ohne gewürfelte Jobs und Weg Rig): echte Prüfung an den 22 Prüfformen Körper 20,1 mm gegen 22,5 mm
+        (<code>allgemein6</code>, MIAs A-Pose) und 24,7 mm (Formkopf); mit enger seitlicher Grenze im Merkmal (<code>eingang2_seite1</code>) 22,5 mm. Nicht in den KI-Fassungen eingetragen.
+        Anzeige: blau nur, wo am Ende der Linie ein Wolkenpunkt höchstens 6 mm daneben liegt — an edgar liegen die blauen Punkte damit im Median 1,7 mm am Netz, 7,5 % über 5 mm
+        (vorher 18 %).</td></tr>
   </tbody>
 </table>
 
@@ -128,6 +150,8 @@ Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Ha
   <li>Die gewürfelten Jobs (<code>Netzwurf</code>) stehen in der A-Pose je einer echten Trainingswolke und werden wie die echten gemessen; Nullprobe: Hautlinien an der Wahrheit
     3,4 mm (Rauschen 1,5 mm), an der Grundfigur 5,6 mm.</li>
   <li>Offen: Schultern; Farben und MediaPipe gehen nicht in die Messung ein.</li>
+  <li>Verworfen (27.10.2026 abends): die Haltung je Wolke gegen die Wolke einpassen (<code>mesh3dai_poseeinpassung.py</code>, nicht eingebaut) — sie schob die Form in Haltung und
+    Größe: an 23 Prüfwolken Wahrheit 6,2 mm, Grundfigur 6,5 mm, Wahrheit nur in 65 % näher. Statt dessen lernt eine KI die Haltung (<code>Eingangshaltung</code>).</li>
 </ul>
 
 <h3>Training (26.10.2026, Läufe <code>allgemein1</code>, <code>allgemein2_verschoben</code>, <code>allgemein3_apose</code>)</h3>
@@ -192,13 +216,16 @@ Plan: Docu/konzepte/2026-10-26_mesh3dai-ki-neue-regler-konzept.md. Zahlen von Ha
   (<code>grenze_paare_compile</code>, Mittel seiner abgelegten Vorhersagen) 13,2 / 19,8 / 18,1 mm — ein anderes Maß als die Tabelle oben.</p>
 <p><strong>Messlinien ansehen (27.10.2026):</strong> Auf derselben Seite steht unter Start · Ziel · Ergebnis die Reihe „Messlinien: was die Regler-KI misst“. Sie zeigt je Prüfprobe (Wolke 0) die Wolke, wie die KI sie sah, also ohne den Maßstab der Wahrheit, dazu alle 9.101 Linien in drei Feldern:</p>
   <ul>
-    <li><strong>Eingang:</strong> gemessen von der Grundfigur aus. Diese Linien bekommt die KI.</li>
-    <li><strong>Ausgang:</strong> gemessen von der Figur der KI aus. So viel fehlt danach noch.</li>
-    <li><strong>Bezug:</strong> gemessen von der wahren Figur aus.</li>
+    <li><strong>Eingabe:</strong> gemessen von der Grundfigur aus. Diese Linien bekommt die KI.</li>
+    <li><strong>Ausgabe:</strong> gemessen von der Figur der KI aus. So viel fehlt danach noch.</li>
+    <li><strong>Ziel:</strong> gemessen von der wahren Figur aus (nur mit Wahrheit).</li>
   </ul>
 <p>Für die Wolke gibt es zwei Wege: MIA (Figur in der A-Pose des Eingangs) und Rig (die Wolke in der Ruhe einer nachgestellten Rig-Figur, wie im Training mit <code>--rig</code>). Farben wie in der Testzeile von 2d-3d-AI: blau der getroffene Punkt der Wolke
   (Vorlage, also der Eingang), schwarz der Messpunkt an der Figur (Ergebnis), rot die Linie dazwischen; Knöpfe schalten Haut, Stoff und Haar einzeln. Unter jedem Feld stehen je Klasse die Zahl der Linien und der Median |Abstand|.
-  Seit 27.10.2026 legt auch der Schritt „form“ der Kette diese Reihe für einen Test ab (<code>reglerki_linien.npz</code>, nur Wolke 0, ohne Wahrheit), die Testseite zeigt sie über der Zeile „Messpunkte“.
+  Seit 27.10.2026 legt auch der Schritt „form“ der Kette diese Reihe für einen Test ab (<code>reglerki_linien.npz</code>, nur Wolke 0, ohne Wahrheit), die Testseite zeigt sie über der Zeile „Messpunkte“:
+  zwei Felder Eingabe · Ausgabe (ein Test hat kein Ziel) und darunter das Mesh des Tests in der A-Pose mit den Ansichtsarten der Zeilen oben (Textur = Farbe je Punkt, halb durchsichtig). Das Mesh
+  legt die Kette schon ab (<code>vorstufe/&lt;nnnn&gt;/apose_flaeche.npz</code>); <code>Mesh3dailinienflaeche</code> bringt es mit derselben Abbildung wie die Wolke der KI in den Raum der Linien
+  (aus den Punkten von <code>apose.npz</code> und der Wolke bestimmt, Rest bei edgar median 0,14 mm) und fasst es auf 3 mm zusammen.
   Gerechnet wird auf der Karte mit <code>mesh3dai/mesh3dai_reglerki_linien.py --lauf &lt;Lauf&gt;</code>; die Ablage liegt in <code>&lt;Lauf&gt;/linien/</code> und wird vom Server mit <code>Mesh3dailinien</code> gelesen. Das Ergebnis auf dem Weg MIA rechnet das Skript neu und prüft es gegen die gespeicherte Vorhersage des Laufs.</p>
 <p><strong>Was das Training misst, was die Testseite misst:</strong> Die Regler-KI bekommt nur die 9.101 Messlinien (4.000 Körper, 5.101 Kopf) als Eingang; ihr Verlust ist der Abstand der Figur aus den
   vorhergesagten Reglern zur wahren Figur über alle 4.000 Körperpunkte (RMS in mm) und die Form des Kopfes ohne seine Lage. MediaPipe und ViTPose kommen im Training nicht vor. Die Zeilen „Messpunkte“

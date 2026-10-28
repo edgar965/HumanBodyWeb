@@ -11,6 +11,7 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Ai2d3dmesslupe } from './ai2d3dmesslupe.js';
 import { Ai2d3dmessstrich } from './ai2d3dmessstrich.js';
+import { Ai2d3dmesszeiger } from './ai2d3dmesszeiger.js';
 
 export class Ai2d3dmesspunkte {
     static HOEHE = 640;
@@ -37,6 +38,9 @@ export class Ai2d3dmesspunkte {
         this.tabelle = karte.querySelector('tbody');
         this.hervor = null;
         this.nurDeltas = 'nurDeltas' in karte.dataset;      // Feld 3 nur die Linien (26.10.2026, Edgar zu den Gesichtspunkten: „im 3. Foto (ganz rechts) nur die Deltas“)
+        // Felder ohne Punkte, nur der unter dem Zeiger (27.10.2026, `Ai2d3dmesszeiger`; Option der Jobseite 2d-3d-AI, Mesh3D-AI zeigt weiter alle) — alle Felder der Zeile,
+        // dazu Feld 3 der gerechneten Figur (`nachZeichnen`, `Ai2d3dtrainingbild`)
+        this.zeiger = optionen.punkteNurBeiZeiger ? new Ai2d3dmesszeiger(this.flaechen, () => this.f && this._zeichnen()) : null;
         this.tabelle.addEventListener('mouseover', e => this._hervorheben(e.target.closest('tr[data-nummern]')?.dataset.nummern ?? null));
         this.tabelle.addEventListener('mouseleave', () => this._hervorheben(null));
         // `adressen.daten` darf schon die Daten sein (27.10.2026, `Ai2d3dbloecke`: eine Zeile je Bild teilt sich EINEN Abruf)
@@ -173,9 +177,11 @@ export class Ai2d3dmesspunkte {
                 (this.daten.grenzen?.rand_mm ?? Infinity) / this.f.mm_je_px);
             if (!nurRot) Ai2d3dmessstrich.ketten(c, auf, this.f.zeilen, this.f.punkte, ansicht === 'beide' ? ['vorlage', 'ergebnis'] : [ansicht], this.farbe, this.hervor);
             if (this.gerippe && ansicht !== 'beide') this._gerippe(c, auf, ansicht);
+            this.zeiger?.merken(flaeche, auf, this.f, ansicht);
             this._punkte(c, auf, ansicht, status);
             if (ansicht === 'beide' && this.hervorZeile) Ai2d3dmesslupe.zeichnen(c, a, this.foto, this.seite, q, this.hervorZeile, this.f.punkte, this.farbe);
         }
+        this.nachZeichnen?.();      // Feld 3 der gerechneten Figur zeigt denselben Punkt unter dem Zeiger (`Ai2d3dbloecke`)
     }
 
     /** Gerippe des Erkenners (`gerippe`: Paare von Punktnummern, z. B. ViTPose) in der Farbe der Seite — zeigt, woran die Messlinien hängen. */
@@ -216,9 +222,12 @@ export class Ai2d3dmesspunkte {
             if (p.vorlage && p.ergebnis && ansicht === 'beide') {
                 c.strokeStyle = c.fillStyle = F.verbindung;
                 c.lineWidth = 1;
-                (nurDeltas ? Ai2d3dmessstrich.pfeil : Ai2d3dmessstrich.strich)(c, auf(p.vorlage), auf(p.ergebnis));
+                // `nurRot` (Mesh3D-AI, Edgar 27.10.2026: „nur eine rote Linie … zwischen den Features, ohne Pfeile“): auch bei den Deltas ein Strich
+                (nurDeltas && !this.nurRot ? Ai2d3dmessstrich.pfeil : Ai2d3dmessstrich.strich)(c, auf(p.vorlage), auf(p.ergebnis));
             }
             if (nurDeltas) { c.globalAlpha = 1; continue; }
+            // `zeiger`: nur der Punkt unter dem Zeiger und die der berührten Tabellenzeile (Linien bleiben)
+            if (this.zeiger && !hervor && !this.zeiger.zeigt(p.nr)) { c.globalAlpha = 1; continue; }
             c.lineWidth = 1;
             for (const seite of seiten) {
                 if (!p[seite]) continue;

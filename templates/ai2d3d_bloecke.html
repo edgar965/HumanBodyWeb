@@ -3,12 +3,12 @@ Vorne, seitlich, so wie diese Eigenregler für den Kopf aufgebaut sind. Das Glei
 <section class="card" id="ai2d3d-ampel">
     <h2>Abstand zur Vorlage — je Eigenregler</h2>
     <p class="hb-hinweis">Je Eigenregler und Foto die mittlere Abweichung zwischen Foto (Vorlage) und Rendering (Ergebnis) in mm: am Umriss des Reglers längs der Strahlen von seiner Mitte
-        (Grenze 10 mm), bei Mund, Nase, Augen und Brauen von vorn über die ViTPose-Gesichtspunkte (Grenze 20 mm — ihr Umriss liegt innen, die Personenmaske sieht ihn nicht). Grün: innerhalb
+        (Grenze 10 mm), bei Mund, Nase, Augen und Brauen von vorn über die Gesichtspunkte von insightface (Grenze 20 mm — ihr Umriss liegt innen, die Personenmaske sieht ihn nicht). Grün: innerhalb
         der Grenze, rot: darüber, leer: in diesem Foto nicht messbar. Jeder Block darunter zeigt jedes seiner Fotos in einer eigenen Zeile; eine Zelle anklicken springt zu ihr.</p>
     <p class="hb-hinweis ai2d3d-mess-info" data-info>Ampel wird geladen …</p>
     <div class="ai2d3d-ampel" data-ampel></div>
 </section>
-{% include "ai2d3d_block.html" with block="kopf_vorne" titel="Kopf vorne" text="Eigenregler KO-… von vorn: Umrisse von Kopf, Schädel und Ohren (blau Foto, schwarz Rendering), dazu Mund, Nase, Augen und Brauen über die Gesichtspunkte (rote Linie vom blauen zum schwarzen Punkt)." %}
-{% include "ai2d3d_block.html" with block="kopf_seitlich" titel="Kopf seitlich" text="Eigenregler KO-… aus den Profilfotos: Profil, Schädel und Ohr der Kameraseite." %}
-{% include "ai2d3d_block.html" with block="koerper_vorne" titel="Körper vorne und hinten" text="Eigenregler von Hals, Rumpf, Armen, Händen, Beinen und Füßen aus Vorder- und Rückenfoto." %}
-{% include "ai2d3d_block.html" with block="koerper_seitlich" titel="Körper seitlich" text="Eigenregler von Hals, Rumpf, Brust, Hüfte und Gesäß, Armen, Beinen und Füßen aus den Profilfotos." %}
+{% include "ai2d3d_block.html" with block="kopf_vorne" training=1 titel="Kopf vorne" text="Eigenregler KO-… von vorn: Umrisse von Kopf, Schädel und Ohren (blau Foto, schwarz Rendering), dazu Mund, Nase, Augen und Brauen über die Gesichtspunkte (rote Linie vom blauen zum schwarzen Punkt)." %}
+{% include "ai2d3d_block.html" with block="kopf_seitlich" training=1 titel="Kopf seitlich" text="Eigenregler KO-… aus den Profilfotos: Profil, Schädel und Ohr der Kameraseite." %}
+{% include "ai2d3d_block.html" with block="koerper_vorne" training=1 titel="Körper vorne und hinten" text="Eigenregler von Hals, Rumpf, Armen, Händen, Beinen und Füßen aus Vorder- und Rückenfoto." %}
+{% include "ai2d3d_block.html" with block="koerper_seitlich" training=1 titel="Körper seitlich" text="Eigenregler von Hals, Rumpf, Brust, Hüfte und Gesäß, Armen, Beinen und Füßen aus den Profilfotos." %}

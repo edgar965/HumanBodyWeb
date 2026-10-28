@@ -16,6 +16,7 @@ from KoerperKI_Fotos.fotogelenke import Fotogelenke  # noqa: E402
 from KoerperKI_Fotos.gesichtserkenner import Gesichtserkenner  # noqa: E402
 
 from core.dienste.ai2d3dgesichtswahl import Ai2d3dgesichtswahl  # noqa: E402
+from core.dienste.ai2d3dmeshwahl import Ai2d3dmeshwahl  # noqa: E402
 from core.dienste.ai2d3dposewahl import Ai2d3dposewahl  # noqa: E402
 
 
@@ -77,3 +78,30 @@ class DieEinstellungsseite(TestCase):
         self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dgesichtswahl.SCHLUESSEL: 'dlib'}), content_type='application/json')
         ge = Gesichtserkenner(geraet='cpu')
         self.assertEqual((ge.art, ge.n, ge.schema.FAECHER), ('insightface', 106, (0, 1, 3)))
+
+    # 28.10.2026, Edgar: „portiere beide Methoden, mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“ — bis zum Lauf
+
+    def test_portierung_der_einpassung_vorgabe_gewaehlt(self):
+        from Genesis9.meshgenesis import G9meshgenesis
+        html = self._seite()
+        self.assertIn('name="%s"' % Ai2d3dmeshwahl.SCHLUESSEL, html)
+        self.assertIn('<option value="%s" selected>' % Ai2d3dmeshwahl.VORGABE, html)
+        for w, text in Ai2d3dmeshwahl.WERTE:
+            self.assertIn(text, html)
+            self.assertIn(w, G9meshgenesis.VERFAHREN)
+        self.assertEqual(G9meshgenesis.gewaehlt(), Ai2d3dmeshwahl.VORGABE)
+        self.assertEqual(G9meshgenesis.VORGABE, Ai2d3dmeshwahl.VORGABE)
+
+    def test_gespeicherte_portierung_gilt_fuer_seite_und_lauf(self):
+        from Genesis9.meshgenesis import G9meshgenesis
+        andere = next(w for w, _t in Ai2d3dmeshwahl.WERTE if w != Ai2d3dmeshwahl.VORGABE)
+        antwort = self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dmeshwahl.SCHLUESSEL: andere}), content_type='application/json')
+        self.assertEqual(antwort.status_code, 200)
+        self.assertIn('<option value="%s" selected>' % andere, self._seite())
+        self.assertEqual(G9meshgenesis.gewaehlt(), andere)
+
+    def test_unbekannte_portierung_faellt_auf_die_vorgabe(self):
+        from Genesis9.meshgenesis import G9meshgenesis
+        self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dmeshwahl.SCHLUESSEL: 'smplify'}), content_type='application/json')
+        self.assertIn('<option value="%s" selected>' % Ai2d3dmeshwahl.VORGABE, self._seite())
+        self.assertEqual(G9meshgenesis.gewaehlt(), Ai2d3dmeshwahl.VORGABE)

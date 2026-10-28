@@ -1,0 +1,155 @@
+{% comment %}28.10.2026 — von Hilfe → Architektur → 2d-3d-AI hierher umgezogen (Edgar: „Was hast du jetzt genau gemacht? Hast du den Code übernommen von einem GitHub-Projekt?
+Dokumentiere das in Seite http://127.0.0.1:8081/hilfe/architektur/genesis/“). Auftrag: „gehe genau den code von IPNet und smplx transfer_model durch … und übernimm diesen Code“,
+„portiere beide Methoden, mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“, „alles soll auf GPU laufen, alles im RAM, ohne
+zwischendateien“.{% endcomment %}
+<h2 id="mesh">12. Genesis in ein Netz: zwei Portierungen und die Kategorie „Mesh“ (28.10.2026)</h2>
+
+<div class="info-box info-box-blue">
+  <strong>Aufgabe:</strong> Eine Genesis-Figur so formen, dass sie <strong>innerhalb</strong> eines Netzes liegt, mit Mindestabstand (1 mm) — an der Haut dicht, unter Haar und
+  Kleidung nur innen. Ergebnis: die üblichen Genesis-Regler plus die Kategorie <strong>„Mesh“</strong> mit einem Regler je Körperteil (32 Regler in fünf Gruppen), alle auf 1 = genau
+  die eingepasste Figur. Erster Einsatz: die geometrische Figur von 2d-3d-AI (EdgarTrip).<br>
+  <strong>Wie:</strong> Der Code von <strong>IPNet</strong> und von <strong>smplx transfer_model</strong> wurde gelesen und Funktion für Funktion auf Genesis übertragen; welche Portierung
+  rechnet, steht unter <a href="/settings/2d-3d-ai/">Einstellungen → 2d-3d-AI</a>. Alles läuft auf der Grafikkarte im Speicher: keine Ablage der Ableitung, keine Zwischendateien;
+  geschrieben werden nur die Mesh-Regler (das Ergebnis) und der Bericht des Laufs.
+</div>
+
+<h3 id="mesh-quellen">Woher der Code kommt</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Quelle</th><th>Lizenz</th><th>Gelesen und übertragen</th><th>Hier</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://github.com/bharat-b7/IPNet" target="_blank" rel="noopener">IPNet</a> (Bhatnagar u. a., ECCV 2020)</td><td>MPG, nur nicht-kommerzielle Forschung</td>
+      <td><code>smpl_registration/fit_SMPL_IPNet.py</code>: <code>get_loss_weights</code>, <code>forward_step</code> (s2m, m2s, betas, pose_pr, part), <code>backward_step</code>,
+      <code>optimize_pose_only</code>, <code>optimize_pose_shape</code>, Ablauf 3 · 2 · 30 · 30 — <code>fit_SMPLD.py</code>: <code>optimize_offsets</code> (Adam 0,005, 5 × 10)
+      — <code>lib/mesh_distance.py</code>: <code>chamfer_distance</code> — <code>lib/smpl_layer.py</code>: Vorwärtsrechnung SMPL+D</td><td><code>G9meshipnet</code>, <code>G9meshkoerper</code></td></tr>
+    <tr><td><a href="https://github.com/vchoutas/smplx/tree/main/transfer_model" target="_blank" rel="noopener">smplx transfer_model</a> (Choutas)</td><td>MPG-Lizenz von SMPL-X
+      (keine Weitergabe)</td><td><code>transfer_model.py</code>: <code>run_fitting</code> (Kantenstufe nur Haltung, Punktstufe alles), <code>build_edge_closure</code>,
+      <code>build_vertex_closure</code>, <code>summary_closure</code> — <code>losses.py</code>: <code>VertexEdgeLoss</code>, <code>WeightedMSELoss</code> —
+      <code>optimizers/minimize.py</code> — <code>utils/pose_utils.batch_rodrigues</code></td><td><code>G9meshtransfer</code>, <code>G9meshkoerper.rodrigues</code></td></tr>
+    <tr><td><a href="https://github.com/vchoutas/torch-trust-ncg" target="_blank" rel="noopener">torch-trust-ncg</a> (Choutas)</td><td>MIT</td>
+      <td><code>trust_region.py</code>, Weg <code>cg</code> (Steihaug-CG, Nocedal &amp; Wright Alg. 7.2)</td><td><code>G9trustregion</code></td></tr>
+    <tr><td>kaolin v0.1 (NVIDIA)</td><td>Apache 2.0</td><td><code>metrics/mesh.py</code>: <code>point_to_surface</code> (Mittel der quadrierten Abstände), Kanten- und
+      Ebenenabstand, Einteilung innen/außen des Dreiecks, <code>laplacian_loss</code> — <code>rep/TriangleMesh.py</code>, <code>Mesh.py</code>: Nachbarschaft, Laplace</td>
+      <td><code>G9meshflaeche</code></td></tr>
+  </tbody>
+</table>
+<p><strong>Lizenz beachten:</strong> <code>G9meshipnet</code> und <code>G9meshtransfer</code> sind aus Code unter den MPG-Lizenzen von IPNet und SMPL-X abgeleitet. Für eine kommerzielle
+  Nutzung oder Weitergabe gelten deren Bedingungen; kaolin (Apache 2.0) und torch-trust-ncg (MIT) erlauben beides. Das SMPL-X-Modell selbst wird für die Einpassung nicht gebraucht.
+  Die Kopien der Quelltexte liegen nur lesend unter <code>ProjektTemp/_wegwerf/quellen/</code> und werden nie ausgeführt.</p>
+
+<h3 id="mesh-genesis">Was an Genesis anders ist als an SMPL</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th>SMPL / SMPL-X</th><th>Genesis 9 hier (<code>G9meshkoerper</code>)</th><th>Folge</th></tr></thead>
+  <tbody>
+    <tr><td>Form β, linear (<code>shapedirs</code>)</td><td>457 Formregler des Satzes „charaktere“, linear über ihre Ableitung (<code>G9meshformung.ableitung</code>: je Regler einmal wirklich
+      geformt, auf der Karte, im Speicher)</td><td>Grenzen: nach jedem Schritt in Daz' min/max. β = 0 ist bei SMPL die Mittelform, hier der Grund (die Startfigur).</td></tr>
+    <tr><td>Gelenke über den Regressor</td><td>Gelenkköpfe über dieselbe Ableitung (Genesis rechnet sie über Formeln)</td><td>—</td></tr>
+    <tr><td>Haltung 24 (SMPL) bzw. 55 Gelenke (SMPL-X), Haltungskorrekturen (<code>posedirs</code>)</td><td>dieselben Gelenke auf Genesis-Knochen: IPNet 25 (Becken, Hüften,
+      Wirbelsäule 4, Knie, Knöchel, Zehenansatz, Hals 2, Kopf, Schlüsselbeine, Schultern, Ellbogen, Handgelenke), transfer 58 (dazu Kiefer, Augen, je Hand 15 Fingerglieder); keine
+      Gelenkkorrekturen</td><td>Mit allen 104 Genesis-Knochen drehte IPNet die Zehen um 85–104°, um sie in den Schuh der geometrischen Figur zu bringen (EdgarTrip, 28.10.2026) — SMPL
+      hat keine Zehenknochen. Haltungsprior: Genesis hat keinen gelernten — Mittel 0, Präzision 1 (Setzung).</td></tr>
+    <tr><td>Versatz D je Punkt (SMPL+D)</td><td>Versatz je Käfigpunkt, abgelegt als Mesh-Regler je Körperteil</td><td>siehe unten</td></tr>
+  </tbody>
+</table>
+
+<h3 id="mesh-ablauf">Ablauf (<code>G9meshgenesis</code>)</h3>
+<pre class="ag-fluss">0  Startfigur                       ohne die für KI gesperrten Regler (G9reglersperre, Abschnitt „Regler-Sperre“)
+1  Formung auf der Karte prüfen    G9meshformung gegen G9formung (CPU) an der Startfigur — muss 0 mm sein
+2  Ableitung auf der Karte          G9meshableitung: alle 457 Regler in einem Stapel — Daz' Formelgraph als Tensor (KoerperKI_alle.Formgraph),
+                                    Knochenmatrizen Ebene für Ebene mit Drehung, Haut als Matrixprodukt; 1,5 s, keine Datei
+3  Einpassung                       G9meshipnet  oder  G9meshtransfer   (Einstellungen → 2d-3d-AI)
+   (nach jedem Schritt: Regler in Daz' min/max, Haltung in Daz' Gelenkgrenzen — G9meshgrenzen)
+4  Innen-Stufe                      G9meshinnenstufe: ein glattes Versatzfeld (Adam, Laplace), jeder Punkt mindestens 1 mm innen
+5  Rest nach innen                  G9meshinnen.nach_innen: was danach fehlt, Punkt für Punkt
+6  Mesh-Regler                      Morph geschlossen: m = M⁻¹ (Soll + Boden − c) − Morphpunkte  (Haut der Formung ist linear)
+                                    → G9meshregler.ablegen (32 Regler) → auf der Karte neu geformt gegen das Soll</pre>
+<p><strong>Innen oder außen</strong> — drei Fehler, alle gemessen (<code>ProjektTemp/_wegwerf/ai2d3d/diag_innen.py</code>, <code>diag_vorzeichen.py</code>): Der erste Test (Ebene
+  durch die erste Ecke des nächsten Dreiecks) hielt an der sauberen Startfigur selbst 3.842 Punkte für „außen“, die 1 mm innen lagen. Mit dem Pseudo-Normalenvektor am nächsten Punkt
+  (<code>G9meshvorzeichen</code>) blieben die Fälle, in denen sich Flächen durchdringen. Jetzt: die Hülle sind nur Dreiecke, die nicht in einem anderen Teil stecken (Windungszahl
+  0,1 mm vor ihrer Fläche ≤ 0,5; an EdgarTrip 4.578 von 50.312 vergraben), der Abstand gilt zu dieser Hülle, und ob ein Punkt innen liegt, sagt nahe der Hülle die Windungszahl über
+  alle Dreiecke. Die Genesis-Grundfigur besteht den Test bis auf 60 Punkte, an denen sich Zehen und Finger berühren; Nagelpunkte sind ausgenommen (die Nägel sind dünne Platten).</p>
+<p><strong>Eigene Zutaten</strong> (in keiner der Vorlagen, je im Code als solche benannt): das Ziel um den Mindestabstand nach innen versetzt; an Haar, Kleidung und
+  Ungesehenem zieht kein Verlust die Figur hinaus (die Klasse je Zielpunkt kommt aus den Fotosegmenten); innen/außen über Hülle und Windungszahl statt kaolins Strahltest (der Käfig
+  hat Löcher); die Haltung in Daz' Gelenkgrenzen (statt SMPLs gelerntem Prior); Innen-Stufe und Rest „nach innen“; bei transfer_model die Abbildung des Ziels auf die Genesis-Punkte
+  (nächster Flächenpunkt an der Startfigur — die mitgelieferte Matrix gibt es nur zwischen SMPL-Modellen) und die glatte Fortsetzung des Rests unter Haar und Kleidung.</p>
+
+<h3 id="mesh-sperre">Regler-Sperre für die KI (<code>G9reglersperre</code>)</h3>
+<p>Edgar, 28.10.2026: „diese komischen Morphs … flaggen, damit die AI diese nicht bedienen kann, sondern nur im UI bedienbar“. Anlass: die Hände der Startfigur von EdgarTrip waren
+  gefaltet — <code>hb:Shoulders_SizeX</code> (−0,44) faltete allein 612 Handpunkte, <code>hb:Shoulders_Length</code> (−1,0) 498 (Grundfigur 24; <code>diag_haende.py</code>), und die
+  geometrische Figur hat diese Hände geerbt. Gemessen ist jeder Regler der Familien und Eigen-Bereiche einzeln an seinen beiden Grenzen auf der Grundfigur
+  (<code>regler_unheil.py</code>, 728 Regler, 378 s): <em>schädlich</em> = mehr als 10 gefaltete Stellen oder mehr als 10 umgeklappte Dreiecke.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Familie / Bereich</th><th>schädlich</th><th>Beispiele</th></tr></thead>
+  <tbody>
+    <tr><td>HumanBody <code>hb:</code></td><td>50 von 213</td><td><code>hb:Shoulders_Length</code> bei ±1: 124 gefaltet, 1.948 umgeklappt</td></tr>
+    <tr><td>UMA <code>uma:</code></td><td>20 von 63</td><td><code>uma:Maedchen_UMA2</code>: 53 / 725; <code>uma:Body_forearmLength</code>: 0 / 358</td></tr>
+    <tr><td>MakeHuman <code>mh:</code></td><td>16 von 290</td><td>Maße und Körperformen: 0</td></tr>
+    <tr><td>SMPL-X <code>sx:</code></td><td>6 von 33</td><td><code>sx:Mass_handlaenge</code> bei −1: 40 / 327</td></tr>
+    <tr><td>Eigen: Ort, Regionen, Eigen-Regler</td><td>18 von 79</td><td><code>eigen:regler_arm_seitlich_beide</code> bei −1: 41 / 130</td></tr>
+    <tr><td>Modell-Eigen, Kopf-Eigen, Mesh</td><td>alle (figurgebunden)</td><td>die Form EINER Figur, kein allgemeiner Regler</td></tr>
+  </tbody>
+</table>
+<p>Ergebnis: 160 Regler in <code>Genesis9/ablage/reglersperre.json</code>, dazu jeder neue <code>eigen:mesh_*</code>. Im Bedienfeld bleiben sie bedienbar, mit dem Grund im Hinweis
+  („Für KI gesperrt: …“, <code>G9reglerplan</code>). Beachtet von: <code>Reglerraum</code> (Bereich 0 … 0 — der Fingerabdruck ändert sich, ein Netz der Regler-KI, das sie noch
+  kannte, passt nicht mehr), <code>Koerpermodell</code> (nie frei), <code>Kopffotojob.startregler</code> (die Startfigur ohne sie; <code>Koerpernetz</code> nimmt die Gelenkzentren dann
+  aus der Formung derselben Regler) und <code>G9meshgenesis</code>. In der Startfigur von EdgarTrip standen 76 gesperrte Regler. Ob die übrigen Familienregler nützliche Form bringen,
+  die Daz nicht hat, ist nicht gemessen — geometrisch sind sie sauber.</p>
+
+<h3 id="mesh-bausteine">Bausteine (beim Aufruf gegen den Code geprüft)</h3>
+<table class="db-tabelle sortable" id="architekturGenesisMesh" data-sort-key="hilfe-architektur-genesis-mesh">
+  <thead>
+    <tr><th>Klasse</th><th>Datei</th><th class="num">Zeilen</th><th>Aufgabe</th><th>Befund</th></tr>
+  </thead>
+  <tbody>
+    {% for b in mesh_bausteine %}
+    <tr>
+      <td data-sort="{{ b.klasse }}"><code>{{ b.klasse|default:"—" }}</code></td>
+      <td data-sort="{{ b.pfad }}"><code>{{ b.pfad }}</code></td>
+      <td class="num" data-sort="{{ b.zeilen }}">{{ b.zeilen }}</td>
+      <td>{{ b.rolle }}</td>
+      <td data-sort="{{ b.fehlt }}">{% if b.fehlt %}<span class="ag-fehlt">{{ b.fehlt }}</span>{% else %}da{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3 id="mesh-gemessen">Gemessen</h3>
+<p id="mesh-stand">EdgarTrip, geometrische Figur <code>2026.10.27.23.37_form_koerper_vier</code> (25.182 Punkte; Klassen aus den Fotosegmenten: Haut 11.255, Kleidung 8.361, ungesehen
+  4.462, Haar 1.104), 28.10.2026, <code>mesh_auf_genesis.py --vergleich</code> (Bericht <code>laeufe/…/mesh_genesis_vergleich_4.json</code>). „Ziel-Haut → Figur“ = mittlerer Abstand der
+  Hautpunkte des (um 1 mm nach innen versetzten) Ziels zur Fläche der Figur; „außen“ = Punkte der Figur außerhalb des Ziels (Seite der Dreiecksnormale).</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th></th><th>IPNet</th><th>transfer_model</th></tr></thead>
+  <tbody>
+    <tr><td>Null-Probe: Formung auf der Karte gegen <code>G9formung</code></td><td colspan="2">Punkte 0,0000 mm, Gelenke 0,0000 mm</td></tr>
+    <tr><td>Ableitung im Speicher (457 Regler)</td><td colspan="2">bei den Läufen dieser Tabelle 155–183 s (je Regler eine volle Formung, 308 ms, davon 123 ms Daz-Formelgraph in
+      Python; <code>ableitung_zeit.py</code>, <code>ableitung_zeit2.py</code>). Seit 28.10.2026 mittags auf der Karte in einem Stapel (<code>G9meshableitung</code>): <strong>1,5 s</strong>,
+      gegen die volle Formung höchstens 0,0014 mm, Median 0,0002 mm (46 Regler, <code>ableitung_gegenprobe.py</code>)</td></tr>
+    <tr><td>Nur Regler + Haltung: Ziel-Haut → Figur</td><td><strong>4,50 mm</strong> (max 32,0)</td><td>6,19 mm (max 74,3)</td></tr>
+    <tr><td>Nur Regler + Haltung: Abweichung der Figurhaut vom Mindestabstand</td><td>6,21 mm</td><td>5,41 mm</td></tr>
+    <tr><td>Mit Versatz: Ziel-Haut → Figur</td><td><strong>0,64 mm</strong> (max 12,4)</td><td>2,78 mm (max 52,1) — Stellen des Ziels, auf die kein Genesis-Punkt abgebildet
+      wurde, bleiben offen</td></tr>
+    <tr><td>Nach „innen“: Ziel-Haut → Figur</td><td><strong>0,80 mm</strong> (max 12,4)</td><td>2,67 mm (max 52,1)</td></tr>
+    <tr><td>Nach „innen“: geschoben / größter Schub</td><td>10.904 Punkte / 25,8 mm</td><td>15.300 Punkte / 64,3 mm</td></tr>
+    <tr><td>Nach „innen“: noch außen / kleinster Abstand</td><td>216 / −1,43 mm</td><td>164 / −0,97 mm</td></tr>
+    <tr><td>Haltung, größte Drehung</td><td>39,8° (<code>l_toes</code>, an Daz' Grenze 40°)</td><td>17,3° (<code>hip</code>)</td></tr>
+    <tr><td>Verschiebung</td><td>12 / 40 / −15 mm (die Füße in den Schuhen der geometrischen Figur)</td><td>−2 / 1 / −9 mm</td></tr>
+    <tr><td>Einpassung</td><td>83 s</td><td>71 s</td></tr>
+  </tbody>
+</table>
+<p><strong>Vorgabe IPNet</strong> (<code>Ai2d3dmeshwahl.VORGABE</code>): Maß ist, wie dicht die Figur an der Haut des Ziels liegt — IPNet folgt der Fläche, transfer_model den einmal
+  zugeordneten Punkten. <strong>Endlauf</strong> mit der Vorgabe (10:10 Uhr): 32 Mesh-Regler abgelegt, die Formung der Regler plus Mesh-Regler trifft das Soll auf
+  <strong>0,000 mm</strong> (auf der Karte neu geformt aus den abgelegten Morphen); Ziel-Haut → Figur 0,80 mm; außen noch 186 Punkte, bis 3,1 mm — Hände 128, Kopf 44, Becken 7,
+  Fuß 7 (Ursache nicht gemessen). Die Figur steht in Feld 2 der Jobseite (<code>genesis</code> in <code>training_figur.json</code>).
+  Zwei Läufe mit demselben Eingang unterscheiden sich in der letzten Stelle (außen 216 gegen 186): die Suche auf der Karte ist nicht bitgleich wiederholbar.</p>
+<p><strong>Was die Läufe davor gezeigt haben</strong> (je ein Lauf, Berichte <code>mesh_genesis_vergleich_1…3.json</code>): mit allen 104 Genesis-Knochen drehte IPNet die Zehen um
+  bis 104° in den Schuh; mit nur den SMPL-Gelenken noch 107° (<code>l_toes</code>) — erst Daz' Gelenkgrenzen (<code>G9meshgrenzen</code>) halten sie. transfer_model gab NaN; seit der
+  nächste Flächenpunkt mit kaolins Einteilung gerechnet wird und die Nenner der Abstände nach unten begrenzt sind, nicht mehr — woher das NaN kam, ist nicht gemessen.</p>
+
+<h3 id="mesh-offen">Offen</h3>
+<ul>
+  <li><strong>Kleider:</strong> unter Kleidung gilt nur „innen“. Wie weit der Körper darunter liegt, sagen nur die Regler. Für weite Kleidung braucht es eine Schätzung der Stoffdicke
+    (etwa ETCH, 2025) oder eine Wahrheit zum Prüfen — die Sonder-Berechnung der Kleider.</li>
+  <li><strong>Fremde Netze</strong> (Scan, andere Topologie): beide Portierungen arbeiten mit nächsten Flächenpunkten, sind aber noch an keinem fremden Netz gelaufen.</li>
+  <li><strong>„Innen“ trägt viel:</strong> unter Kleidung und an Ungesehenem lag die eingepasste Figur oft außen; der Abschluss schiebt dort bis 26 mm (IPNet) nach innen, Punkt für
+    Punkt längs der Normale. Hände und Kopf behalten Reste außen (186 Punkte, bis 3,1 mm); die Ursache ist nicht gemessen.</li>
+  <li><strong>Haltungsprior:</strong> Genesis hat keinen gelernten; die Daz-Grenzen sind nur ein Kasten. Die Zehen stehen an der Grenze, weil der Schuh sie hineindrückt.</li>
+</ul>

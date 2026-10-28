@@ -19,5 +19,8 @@ Von Hand, Quelle: Docstrings von `mesh3dai/mesh3dai_kostuem_lauf.py`, `…_erken
   <li><strong>Prüfung</strong> (<code>Kostuempruefung</code>): Eingang und Ergebnis nebeneinander, Testfälle siehe <a href="#rechenlauf">Rechnen per Knopf</a> — jeder gemeldete Fehler wurde zuerst ein
     Testfall, am Ziel geeicht und am damaligen Ergebnis rot. Die Testseite zeigt zwei Zeilen davon im Format der 2d-3d-AI (<code>Ai2d3dmesspunkte</code>; blau Eingang, schwarz Ergebnis, Feld 3 nur
     die roten Abweichungen): „Messpunkte“ mit 23 ViTPose-Punkten, 40 Randpunkten und dem ViTPose-Gerippe in vier Ansichten (<code>Kostuemmesspunkte</code>), und seit 27.10.2026 „Gesichtspunkte
-    (MediaPipe)“ (<code>Kostuemgesichtszeile</code>): 478 MediaPipe-Punkte am Eingang gegen dieselben festen Netzstellen der Figur, mit den Maßen der Prüfung „Gesicht wie der Eingang“.</li>
+    (MediaPipe)“ (<code>Kostuemgesichtszeile</code>): 478 MediaPipe-Punkte am Eingang gegen dieselben festen Netzstellen der Figur, mit den Maßen der Prüfung „Gesicht wie der Eingang“.
+    Gegenprobe an edgar (27.10.2026, <code>ProjektTemp/_wegwerf/regler_ki/gesicht_versatz_gegenprobe.py</code>): feste Netzstellen gegen MediaPipe auf derselben Figur 0,2 mm Verschiebung — die
+    Netzstellen messen richtig. Die roten Linien bei edgar (Median 4,1 mm) sind zu 91 % dieselbe Verschiebung: das Gesicht der Figur liegt 4,2 mm höher als im Eingang (MediaPipe auf beiden
+    Bildern: 4,16 mm); nach ihrem Abzug bleibt median 1,2 mm Form.</li>
 </ol>

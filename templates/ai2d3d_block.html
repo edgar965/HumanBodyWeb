@@ -6,7 +6,9 @@
     <div class="ai2d3d-messzeile">
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
         <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
-        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">3</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        {% comment %} Mit Training (27.10.2026, Edgar: „mach die geometrische figur an 3. Stelle (und den vergleich aus der 3. Stelle an 4. Stelle)“): 3 die gerechnete Figur, 4 der Vergleich. {% endcomment %}
+        {% if training %}<figure class="ai2d3d-messansicht ai2d3d-training"><figcaption><span class="ai2d3d-nummer">3</span> Gerechnete Figur — Geometrie, die das Training misst</figcaption><canvas data-training></canvas><p class="hb-hinweis" data-training-info>Training wird geladen …</p></figure>{% endif %}
+        <figure class="ai2d3d-messansicht"><figcaption><span class="ai2d3d-nummer">{% if training %}4{% else %}3{% endif %}</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
         <div class="ai2d3d-messtabelle"><table class="ai2d3d-kopftabelle" data-sort-aus data-sort-key="ai2d3d-block-{{ block }}">
             <thead><tr><th>Nr</th><th>Eigenregler · Messung</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
         </table></div>

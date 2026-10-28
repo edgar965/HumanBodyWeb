@@ -46,6 +46,26 @@ Gespeichert über `Vorgabenformular` in `AppSettings.ui_prefs`, wie Einstellunge
         </tbody>
     </table>
 </div>
+{% comment %}28.10.2026, Edgar: „portiere beide Methoden, mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“ — `Ai2d3dmeshwahl`,
+gelesen von `G9meshgenesis.gewaehlt`.{% endcomment %}
+<div class="settings-section">
+    <h3>Genesis in die geometrische Figur einpassen</h3>
+    <div class="settings-row">
+        <label for="{{ mesh_schluessel }}">Portierung:</label>
+        <select name="{{ mesh_schluessel }}" id="{{ mesh_schluessel }}" data-reihenfolge="fest">
+            {% for q in mesh_verfahren %}<option value="{{ q.wert }}"{% if q.wert == mesh_wert %} selected{% endif %}>{{ q.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ mesh_vorgabe }}. Gilt ab dem nächsten Lauf; ein gerechneter Lauf bleibt, wie er ist.</span>
+    </div>
+    <table class="doku ai2d3d-quellen">
+        <thead><tr><th>Portierung</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for q in mesh_verfahren %}<tr{% if q.wert == mesh_wert %} class="ai2d3d-quelle-gewaehlt"{% endif %}><td><strong>{{ q.text }}</strong></td><td>{{ q.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    <p class="hint">Beide passen die Genesis-Figur innen mit Mindestabstand in die geometrische Figur und legen den Rest als Regler der Kategorie „Mesh“ ab, auf der Grafikkarte im
+        Speicher. Quellen, Lizenzen und Messungen: <a href="/hilfe/architektur/genesis/#mesh">Hilfe → Architektur → Genesis</a>.</p>
+</div>
 {% comment %}25.10.2026, Edgar: „in % die Entlichtung ist, bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“ — `Hautentlichtung`, gelesen von `Hautkieinsatz`.{% endcomment %}
 <div class="settings-section">
     <h3>Haut</h3>

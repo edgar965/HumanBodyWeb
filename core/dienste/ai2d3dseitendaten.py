@@ -31,7 +31,14 @@ class Ai2d3dseitendaten:
             'kamera': cls.KAMERA_EXPORT if job['art'] == 'export' else None,
             # Feld „Körpergröße“ oben auf der Testseite (`Ai2d3dkoerpergroesse`, 24.10.2026); Meter oder None
             'koerpergroesse_m': job.get('koerpergroesse_m'),
+            # 27.10.2026: die gerechnete Figur der Kopf-KI (`<Job>/abnahme/training_figur.json`, `Trainingfigur`) — dann Feld 2 der oberen Zeile in 3D, das Genesis-Modell in Feld 3
+            'trainingfigur': '/api/2d3dai/%s/abnahme/trainingfigur/' % k if cls._trainingfigur(job) else None,
         }
+
+    @staticmethod
+    def _trainingfigur(job):
+        from pathlib import Path
+        return job.get('art') == 'foto' and bool(job.get('ordner')) and (Path(job['ordner']) / 'abnahme' / 'training_figur.json').is_file()
 
     @staticmethod
     def _test(job):

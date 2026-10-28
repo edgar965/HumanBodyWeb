@@ -29,6 +29,7 @@ MESH3DAI = [
     path('api/mesh3dai/test/<str:kennung>/', Mesh3daitestendpunkte.daten, name='mesh3dai_testdaten'),
     path('api/mesh3dai/test/<str:kennung>/netz/', Mesh3daitestendpunkte.netz, name='mesh3dai_testnetz'),
     path('api/mesh3dai/test/<str:kennung>/linien/<int:nr>/', Mesh3daitestendpunkte.linien, name='mesh3dai_testlinien'),
+    path('api/mesh3dai/test/<str:kennung>/linien/flaeche/', Mesh3daitestendpunkte.linienflaeche, name='mesh3dai_testlinienflaeche'),
     path('api/mesh3dai/test/<str:kennung>/geschlecht/', Mesh3daitestendpunkte.geschlecht, name='mesh3dai_testgeschlecht'),
     # Name ändern (19.10.2026, Stift wie bei Mesh-3D, `Mesh3dainame`) — für Tests hier, für Jobs unten.
     path('api/mesh3dai/test/<str:kennung>/name/', Mesh3dainameendpunkte.test, name='mesh3dai_testname'),

@@ -36,6 +36,8 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/abnahme/gesichtspunkte/<slug:art>/', Ai2d3dabnahmeendpunkte.gesichtspunkte, name='ai2d3d_abnahme_gesichtspunkte_art'),
     path('api/2d3dai/<slug:job>/abnahme/block/<slug:name>/', Ai2d3dabnahmeendpunkte.block, name='ai2d3d_abnahme_block'),
     path('api/2d3dai/<slug:job>/abnahme/ampel/', Ai2d3dabnahmeendpunkte.ampel, name='ai2d3d_abnahme_ampel'),
+    path('api/2d3dai/<slug:job>/abnahme/training/', Ai2d3dabnahmeendpunkte.training, name='ai2d3d_abnahme_training'),
+    path('api/2d3dai/<slug:job>/abnahme/trainingfigur/', Ai2d3dabnahmeendpunkte.trainingfigur, name='ai2d3d_abnahme_trainingfigur'),
     path('api/2d3dai/<slug:job>/abnahme/haltungen/', Ai2d3dabnahmeendpunkte.haltungen, name='ai2d3d_abnahme_haltungen'),
     # Die Genesis-Figur aus `<Job>/figur/` (25.10.2026, Edgar: „das ist doch eine andere Pipeline“) — `Ai2d3dfigurendpunkte`; bis dahin über den Mesh3D-AI-Test edgar_foto.
     path('api/2d3dai/<slug:job>/figur/', Ai2d3dfigurendpunkte.daten, name='ai2d3d_figur'),

@@ -76,6 +76,27 @@ class Architekturgenesis:
         ('Genesis9/stueckersatz.py', 'G9stueckersatz', 'Die `.ersetzt.json` eines Stücks: `haut_tiefe_mm`, `loch` (die entfallenden Hautdreiecke), `anatomie`'),
     ]
 
+    #: Mesh → Genesis (28.10.2026, Abschnitt 12 der Seite): die zwei Portierungen und ihre Teile — dieselbe Prüfung.
+    MESH = [
+        ('Genesis9/meshgenesis.py', 'G9meshgenesis', 'Ablauf: Verfahren aus Einstellungen → 2d-3d-AI, Ableitung im Speicher, Einpassen, nach innen, Mesh-Regler'),
+        ('Genesis9/meshipnet.py', 'G9meshipnet', 'IPNet fit_SMPL_IPNet + fit_SMPLD (Adam, Abstand Punkt ↔ Fläche, Chamfer je Teil, Versatz mit Laplace)'),
+        ('Genesis9/meshtransfer.py', 'G9meshtransfer', 'smplx transfer_model (Kantenstufe, Punktstufe, minimize)'),
+        ('Genesis9/trustregion.py', 'G9trustregion', 'torch-trust-ncg, Weg cg (Steihaug)'),
+        ('Genesis9/meshkoerper.py', 'G9meshkoerper', 'Genesis als SMPL-artiges Körpermodell: Regler, Haltung (Rodrigues, Kette), Versatz, Haut'),
+        ('Genesis9/meshflaeche.py', 'G9meshflaeche', 'kaolin point_to_surface, laplacian_loss; IPNet chamfer_distance'),
+        ('Genesis9/meshformung.py', 'G9meshformung', 'G9formung auf der Karte: Mesh-Morph geschlossen, Null-Probe'),
+        ('Genesis9/meshableitung.py', 'G9meshableitung', 'Ableitung aller Regler in einem Stapel auf der Karte: Formgraph, Knochenmatrizen Ebene für Ebene mit Drehung, Haut'),
+        ('Genesis9/meshgrundstellung.py', 'G9meshgrundstellung', 'genauer Weg (CPU) für Regler, deren Drehung aus Faktor- oder seltenen Formeln kommt'),
+        ('Genesis9/meshinnen.py', 'G9meshinnen', 'Ziel nach innen, Hülle ohne vergrabene Dreiecke, Abstand mit Vorzeichen, Zahlen, Rest „nach innen“'),
+        ('Genesis9/meshvorzeichen.py', 'G9meshvorzeichen', 'innen/außen: Pseudo-Normale am nächsten Punkt, Windungszahl, vergrabene Dreiecke'),
+        ('Genesis9/meshinnenstufe.py', 'G9meshinnenstufe', 'Versatzfeld glatt ins Ziel (Adam, Laplace, Strafverfahren)'),
+        ('Genesis9/reglersperre.py', 'G9reglersperre', 'Regler, die eine KI nicht stellen darf — nur im Bedienfeld'),
+        ('Genesis9/meshgrenzen.py', 'G9meshgrenzen', 'Haltung in Daz\' Gelenkgrenzen (Genesis9.dsf), Euler je Reihenfolge'),
+        ('Genesis9/meshziel.py', 'G9meshziel', 'Das Ziel: Punkte, Normalen, Klasse je Punkt, Teile'),
+        ('Genesis9/meshregler.py', 'G9meshregler', 'Kategorie „Mesh“: je Körperteil ein Eigenmorph'),
+        ('HumanBodyWeb/core/dienste/ai2d3dmeshwahl.py', 'Ai2d3dmeshwahl', 'Einstellung: welche Portierung'),
+    ]
+
     @classmethod
     def zeile(cls, pfad, klasse, rolle):
         """Ein Baustein mit Befund: gibt es die Datei, steht die Klasse darin, wie lang ist sie?"""
@@ -101,5 +122,9 @@ class Architekturgenesis:
         return [cls.zeile(*eintrag) for eintrag in cls.FITTING]
 
     @classmethod
+    def mesh(cls):
+        return [cls.zeile(*eintrag) for eintrag in cls.MESH]
+
+    @classmethod
     def kontext(cls):
-        return {'stand': cls.STAND, 'bausteine': cls.bausteine(), 'fitting': cls.fitting()}
+        return {'stand': cls.STAND, 'bausteine': cls.bausteine(), 'fitting': cls.fitting(), 'mesh_bausteine': cls.mesh()}

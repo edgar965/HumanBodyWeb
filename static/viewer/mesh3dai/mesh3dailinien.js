@@ -6,20 +6,33 @@
  * Weg MIA (A-Pose des Eingangs) oder Rig (Ruhe einer Rig-Figur). Daten `…/linien/<nr>/` (Server `Mesh3dailinien`, gerechnet auf der Karte).
  */
 import { Mesh3daiansicht } from './mesh3daiansicht.js';
+import { Mesh3daimaterial } from './mesh3daimaterial.js';
+import { Mesh3dailinienflaeche } from './mesh3dailinienflaeche.js';
 import { Mesh3dailinienzeichner as LZ } from './mesh3dailinienzeichner.js';
 
 const de = (n, s = 0) => Number(n).toLocaleString('de-DE', { minimumFractionDigits: s, maximumFractionDigits: s });
 const WAS = ['start', 'ergebnis', 'ziel'];
 const KLASSEN = { haut: ['Haut', 1], stoff: ['Stoff', 2], haar: ['Haar', 3] };
-const KAMERA = { position: [1.7, 1.5, 3.4], ziel: [0, 0.95, 0], boden: true };
+const KAMERA = { position: [1.2, 1.3, 2.9], ziel: [0, 0.95, 0], boden: true };
 
 export class Mesh3dailinien {
-    /** Seite eines Testjobs: `data-kennung` am Abschnitt, Probe 0. */
+    /** Seite eines Testjobs: `data-kennung` am Abschnitt, Probe 0; darunter das Mesh in der A-Pose (`Mesh3dailinienflaeche`). Nur zwei Felder: ein Test hat keine Wahrheit. */
     static testStarten(wurzel) {
-        const linien = new Mesh3dailinien(wurzel, `/api/mesh3dai/test/${encodeURIComponent(wurzel.dataset.kennung)}`, '', KAMERA);
+        const basis = `/api/mesh3dai/test/${encodeURIComponent(wurzel.dataset.kennung)}`;
+        const linien = new Mesh3dailinien(wurzel, basis, '', KAMERA);
         window.__mesh3dailinien = linien;
         linien.probe(0);
+        linien.flaecheLaden(`${basis}/linien/flaeche/`);
         return linien;
+    }
+
+    async flaecheLaden(adresse) {
+        try {
+            this.flaeche = await Mesh3dailinienflaeche.laden(adresse);
+        } catch (fehler) {
+            this.flaecheFehler = fehler.message;
+        }
+        this._neu();
     }
 
     constructor(wurzel, basis, laufParam, kamera = KAMERA) {
@@ -28,15 +41,35 @@ export class Mesh3dailinien {
         this.laufParam = laufParam;
         this.weg = 'mia';
         this._wegGewaehlt = false;
-        this.zeige = { vorlage: true, ergebnis: true, verbindung: true, wolke: false };
+        this.zeige = { vorlage: true, ergebnis: true, verbindung: true, wolke: false, mesh: true };
         this.klassen = { 1: true, 2: true, 3: true };
+        this.modus = 'textur';
+        this.flaeche = null;
+        this.flaecheFehler = null;
         this.pakete = new Map();
         this.geometrien = new Map();
         this.aktuell = null;
         this.fehler = null;
         this._auftrag = 0;
         const zeichner = { zeichnen: (inhalt, art) => this._zeichnen(inhalt, art) };
-        this.ansichten = WAS.map(was => new Mesh3daiansicht(wurzel.querySelector(`.mesh3dai-leinwand[data-art="linien-${was}"]`), was, zeichner, kamera));
+        // Felder nur, wo die Seite sie hat: die Testseite zeigt kein drittes Feld (keine Wahrheit)
+        this.was = WAS.filter(was => wurzel.querySelector(`.mesh3dai-leinwand[data-art="linien-${was}"]`));
+        this.ansichten = this.was.map(was => new Mesh3daiansicht(wurzel.querySelector(`.mesh3dai-leinwand[data-art="linien-${was}"]`), was, zeichner, kamera));
+        // Ansichtsarten des Meshs wie in den Zeilen oben (`Mesh3daimaterial.MODI`)
+        wurzel.querySelector('.mesh3dai-ll-ansicht')?.append(...Mesh3daimaterial.MODI.map(m => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'schaltknopf';
+            b.dataset.modus = m.schluessel;
+            b.title = m.schluessel === 'textur' ? 'Das Mesh in seinen Farben (Farbe je Punkt), halb durchsichtig.' : m.hinweis;
+            b.innerHTML = `<i class="fas ${m.icon}"></i> `;
+            b.append(m.name);
+            b.addEventListener('click', () => {
+                this.modus = m.schluessel;
+                this._neu();
+            });
+            return b;
+        }));
         for (const b of wurzel.querySelectorAll('[data-weg]')) b.addEventListener('click', () => {
             this.weg = b.dataset.weg;
             this._wegGewaehlt = true;
@@ -72,6 +105,7 @@ export class Mesh3dailinien {
         for (const b of this.wurzel.querySelectorAll('[data-weg]')) an(b, b.dataset.weg === this.weg);
         for (const b of this.wurzel.querySelectorAll('[data-zeige]')) an(b, this.zeige[b.dataset.zeige]);
         for (const b of this.wurzel.querySelectorAll('[data-klasse]')) an(b, this.klassen[b.dataset.klasse]);
+        for (const b of this.wurzel.querySelectorAll('[data-modus]')) an(b, b.dataset.modus === this.modus);
     }
 
     /** Probe nr (Wolke k) der Seite; Linien gibt es nur für k = 0 (die Wolke, die die KI im Training sah). */
@@ -110,10 +144,11 @@ export class Mesh3dailinien {
     _zeichnen(inhalt, was) {
         const p = this.aktuell;
         if (!p) return;
+        if (this.flaeche && this.zeige.mesh) inhalt.add(Mesh3dailinienflaeche.objekt(this.flaeche.geo, this.modus));
         const nr = p.kopf.nr;
         const d = p.daten;
         const s = `${this.weg}_${was}_`;
-        const wolke = this.weg === 'rig' ? 'rig_wolke' : 'wolke';
+        const wolke = { rig: 'rig_wolke', eingang: 'eingang_wolke' }[this.weg] ?? 'wolke';
         if (this.zeige.wolke && d[wolke]) inhalt.add(LZ.objekt('wolke', this._geometrie(`${nr}|${wolke}`, () => LZ.wolke(d[wolke]))));
         if (!d[s + 'ort']) return;
         const k = d[s + 'klasse'];
@@ -135,10 +170,11 @@ export class Mesh3dailinien {
         if (!z) {
             if (was === 'ziel' && p.kopf.wahrheit === false) return 'Kein Bezug: dieser Testjob hat keine Wahrheit.';
             if (was === 'ergebnis' && this.weg === 'rig' && !p.kopf.rig_gelernt) return 'Dieser Lauf hat den Weg Rig nicht gelernt — kein Ergebnis.';
-            return p.kopf.test ? `Die Kette hat diesen Job auf dem Weg ${p.kopf.weg === 'rig' ? 'Rig' : 'MIA'} gerechnet — hier gibt es keine Linien.` : 'keine Linien';
+            const wegname = { rig: 'Rig', eingang: 'Pose des Eingangs' }[p.kopf.weg] ?? 'MIA';
+            return p.kopf.test ? `Die Kette hat diesen Job auf dem Weg ${wegname} gerechnet — hier gibt es keine Linien.` : 'keine Linien';
         }
         const teile = Object.entries(KLASSEN).map(([c, [name]]) => (z[c]?.linien ? `${name}: ${de(z[c].linien)} Linien, Abweichung Median ${de(z[c].median_mm, 1)} mm` : `${name}: —`));
-        let text = `${teile.join(' · ')} · gefunden ${de(100 * z.gefunden, 1)} %, grau: nichts gefunden.`;
+        let text = `${teile.join(' · ')} · auf der Fläche ${de(100 * z.gefunden, 1)} %, grau: die Linie trifft keine Fläche (nichts gefunden, oder der nächste Punkt liegt über 6 mm neben der Linie).`;
         if (was === 'ergebnis') {
             const r = p.kopf.zahlen?.regler_gesetzt?.[this.weg];
             if (r != null) text += ` ${de(r)} Regler gesetzt (|Wert| ≥ 0,01).`;
@@ -149,7 +185,7 @@ export class Mesh3dailinien {
     }
 
     _texte() {
-        for (const was of WAS) this._text(`linien-${was}`, this._feldText(was));
+        for (const was of this.was) this._text(`linien-${was}`, this._feldText(was));
         const k = this.aktuell?.kopf;
         if (!k) {
             this._text('linien-kopf', this.fehler ?? '');
@@ -158,9 +194,19 @@ export class Mesh3dailinien {
         const r = k.rig || {};
         const wege = this.weg === 'rig'
             ? `Weg Rig: die Wolke in der Ruhe einer Rig-Figur${k.test ? ' (aus der Kette)' : ` (nachgestellt: Figur ein Stück zu einer anderen Trainingsfigur gezogen, Knochen verrauscht bis ${de(Math.max(...Object.values(r.sigma_grad || { a: 0 })), 1)}°, Wurzel ${de(r.wurzel_grad ?? 0, 1)}° und ${de(1000 * (r.wurzel_m ?? 0), 1)} mm)`}; die Figuren stehen in Ruhe, auf die Höhe der Wolke gestreckt.${k.rig_gelernt ? '' : ' Dieser Lauf hat den Weg nicht gelernt.'}`
-            : 'Weg MIA: die A-Pose-Wolke, wie die KI sie sah; die Figuren stehen in der A-Pose des Eingangs, auf die Höhe der Wolke gestreckt.';
-        const wer = k.test ? `Testjob ${k.test}` : `Probe ${k.nr}`;
-        this._text('linien-kopf', `${wer}, Regler-KI ${k.lauf}, gerechnet ${k.erzeugt}. ${wege} Je Linie: vom Figurpunkt (schwarz) entlang der Normale bis zu der Fläche der Wolke, die die Messung dort findet (blau, höchstens 10 cm); rot ist die Abweichung.`);
+            : this.weg === 'eingang'
+                ? 'Weg Pose des Eingangs: die Wolke unverformt, wie die KI sie sah; die Figuren stehen in den Gelenken der Haltungs-KI, so groß wie deren Skelett.'
+                : 'Weg MIA: die A-Pose-Wolke, wie die KI sie sah; die Figuren stehen in der A-Pose des Eingangs, auf die Höhe der Wolke gestreckt.';
+        if (k.test) {
+            const f = this.flaeche?.kopf;
+            const mesh = !f ? (this.flaecheFehler ? `Mesh: ${this.flaecheFehler}.` : 'Mesh wird geladen …')
+                : f.pose === 'eingang'
+                    ? `Mesh: das Netz der Datei in seiner eigenen Pose (Kette ${f.kette}), so groß, wie die KI rechnet, auf ${de(f.gitter_mm)} mm zusammengefasst, halb durchsichtig.`
+                    : `Mesh: in der A-Pose aus der Kette (${f.kette}), so groß, wie die KI rechnet (× ${de(f.massstab, 3)}), auf ${de(f.gitter_mm)} mm zusammengefasst, halb durchsichtig.`;
+            this._text('linien-kopf', `Testjob ${k.test}, Regler-KI ${k.lauf}, gerechnet ${k.erzeugt}. ${mesh} Jede Linie geht von einem Punkt der Figur (schwarz) senkrecht zur Figur bis dorthin, wo sie das Mesh trifft (blau); rot ist der Abstand dazwischen. 9.101 Linien, höchstens 10 cm lang.`);
+            return;
+        }
+        this._text('linien-kopf', `Probe ${k.nr}, Regler-KI ${k.lauf}, gerechnet ${k.erzeugt}. ${wege} Je Linie: vom Figurpunkt (schwarz) entlang der Normale bis zu der Fläche der Wolke, die die Messung dort findet (blau, höchstens 10 cm); rot ist die Abweichung.`);
     }
 
     zeigen() {

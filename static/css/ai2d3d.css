@@ -99,6 +99,10 @@
 .ai2d3d-mess-warnung { color: #ffb84d; font-weight: 700; }
 .ai2d3d-messzeile { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(420px, 1.25fr); gap: 12px; align-items: start; }
 @media (max-width: 1400px) { .ai2d3d-messzeile { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ai2d3d-messtabelle { grid-column: 1 / -1; } }
+/* Feld 4 der Kopfzeilen: die Geometrie des Trainings (27.10.2026) — vier Bilder in einer Reihe, die Tabelle darunter */
+.ai2d3d-messzeile:has(.ai2d3d-training) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ai2d3d-messzeile:has(.ai2d3d-training) .ai2d3d-messtabelle { grid-column: 1 / -1; }
+.ai2d3d-training [data-training-info] { margin: 0; align-self: stretch; }
 .ai2d3d-messansicht { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
 .ai2d3d-messansicht figcaption { align-self: stretch; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; }
 .ai2d3d-messansicht canvas { display: block; border-radius: 4px; background: #fff; }

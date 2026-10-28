@@ -3,7 +3,8 @@
 Linien, die du errechnet hast“).
 
 Gerechnet wird nicht hier, sondern auf der Karte (`A:/3DTools/mesh3dai/mesh3dai_reglerki_linien.py`): je Lauf `<Lauf>/linien/<Figur>.npz` (float16) und `linien/linien.json` (Zahlen).
-Je Probe nr und Weg (mia, rig) und Figur (start, ergebnis, ziel): `p<nr>_<weg>_<was>_ort|ende|klasse|abstand`, dazu `p<nr>_wolke`, `p<nr>_etikett`, `p<nr>_rig_wolke`.
+Je Probe nr und Weg (mia, rig, eingang) und Figur (start, ergebnis, ziel): `p<nr>_<weg>_<was>_ort|ende|klasse|abstand`, dazu `p<nr>_wolke`, `p<nr>_etikett`, `p<nr>_rig_wolke`,
+`p<nr>_eingang_wolke` (Weg „eingang“, 27.10.2026 nachts: die Wolke in der Pose des Eingangs, `mesh3dai_reglerki_eingang.Reglerkieingang`).
 
 Paket (little endian): uint32 Länge des Kopfes · Kopf (JSON, auf 4 aufgefüllt) · Blöcke in der Reihenfolge von `kopf['bloecke']` ([Name, Typ, Zahl der Werte]), jeder auf 4 aufgefüllt;
 Typ 'f4' (float32: Punkte, Abstand) oder 'u1' (uint8: Klasse, Etikett + 1 bei `etikett`, damit −1 nicht stört).
@@ -28,7 +29,8 @@ __all__ = ['Mesh3dailinien']
 class Mesh3dailinien:
     ORDNER = 'linien'
     NAME = re.compile(r'^[A-Za-z0-9_\-]+$')
-    WEGE = ('mia', 'rig')
+    WEGE = ('mia', 'rig', 'eingang')
+    WOLKEN = ('wolke', 'rig_wolke', 'eingang_wolke')
     WAS = ('start', 'ergebnis', 'ziel')
     TEILE = (('ort', 'f4'), ('ende', 'f4'), ('klasse', 'u1'), ('abstand', 'f4'))
 
@@ -68,9 +70,9 @@ class Mesh3dailinien:
         bloecke, teile = [], []
         try:
             with np.load(datei) as z:
-                if vor + 'wolke' not in z.files and vor + 'rig_wolke' not in z.files:
+                if not any(vor + w in z.files for w in cls.WOLKEN):
                     return None
-                for name, typ in ((vor + 'wolke', 'f4'), (vor + 'rig_wolke', 'f4'), (vor + 'etikett', 'u1')):
+                for name, typ in [(vor + w, 'f4') for w in cls.WOLKEN] + [(vor + 'etikett', 'u1')]:
                     if name not in z.files:
                         continue
                     werte = z[name].astype(np.int16) + 1 if typ == 'u1' else z[name]

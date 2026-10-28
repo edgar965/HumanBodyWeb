@@ -8,13 +8,20 @@
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Ai2d3dmesspunkte } from './ai2d3dmesspunkte.js';
+import { Ai2d3dtrainingbild } from './ai2d3dtrainingbild.js';
 
 export class Ai2d3dbloecke {
+    /** Punkte in Feld 1 und 2 nur unter dem Zeiger (27.10.2026, `Ai2d3dmesszeiger`). */
+    static OPTIONEN = { punkteNurBeiZeiger: true };
+
     constructor(daten) {
         this.daten = daten;
         this.seite = nr => `/api/2d3dai/${daten.id}/abnahme/seite/${nr}/`;
+        // Feld 4 der Kopfzeilen (27.10.2026): die Geometrie des Trainings, ein Abruf für alle Zeilen
+        this.training = Serverabruf.json(`/api/2d3dai/${daten.id}/abnahme/training/`).catch(fehler => ({ fehler: fehler.message }));
         this.bloecke = new Map([...document.querySelectorAll('[data-block]')].map(karte => {
-            const m = new Ai2d3dmesspunkte(karte, daten.id, daten.fotos, { daten: `/api/2d3dai/${daten.id}/abnahme/block/${karte.dataset.block}/`, seite: this.seite });
+            const m = new Ai2d3dmesspunkte(karte, daten.id, daten.fotos, { daten: `/api/2d3dai/${daten.id}/abnahme/block/${karte.dataset.block}/`, seite: this.seite },
+                                           Ai2d3dbloecke.OPTIONEN);
             const b = { karte, zeilen: new Map() };
             m.bereit.then(() => this._zeilen(b, m));
             return [karte.dataset.block, b];
@@ -39,10 +46,18 @@ export class Ai2d3dbloecke {
                 kopie.querySelector('tbody').replaceChildren();
                 element.append(m.info.cloneNode(false), kopie);
                 b.karte.append(element);
-                zeile = new Ai2d3dmesspunkte(element, this.daten.id, this.daten.fotos, { daten: m.daten, seite: this.seite });
+                zeile = new Ai2d3dmesspunkte(element, this.daten.id, this.daten.fotos, { daten: m.daten, seite: this.seite }, Ai2d3dbloecke.OPTIONEN);
             }
             b.zeilen.set(nr, element);
-            zeile.zeigen(nr - 1);
+            const gezeigt = zeile.zeigen(nr - 1);
+            if (element.querySelector('canvas[data-training]')) {
+                // Körperzeilen (27.10.2026): der Umriss des ganzen Körpers statt der Kopfregler; Feld 3 nimmt Foto und Ausschnitt der Zeile, darum erst nach `zeigen`
+                const koerper = b.karte.dataset.block.startsWith('koerper');
+                Promise.all([this.training, gezeigt]).then(([t]) => {
+                    zeile.nachZeichnen = () => Ai2d3dtrainingbild.zeichnen(element, nr, t, zeile, koerper);
+                    zeile.nachZeichnen();
+                });
+            }
         });
     }
 

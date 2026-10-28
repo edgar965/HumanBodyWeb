@@ -1,0 +1,109 @@
+{% comment %}28.10.2026, Edgar: „Gehe das Genesis Modell einmal konkret und genau durch und dokumentiere möglichst viel, was da drin steckt, welche Regler es gibt, wie man die anpassen
+kann, welches RIG es ist, wie es sich vergleicht zu dem Human Body oder anderen.“ Zahlen gemessen mit `ProjektTemp/_wegwerf/genesis_inventur.py` (Ausgabe `genesis_inventur.txt`,
+28.10.2026), sonst mit Quelle.{% endcomment %}
+<h2 id="modell">11. Das Genesis-9-Modell: was drinsteckt (Stand 28.10.2026)</h2>
+<p>Gemessen am Code und an den Daz-Dateien dieses Rechners mit <code>ProjektTemp/_wegwerf/genesis_inventur.py</code>. Was nicht gemessen ist, steht mit Quelle da.</p>
+
+<h3 id="modell-netz">Netz</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Stufe</th><th>Punkte</th><th>Flächen</th><th>Wozu</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Käfig</strong> (Daz-Netz, <code>G9basisnetz</code>)</td><td>25.182</td><td>25.156 Vielecke</td><td>Alle Rechnungen: Morphe, Haut, Einpassen, Mesh-Regler.
+      Grundfigur 170,1 cm hoch. Sieben Materialgruppen: Body, Head, Arms, Legs, Mouth Cavity, Fingernails, Toenails.</td></tr>
+    <tr><td>Stufe 0 im Browser</td><td>27.087</td><td>50.312 Dreiecke</td><td>der Käfig, an den UV-Nähten geteilt (<code>G9netzteilung</code>, <code>ursprung</code> zeigt auf den
+      Käfigpunkt)</td></tr>
+    <tr><td>Stufe 1</td><td>104.480</td><td>201.248 Dreiecke</td><td>Catmull-Clark (<code>G9unterteilung</code>), Hautgewichte durch dieselbe Matrix</td></tr>
+    <tr><td>Stufe 2</td><td>410.202</td><td>804.992 Dreiecke</td><td>Daz' Render-Stufe; höher rechnet diese Seite nicht (<code>G9netzstufe.browser</code>, Strg+Alt+H)</td></tr>
+  </tbody>
+</table>
+<p>Alle UV-Koordinaten des Standardsatzes liegen in [0, 1] (gemessen an allen drei Stufen).</p>
+{% comment %}28.10.2026, Edgar: „Was genau bedeutet das, kriege ich über 400.000 Punkte heraus??“ und „einige Modelle sind ja HD, z.B. damira, nutzen die auch diese Punkte?“
+Gemessen mit `ProjektTemp/_wegwerf/genesis_hd_probe.py damira` und `ProjektTemp/_wegwerf/dhdm_stufen.py` (beide lesen nur).{% endcomment %}
+<p><strong>Was die Stufen bedeuten:</strong> Stufe 1 und 2 sind Catmull-Clark-Unterteilungen des Käfigs. Jeder neue Punkt ist eine feste, gewichtete Mischung von
+  Käfigpunkten (<code>G9netzstufe.matrix</code>): Die Fläche wird runder und verliert die Facetten, aber die Form hat weiter nur 25.182 × 3 Freiheitsgrade. Kein Punkt der Stufe 2
+  bewegt sich unabhängig vom Käfig. Ein Teil der Browserpunkte sind Nahtkopien (gleiche Lage, andere UV); wie viele, ist nicht gemessen.</p>
+<p><strong>Die 410.202 Punkte herausholen:</strong> Strg+Alt+H drücken, warten, bis die Figur neu gebaut ist, dann „Modell exportieren“. Der Export schreibt das Netz, das gerade in der
+  Szene steht (<code>charakter/modellexport.js</code>, wartet auf <code>Figuraufbaustand</code>).</p>
+<p><strong>Die Ausnahme sind HD-Morphe</strong> (<code>G9hdmorph</code>, <code>G9hdmorphe</code>): Sie legen echte Feinheiten auf Stufe 1 und 2, die der Käfig nicht tragen kann.
+  Die Morphablage führt heute 101 HD-Kanäle. Beispiel <strong>NW Damira 8K</strong>: Der Charakter stellt fünf davon (Damira Body 1,0, Damira Head 1,0, Damira Abs I 0,68,
+  Navel HD3 1,0, MouthRealism HD3 1,0). Sie gehen in die Browserpunkte (<code>G9koerpernetz._fein</code>) und damit auch in den Export:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Damira</th><th>bewegte Punkte</th><th>Median</th><th>p99</th><th>größter Weg</th></tr></thead>
+  <tbody>
+    <tr><td>Stufe 1 (Ansicht)</td><td>104.176 von 104.480</td><td>0,09 mm</td><td>0,42 mm</td><td>1,6 mm</td></tr>
+    <tr><td>Stufe 2 (Strg+Alt+H)</td><td>395.933 von 410.202</td><td>0,08 mm</td><td>0,52 mm</td><td>4,0 mm</td></tr>
+  </tbody>
+</table>
+<p>Das sind Feinheiten unter einem Millimeter (Hautrelief, Bauchmuskeln, Nabel, Mund); die Grobform kommt aus dem Käfig. <strong>Was nicht ankommt:</strong></p>
+<ul>
+  <li><strong>Stufe 3 und höher:</strong> <code>NW Damira Body.dhdm</code> trägt auf Stufe 3 noch 2.010.153 Einträge, <code>NW Damira Head.dhdm</code> 584.283. Gelesen wird höchstens bis
+    Stufe 2 (<code>G9hdmorph.lesen(pfad, min(stufe, 2))</code>), der Rest bleibt liegen. Ob Daz' Render-Stufe von Hand auf 3 gestellt werden kann, ist nicht geprüft.</li>
+  <li><strong>Die HD-Anteile der Gelenkkorrekturen:</strong> Damira hat 30 HD-Korrekturen (<code>NWDamira_body_cbs_*</code> für Knie, Arme, Beine, dazu das Lächeln). In der Bewegung
+    rechnet der Browser Gelenkkorrekturen als Feld aus den Käfigverschiebungen (<code>G9reglerfelder</code>: <code>W · Käfigdelta</code>); ihr HD-Anteil fehlt. Aus dem Code gelesen,
+    nicht gemessen.</li>
+  <li><strong>Die KIs</strong> (Regler-KI, Mesh3D-AI) rechnen auf dem Käfig ohne HD.</li>
+</ul>
+
+<h3 id="modell-rig">Skelett (Rig)</h3>
+<p><strong>138 Knochen</strong> in einer Kette ab der Wurzel <code>hip</code>, größte Tiefe 12 (bis <code>l_index3</code>). Namen klein mit <code>l_</code>/<code>r_</code>. Es ist das
+  eigene Rig von Genesis 9 aus <code>Genesis9.dsf</code> (<code>G9skelett</code>), kein Rigify und kein Mixamo:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Teil</th><th>Knochen</th><th>Teil</th><th>Knochen</th></tr></thead>
+  <tbody>
+    <tr><td>Becken</td><td>2 (hip, pelvis)</td><td>Rumpf</td><td>6 (spine1–4, Brustmuskeln)</td></tr>
+    <tr><td>Hals</td><td>2 (neck1, neck2)</td><td>Kopf und Gesicht</td><td>36 + 2 Augen</td></tr>
+    <tr><td>je Schulter / Oberarm / Unterarm</td><td>1 / 3 / 3</td><td>je Hand</td><td>21 (Daumen 3, je Finger Mittelhand + 3, Anker)</td></tr>
+    <tr><td>je Oberschenkel / Unterschenkel</td><td>3 / 1</td><td>je Fuß</td><td>13 (Zehen je 2 Glieder, Mittelfuß)</td></tr>
+  </tbody>
+</table>
+<p><strong>Verdrillung:</strong> 12 Twist-Knochen (je Oberarm, Unterarm und Oberschenkel zwei). <strong>Gesichtsrig:</strong> unter <code>head</code> liegen Kiefer, Zähne, Lippen,
+  Wangen, Brauen, Lider, Nasenflügel und Ohren als eigene Knochen (<code>upperfacerig</code>, <code>lowerfacerig</code>) — die Mimik ist Knochen plus Morph. <strong>Haut:</strong>
+  138 Knochen tragen Gewichte; hier gelten je Punkt die vier größten, auf Summe 1 (<code>G9haut</code>). Punkte mit 1 / 2 / 3 / 4 wirksamen Gewichten: 5.516 / 9.503 / 5.846 / 4.317.</p>
+
+<h3 id="modell-regler">Regler und wie sie wirken</h3>
+<p>Daz' Regler sind <strong>Kanäle mit Formeln</strong>: Ein Steuerregler (etwa ein Charakter) hat selbst keine Verschiebungen, er stellt über Formeln andere Kanäle, die wieder Morphe
+  und Knochenkanäle (Skalierung, Verschiebung, Gelenkpunkt) stellen. Der Reglerplan dieses Rechners hat <strong>947 Daz-Kanäle</strong> (585 Form, 362 Pose; 615 davon zweiseitig), die
+  Morphablage 2.108 Kanäle. Die Formung einer Stellung (<code>G9formung</code>) rechnet:</p>
+<pre class="ag-fluss">Regler → Alter aufgelöst (G9alterung) → Daz-Formelgraph (G9formeln: Morphwerte, Knochenkanäle)
+       → Basis + Σ Wert · Delta (Daz-Morphe, Eigenmorphe, Familien hb:/mh:/sx:/uma:)  + Anfasser der Eigenregler (G9eigenform)
+       → Knochenmatrizen (G9knochenmatrizen) über die Haut:  Punkt = Σ w (L · p + t)
+       → Füße auf y = 0 (Boden), Gelenkköpfe über G9skelett</pre>
+<p><strong>Im Bedienfeld</strong> stehen 2.495 Regler in 54 Bereichen, darunter:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Herkunft</th><th>Bereiche (Regler)</th></tr></thead>
+  <tbody>
+    <tr><td>Daz, Form</td><td>Figur 15 · Körper 45 · Kopf 387 · Hals 21 · Brust 64 · Rücken 7 · Taille und Bauch 23 · Hüfte und Po 17 · Arme 22 · Hände 44 · Beine 24 · Füße 32 ·
+      Alter 4</td></tr>
+    <tr><td>Daz, Pose und Anhänge</td><td>Mimik 246 · Zähne 69 · Augen (Iris, Pupille) 4 · Mund und Augen (eigene Form) 5; verborgen: Base Correctives 119, Body 122, BaseAnime9 163,
+      People 85, FACS 60 u. a.</td></tr>
+    <tr><td>Familien (portiert, <code>G9morphfamilie</code>)</td><td><strong>hb:</strong> HumanBody 96 Körper · 111 Gesicht · 6 Fantasie — <strong>mh:</strong> MakeHuman 13 Makro ·
+      89 Körper · 146 Gesicht · 20 Maße · 22 Körperformen — <strong>sx:</strong> SMPL-X 23 Maße (cm) · 10 Formrichtungen — <strong>uma:</strong> UMA 3 Kind · 60 DNA —
+      <strong>g1:</strong> Alter</td></tr>
+    <tr><td>Eigen</td><td>Eigen 57 (17 Umriss, 1 Profil, 39 Streifen; <code>G9eigenregler</code>) · Modell-Eigen 15 · Kopf-Eigen 3 · Nachformung (Ort) 10 · Regionen 12 ·
+      <strong>Mesh 32</strong> (<a href="#mesh">Abschnitt 12</a>)</td></tr>
+  </tbody>
+</table>
+<p><strong>Charaktere:</strong> 128 Einträge (<code>G9charaktere</code>), von „Genesis 9 (neutral)“ über die Daz-Figuren (Amala, Kat, P3D Ursula …) bis zu den MB-Lab-Körpertypen.
+  <strong>Anhänge</strong>, die der Form folgen (<code>G9folger</code>): Augen, Mund, Wimpern, Tränenfilm, Brauen.</p>
+<p><strong>Anpassen</strong> lässt sich die Figur auf fünf Wegen: Regler im Bedienfeld (Werte in Daz' Grenzen, ein gestellter Wert bis ×2 darüber, <code>G9reglergrenzen</code>);
+  ein Charakter als Ausgangspunkt; <code>G9formanpassung</code> (Regler aus einem Zielnetz über <code>G9reglerableitung</code>); die Eigenregler (Anfasser je Figur); und die Mesh-Regler
+  (die Figur in ein Netz, Abschnitt 12).</p>
+
+<h3 id="modell-vergleich">Vergleich mit den anderen Körpermodellen im Projekt</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th></th><th>Genesis 9</th><th>HumanBody</th><th>MakeHuman</th><th>SMPL-X</th><th>UMA</th></tr></thead>
+  <tbody>
+    <tr><td>Netz</td><td>25.182 Punkte (Käfig), Unterteilung bis 410.202</td><td>MB-Lab-Netz, 18.210 Punkte</td><td>hm08, 19.158 Punkte (MakeHuman 1.3.0)</td>
+      <td>10.475 Punkte</td><td>je Rasse eigenes Netz; ein Roomguest-Export mit 10 Kleidungsstücken: 44.440 Punkte</td></tr>
+    <tr><td>Skelett</td><td>138 Knochen, eigenes Rig mit Gesichtsknochen und Twist</td><td>Rigify, 176 DEF-Knochen im GLB-Export</td><td>nicht gemessen</td>
+      <td>54 Gelenke (Hals, Kiefer, Augen, Finger)</td><td>Mixamo-Kette plus <code>*Adjust</code>-Knochen; derselbe Export 229 Knochen</td></tr>
+    <tr><td>Form</td><td>Morphe mit Formelgraph und Knochenskalierung, Charaktere als Steuerregler</td><td>204 zweiseitige Regler (MB-Lab <code>MinMaxMorph</code>)</td>
+      <td>269 Regler und 22 Körperformen, 1.280 Ziele; Makroregler (Geschlecht, Alter, Gewicht …)</td><td>Formraum aus Scans, bis 300 Richtungen β (PCA), dazu Haltungskorrekturen</td>
+      <td>DNA-Regler skalieren, verschieben und drehen Knochen — keine Verschiebungen</td></tr>
+    <tr><td>Hier</td><td>die Figur, auf die alles gebaut wird</td><td>als Familie <code>hb:</code> auf Genesis</td><td>als <code>mh:</code></td><td>als <code>sx:</code> (Lizenz nur
+      nicht-kommerziell)</td><td>als <code>uma:</code> (MIT)</td></tr>
+  </tbody>
+</table>
+<p class="hint">Quellen: Genesis gemessen (oben); HumanBody, MakeHuman, SMPL-X, UMA aus den Docstrings der Familien (<code>G9hbmorphe</code>, <code>G9mhmorphe</code>,
+  <code>G9sxmorphe</code>, <code>G9umamorphe</code>), SMPL-X-Gelenke aus Pavlakos u. a. 2019 („Expressive Body Capture“), HumanBody-Rig und UMA-Export aus den Messungen der
+  Roomguest-Exporte (05./06.09.2026). Das Skelett von MakeHuman ist nicht gemessen.</p>

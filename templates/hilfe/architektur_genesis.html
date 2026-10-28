@@ -7,11 +7,13 @@ Genesis"). Inhalt: das Konzept „Blender-Modell als Genesis-Figur importieren"
 kommt aus `core/dienste/architekturgenesis.py` und wird beim Aufruf gegen den Code geprüft.
 Teile: `_architektur_genesis_datei.html` (Datei, Ist-Zustand), `_architektur_genesis_ablauf.html` (Entscheidung,
 Ablauf, neue Bausteine), `_architektur_genesis_pruefen.html` (Messung, Grenzen, Entscheidungen, Nebenbefund),
-`_architektur_genesis_fitting.html` (11.10.2026: Fitting der Kleider und was die Scham daran ändert; Tabelle aus `Architekturgenesis.FITTING`).
+`_architektur_genesis_fitting.html` (11.10.2026: Fitting der Kleider und was die Scham daran ändert; Tabelle aus `Architekturgenesis.FITTING`),
+`_architektur_genesis_modell.html` (28.10.2026: das Genesis-9-Modell, Regler, Rig, Vergleich), `_architektur_genesis_mesh.html` (28.10.2026: Mesh → Genesis, die Portierungen von
+IPNet und smplx transfer_model; Tabelle aus `Architekturgenesis.MESH`). Inhaltsverzeichnis oben (Edgar, 28.10.2026: „mach auch ein Inhaltsverzeichnis am Anfang dieser Seite“).
 {% endcomment %}
 
 {% block title %}Architektur Genesis{% endblock %}
-{% block topbar_title %}Architektur — Genesis: Blender-Modell als Genesis-Figur{% endblock %}
+{% block topbar_title %}Architektur — Genesis: Import, Modell, Mesh → Genesis{% endblock %}
 
 {% block extra_head %}{{ block.super }}
 <link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
@@ -21,7 +23,45 @@ Ablauf, neue Bausteine), `_architektur_genesis_pruefen.html` (Messung, Grenzen, 
 {% block doku_inhalt %}
 <div class="doku-seite ag-breit">
 
-  <h1>Blender-Modell importieren: „cute girl" als Genesis-9-Figur mit eigenen Stücken</h1>
+  <h1>Genesis 9: Blender-Import, das Modell, und Genesis in ein Netz</h1>
+
+  <nav class="ag-inhalt" aria-label="Inhalt">
+    <strong>Inhalt</strong>
+    <ol>
+      <li><a href="#import">Blender-Modell importieren („cute girl“)</a>
+        <ol>
+          <li><a href="#datei">Was in der Datei steckt</a></li>
+          <li><a href="#heute">Was das Projekt heute kann</a></li>
+          <li><a href="#entscheidung">Entscheidung: Genesis-Figur, kein Fremdrig</a></li>
+          <li><a href="#ablauf">Der Ablauf</a></li>
+          <li><a href="#bausteine">Neue Bausteine</a></li>
+          <li><a href="#fertig">Woran „fertig“ gemessen wird</a></li>
+          <li><a href="#grenzen">Grenzen</a></li>
+          <li><a href="#entscheidungen">Entscheidungen (08.10.2026)</a></li>
+          <li><a href="#nebenbefund">Nebenbefund: die eigene Bibliothek an zwei Orten</a></li>
+          <li><a href="#fitting">Fitting der Kleider und die Scham</a></li>
+        </ol></li>
+      <li><a href="#modell">Das Genesis-9-Modell: was drinsteckt</a>
+        <ol>
+          <li><a href="#modell-netz">Netz</a></li>
+          <li><a href="#modell-rig">Skelett (Rig)</a></li>
+          <li><a href="#modell-regler">Regler und wie sie wirken</a></li>
+          <li><a href="#modell-vergleich">Vergleich mit HumanBody, MakeHuman, SMPL-X, UMA</a></li>
+        </ol></li>
+      <li><a href="#mesh">Genesis in ein Netz: zwei Portierungen und die Kategorie „Mesh“</a>
+        <ol>
+          <li><a href="#mesh-quellen">Woher der Code kommt (IPNet, smplx transfer_model, kaolin, torch-trust-ncg)</a></li>
+          <li><a href="#mesh-genesis">Was an Genesis anders ist als an SMPL</a></li>
+          <li><a href="#mesh-ablauf">Ablauf</a></li>
+          <li><a href="#mesh-sperre">Regler-Sperre für die KI</a></li>
+          <li><a href="#mesh-bausteine">Bausteine</a></li>
+          <li><a href="#mesh-gemessen">Gemessen</a></li>
+          <li><a href="#mesh-offen">Offen</a></li>
+        </ol></li>
+    </ol>
+  </nav>
+
+  <h2 id="import">Blender-Modell importieren: „cute girl" als Genesis-9-Figur mit eigenen Stücken</h2>
 
   <div class="info-box info-box-blue">
     <strong>Umsetzung (Stand {{ stand }}, Lauf 2026.10.08.11.28.06):</strong> Der Import steht im UI und ist
@@ -93,6 +133,8 @@ Ablauf, neue Bausteine), `_architektur_genesis_pruefen.html` (Messung, Grenzen, 
   {% include "hilfe/_architektur_genesis_ablauf.html" %}
   {% include "hilfe/_architektur_genesis_pruefen.html" %}
   {% include "hilfe/_architektur_genesis_fitting.html" %}
+  {% include "hilfe/_architektur_genesis_modell.html" %}
+  {% include "hilfe/_architektur_genesis_mesh.html" %}
 
 </div>
 {% endblock %}

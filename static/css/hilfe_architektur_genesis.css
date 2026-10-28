@@ -54,3 +54,22 @@
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 16px;
 }
+
+/* Genesis: Inhaltsverzeichnis am Seitenanfang (28.10.2026) */
+.ag-breit .ag-inhalt {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 8px 0 18px;
+    font-size: 0.9rem;
+}
+
+.ag-breit .ag-inhalt ol {
+    margin: 4px 0 4px 20px;
+    padding: 0;
+}
+
+.ag-breit .ag-inhalt ol ol {
+    columns: 2 320px;
+    font-size: 0.85rem;
+}

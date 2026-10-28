@@ -24,15 +24,15 @@ const MATERIAL = {
 };
 
 export class Mesh3dailinienzeichner {
-    /** Paket → {kopf, daten: {Name: Float32Array | Uint8Array}} (Sichten auf den Puffer, jeder Block beginnt auf einem Vielfachen von 4). */
+    /** Paket → {kopf, daten: {Name: Float32Array | Uint32Array | Uint8Array}} (Sichten auf den Puffer, jeder Block beginnt auf einem Vielfachen von 4; 'u4' = Dreiecke des Meshs). */
     static paket(puffer) {
         const laenge = new DataView(puffer).getUint32(0, true);
         const kopf = JSON.parse(new TextDecoder().decode(new Uint8Array(puffer, 4, laenge)));
         const daten = {};
         let ab = 4 + laenge;
         for (const [name, typ, n] of kopf.bloecke) {
-            daten[name] = typ === 'f4' ? new Float32Array(puffer, ab, n) : new Uint8Array(puffer, ab, n);
-            ab += typ === 'f4' ? n * 4 : Math.ceil(n / 4) * 4;
+            daten[name] = typ === 'f4' ? new Float32Array(puffer, ab, n) : typ === 'u4' ? new Uint32Array(puffer, ab, n) : new Uint8Array(puffer, ab, n);
+            ab += typ === 'u1' ? Math.ceil(n / 4) * 4 : n * 4;
         }
         return { kopf, daten };
     }

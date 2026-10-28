@@ -1,0 +1,64 @@
+{% comment %}Konzept (27.10.2026, Edgar: „Hast du ein Konzept, wie wir auch die anderen zwei Bilder einbinden können? Für eine geometrische Figur braucht man ja eigentlich nur Vorderansicht und
+eine Seitenansicht. … Eventuell kannst du dir überlegen, dass du eine der Seitenansichten als Masteransicht nimmst für die geometrische Figur. Die zweite Seiten-Ansicht nur für fehlende Punkte
+und für die Textur. Die Hinteransicht ebenfalls nur für die Textur, und die fehlenden Elemente? Mach ein Konzept dazu und schreibe das auf die Hilfeseite von 2d-3d-ai“). Statisch, nichts davon gebaut.{% endcomment %}
+<h2 id="vier-ansichten">Geometrische Figur aus vier Fotos: welche Ansicht wofür (Konzept, 27.10.2026)</h2>
+
+<div class="info-box info-box-blue">
+  <strong>Stand heute:</strong> Die gerechnete Figur (<code>ProjektTemp/_wegwerf/ai2d3d/form_direkt.py</code>, Jobseite Feld 2 oben und Feld 3 der Kopfzeilen) entsteht nur aus <strong>Vorderansicht
+  und einer Seitenansicht</strong> (EdgarTrip: 1.jpg und 4.jpg). Unbekannt ist die Verschiebung jedes Punkts der Figur. Gemessen werden der Umriss beidseitig (Figur → Foto und Foto → Figur),
+  die Gesichtspunkte und ViTPose; die Glättung ist ein Laplace-Term. Rückansicht (2.jpg) und zweite Seite (3.jpg) gehen bisher in nichts ein; die Seite zeigt sie mit „nicht im Training“.<br>
+  <strong>Alles Folgende ist ein Vorschlag</strong>, nichts davon ist gebaut oder gemessen.
+</div>
+
+<h3>Was zwei Ansichten bestimmen und was nicht</h3>
+<p>Vorderansicht und Seitenansicht legen je Höhe die <strong>Breite</strong> und die <strong>Tiefe</strong> der Figur am Umriss fest. Nicht festgelegt ist alles, was in keiner der beiden
+  Ansichten auf dem Umriss liegt:</p>
+<ul>
+  <li><strong>Verdecktes in der Seitenansicht:</strong> der ferne Arm, die ferne Hand und das ferne Bein, das ferne Ohr und die ferne Gesichtshälfte. Die Seitenansicht sieht nur die ihr
+    zugewandte Hälfte. Für die andere nimmt die Figur heute an, was ihr Startwert (die Einpassung) dort hat.</li>
+  <li><strong>Der Querschnitt zwischen den Umrissen:</strong> Ob der Rumpf im Schnitt eher oval oder eckig ist, sieht keine der Ansichten. Das bestimmt nur die Glättung.</li>
+  <li><strong>Was nur von hinten absteht:</strong> zum Beispiel Zopf, Haarknoten oder Kapuze. Von vorn liegt es hinter dem Körper, also innerhalb des Umrisses.</li>
+</ul>
+<p>Die Kameras der Einpassung stehen bei EdgarTrip ungefähr im Viereck um die Person (aus <code>abnahme/training_figur.json</code>, Ort in m, Blickziel 0 / 0,925 / 0):
+  1.jpg bei z = +1,59, 4.jpg bei x = +1,60, 2.jpg bei z = −1,68, 3.jpg bei x = −1,59. Die zweite Seite sieht also genau die Hälfte, die 4.jpg verdeckt ist. Der Umriss der Rückansicht ist
+  fast der gespiegelte Umriss der Vorderansicht; er unterscheidet sich nur durch die Perspektive und durch das, was nur hinten absteht.</p>
+
+<h3>Vorschlag: eine Master-Ansicht je Richtung, die anderen nur für das, was fehlt</h3>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Foto</th><th>Geometrie</th><th>Textur</th><th>Prüfung</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Vorderansicht</strong> (Master)</td><td>voll: Umriss beidseitig, Gesichtspunkte, ViTPose</td><td>Vorderseite, Gesicht</td><td>—</td></tr>
+    <tr><td><strong>Master-Seite</strong> (eine der beiden Seiten)</td><td>voll wie die Vorderansicht</td><td>ihre Seite</td><td>—</td></tr>
+    <tr><td><strong>Zweite Seite</strong></td><td>nur <strong>fehlende Punkte</strong>: Umrisspunkte, deren Punkt der Figur in Vorderansicht und Master-Seite nicht sichtbar ist (ferner Arm, ferne
+      Hand, fernes Ohr, ferne Gesichtshälfte)</td><td>ihre Seite</td><td>alle übrigen Umrisspunkte: nur gemessen, nicht gerechnet</td></tr>
+    <tr><td><strong>Rückansicht</strong></td><td>nur <strong>fehlende Elemente</strong>: Umrisspunkte, deren Punkt der Figur von vorn nicht sichtbar ist und die über den Umriss der
+      Vorderansicht hinausragen (Zopf, Haarknoten, Kapuze)</td><td>Rücken, Hinterkopf, Haar hinten</td><td>alle übrigen Umrisspunkte: nur gemessen, nicht gerechnet</td></tr>
+  </tbody>
+</table>
+<p><strong>Warum die Master-Ansicht gewinnt:</strong> Jedes Foto hat seine eigene Haltung und Kamera. Bewegt sich die Person zwischen zwei Aufnahmen oder liegt eine Kamera einige Millimeter
+  daneben, widersprechen sich zwei Seitenansichten am selben Punkt, und die Figur läge im Mittel neben beiden. Mit einer Master-Ansicht hat jeder Punkt genau eine Quelle. Der Widerspruch
+  wird gemessen und angezeigt (Prüfspalte), aber nicht in die Form gerechnet. Das ist zugleich die Prüfung an Zurückgehaltenem: Liegt die zweite Seite dort, wo die Master-Seite schon
+  entschieden hat, ebenfalls nahe 0 mm, stimmen Haltung und Kameras.</p>
+
+<h3>Bausteine, in dieser Reihenfolge</h3>
+<ol>
+  <li><strong>Sichtbarkeit je Punkt und Foto:</strong> mit derselben Rasterung wie die Figurmaske (<code>Figurmaske.rastern</code>), dazu die Nummer des vordersten Dreiecks je Pixel
+    (z-Puffer). Daraus eine Tabelle Punkt × Foto: sichtbar, verdeckt oder am Umriss.</li>
+  <li><strong>Master-Satz:</strong> Vorderansicht und Master-Seite wie heute (<code>Umrissabstand</code>, Gesicht, ViTPose).</li>
+  <li><strong>Ergänzung:</strong> Umrisspunkte der zweiten Seite und der Rückansicht zählen nur, wenn ihr Punkt der Figur in keiner Master-Ansicht sichtbar ist. Die Auswahl ist fest wie die
+    Erkennung (einmal bestimmen, bis zum Minimum rechnen, dann neu bestimmen). So bleibt der Verlust eine feste Funktion der Form.</li>
+  <li><strong>Prüfung:</strong> Die übrigen Umrisspunkte der zweiten Seite und der Rückansicht werden nur gemessen. Auf der Jobseite stehen sie in Feld 3 ihrer Zeile wie bei den
+    Master-Ansichten: blau das Foto, grün die gerechnete Figur, rot die Abweichung.</li>
+  <li><strong>Textur:</strong> Jedes Foto wird auf die fertige Geometrie projiziert. Je Punkt zählt das Foto, das ihn sichtbar und am geradesten sieht (Normale gegen Blickrichtung);
+    an den Übergängen wird gemischt. Vorher wird die Helligkeit der Fotos in den Bereichen angeglichen, die zwei Fotos zugleich sehen. Hier tragen alle vier Fotos bei.</li>
+</ol>
+
+<h3>Offen</h3>
+<ul>
+  <li><strong>Welche Seite ist Master?</strong> Fest je Job (Edgar wählt), oder nach einer Messung: die Seite mit dem kleineren Umrissfehler nach der Einpassung oder die, in der
+    insightface das Gesicht findet (EdgarTrip: in 4.jpg gefunden). Noch nicht entschieden.</li>
+  <li><strong>Gewicht der Ergänzung:</strong> ob „fehlende Punkte“ mit vollem Gewicht oder schwächer zählen. Erst ein Lauf mit der Prüfspalte zeigt, wie weit die zweite Seite der Master-Seite
+    widerspricht.</li>
+  <li><strong>Querschnitt:</strong> Was keine Ansicht als Umriss sieht, bleibt Sache der Glättung (oder des Startwerts). Ein Schrägfoto (45°) würde den Umriss in einer weiteren Richtung messen; vorn, hinten und zwei Seiten
+    messen nur zwei Richtungen.</li>
+</ul>

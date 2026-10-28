@@ -50,7 +50,7 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 </div>
 
 {% comment %} 24.10.2026, Edgar: „die zweite 3D Ansicht ‚Netz‘ ist ja nur zu Testzwecken da, kannst du die unter der ersten Zeile machen, sonst verwirrt sie“ — erste Zeile Fotos · Genesis-Modell ·
-Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, es fließt in keine Rechnung des Genesis-Modells ein. {% endcomment %}
+Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, es fließt in keine Rechnung des Genesis-Modells ein. {% endcomment %}{% if daten.trainingfigur %}{% include "ai2d3d_meshzeile.html" %}{% endif %}
 <div class="ai2d3d-zeile ai2d3d-koerperzeile">
     <div class="ai2d3d-bereiche">
         <section class="card ai2d3d-bereich">
@@ -58,16 +58,23 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
             <div class="ai2d3d-leinwand ai2d3d-fotofeld" data-feld="fotos"></div>
             <div class="ai2d3d-daumen" id="ai2d3d-daumen"></div>
         </section>
+        {% comment %} 27.10.2026, Edgar: „mach … anstelle des Fotos die geometrische Figur die du ausgerechnet hast, auch in einer 3D View“ — „das Genesis Modell an 3. Stellen (und das
+        geometrische an 2. Stelle)“: mit gerechneter Figur (`Ai2d3dtrainingfigur`) 1 Fotos · 2 gerechnete Figur · 3 Genesis-Modell, das Ergebnis-Rendering entfällt. {% endcomment %}
+        {% if daten.trainingfigur %}<section class="card ai2d3d-bereich">
+            <h2><span class="ai2d3d-nummer">2</span> Gerechnete Figur</h2>
+            <div class="ai2d3d-leinwand" data-feld="trainingfigur"></div>
+            <p class="hb-hinweis" id="ai2d3d-trainingfigurinfo"></p>
+        </section>{% endif %}
         <section class="card ai2d3d-bereich">
-            <h2><span class="ai2d3d-nummer">2</span> Genesis-Modell</h2>
+            <h2><span class="ai2d3d-nummer">{% if daten.trainingfigur %}3{% else %}2{% endif %}</span> Genesis-Modell</h2>
             <div class="ai2d3d-leinwand" data-feld="genesis"></div>
             <p class="hb-hinweis" id="ai2d3d-genesisinfo"></p>
         </section>
-        <section class="card ai2d3d-bereich">
+        {% if not daten.trainingfigur %}<section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">3</span> Ergebnis</h2>
             <div class="ai2d3d-leinwand ai2d3d-ergebnisfeld" data-feld="ergebnis"></div>
             <p class="hb-hinweis" id="ai2d3d-ergebnisinfo"></p>
-        </section>
+        </section>{% endif %}
     </div>
 </div>
 {% if ist_test %}{% include "ai2d3d_bloecke.html" %}{% include "ai2d3d_gesichtspunkte.html" %}{% endif %}

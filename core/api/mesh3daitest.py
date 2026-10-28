@@ -7,6 +7,7 @@ GET /api/mesh3dai/test/<kennung>/netz/     das Netz im Rahmen des Datensatzes (G
 POST /api/mesh3dai/test/<kennung>/geschlecht/  {"geschlecht": "weiblich" | "maennlich"} — welche Figuren die Ausgabe nehmen darf (16.10.2026 abends)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/netz/        Anzeigenetz der vorhergesagten Figur (Binärpaket wie `/api/mesh3dai/<job>/flaeche/netz/`, `Mesh3daiflaechennetz`)
 GET /api/mesh3dai/test/<kennung>/linien/0/   Messlinien der Regler-KI aus dem Formschritt (Binärpaket `Mesh3dailinien`, 27.10.2026)
+GET /api/mesh3dai/test/<kennung>/linien/flaeche/   das Mesh in der A-Pose im Raum dieser Linien (`Mesh3dailinienflaeche`, 27.10.2026)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/bild/<name>  ein Bild dieser Figur (Haut) — die Kachel der KI, wenn Stufe 2 die Haut gerechnet hat (`Mesh3daitesthaut`), sonst die Grundhaut
 Die Liste steht im Reiter „Test“ der Seite `/mesh-3D-AI/` (`Mesh3daiendpunkte.liste`).
 """
@@ -72,6 +73,16 @@ class Mesh3daitestendpunkte:
         paket = Mesh3dailinien.test(ordner, kennung) if ordner is not None and int(nr) == 0 else None
         if paket is None:
             raise Http404('Keine Messlinien für Test %s — der Formschritt der Kette schreibt sie (Regler-KI, seit 27.10.2026)' % kennung)
+        return HttpResponse(paket, content_type='application/octet-stream')
+
+    @staticmethod
+    @require_GET
+    def linienflaeche(request, kennung):
+        from ..dienste.mesh3dailinienflaeche import Mesh3dailinienflaeche
+        ordner = Mesh3daitest.pfad(kennung)
+        paket = Mesh3dailinienflaeche.paket(ordner) if ordner is not None else None
+        if paket is None:
+            raise Http404('Kein Mesh in der A-Pose unter den Messlinien für Test %s' % kennung)
         return HttpResponse(paket, content_type='application/octet-stream')
 
     @staticmethod

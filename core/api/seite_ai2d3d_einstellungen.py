@@ -4,12 +4,14 @@
 Aufbau wie Einstellungen → Mesh3D-AI: der Wert liegt in `AppSettings.ui_prefs` (keine Migration), das Formular geht als JSON an `/api/ui-prefs/` (`Vorgabenformular`). Werte:
 woher die Gelenke der Person in den Fotos kommen (`Ai2d3dposewahl`), und seit 25.10.2026 wie stark die Haut-KI das Licht des Eingangs aus der Haut herausrechnet (`Hautentlichtung`, Edgar:
 „in % die Entlichtung … bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“ — gilt für die Haut-KI, die heute Mesh3D-AI einsetzt), seit 27.10.2026 der Erkenner der
-Gesichtspunkte (`Ai2d3dgesichtswahl`, Edgar: „in den Einstellungen umschaltbar zwischen Insight und MediaPipe“).
+Gesichtspunkte (`Ai2d3dgesichtswahl`, Edgar: „in den Einstellungen umschaltbar zwischen Insight und MediaPipe“), seit 28.10.2026 die Portierung, mit der Genesis in die geometrische
+Figur eingepasst wird (`Ai2d3dmeshwahl`, Edgar: „mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“).
 """
 
 from django.views.generic import TemplateView
 
 from ..dienste.ai2d3dgesichtswahl import Ai2d3dgesichtswahl
+from ..dienste.ai2d3dmeshwahl import Ai2d3dmeshwahl
 from ..dienste.ai2d3dposewahl import Ai2d3dposewahl
 from ..dienste.hautentlichtung import Hautentlichtung
 
@@ -31,7 +33,9 @@ class Ai2d3dEinstellungenSeite(TemplateView):
                     licht_minimum=Hautentlichtung.MINIMUM, licht_maximum=Hautentlichtung.MAXIMUM,
                     gesicht_schluessel=Ai2d3dgesichtswahl.SCHLUESSEL, gesicht_wert=Ai2d3dgesichtswahl.aus(prefs),
                     gesicht_vorgabe=Ai2d3dgesichtswahl.text(Ai2d3dgesichtswahl.VORGABE),
-                    gesicht_erkenner=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dgesichtswahl.BESCHREIBUNG[w]} for w, t in Ai2d3dgesichtswahl.WERTE])
+                    gesicht_erkenner=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dgesichtswahl.BESCHREIBUNG[w]} for w, t in Ai2d3dgesichtswahl.WERTE],
+                    mesh_schluessel=Ai2d3dmeshwahl.SCHLUESSEL, mesh_wert=Ai2d3dmeshwahl.aus(prefs), mesh_vorgabe=Ai2d3dmeshwahl.text(Ai2d3dmeshwahl.VORGABE),
+                    mesh_verfahren=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dmeshwahl.BESCHREIBUNG[w]} for w, t in Ai2d3dmeshwahl.WERTE])
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heißt sonst ``view``.
