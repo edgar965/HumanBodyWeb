@@ -36,7 +36,7 @@ class Mesh3dairechenlauf:
                                                                                   '--netz', '{vorstufe_pfad}']),
         ('haltung', 'Haltung aus der KI', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form.py', '--vorhersagen', '--lauf', '{haltung}', '--nur', '{k}']),
         ('form', 'Form aus der KI (Genesis-Regler)', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form_apose.py', '--lauf', '{formkopf}', '--als-form', '--nur', '{k}']),
-        ('figur', 'Figur bauen', ['mesh3dai_formfigur.py', '--parallel', '2', '--nur', '{k}']),
+        ('figur', 'Figur bauen', ['mesh3dai_formfigur.py', '--parallel', '1', '--nur', '{k}']),          # im Skriptdienst nur ein Faden (29.10.2026, `Skriptdienstruf.ERLAUBT`)
         ('anpassen', 'Figur in die Haltung legen', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form.py', '--anpassen', '--nur', '{k}']),
         ('haltung2', 'Haltung aus Gelenken und Enden', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form_haltung.py', '--nur', '{k}']),
         ('segmentierung', 'Bilderkennung vorbereiten (Sapiens2 + SAM 3)', ['mesh3dai_kostuem_segmentierung.py', '{k}']),

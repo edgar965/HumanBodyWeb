@@ -105,3 +105,54 @@ class DieEinstellungsseite(TestCase):
         self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dmeshwahl.SCHLUESSEL: 'smplify'}), content_type='application/json')
         self.assertIn('<option value="%s" selected>' % Ai2d3dmeshwahl.VORGABE, self._seite())
         self.assertEqual(G9meshgenesis.gewaehlt(), Ai2d3dmeshwahl.VORGABE)
+
+    # 28.10.2026 abends, Edgar: „mach deinen Vorschlag“ — der Versatz nach der Einpassung (längs der Normale statt frei je Punkt), bis zum Lauf
+
+    def test_versatz_vorgabe_laengs_der_normale(self):
+        from core.dienste.ai2d3dmeshversatz import Ai2d3dmeshversatz
+        from Genesis9.meshgenesis import G9meshgenesis
+        html = self._seite()
+        self.assertIn('name="%s"' % Ai2d3dmeshversatz.SCHLUESSEL, html)
+        self.assertIn('<option value="normale" selected>', html)
+        for w, text in Ai2d3dmeshversatz.WERTE:
+            self.assertIn(text, html)
+            self.assertIn(w, G9meshgenesis.VERSATZ)
+        self.assertEqual(G9meshgenesis.versatz_gewaehlt(), 'normale')
+        self.assertEqual(G9meshgenesis.VERSATZ_VORGABE, Ai2d3dmeshversatz.VORGABE)
+
+    def test_gespeicherter_versatz_gilt_fuer_seite_und_lauf(self):
+        from core.dienste.ai2d3dmeshversatz import Ai2d3dmeshversatz
+        from Genesis9.meshgenesis import G9meshgenesis
+        antwort = self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dmeshversatz.SCHLUESSEL: 'frei'}), content_type='application/json')
+        self.assertEqual(antwort.status_code, 200)
+        self.assertIn('<option value="frei" selected>', self._seite())
+        self.assertEqual(G9meshgenesis.versatz_gewaehlt(), 'frei')
+
+    # 28.10.2026 abends, Edgar: „in den Einstellungen - 2d-3d-ai einstellbar, KopfKI oder iterative MeshKi“
+
+    def test_ki_der_form_vorgabe_kopfki(self):
+        from core.dienste.ai2d3dformki import Ai2d3dformki
+        html = self._seite()
+        self.assertIn('name="%s"' % Ai2d3dformki.SCHLUESSEL, html)
+        self.assertIn('<option value="kopfki" selected>', html)
+        self.assertIn('<option value="iterativ">', html)
+        self.assertEqual(Ai2d3dformki.gewaehlt(), 'kopfki')
+
+    def test_gespeicherte_ki_der_form_gilt(self):
+        from core.dienste.ai2d3dformki import Ai2d3dformki
+        antwort = self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dformki.SCHLUESSEL: 'iterativ'}), content_type='application/json')
+        self.assertEqual(antwort.status_code, 200)
+        self.assertIn('<option value="iterativ" selected>', self._seite())
+        self.assertEqual(Ai2d3dformki.gewaehlt(), 'iterativ')
+
+    def test_unbekannte_ki_der_form_faellt_auf_kopfki(self):
+        from core.dienste.ai2d3dformki import Ai2d3dformki
+        self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dformki.SCHLUESSEL: 'smplx'}), content_type='application/json')
+        self.assertEqual(Ai2d3dformki.gewaehlt(), 'kopfki')
+
+    def test_unbekannter_versatz_faellt_auf_die_vorgabe(self):
+        from core.dienste.ai2d3dmeshversatz import Ai2d3dmeshversatz
+        from Genesis9.meshgenesis import G9meshgenesis
+        self.client.post('/api/ui-prefs/', json.dumps({Ai2d3dmeshversatz.SCHLUESSEL: 'smpld'}), content_type='application/json')
+        self.assertIn('<option value="normale" selected>', self._seite())
+        self.assertEqual(G9meshgenesis.versatz_gewaehlt(), 'normale')

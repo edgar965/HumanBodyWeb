@@ -16,6 +16,7 @@ export class Mesh3daiansichtgedaechtnis {
     static ADRESSE = '/api/ui-prefs/';
     static SCHLUESSEL = 'mesh3dai_ansicht';
     static WARTE_MS = 400;
+    static EREIGNIS = 'mesh3dai-ansicht';
     static _stand = {};
     static _uhr = null;
 
@@ -43,10 +44,14 @@ export class Mesh3daiansichtgedaechtnis {
         return Mesh3daiansichtgedaechtnis._stand;
     }
 
-    /** Einen Teil des Stands ändern (`{modus}` oder `{rig}`), den Rest behalten, und den ganzen Eintrag an den Server schicken (der Server ersetzt nur diesen Schlüssel). */
+    /**
+     * Einen Teil des Stands ändern (`{modus}` oder `{rig}`), den Rest behalten, und den ganzen Eintrag an den Server schicken (der Server ersetzt nur diesen Schlüssel).
+     * Seit 28.10.2026 meldet es den Teil auch auf `document` (`EREIGNIS`): Zeilen mit eigenen Knöpfen (Testseite: `Mesh3daimeshanpassung` über `Mesh3daitestansicht`) folgen so einem Klick in der anderen.
+     */
     static merken(teil) {
         const g = Mesh3daiansichtgedaechtnis;
         g._stand = { ...g._stand, ...teil };
+        document.dispatchEvent(new CustomEvent(g.EREIGNIS, { detail: teil }));
         clearTimeout(g._uhr);
         g._uhr = setTimeout(() => {
             Serverabruf.senden(g.ADRESSE, { [g.SCHLUESSEL]: g._stand }).catch(fehler => console.warn('Mesh3D-AI: Ansicht nicht gemerkt', fehler));

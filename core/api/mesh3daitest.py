@@ -8,6 +8,7 @@ POST /api/mesh3dai/test/<kennung>/geschlecht/  {"geschlecht": "weiblich" | "maen
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/netz/        Anzeigenetz der vorhergesagten Figur (Binärpaket wie `/api/mesh3dai/<job>/flaeche/netz/`, `Mesh3daiflaechennetz`)
 GET /api/mesh3dai/test/<kennung>/linien/0/   Messlinien der Regler-KI aus dem Formschritt (Binärpaket `Mesh3dailinien`, 27.10.2026)
 GET /api/mesh3dai/test/<kennung>/linien/flaeche/   das Mesh in der A-Pose im Raum dieser Linien (`Mesh3dailinienflaeche`, 27.10.2026)
+GET /api/mesh3dai/test/<kennung>/meshanpassung/    die Genesis-Figur, ohne KI in das Netz eingepasst, mit dem Netz (`Mesh3daitestanpassung`, 28.10.2026)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/bild/<name>  ein Bild dieser Figur (Haut) — die Kachel der KI, wenn Stufe 2 die Haut gerechnet hat (`Mesh3daitesthaut`), sonst die Grundhaut
 Die Liste steht im Reiter „Test“ der Seite `/mesh-3D-AI/` (`Mesh3daiendpunkte.liste`).
 """
@@ -83,6 +84,16 @@ class Mesh3daitestendpunkte:
         paket = Mesh3dailinienflaeche.paket(ordner) if ordner is not None else None
         if paket is None:
             raise Http404('Kein Mesh in der A-Pose unter den Messlinien für Test %s' % kennung)
+        return HttpResponse(paket, content_type='application/octet-stream')
+
+    @staticmethod
+    @require_GET
+    def meshanpassung(request, kennung):
+        from ..dienste.mesh3daitestanpassung import Mesh3daitestanpassung
+        ordner = Mesh3daitest.pfad(kennung)
+        paket = Mesh3daitestanpassung.paket(ordner) if ordner is not None else None
+        if paket is None:
+            raise Http404('Keine Genesis-Anpassung für Test %s — python14 mesh3dai/mesh3dai_meshanpassung.py --nur %s' % (kennung, kennung))
         return HttpResponse(paket, content_type='application/octet-stream')
 
     @staticmethod

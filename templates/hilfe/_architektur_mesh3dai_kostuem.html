@@ -13,6 +13,11 @@ Von Hand, Quelle: Docstrings von `mesh3dai/mesh3dai_kostuem_lauf.py`, `…_erken
     der Bildmodelle vor den Regeln in <code>kostuem/erkennung.npz</code> (<code>art_bild</code>, <code>kostuem_stimme</code>) — die Prüfung „Erkennung wie die Bildmodelle“ misst, ob die Regeln es
     umwerfen, wo die Bildmodelle sich einig waren (baron: Kniehose als Haut).</li>
   <li><strong>Ausschneiden</strong> (<code>Kostuemschnitt</code>): je Art die zusammenhängenden Flächen des Eingangs als Stück, mit Textur.</li>
+  <li><strong>Heben</strong> (seit 28.10.2026 nachts, <code>Kostuemheben</code>): jeder Punkt eines Stücks, der weniger als 3 mm vor der Haut der Figur liegt, geht längs der (über die Kanten
+    gemittelten) Hautnormale hinaus, der Versatz über die Kanten des Stücks verteilt; der offene Rand nur bis auf die Haut. Anlass edgar: die Figur war unter der Unterhose bis 26 mm dicker
+    als der Eingang, ihre Haut stach am Saum durch und schnitt ihn in Zacken (Prüfung „Durchstich“ 11,7 % der Hosenpunkte). Lauf 28.10.2026 23:31: „Durchstich“, „Loch in der Haut“ und die
+    Hose im Tanz grün, Prio 1 21 → 12 Fehler; ohne Heben (Gegenprobe, <code>ProjektTemp/_wegwerf/regler_ki/kostuem_ohne_heben.py</code>) wären diese wieder rot. Offen: die Uhr im Tanz
+    (Bild 188, 5,7 % ihrer Hautpunkte, auch ohne Heben).</li>
   <li><strong>Auflegen</strong> (Stufe 1, <code>Kostuemrueckhaeutung</code>): jedes Stück bleibt genau dort, wo es im Eingang liegt — jeder Punkt bekommt Knochen und Gewichte der nächsten Hautstelle
     der Figur und seine Ruhelage so, dass die Häutung ihn wieder an seine Stelle legt. Folge: steht ein Glied der Figur nicht im Glied des Eingangs, sieht man es doppelt (Prüfung „Glied im Eingang“).</li>
   <li><strong>Hautmasken</strong>: Haut unter einem Stück wird ausgeblendet (<code>Kostuemszene</code>).</li>

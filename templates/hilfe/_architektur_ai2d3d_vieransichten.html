@@ -7,7 +7,10 @@ und für die Textur. Die Hinteransicht ebenfalls nur für die Textur, und die fe
   <strong>Stand heute:</strong> Die gerechnete Figur (<code>ProjektTemp/_wegwerf/ai2d3d/form_direkt.py</code>, Jobseite Feld 2 oben und Feld 3 der Kopfzeilen) entsteht nur aus <strong>Vorderansicht
   und einer Seitenansicht</strong> (EdgarTrip: 1.jpg und 4.jpg). Unbekannt ist die Verschiebung jedes Punkts der Figur. Gemessen werden der Umriss beidseitig (Figur → Foto und Foto → Figur),
   die Gesichtspunkte und ViTPose; die Glättung ist ein Laplace-Term. Rückansicht (2.jpg) und zweite Seite (3.jpg) gehen bisher in nichts ein; die Seite zeigt sie mit „nicht im Training“.<br>
-  <strong>Alles Folgende ist ein Vorschlag</strong>, nichts davon ist gebaut oder gemessen.
+  <strong>Alles Folgende ist ein Vorschlag</strong>, nichts davon ist gebaut oder gemessen.<br>
+  <strong>Nachtrag 28.10.2026:</strong> gebaut als <code>form_direkt.py --koerper --vier</code> (Master 1.jpg + 4.jpg, Ergänzung mit Gewicht 0,5); was das an den Armen bringt, steht
+  unter <a href="#vier-ansichten-arme">Die Arme</a>. Seit 14:51 ist die Haltung von Armen und Beinen je Foto frei, mit Ellbogen, Handgelenk, Knie und Knöchel von ViTPose
+  als Ziel: Umriss 3.jpg 5,94 → 3,06 mm, siehe <a href="#vier-ansichten-gelenke">Gelenkpunkte</a>.
 </div>
 
 <h3>Was zwei Ansichten bestimmen und was nicht</h3>
@@ -53,8 +56,141 @@ und für die Textur. Die Hinteransicht ebenfalls nur für die Textur, und die fe
     an den Übergängen wird gemischt. Vorher wird die Helligkeit der Fotos in den Bereichen angeglichen, die zwei Fotos zugleich sehen. Hier tragen alle vier Fotos bei.</li>
 </ol>
 
+<h3 id="vier-ansichten-tempo">Tempo: alles auf der Karte, ohne dass die CPU wartet (28.10.2026)</h3>
+<p>Edgar: „was dauert so lange bei der geometrischen Figur? … alles auf GPU und im RAM?“ — „es soll nur torch sein, Was synchronisierst du denn?“ Gerechnet wurde schon auf der
+  Karte, aber die CPU wartete in jedem Schritt <strong>794-mal</strong> auf sie: überall, wo Python über einen Wert auf der Karte entschied — Auswahl per Maske
+  (<code>x[maske]</code>), eine Zahl nach Python (<code>float</code>, <code>int</code>, <code>bool</code>), eine Schleife bis zum Stillstand. Gezählt mit
+  <code>ProjektTemp/_wegwerf/ai2d3d/form_direkt_warten_zaehlen.py</code> (<code>torch.cuda.set_sync_debug_mode('warn')</code> je Projektzeile, Schritte 7–9 von EdgarTrip, Eichung
+  4 → 4 und 0 → 0).</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Wo die CPU wartete</th><th class="num">je Schritt</th><th>Jetzt</th></tr></thead>
+  <tbody>
+    <tr><td>Ohrmaske füllen (<code>Ohrabstand.gefuellt</code>: Pixel für Pixel, je Runde <code>torch.equal</code>)</td><td class="num">290</td>
+      <td>je Runde ganze Zeilen- und Spaltenläufe plus ein 3×3-Schritt, 8 feste Runden; ob die letzte noch etwas änderte, zählt auf der Karte</td></tr>
+    <tr><td>Maske der Figur (<code>Figurmaske.rastern</code>: Größen zur CPU, Auswahl je Stapel)</td><td class="num">221</td>
+      <td>Plan je Runde (Fenster je Dreieck), danach <code>scatter_add_</code>; Überlauf zählt auf der Karte</td></tr>
+    <tr><td>Rückweg über Auswahl per Maske</td><td class="num">95</td><td>Gewichte statt Auswahl (<code>verlust_fest</code>, <code>zellen_summe</code>)</td></tr>
+    <tr><td>Kopflage (<code>torch.linalg.matrix_exp</code>)</td><td class="num">52</td><td>Drehung nach Rodrigues (<code>Freiformjobkarte.drehmatrix</code>)</td></tr>
+    <tr><td>Große Schritte (CG fragte alle 10 Schritte <code>float(r.norm())</code>)</td><td class="num">42</td>
+      <td>immer 300 Schritte, nach Erreichen der Grenze eingefroren (<code>torch.where</code>) — dasselbe Ergebnis</td></tr>
+    <tr><td>Strahlen, Zellen, Gesicht, ViTPose, Verlaufswert</td><td class="num">94</td><td>feste Länge, Index statt Maske, Verlauf einmal je Runde</td></tr>
+  </tbody>
+</table>
+<p>Danach <strong>0 Wartepunkte</strong>. Weil alle Formen je Runde fest sind, ist ein Schritt (Verlust und Rückweg) ein CUDA-Graph je Runde (<code>Formschrittgraph</code>): statt
+  etwa 13.000 Kernelstarts je Schritt eine Wiedergabe. <strong>1.076 ms → 394 ms je Schritt</strong> (Schritte 4–6, Wanduhr); der ganze Lauf (8 Runden × 60 Schritte)
+  <strong>216 s statt 493 s</strong> (<code>2026.10.28.12.54_form_koerper_vier</code> gegen <code>2026.10.28.11.38_form_koerper_vier</code>, je ein Lauf; Verlust am Ende 7,98 gegen 8,14).
+  Die festen Formen sind dieselbe Rechnung, solange nichts überläuft — der Lauf zählt es je Runde und meldet 0 in allen 8 Runden (ein Mindestfenster von 12 Pixeln, nachdem im ersten
+  Lauf 1–3 Splitter-Dreiecke in 4.jpg von 1 auf 7 Pixel gewachsen waren). Jetzt rechnet die Karte die ganze Zeit
+  (395 ms Kartenzeit je Schritt, torch.profiler): am meisten die Suche nach dem nächsten Punkt (Matrixprodukt + argmin, ~110 ms) und die Strahlen in float64.</p>
+<p><strong>Gleich geblieben</strong> (alt gegen neu an derselben Figur, <code>form_direkt_warten_zaehlen.py --abgleich</code>): Masken der Figur an 4 Fotos und 3 Ohren 0 Pixel verschieden,
+  Füllung 0, gezählte Strahlen 0, Punkte der Figur ≤ 1,2·10⁻⁷ m, große Schritte ≤ 1,3·10⁻⁷. Anders: „nahe am Rand“ beim Ohr — die alte Prüfung (<code>torch.cdist</code>, rechnet
+  über das Matrixprodukt) lag an 18 von 8.112 Punkten daneben, die neue rechnet exakt (0 verschieden zur exakten); Verlust Ohr links 1.jpg 3,761 → 3,775. Die Wiedergabe des Graphen
+  gegen dieselbe Rechnung ohne Graph am selben Stand: 54,4936 gegen 54,4946.</p>
+
+<h3 id="vier-ansichten-arme">Die Arme: was die zweite Seite bringt und was nicht (gemessen 28.10.2026)</h3>
+<p>Anlass: Edgar „Der linke Arm ist halbwegs okay, der rechte ist aber grottenschlecht. Hast du die andere Profilaufnahme eingebunden?“. Gemessen mit
+  <code>ProjektTemp/_wegwerf/ai2d3d/arm_messen.py &lt;lauf&gt; [Master]</code>: Umrissabstand je Foto und Körperteil, beide Richtungen, alle Umrisspunkte (Logs
+  <code>arm_messen_1254.log</code>, <code>arm_messen_1404.log</code>). Mittel Figur → Foto in mm.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Teil, Foto</th><th>12.54: Master 1.jpg + 4.jpg, 3.jpg Ergänzung</th><th>14.04: Master 1.jpg + 4.jpg + 3.jpg</th></tr></thead>
+  <tbody>
+    <tr><td>linker Oberarm, 1.jpg</td><td>2,8</td><td>3,1</td></tr>
+    <tr><td>rechter Oberarm, 1.jpg</td><td>4,8 (90 % 11,6)</td><td>4,9 (90 % 12,7)</td></tr>
+    <tr><td>rechter Unterarm, 1.jpg</td><td>3,6</td><td>3,4</td></tr>
+    <tr><td>rechte Hand, 3.jpg</td><td>13,1 (davon 1 von 102 Punkten gerechnet)</td><td>2,0</td></tr>
+    <tr><td>rechter Oberarm, 3.jpg</td><td colspan="2">0 Umrisspunkte: Der Oberarm liegt im Profil vor dem Rumpf, nicht auf dem Umriss</td></tr>
+    <tr><td>linker Unterarm, 2.jpg (Rückansicht, nur gemessen)</td><td>20,8</td><td>20,3</td></tr>
+    <tr><td>Umriss ganz (Log von <code>form_direkt</code>, beide Richtungen)</td><td>1.jpg 3,31 · 4.jpg 2,06 · 3.jpg 2,94*</td><td>1.jpg 4,21 · 4.jpg 3,18 · 3.jpg 6,04</td></tr>
+  </tbody>
+</table>
+<p>* in 12.54 nur über die gerechneten Ergänzungspunkte, daher nicht mit der rechten Spalte vergleichbar.</p>
+<p><strong>Was daraus folgt:</strong> Die zweite Seite als volle Ansicht repariert die rechte Hand, den rechten Oberarm nicht, und Vorderansicht und erste Seite werden schlechter.
+  Die Tiefe der Oberarme legt kein Foto fest, weil der Oberarm in beiden Profilen innerhalb des Rumpfumrisses liegt. Gemessen ist außerdem, dass die Rückansicht am linken Unterarm
+  20 mm neben der Figur liegt, während die Vorderansicht am selben Arm 1,7–2,0 mm misst. In <code>Freiformjobkarte.haltung</code> ist je Foto nur die Kopflage frei; die Haltung von
+  Rumpf und Armen kommt fest aus der Einpassung (<code>lage['je_foto']</code>). <em>Vermutung, nicht getrennt gemessen:</em> Edgar hält die Arme in den vier Aufnahmen verschieden,
+  oder die feste Armhaltung je Foto stimmt nicht. Dann rechnet die gemeinsame Form den Unterschied in die Arme ein.</p>
+
+<h4 id="vier-ansichten-gelenke">Haltung je Foto frei und Gelenkpunkte von ViTPose (gebaut und gemessen 28.10.2026, 14:37–15:01)</h4>
+<p>Edgar: „wir müssen mit den Bildern auskommen, die wir haben. Mach das beste daraus.“ Zwei Schritte in <code>form_direkt.py</code>:</p>
+<ul>
+  <li><code>--arme</code> (<code>armlage.py</code>, <code>Armlage</code>): je Foto und Seite eine Drehung an Schulter, Oberarm, Unterarm, Hand, Oberschenkel, Unterschenkel und Fuß, jeweils um
+    das eigene Gelenk mit allen Nachfahren, gedämpft mit 0,002 je Grad² (sonst wäre die Tiefe des Arms in jedem Foto frei). Allein (Lauf <code>14.37_…_arme</code>, nur Arme)
+    blieben alle Drehungen unter 2,3° und der Umriss unverändert (1.jpg 4,27 statt 4,21 mm). Grund, gemessen mit <code>umriss_bild.py --teile</code>: Im Profil liegen
+    Unterarm und Hand innerhalb des Rumpfumrisses. Dort misst der Umriss nichts, obwohl die Hand der Figur in 3.jpg sichtbar tiefer hing als im Foto.</li>
+  <li><code>--gelenke</code> (<code>gliedpunkte.py</code>, <code>Gliedpunkte</code>): Ellbogen, Handgelenk, Knie und Knöchel von ViTPose in den Master-Ansichten gegen die
+    Gelenke der Figur in der Haltung des Fotos. ViTPose läuft einmal am Foto, danach ist der Abstand eine feste Funktion der Haltung. Paare, die am Start über 60 mm
+    auseinanderliegen, zählen nicht. Im ersten Lauf ohne diese Schranke lagen in den Profilen die Punkte der abgewandten Seite 122–217 mm neben der Startfigur; ViTPose rät die
+    verdeckte Seite, und die Rechnung zog daran. Verworfen werden so in 4.jpg rechter Ellbogen, Handgelenk und Knie, in 3.jpg linker Ellbogen, Handgelenk, Knie und Knöchel.</li>
+</ul>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Messung (mm)</th><th>14.37: Arme frei, ohne Gelenkpunkte</th><th>14.51: Arme und Beine frei, Gelenkpunkte</th></tr></thead>
+  <tbody>
+    <tr><td>Umriss 1.jpg (Mittel beider Richtungen / 90 %)</td><td>4,27 / 11,7</td><td>3,12 / 7,5</td></tr>
+    <tr><td>Umriss 4.jpg</td><td>2,96 / 8,4</td><td>2,19 / 5,5</td></tr>
+    <tr><td>Umriss 3.jpg</td><td>5,94 / 20,1</td><td>3,06 / 8,8</td></tr>
+    <tr><td>3.jpg linker Unterschenkel, Figur → Foto</td><td>26,2</td><td>5,6</td></tr>
+    <tr><td>3.jpg linker Fuß, Foto → Figur</td><td>31,4</td><td>7,2</td></tr>
+    <tr><td>1.jpg rechter Unterschenkel / rechter Fuß, Figur → Foto</td><td>10,7 / 12,4</td><td>2,3 / 3,9</td></tr>
+    <tr><td>1.jpg rechter Oberarm, Figur → Foto (90 %)</td><td>5,9 (21,1)</td><td>4,1 (9,9)</td></tr>
+    <tr><td>1.jpg rechter Unterarm, Figur → Foto</td><td>3,4</td><td>4,6</td></tr>
+    <tr><td>Gelenkpunkte am Ende</td><td>—</td><td>alle ≤ 2,9 (Start: vorn Ellbogen 19–25, rechter Knöchel 48)</td></tr>
+    <tr><td>größte Drehung</td><td>2,3°</td><td>12,0° (Unterschenkel vorn), 10,2° (linker Unterarm vorn)</td></tr>
+  </tbody>
+</table>
+<p>In beiden Profilen sitzt die Hand jetzt auf der Höhe des Fotos; der Handrücken liegt noch etwas zu weit hinten (Bild <code>umriss_2026.10.28.14.51_3.png</code>). Der
+  rechte Unterarm von vorn ist 1,2 mm schlechter geworden. Der Anteil der sichtbaren Handpunkte auf Haut im Foto taugt im Profil nicht als Maß: Die Hand liegt dort vor der
+  dunklen Hose. Logs: <code>form_direkt16.log</code> (14.37), <code>form_direkt18.log</code> (14.51), <code>arm_messen_1437.log</code>, <code>arm_messen_1451.log</code>.</p>
+
+<h3 id="vier-ansichten-koerper">Der Körper so gut wie der Kopf (28.10.2026 abends)</h3>
+<p>Edgar: „jetzt brauchen wir als erstes einen Körper der genau so gut ist“ — „nimm doch für jedes Körperteil auch Maße … Armumfang an mehreren Stellen, Beine, Brust usw“. Gemessen
+  mit <code>koerper_teile.py</code> (Umriss der geometrischen Figur gegen jedes Foto JE KÖRPERTEIL; das Mittel über die ganze Figur verdeckt einen Wulst): am Lauf 18.47 Kopf
+  1,2–2,0 mm, Hände vorn 5–12 mm, Oberarme 5–6 mm, Füße im Profil 8–17 mm, im Rückenfoto fast alle Teile 6–13 mm (<code>koerper_teile1.log</code>). Allgemein für jeden Job gebaut:</p>
+<ul>
+  <li><strong>Maße im Bild</strong> (<code>formmasse.Formmasse</code>): 53 Maßlinien (<code>Koerpermesspunkte.fein()</code>: Rumpf an 6 Stellen, je Oberarm 5, Unterarm 6,
+    Oberschenkel 5, Unterschenkel 6, dazu Hals, Schultern, Hüfte) an den ViTPose-Gelenken jedes Fotos, im Foto mit <code>Fotomasse</code> (vorn Breite, im Profil Tiefe); an der Figur
+    auf derselben Linie im Bild des Fotos: die Schnittpunkte der eigenen Konturkanten des Körperteils mit der Linie. Die erste Fassung maß die Figur am Querschnitt in Ruhe
+    (<code>Modellmasse</code>) — die Nullprobe (dieselbe Figur gerendert und wie das Foto gemessen, <code>masse_gegenprobe.py</code>) lag bis 106 mm daneben, und der Lauf 20.08
+    schmälerte den Rumpf. Die Fassung im Bild: Median 0,5 mm, 90 % unter 4,5 mm (<code>masse_gegenprobe3.log</code>).</li>
+  <li><strong>Mehr Punkte von ViTPose</strong> (<code>Gliedpunkte</code>): dazu die Grundgelenke der vier Finger, Großzeh, Kleinzeh und Ferse (Hautpunkte aus der Ruhelage), an allen vier
+    Fotos mit Seitentest am Start. Schultern und Hüften wieder heraus: mit ihnen wurden die Schultern vorn 2,2 → 10,3 und 1,1 → 7,9 mm schlechter (Lauf 20.34).</li>
+  <li><strong>Rückenfoto voll — versucht, zurückgenommen</strong> (<code>Formaufbau.ZUSATZ_VOLL</code>, Ablation <code>form_direkt_variante.py</code>): der ganze Umriss mit Gewicht 1
+    machte den Rücken besser, aber Vorder- und Rückenfoto widersprechen sich an Schultern und Hals — vorn Schulter 11,1 / 10,2 statt 5,1 / 2,6 mm, hinten 2,4 / 1,2 statt 17,1 / 10,7,
+    Hals hinten 6,5 statt 17,3 (<code>koerper_teile4.log</code> / <code>koerper_teile5.log</code>). Vermutung, nicht gemessen: andere Haltung von Schultern und Hals im Rückenfoto.
+    Vorgabe wieder: Master-Ansichten voll, das Rückenfoto nur für die Punkte, die sie nicht sehen.</li>
+</ul>
+
+<h3 id="vier-ansichten-meshki">Iterative Mesh-KI (Versuch, 28.10.2026 abends)</h3>
+<p>Edgar: „… oder ein mesh iterativ KI aus den Bildern erzeugt, und daraus das Genesis“ — „in den Einstellungen - 2d-3d-ai einstellbar, KopfKI oder iterative MeshKi, mache einen
+  zweiten Job mit der iterativen MeshKI zum Vergleich“. Gebaut:</p>
+<ul>
+  <li><strong>Wahl:</strong> Einstellungen → 2d-3d-AI → „KI der Form“ (<code>Ai2d3dformki</code>, Schlüssel <code>ai2d3d_form_ki</code>, <code>kopfki</code> | <code>iterativ</code>,
+    Vorgabe <code>kopfki</code>). Der Job <code>EdgarTrip_MeshKI</code> (dieselben Fotos, eigener Arbeitsordner <code>kopf_meshki</code>) trägt <code>form_ki: iterativ</code>.</li>
+  <li><strong>Netz</strong> <code>KoerperKI_Fotos.Meshschritt</code>: gelernter Gradientenabstieg auf der freien Form (Song u. a., ECCV 2020, nicht gegen den Quelltext geprüft). Je Runde
+    bekommt es je Punkt den Gradienten des Fotoverlusts, denselben Gradienten ohne Huber-Sättigung, Form und Normale, und gibt die Verschiebung aus; Graph über die Kanten der freien Form.</li>
+  <li><strong>Messwerk</strong> <code>Formaufbau</code> (aus <code>form_direkt.py</code> herausgelöst): dieselben Messmethoden wie die geometrische Figur. Training
+    <code>meshki_lauf.py trainieren</code> (je Job ein Prozess, Gewichte über alle Jobs), Anwenden <code>meshki_lauf.py anwenden</code> → Lauf wie <code>form_direkt</code>, danach
+    <code>mesh_auf_genesis.py</code>.</li>
+</ul>
+<p><strong>Erst einen Fall auswendig — nicht bestanden.</strong> EdgarTrip allein, 6 Epochen (<code>meshki_auswendig1.log</code>): Verlust nach Runde 8 je Epoche 30,86 → 30,69 → 30,67
+  → 30,38 → 29,03 → 30,54; <code>form_direkt</code> erreicht mit 8 × 60 Adam-Schritten 12,6. Die Overfit-Probe auf EINEM festen Eingang (Runde 1, <code>meshki_auswendig.py</code>) fand
+  einen Messfehler: Das Kantenfeld der festen Formen wurde nur einmal je Runde bemessen, unter großen Verschiebungen liefen 11.856 Aufrufe über, der Verlust war keine feste
+  Funktion der Form mehr. Seither wird vor jeder Messung neu bemessen (0 Überläufe). Danach:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Probe (Runde 1, Verlust vorher 63,14)</th><th class="num">Schritte</th><th>Verlauf</th><th class="num">gestiegen</th><th class="num">kleinster</th></tr></thead>
+  <tbody>
+    <tr><td>Netz, Lernrate 1e-3 (<code>meshki_auswendig3.log</code>)</td><td class="num">150</td><td>59,24 → 51,39 → 47,34 → 46,92 → 43,98</td><td class="num">55</td><td class="num">43,80</td></tr>
+    <tr><td>Netz mit Gradient ohne Sättigung, Lernrate 3e-4 (<code>meshki_auswendig4.log</code>)</td><td class="num">150</td><td>59,25 → 57,64 → 48,99 → 47,73 → 46,80</td><td class="num">43</td><td class="num">46,80</td></tr>
+    <tr><td>Bezug: Adam direkt auf der Form, nur gemessen (<code>meshki_auswendig3.log</code>)</td><td class="num">150</td><td>63,14 → 35,43 → 28,29 → 27,73 → 27,54</td><td class="num">23</td><td class="num">27,51</td></tr>
+  </tbody>
+</table>
+<p>Das Netz fällt, aber langsam und weit über dem erreichbaren Wert. Über alle Jobs ist es deshalb nicht trainiert, und <code>EdgarTrip_MeshKI</code> hat noch kein Ergebnis.
+  Vermutung, nicht gemessen: Ein einziger gelernter Schritt je Runde aus dem Gradienten eines Augenblicks kann nicht leisten, was 60 Adam-Schritte mit jeweils neuem Gradienten
+  leisten. Ein gelernter Schritt sieht nur 4 Kanten weit, und Punkte ohne Umriss haben keinen eigenen Gradienten.</p>
+
 <h3>Offen</h3>
 <ul>
+  <li><strong>Haltung je Foto frei:</strong> gebaut (<code>--arme --gelenke</code>, siehe oben). Offen: die Rückansicht bekommt keine Gelenkpunkte (ViTPose vertauscht
+    dort leicht links und rechts, nicht geprüft), und Schulter und Hüfte von ViTPose sind nicht im Verlust.</li>
   <li><strong>Welche Seite ist Master?</strong> Fest je Job (Edgar wählt), oder nach einer Messung: die Seite mit dem kleineren Umrissfehler nach der Einpassung oder die, in der
     insightface das Gesicht findet (EdgarTrip: in 4.jpg gefunden). Noch nicht entschieden.</li>
   <li><strong>Gewicht der Ergänzung:</strong> ob „fehlende Punkte“ mit vollem Gewicht oder schwächer zählen. Erst ein Lauf mit der Prüfspalte zeigt, wie weit die zweite Seite der Master-Seite

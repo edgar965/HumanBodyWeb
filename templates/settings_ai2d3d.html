@@ -63,8 +63,38 @@ gelesen von `G9meshgenesis.gewaehlt`.{% endcomment %}
         {% for q in mesh_verfahren %}<tr{% if q.wert == mesh_wert %} class="ai2d3d-quelle-gewaehlt"{% endif %}><td><strong>{{ q.text }}</strong></td><td>{{ q.beschreibung }}</td></tr>{% endfor %}
         </tbody>
     </table>
-    <p class="hint">Beide passen die Genesis-Figur innen mit Mindestabstand in die geometrische Figur und legen den Rest als Regler der Kategorie „Mesh“ ab, auf der Grafikkarte im
-        Speicher. Quellen, Lizenzen und Messungen: <a href="/hilfe/architektur/genesis/#mesh">Hilfe → Architektur → Genesis</a>.</p>
+    {% comment %}28.10.2026 abends, Edgar: „mach deinen Vorschlag“ — `Ai2d3dmeshversatz`, gelesen von `G9meshgenesis.versatz_gewaehlt`.{% endcomment %}
+    <div class="settings-row">
+        <label for="{{ versatz_schluessel }}">Versatz danach:</label>
+        <select name="{{ versatz_schluessel }}" id="{{ versatz_schluessel }}" data-reihenfolge="fest">
+            {% for q in versatz_arten %}<option value="{{ q.wert }}"{% if q.wert == versatz_wert %} selected{% endif %}>{{ q.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ versatz_vorgabe }}. Gilt für 2d-3d-AI und Mesh3D-AI ab dem nächsten Lauf.</span>
+    </div>
+    <table class="doku ai2d3d-quellen">
+        <thead><tr><th>Versatz</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for q in versatz_arten %}<tr{% if q.wert == versatz_wert %} class="ai2d3d-quelle-gewaehlt"{% endif %}><td><strong>{{ q.text }}</strong></td><td>{{ q.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    {% comment %}28.10.2026 abends, Edgar: „in den Einstellungen - 2d-3d-ai einstellbar, KopfKI oder iterative MeshKi“ — `Ai2d3dformki`.{% endcomment %}
+    <div class="settings-row">
+        <label for="{{ formki_schluessel }}">KI der Form:</label>
+        <select name="{{ formki_schluessel }}" id="{{ formki_schluessel }}" data-reihenfolge="fest">
+            {% for q in formki_arten %}<option value="{{ q.wert }}"{% if q.wert == formki_wert %} selected{% endif %}>{{ q.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ formki_vorgabe }}. Gilt ab dem nächsten Lauf eines Jobs.</span>
+    </div>
+    <table class="doku ai2d3d-quellen">
+        <thead><tr><th>KI</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for q in formki_arten %}<tr{% if q.wert == formki_wert %} class="ai2d3d-quelle-gewaehlt"{% endif %}><td><strong>{{ q.text }}</strong></td><td>{{ q.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    <p class="hint">Beide Portierungen stellen Regler und Haltung auf dem Genesis-Rig (ohne Finger, Zehen und Gesichtsknochen, in Daz' Gelenkgrenzen), legen die Figur glatt über
+        die geometrische Figur (seit 28.10.2026 ohne Pflicht, innen zu liegen) und den Rest als Regler der Kategorie „Mesh“ ab, auf der Grafikkarte im Speicher. Jede Einpassung wird abgenommen (Gelenkdicke,
+        umgeklappte Dreiecke gegen die Startfigur); eine, die nicht besteht, legt keine Regler ab. Quellen, Lizenzen und Messungen:
+        <a href="/hilfe/architektur/genesis/#mesh">Hilfe → Architektur → Genesis</a>.</p>
 </div>
 {% comment %}25.10.2026, Edgar: „in % die Entlichtung ist, bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“ — `Hautentlichtung`, gelesen von `Hautkieinsatz`.{% endcomment %}
 <div class="settings-section">

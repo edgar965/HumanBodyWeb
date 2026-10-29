@@ -1,0 +1,146 @@
+{% comment %}28.10.2026, Edgar: „Die andere Session hat eine Anpassung des Genesis Modells an das Mesh eingebaut. Schau nach und übernimm die bitte. Mache in deinem Jobview auch eine erste Zeile
+mit der reinen Anpassung des Genesis Modells an das Mesh. Also ohne KI.“ und „alles komplett auf GPU und RAM, keine Zwischenschritte, alles in einem Prozess. Überprüfe auch du, ob die
+Implementierung sauber auf GPU in einem Prozess ist.“ Zahlen: `ProjektTemp/_wegwerf/regler_ki/meshanpassung_edgar.log`, Bericht `_test/edgar/meshanpassung/meshanpassung.json`, Zählung
+`ProjektTemp/_wegwerf/koerper_eigen/messlauf/abstimmung_meshanpassung_edgar.json`.{% endcomment %}
+<h2 id="meshanpassung">Ohne KI: Genesis ins Mesh eines Tests (seit 28.10.2026, erste Zeile der Testseite)</h2>
+<p>Die Einpassung ist die der 2d-3d-AI-Sitzung, unverändert übernommen: <code>Genesis9.meshgenesis.G9meshgenesis</code> (Portierung von IPNet bzw. smplx transfer_model, Wahl unter
+  Einstellungen → 2d-3d-AI; <a href="/hilfe/architektur/genesis/#mesh">Hilfe → Architektur → Genesis, Abschnitt 12</a>). Mesh3D-AI baut nur das Ziel
+  (<code>mesh3dai/mesh3dai_meshanpassung.py</code>, Klasse <code>Mesh3daimeshanpassung</code>), in EINEM Prozess, alles in torch auf der Karte; von der Platte nur die Eingänge, auf die Platte
+  nur das Ergebnis:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Teil</th><th>Woher</th></tr></thead>
+  <tbody>
+    <tr><td>Netz</td><td>das Netz der Datei im Rahmen der Regler-KI in der Pose des Eingangs (Ausrichtung und Größe wie <code>Reglerkitest.eingang</code>), danach mit den Füßen auf y = 0, wie
+      <code>G9meshziel</code> es erwartet (der Rahmen hat sie bei <code>ruhehoehe</code>, an edgar 0,950 m); auf 6 mm zusammengefasst, doppelte Dreiecke nur einmal</td></tr>
+    <tr><td>Klasse je Punkt</td><td>Art des nächsten Punkts der A-Pose-Wolke (Zerlegung): Haut, Haar, sonst Kleidung; weiter als 20 mm von der Wolke: ungesehen (Setzung)</td></tr>
+    <tr><td>Teil je Punkt</td><td>der Genesis-Teil des MIA-Knochens mit dem größten Hautgewicht (<code>MIA_TEIL</code>) — die Schranke der Suche (nur gleicher oder Nachbarteil)</td></tr>
+    <tr><td>Start</td><td>die Genesis-Grundfigur des eingestellten Geschlechts, keine Regler einer KI</td></tr>
+  </tbody>
+</table>
+<p><strong>Gemessen an edgar</strong> (IPNet, je ein Lauf). Mittlerer Abstand der Haut des Meshs zur Figur:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Lauf</th><th>Ziel</th><th>Regler + Haltung</th><th>mit Versatz</th><th>am Ende</th><th>außen</th><th>Haltung max</th><th>Dauer (Einpassung)</th></tr></thead>
+  <tbody>
+    <tr><td>1 (28.10. mittags)</td><td>74.194 Punkte, Füße bei 0,95 m</td><td>4,85 mm (max 31,8)</td><td>0,51 mm</td><td>1,39 mm (max 13,7)</td><td>1</td><td>33,2°</td><td>1.210 s (219 s)</td></tr>
+    <tr><td>2 (28.10. 14:34)</td><td>74.164 Punkte, Füße auf 0</td><td>5,08 mm (max 32,7)</td><td>0,54 mm (max 9,0)</td><td>0,65 mm (max 9,7)</td><td>7</td><td>26,7°</td><td>268 s (147 s)</td></tr>
+    <tr><td>3 (28.10. 15:16)</td><td>74.164 Punkte, Füße auf 0</td><td>5,08 mm (max 32,7)</td><td>0,54 mm (max 8,9)</td><td>0,65 mm (max 9,4)</td><td>0</td><td>26,8°</td><td>282 s (134 s)*</td></tr>
+  </tbody>
+</table>
+<p>Ziel ab Lauf 2: Haut 54.867, Kleidung 14.399, Haar 4.897, ungesehen 1. Zwischen Lauf 1 und 2 hat sich dreierlei geändert, die Unterschiede sind darum keiner Änderung allein
+  zuzuschreiben: die 2d-3d-AI-Sitzung hat die Wartepunkte umgebaut und die Innen-Stufe neu gefasst (12 Runden linear gelöst statt 400 Adam-Schritte), und das Ziel steht jetzt auf y = 0
+  (vorher begann die Einpassung 0,94 m neben dem Ziel und holte es über die Verschiebung ein, 941,5 mm). Die Innen-Stufe schiebt seither rund 170 Punkte über 5 mm, fast alle an den Händen
+  (Lauf 3: 93 und 81), in Lauf 1 waren es 3.057.</p>
+<p><strong>Punkte außen</strong> (Lauf 2: 7 an Händen, linkem Oberarm, rechter Schulter, bis 1,0 mm außen; Soll mindestens 1 mm innen): Ursache laut 2d-3d-AI-Sitzung (gemessen an EdgarTrip,
+  <code>ai2d3d/diag_aussen_rest.py</code>) umgeklappte oder verschränkte Flächen des Meshs an Händen, Füßen und Kopf — dort nannte die Windungszahl einen 1 mm nach innen gelegten Punkt außen.
+  Seit 15:06 entscheidet die Windungszahl nur an Dreiecken, an denen sie 0,1 mm innen auch „innen“ sagt (<code>G9meshinnen.verlaesslich</code>), sonst die Pseudo-Normale; was danach noch außen
+  liegt, kommt auf 0,5 / 0,25 / 0,125 des Mindestabstands nach innen (<code>_flach</code>). Lauf 3: 0 außen, 3 Punkte nur 0,5 mm innen (dort ist die Fläche dünner als 2 mm).</p>
+<p class="m3a-klein">* Lauf 3 rechnete auf Platz 2 neben einem Lauf der 2d-3d-AI-Sitzung (<code>form_direkt</code>) — seine Zeiten sind mit Lauf 1 und 2 nicht vergleichbar.</p>
+<p><strong>Keine Mesh-Regler aus Mesh3D-AI:</strong> bis 28.10. mittags rechnete <code>G9meshgenesis</code> ihr Soll mit der Haltung, weil das Ziel bei 2d-3d-AI in der Ruhelage steht. Ein Testnetz
+  steht in seiner eigenen Pose: an edgar Oberarme bis 33,2° gedreht, der Mesh-Morph bis 381 mm — die Pose als Form gebacken. Der erste Lauf hat sie noch abgelegt (32 Regler, Quelle
+  <code>m3a_edgar</code>), seither <code>ablegen=False</code>. Seit 15:09 rechnet <code>G9meshgenesis</code> das Soll durch die eingepasste Haltung in die Ruhelage zurück
+  (<code>G9meshkoerper.ruhelage</code>; an EdgarTrip Rundweg Ruhe → Haltung → Punkte höchstens 0,0003 mm). Seit Lauf 4 (28.10. 15:33, Edgars Wort, Schalter <code>--mesh-regler</code>) liegen
+  die 32 Regler <code>m3a_edgar</code> neu aus der Ruhelage vor; die alten liegen in <code>ProjektTemp/_wegwerf/regler_ki/mesh_m3a_edgar_lauf1/</code>. Gemessen: Mesh-Morph höchstens
+  69,7 mm statt 385 mm (Mittel 10,8 statt 127,1), Formung − Soll 0,000 mm, Rundweg 0,0004 mm. Im Bild (Server-Netz Stufe 1 mit und ohne Mesh-Regler, Chrome): Arme und Rumpf stehen in der
+  Ruhelage, Armspanne ±0,655 statt ±0,658 m; größter Unterschied 69 mm im Schritt. <strong>Kopf und Hals nicht brauchbar:</strong> das Gesicht ist schräg verformt (Stirn zurück, Kinn
+  vor), der Mund zerknittert, am Hals eine Stufe — als Ganzes aber nicht gedreht (Kopfpunkte über 1,55 m: −1,3° Nicken). Die eingepasste Figur in der Pose des Eingangs hat das nicht; es
+  entsteht beim Zurückrechnen. Ursache offen (gemeldet an die 2d-3d-AI-Sitzung).</p>
+<p><strong>Prüfung „ein Prozess auf der Karte“</strong> (<code>abstimmung_messen.py</code> um je einen ganzen Lauf, Zähler vorher geeicht 4 → 4, 0 → 0; Berichte
+  <code>messlauf/abstimmung_meshanpassung_edgar_lauf1.json</code> bis <code>…_lauf3.json</code>): keine Zwischendateien, kein rechnender Kindprozess. Lauf 3 zählt 10 Kindprozesse: alle
+  <code>nvidia-smi</code> der GPU-Sperre (<code>gpu_sperre.py</code> <code>messen</code>), die vor der Vergabe von Platz 2 die Karte misst.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Lauf</th><th>Wartepunkte</th><th>CPU</th><th>Wandzeit</th><th>Karte im Mittel</th></tr></thead>
+  <tbody>
+    <tr><td>1, vor dem Umbau</td><td>32.009</td><td>557 s</td><td>1.234 s</td><td>86 %</td></tr>
+    <tr><td>2, nach dem Umbau</td><td>990</td><td>172 s</td><td>292 s</td><td>72 %</td></tr>
+    <tr><td>3, Runden ohne Warten</td><td>503</td><td>132 s</td><td>319 s*</td><td>75 %* (mit dem Lauf daneben)</td></tr>
+  </tbody>
+</table>
+<p>In Lauf 1 kam fast alles aus den Modulen der Einpassung: <code>meshflaeche.py</code> 11.674 (<code>abstaende</code>: <code>if bool(m.any())</code> und <code>masked_scatter</code> je Aufruf),
+  <code>meshipnet.py</code> 8.848, <code>meshgrenzen.py</code> 4.740 (<code>klemmen</code>), <code>meshinnenstufe.py</code> 3.269, <code>meshinnen.py</code> 1.813, <code>meshkoerper.py</code> 1.181.
+  Die 2d-3d-AI-Sitzung hat das umgebaut (<code>torch.where</code> statt Masken-Index und <code>masked_scatter</code>, Masken und Gruppen einmal im <code>__init__</code>, Abbruchfrage nur jede
+  5. Runde; Abgleich alt/neu ohne Abweichung). Lauf 2 hatte noch <code>meshinnen.py</code> 394 (Bericht <code>masse</code> und <code>aussen</code> je Runde) und <code>meshinnenstufe.py</code> 98;
+  seit 15:06 holen beide ihre Zahlen in einem Zug. In Lauf 3 bleibt nur noch Aufbau und Bericht: <code>morphsummekarte.py</code> 75 (<code>G9formung</code> gibt je Aufruf numpy zurück —
+  Null-Probe, Grundstellung), die Zerlegung beim Laden 117, <code>meshziel.py</code> 50 und <code>meshipnet.py</code> 38 im <code>__init__</code>, <code>meshableitung.py</code> 31,
+  <code>meshkoerper.py</code> 30, das Ziel von Mesh3D-AI 25 (einmal beim Aufbau), <code>meshinnen.py</code> 23 (davon <code>masse</code> 12 bei 4 Berichten), <code>formgraph.py</code> 14,
+  <code>meshformung.py</code> 12, <code>meshipnet.py</code> <code>_melden</code> 11 (einer je Iteration), <code>meshinnenstufe.py</code> 7, <code>meshgrenzen.py</code> 4, <code>meshflaeche.py</code> 2,
+  <code>meshgenesis.py</code> 2. In den Runden von IPNet, Innen-Stufe und „nach innen“ wartet die CPU nicht mehr (bis auf die eine Berichtszeile je IPNet-Iteration).</p>
+<p><strong>Ansicht „Textur“</strong> (seit 28.10. abends, Edgar: „kannst du das eingepasste Genesis auch mit Textur zeigen?“): die eingepasste Figur in der Haut ihrer Startfigur — je
+  UV-Punkt Lage und Normale seines Käfigpunkts (<code>G9basisnetz.ursprung</code>), je Materialgruppe die Albedo der Daz-Bibliothek (<code>Mesh3daitestanpassung.textur</code>,
+  <code>Genesis9texturen</code>); das Mesh in seinen Farben. Bis Lauf 6 war das Mesh dort grau (Edgar: „Textur ist nicht vorhanden … auch nicht bei Tripo“): die Farbe je Punkt las
+  das Bild aus <code>material.image</code>, ein GLB (Scan wie Tripo) kommt aber als <code>PBRMaterial</code> mit <code>baseColorTexture</code> — alle 268.587 Anzeigepunkte waren 153 grau, ohne
+  Meldung. Seit Lauf 7 (28.10. 17:25, sonst wie Lauf 6) liest <code>Mesh3daimeshanpassung.farbe</code> beides wie <code>Kostuemeingang</code>; ohne Farbe steht eine Warnung im Log.
+  Gegenprobe <code>ProjektTemp/_wegwerf/regler_ki/netzfarbe_farbe.py edgar</code>: 75.582 verschiedene Farben an 1.002.932 Punkten; im Anzeigenetz 84.433.</p>
+<p><strong>Kaputte Hände und Schritt</strong> (Edgar: „Warum sind die Hände noch kaputt, und auch Geschlechtsteil? Sowas kriegt man doch mit Genesis-Reglern gar nicht hin“): Die Regler
+  sind es nicht — Regler und Haltung allein ergeben einen sauberen Menschen (gemessen an EdgarTrip, <a href="/hilfe/architektur/genesis/#mesh-mensch">Hilfe → Architektur → Genesis</a>).
+  Es ist der freie Versatz je Punkt (IPNet) mit der Innen-Stufe: er zieht jeden Käfigpunkt einzeln an das Mesh und übernimmt, was dort ist — verschmolzene Finger, die Uhr am
+  Handgelenk, die Falte der Unterhose im Schritt. Abhilfe ist der Versatz nur längs der Normale ohne Hände und Füße (2d-3d-AI-Sitzung, Einstellung
+  <code>ai2d3d_mesh_versatz</code>, Vorgabe <code>normale</code>, im Skript <code>--versatz normale|frei</code>).</p>
+<p><strong>Lauf 5</strong> (28.10. 16:54, <code>--mesh-regler</code>, Versatz <code>normale</code>, 281 s; Log <code>ProjektTemp/_wegwerf/regler_ki/meshanpassung_edgar_lauf5.log</code>,
+  Regler und Ergebnis von Lauf 4 in <code>mesh_m3a_edgar_lauf4/</code> und <code>meshanpassung_edgar_lauf4.*</code>): Abnahme bestanden — Gelenkdicke 0,98–1,10 der Startfigur,
+  23 Dreiecke umgeklappt (Regler und Haltung allein 10), 30 Falten, davon 22 am Rumpf. Haut 3,62 mm innen, außen 0, Ziel-Haut → Figur 2,06 mm; Versatz längs der Normale an den
+  Händen höchstens 0,1 / 0,6 mm, die Innen-Stufe schiebt an der rechten Hand 483 Punkte über 5 mm (links 208). Mesh-Morph in der Ruhelage höchstens 30,1 mm (Mittel 3,5).
+  Im Bild (eigener Renderer in Chrome, Ansicht „Textur“, Hände, Füße, Rumpf nah): Hände und Füße sind die Genesis-Hände und -Füße, ohne Verschmelzung, Uhr oder Fäden; der Schritt glatt.
+  Sichtbar blieb eine Falte unter der rechten Brust (die 22 Falten am Rumpf).</p>
+<p><strong>Lauf 6</strong> (28.10. 17:06, 166 s, Log <code>…/meshanpassung_edgar_lauf6.log</code>, Lauf 5 gesichert in <code>mesh_m3a_edgar_lauf5/</code> und
+  <code>meshanpassung_edgar_lauf5.*</code>): seit 17:00 ohne Pflicht nach innen (<code>G9meshgenesis.INNEN</code> aus, <code>MINDEST_MM</code> 0, Edgar über die 2d-3d-AI-Sitzung: Genesis legt
+  sich glatt über das Mesh) — Innen-Stufe und „nach innen“ entfallen, die Haut geht auf die Fläche, an Haar und Kleidung nur nicht hinaus. Der Bericht trägt dafür <code>innen</code> und
+  <code>mindest_mm</code>. Abnahme bestanden: Gelenkdicke 1,03–1,14, 30 Dreiecke umgeklappt (Regler und Haltung allein 11), 30 Falten (Rumpf 17, Becken 9). Haut im Mittel 1,87 mm innen,
+  Abweichung von der Fläche 3,70 mm, 3.653 Punkte außen; Ziel-Haut → Figur 2,44 mm; Mesh-Morph in der Ruhelage höchstens 27,3 mm (Mittel 2,5). Im Bild (wie Lauf 5): Hände und Füße heil,
+  Schritt glatt, die Falte unter der Brust ist weg.</p>
+<p><strong>Kopf seit Lauf 12</strong> (28.10. 18:23; Edgar: „der Kopf … war vor deinen letzten ca. 3 Änderungen in der ersten Zeile viel besser … was machst du falsch?“): Beim Versatz
+  <code>normale</code> nimmt <code>G9meshgenesis._geschuetzt</code> den Kopf aus — er kam seit Lauf 5 nur aus den 292 Kopfreglern, und die starten hier bei der Grundfigur (die 2d-3d-AI-Sitzung
+  startet bei der Figur ihrer KI). Gemessen mit <code>ProjektTemp/_wegwerf/regler_ki/kopf_vergleich.py</code> (Kopfpunkte der Figur → Netz, Median / p90): Lauf 4 (frei) 1,87 / 3,04 mm,
+  Lauf 7 2,44 / 9,20 mm. Versuche: Lauf 8 Kopf mit Normalversatz 1,96 / 8,91 mm, am Kopf 26 umgeklappt, 18 zusammengefallen — verworfen; Lauf 9 Kopf frei je Punkt (IPNets
+  fit_SMPLD nur am Kopf) 1,49 / 4,38 mm, aber der Mundraum wanderte bis 56 mm nach außen, 325 umgeklappt, Abnahme nicht bestanden; Lauf 10 ohne Mundraum 300 umgeklappt (Augenhöhlen,
+  <code>kopf_gruppen.py</code>). Seit Lauf 12: <code>Mesh3daimeshgenesis</code> (Unterklasse in <code>mesh3dai/</code>, <code>G9meshgenesis</code> unverändert) legt nach dem Normalversatz
+  <code>Mesh3daikopfversatz</code> darauf — fit_SMPLD nur an Kopfpunkten, Regler und Haltung fest, ohne Mundraum (Gruppe „Mouth Cavity“), ohne Punkte binnen 8 mm davon und binnen 5 mm
+  der Lider (Hautgewicht auf <code>eyelid</code>-Knochen; der Käfig hat keine Augäpfel). Ergebnis: Kopf 1,73 / 6,96 mm, Versatz bis 16 mm, Abnahme bestanden (246 umgeklappt,
+  erlaubt 264; am Kopf 219, meist in den Augenhöhlen), 32 Mesh-Regler. Im Bild (Chrome, „Textur“): Gesicht des Scans, Mund sauber. Läufe 7–10 gesichert unter
+  <code>meshanpassung_edgar_lauf*.npz/.json</code> und <code>mesh_m3a_edgar_lauf*/</code>.</p>
+<p><strong>Geschlechtsteil</strong> (Edgar: „das ist entweder nicht da oder monströs in der 2. Zeile“). Zeile 2: „Daz Anatomie Mann“ trug bis 28.10. die Gewichte der verdeckenden Haut —
+  26 % auf den Oberschenkel-Drehknochen; in der Haltung des Tests lagen die Knochenlagen eines Punkts bis 83 mm auseinander, das Stück zerknüllte. Seit 17:52 Dazs eigene Hautbindung
+  (<code>Dazgeograftgewichte</code>, <code>manage.py dazgeograft_einbauen --nur-gewichte</code>): Oberschenkel 0,9 %, Rest Becken; danach höchstens 32 mm (Ringband), die Figur von edgar
+  neu gebaut (<code>Figurneubau</code>, Dreiecke gleich). Zeile 1: der Käfig hat kein Stück — seit Lauf 8 legt <code>Mesh3daimeshanatomie</code> das Stück der Startfigur ans Becken
+  (Umeyama über Beckenpunkte am Ring, dann der Ring auf die eingepasste Haut, Fehler am Ring im Mittel 14 mm, ins Stück auslaufend).</p>
+<p><strong>Lippen, Gesäß, Geschlechtsteil in der Hose</strong> (28.10. nachts; Edgar: „Neue Fehler. Kopf: Lippen Fehler. Popo fehlt usw.“, „Geschlechter geht aus der Hose heraus, fixe
+  das.“, „Kein Code nur für diesen Job. Bitte allgemeinen Code schreiben für alle.“). Erst die Prüfung: <code>Mesh3daimeshpruefung</code> zählt je Teil, wie viel Haut des Netzes mehr als
+  10 mm außerhalb der Figur liegt („fehlt“, höchstens 5 %) und wie viel der Figur mehr als 10 mm vor dem Netz steht („vor“, höchstens 2 %), dazu die Lippen (Kopfpunkte bis 12 mm am
+  Mundraum: höchstens 5 % mehr als 3 mm vor dem Netz); steht im Bericht und unter „Beide“. Gemessen (<code>koerper_vergleich.py</code>, <code>lippen_vergleich.py</code>): Lauf 12 Gesäß
+  unter der Unterhose im Median 64 mm außen (Lauf 4: 40 mm), Lippen 33 % mehr als 3 mm vor dem Netz (Lauf 7: 64 %, Lauf 4 mit freiem Versatz: 0 %).
+  <em>Gesäß:</em> an Kleidung zog die Einpassung nur nach innen (<code>G9meshziel.KLEID</code>); <code>Mesh3daimeshanliegend</code> macht Kleidung, deren Stoff 1–3 cm vom Rand die Haut
+  ohne Stufe fortsetzt (75 % der Randpunkte bis 10 mm), zur Haut — außer vorn am Becken (Normale nach vorn): dort wölbt sich der Stoff über dem Geschlechtsteil, als Haut gezählt
+  bekam die Figur die Wölbung und das Anatomie-Stück saß 1,21-fach davor (Lauf 13). Seit Lauf 16 nimmt <code>Mesh3daimeshanatomie</code> den Maßstab aus der Höhe der ganzen Figur,
+  nicht aus den Beckenpunkten am Ansatz (die rücken mit dem Gesäß auseinander: Lauf 15 noch 1,17). <em>Lippen:</em> Lauf 12 hielt alles bis 8 mm am Mundraum fest, das Gesicht ringsum ging bis 16 mm zum Netz;
+  seit Lauf 13 ist der ganze Kopf beweglich, und nur Punkte mit gleichsinniger Normale ziehen zum Netz (ohne Mundraum und Lidbereich). Die übrigen, etwa Mundraum, Lider und Nasenlöcher,
+  folgen über lap ihren Nachbarn. <em>Zeile 2:</em> ein Kleidungsstück, das mindestens 20 % der Dreiecke der Anatomie verdeckt, verdeckt sie ganz (<code>Kleideranatomie</code> im
+  Kostüm-Weg A), Prüfzeile „Anatomie im Stoff“. Verworfen: die Anatomie zur Wurzel stauchen (flacher Lappen, hing durch Lücken im Scan-Stoff heraus).
+  Ergebnis Lauf 16 (edgar, 19:17): Lippen 0,4 % mehr als 3 mm vor dem Netz (Median +0,1 mm), Becken 1,8 % „fehlt“, Gesäß im Bild wie der Scan; Kopf 3.356 von 5.101 Punkten mit Zug,
+  Versatz bis 10 mm; Abnahme bestanden, 209 umgeklappt (Kopf 128, Becken 70 — Lauf 12: 7). Prüfung rot nur an Händen und Unterarmen (linke Hand 19 % „fehlt“, 17 % „vor“; schon
+  Lauf 7: 20 %). Zeile 2: die Unterhose verdeckt beim Mann 82 % der Anatomie und jetzt alles, bei der Frau 6 % (unverändert); keine andere Prüfzeile neu rot.</p>
+<p><strong>Finger, Schritt, Geschlechtsteil in der ersten Zeile, Hände</strong> (28.10. nachts; Edgar: „fixe alles, und frage nicht mehr nach“, „kannst du das Geschlechtsteil auch in
+  der ersten Zeile fixen?“).
+  <em>Finger:</em> <code>Mesh3daimeshfinger</code> (seit 28.10.2026 nachts <code>Genesis9.meshfinger.G9meshfinger</code>, eine Stufe von <code>G9meshgenesis</code> für jede Einpassung, auch die Mesh-Zeile von 2d-3d-AI) dreht vor der Einpassung die Fingerknochen (40, in Dazs Grenzen) auf die Hände des Netzes — feste Paare je Runde wie ICP, übernommen nur,
+  wenn der Abstand fällt (Lauf 17: 6,42 → 5,83 mm, Lauf 18: 6,82 → 6,24 mm).
+  <em>Schritt:</em> auch unten an den Oberschenkeln (Normale nach unten) bleibt Kleidung einseitig — der Stoffsteg im Schritt zählt bei MIA zu den Oberschenkeln, die Ausnahme nur am Becken
+  ließ ihn den Damm 2–3 cm nach unten ziehen (Lauf 17: 30 Faltenkanten in der Schrittmitte, Lauf 12: 13 an der Taille; <code>becken_falten.py</code>, <code>falten_ziel.py</code>).
+  <em>Rock und Kleid</em> zählen nie als anliegend: sie umschließen beide Beine mit einer Fläche. Gegenprobe der Randregel (<code>anliegend_probe.py</code>): der Rock von zauberer (81 %
+  ohne Stufe), von ballerina_pilz (88 %) und das Kleid von koenigin1 (93 %) zählten als anliegend — die Randpunkte liegen per Auswahl dort, wo Stoff und Haut sich nahe sind.
+  <em>Geschlechtsteil:</em> dieselbe Regel wie in Zeile 2 (<code>Mesh3daimeshanatomie._im_stoff</code>): liegt für mindestens 20 % der Punkte des Stücks der nächste Punkt des Meshs auf
+  einer Art, die es trägt (Hose, Unterwäsche, Kleid …), zeigt „Beide“ das Stück nicht; „Figur“ zeigt es unverändert. An edgar: 85 % unter der Hose. Verworfen (Lauf 17): das Stück ins Netz
+  biegen und verkleinern — gewählt wurden Maßstab 0,6 und 50°, danach lagen 1.250 von 6.028 Punkten im Körper; zwischen Figur und Unterhose ist vorn nur 1,5–2 cm Platz
+  (<code>schritt_profil.py</code>). Die Dreiecke der Figur unter dem Stück (Dazs <code>hidden_polys</code>, grob über <code>G9stuecklochstufen.grob</code>: 360 Dreiecke) zeichnet die
+  erste Zeile seither nicht mehr, wo das Stück gezeigt wird — in Lauf 18 schnitten sie vorn durch das Stück (344 Punkte 8 mm „im Körper“, alle am Becken, <code>anatomie_im_koerper.py</code>).
+  In „Textur“ trägt das Stück die Haut der Startfigur am nächsten Käfigpunkt (<code>Mesh3daitestanpassung.anatomie_farbe</code>).
+  <em>Hände:</em> nach den Fingern blieb die linke Hand rot (Lauf 18: 356 von 1.815 Hautpunkten mehr als 10 mm außen, über die ganze Länge, Median 13,7 mm, <code>hand_fehlt.py</code>) —
+  Regler und Haltung tragen die Form der Hand nicht. Verworfen (Lauf 19): den Händen den freien Versatz je Punkt wie dem Kopf geben (nur gleichsinnige Normale, Nägel ohne Zug) — die
+  Prüfung wurde grün (linke Hand 3 % „fehlt“), aber die Abnahme fiel durch (umgeklappt linke Hand 474, rechte 288 Dreiecke, Versatz bis 50 mm), im Bild zerknitterte Finger; wie Lauf 4.
+  Dateien über 300 Zeilen geteilt: das Ziel nach <code>Mesh3daimeshziel</code>, die Texte der Kostüm-Prüfung nach <code>Kostuemtexte</code>.
+  Ergebnis Lauf 20 (edgar, 20:22): Abnahme bestanden, umgeklappt am Becken 32 (Lauf 16: 70); Faltenkanten am Becken 21, davon 8 unter der Anatomie versteckt — sichtbar 13 wie Lauf 12;
+  Anatomie unter der Hose verdeckt, 47 von 6.028 Punkten im Körper (Lauf 18 ohne Loch: 344); im Bild „Figur“ ganz und mittig, in „Beide“ nichts mehr aus der Unterhose. Prüfung rot nur
+  an Armen und Händen (linke Hand 19 % „fehlt“, 10 % „vor“).</p>
+<p class="hint">Offen: Hände und Unterarme bleiben in der Prüfung rot (Form der Hand ohne Versatz je Punkt; ein Weg ohne kaputte Finger fehlt). Die anderen Anzeigenetze mit „Daz Anatomie
+  Mann“ (andere Tests, EdgarTrip) tragen die alten Gewichte bis zum nächsten Neubau.</p>
+<p class="hint">Offen: Kopf und Hals der Mesh-Regler von Lauf 6 in der Ruhelage nicht im Bild geprüft; die Haltung dreht <code>l_thightwist1</code> um 72,5° (rechts 58,9°, an EdgarTrip 14,9°) — die Twist-Knochen
+  haben in <code>Genesis9.dsf</code> −180…180° auf ihrer Achse (2d-3d-AI-Sitzung, <code>diag_twistgrenzen.py</code>), ein Haltungsprior fehlt (Hilfe → Architektur → Genesis, Offen);
+  ein Fix käme allgemein, nicht an edgar;
+  nicht in der Kette (Knopf „Rechnen“), gerechnet nur von Hand: <code>python14 mesh3dai/mesh3dai_meshanpassung.py --nur &lt;Test&gt; [--mesh-regler]</code>.</p>

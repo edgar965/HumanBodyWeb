@@ -9,10 +9,44 @@
 import * as THREE from 'three';
 
 export class Mesh3daiflaechennormalen {
-    /** Normalen an `geometrie`: `normalen` (Float32Array V·3) oder, ohne sie, aus den Dreiecken gerechnet. */
+    /** Normalen an `geometrie`: `normalen` (Float32Array V·3) oder, ohne sie, aus den Dreiecken gerechnet und über gleich liegende Punkte gemittelt (`geschweisst`). */
     static setzen(geometrie, normalen) {
         if (normalen && normalen.length === geometrie.getAttribute('position').count * 3) geometrie.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
-        else geometrie.computeVertexNormals();
+        else Mesh3daiflaechennormalen.geschweisst(geometrie);
+    }
+
+    /**
+     * Normalen aus den Dreiecken, an den UV-Nähten nicht geknickt (28.10.2026 nachts, Edgar zur zweiten Zeile der Testseite edgar: „unter der Hose noch ein Fehler in der Textur und bei den
+     * Beinen. In der ersten Zeile gibt es diese Fehler nicht.“). Das Anzeigenetz ist an den UV-Nähten geteilt (Genesis: Rumpf ↔ Beine am Oberschenkel, y ≈ 0,74 m); `computeVertexNormals` gab
+     * jeder Seite der Naht ihre eigene Normale — im Bild eine Kante rund um den Oberschenkel (im Tab gesehen; mit gemittelten Normalen weg). Die erste Zeile nimmt die Normalen vom ungeteilten
+     * Käfig (`Mesh3daimeshanpassung._haut`). Hier: Punkte gleicher Lage (auf 1e-5 m) bekommen die Summe ihrer Normalen.
+     */
+    static geschweisst(geometrie) {
+        geometrie.computeVertexNormals();
+        const p = geometrie.getAttribute('position').array, n = geometrie.getAttribute('normal').array;
+        const gruppen = new Map();
+        for (let i = 0; i < p.length / 3; i++) {
+            const k = `${Math.round(p[3 * i] * 1e5)},${Math.round(p[3 * i + 1] * 1e5)},${Math.round(p[3 * i + 2] * 1e5)}`;
+            const g = gruppen.get(k);
+            if (g) g.push(i);
+            else gruppen.set(k, [i]);
+        }
+        for (const g of gruppen.values()) {
+            if (g.length < 2) continue;
+            let x = 0, y = 0, z = 0;
+            for (const i of g) {
+                x += n[3 * i];
+                y += n[3 * i + 1];
+                z += n[3 * i + 2];
+            }
+            const l = Math.hypot(x, y, z) || 1;
+            for (const i of g) {
+                n[3 * i] = x / l;
+                n[3 * i + 1] = y / l;
+                n[3 * i + 2] = z / l;
+            }
+        }
+        geometrie.getAttribute('normal').needsUpdate = true;
     }
 
     /** Normalen mit den Knochenmatrizen `m` (je Knochen 12 Zahlen, 3×4 zeilenweise, wie `Mesh3daihaeutung.verformen`) gedreht und wieder auf Länge 1 gebracht. */

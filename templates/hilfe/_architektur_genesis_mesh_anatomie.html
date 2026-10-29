@@ -1,0 +1,27 @@
+{% comment %}28.10.2026 nachts, Edgar zur Mesh-Zeile von edgartrip: „hände zu groß und falsche Textur, Beine und Geschlecht völlig falsch, Ellbogen“ — „alles aber allgemeiner Code, keine
+Fixes für den Job!“. Eigene Datei, damit `_architektur_genesis_mesh.html` nicht weiter wächst. Aufteilung mit der 2d-3d-AI-Sitzung: sie die geometrische Figur (Feld 2, Ellbogen,
+Messpunkte an den Händen), hier die Einpassung der Genesis-Figur (Feld 3).{% endcomment %}
+<p id="mesh-anatomie"><strong>Schritt und Finger der Genesis-Figur (28.10.2026 nachts).</strong></p>
+<ul>
+  <li><strong>Wölbung unter der Unterhose:</strong> Die Startfigur von EdgarTrip trägt <code>body_bs_HipGenitalBulge</code> 1,0 (Verschiebung bis 29 mm),
+    <code>hb:Pelvis_CrotchVolume</code> 0,77 und <code>mh:pelvis_bulge-decr_incr</code> 0,66 — in jedem Lauf seit 27.10.2026 gleich (<code>stufe1</code> der Berichte,
+    <code>ProjektTemp/_wegwerf/regler_ki/bulge_herkunft.py</code>). Die Einpassung änderte sie nie: unter Kleidung zählt das Ziel einseitig, nichts zieht zurück. Im Bild hing die Wölbung
+    unter dem Saum zwischen den Oberschenkeln. Neu für jede Einpassung: <code>G9meshanatomie</code> — Zone = die Käfigpunkte unter den versteckten Dreiecken der Daz-Anatomie (Mann
+    und Frau, 206 Punkte); ein Regler der Startfigur, dessen eigene Deltas zu mindestens 50 % in der Zone liegen, beginnt auf 0 (an EdgarTrip genau die drei: 99 / 83 / 73 %, der
+    nächste <code>hb:Pelvis_CrotchDist</code> 38 %; <code>anatomie_regler_probe.py</code>). Der erste Probelauf zeigte: die Einpassung zog <code>HipGenitalBulge</code> wieder auf
+    0,37 bzw. 0,67 — 20 Zielpunkte an der Wölbung sind „Haut“ (die Wölbung der geometrischen Figur hängt unter dem Saum, wo das Foto die Oberschenkel zeigt), die Zone selbst liegt im Ziel
+    nur zu 5–14 % auf Haut. Darum zweitens (<code>G9meshanatomie.unter_kleidung</code>, nach der Einpassung): liegt die Zone im Ziel zu weniger als 50 % auf Haut, gehen die Regler
+    mit mindestens 50 % Wirkung in der Zone auf die Startfigur (0) zurück und bleiben fest.</li>
+  <li><strong>Finger:</strong> die Fingerstufe der ersten Mesh3D-AI-Zeile (<code>G9meshfinger</code>, vorher <code>Mesh3daimeshfinger</code>) läuft jetzt in jeder Einpassung vor Kopf
+    und Versatz. Die Hände der Genesis-Figur waren an Lauf 21.05 praktisch die der geometrischen Figur (Median 2,3 / 2,6 mm, Länge Handgelenk → fernster Punkt 191 / 184 gegen
+    190 / 180 mm, <code>mesh_genesis_gegen_geo.py</code>) — bessere Hände müssen zuerst in Feld 2; Feld 3 folgt dann über diese Stufe.</li>
+  <li><strong>Saum der Hüllen</strong> (<code>Genesis9.meshsaum.G9meshsaum</code>, in <code>mesh_auf_genesis.huellen</code>): bis dahin ganze Dreiecke mit mindestens zwei Ecken der
+    Klasse — der Saum der Unterhose ein Sägezahn von einer Dreiecksbreite. Jetzt der Anteil der Klasse je Punkt, dreimal halb mit den Nachbarn gemischt, und die Dreiecke an seiner
+    0,5-Linie geschnitten (Marching Triangles; neue Kantenpunkte mit gemischter Lage je Foto und Farbe). Probe am Gitter (<code>meshsaum_probe.py</code>): Fläche 0,3988 bei Soll 0,40,
+    Umlauf erhalten, Randpunkte im Median 0,1 Gitterweite neben der Linie.</li>
+  <li><strong>Probe alt gegen neu</strong> an Lauf 21.05 (<code>mesh_genesis_probe.py</code>, ein Prozess, ohne Ablage; <code>mesh_genesis_probe_2105b.log</code>,
+    <code>schritt_profil_probe.py</code>, <code>bulge_wert_schaetzen.py</code>): Wölbungspunkte (74 Käfigpunkte, an denen <code>HipGenitalBulge</code> mehr als 5 mm wirkt) 16 mm
+    höher und 19 mm weiter hinten (tiefster Punkt y 0,894 → 0,910 m, vorderster z 0,129 → 0,110 m); die Genesis-Figur ohne Wölbung, die geometrische Figur steht dort im Mittel 34 mm
+    davor (Sache der geometrischen Figur, die 2d-3d-AI-Sitzung nimmt dieselbe Regel). Finger 2,11 → 1,87 mm übernommen (0,6°), Haut-Abweichung 1,04 → 0,92 mm, Ziel-Haut → Figur
+    1,44 → 1,23 mm, Abnahme beide Male bestanden. Läufe ohne deterministischen Modus — dieselbe alte Rechnung gab im ersten Probelauf 0,96 / 1,41 mm.</li>
+</ul>

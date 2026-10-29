@@ -33,8 +33,29 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
     Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.<br>
     <strong>Stand 26.10.2026:</strong> ein Test rechnet per Knopf in {{ rechenlauf.schritte|length|default:"—" }} festen Schritten (<a href="#rechenlauf">Rechnen per Knopf</a>), seit 25.10. mit
     „Haltung an den Eingang“ (<code>Lageangleich</code>) und „Körper in die Außenmaße“ (<code>Koerperangleich</code>, seit 26.10. mit den Anfassern der Körper-Eigenregler, seit 27.10. mit einer
-    Schlussrunde für Hals und Kopf, die das Gesicht auf das des Meshs legt — <code>Koerperangleichhaltung</code>; die Prüfung „Lage des Gesichts“ ist seitdem ab 2 statt 20 mm rot); der Kopf wird nach dem
-    Kopfnetz an das Mesh angeglichen (<a href="#kopf">Kopf aus der KI</a>). Seit 26.10. rechnet jeder Schritt auf der Karte, Körper und Kopf als CUDA-Graph, und die Kette ist reproduzierbar
+    Schlussrunde für Hals und Kopf, die das Gesicht auf das des Meshs legt — <code>Koerperangleichhaltung</code>; die Prüfung „Lage des Gesichts“ ist seitdem ab 2 statt 20 mm rot;
+    seit 28.10. nachts, nach dem Vorbild der ersten Zeile der Testseite, mit der Größe „innen“ — kein Körperpunkt vor der Fläche des Meshs, in 3D, weil von der Seite die Hände das Gesäß im Umriss
+    verdecken (edgar: Gesäß bis 2 cm unter dem Saum der Unterhose) —, mit festen Anfassern der Hände (<code>Koerperangleichstellen.EIGEN_FEST</code>; „koerper“ hatte die rechte Hand um 16 mm
+    verbogen) und einer Fingerrunde auf die Hände des Meshs, <code>Koerperangleichnetz</code>; die Figur schattiert über die UV-Nähte hinweg gleichmäßig, <code>Mesh3daiflaechennormalen.geschweisst</code>.
+    Seit 28.10. spät: die Winkelanpassung („haltung2“) legt die Fingerglieder nach der RICHTUNG der Glieder der KI, nicht nach ihrer Lage (<code>Ikgraph</code> mit <code>richtung</code>,
+    <code>mesh3dai_test_form_haltung.RICHTUNG</code>), und die Runden von „koerper“ halten die Finger fest (Fassung 9) — an edgar war die rechte Hand der Figur 9–18 % länger als die linke
+    (Regler-KI: <code>body_ctrl_ProportionHandSizeR_scl</code> 0,266, <code>…L_scl</code> 0,040; die Hände des Meshs 190/193 mm), die Anpassung bog die zu langen Finger bis 79°, „koerper“
+    Mittel- und Ringfinger auf 59°/71°; neue Prüfung „Finger wie die KI“ (<code>Kostuemfinger</code>) vorher 4 von 10 rot, danach 0.
+    Seit 29.10. nachts (Edgar, Unterhose von hinten: das Gesäß hing unter dem Saum heraus): Prüfung „Haut am Saum wie der Eingang“ (<code>Kostuemsaumhaut</code>; Hose rechts 14,8 %, links 9,2 %
+    der Haut um den Saum mehr als 5 mm vor dem Eingang, rot); „koerper“ misst „haut“ vom Körper aus und zieht nicht mehr an Kleidung (Fassung 10, <code>hb:Pelvis_GluteusMass</code> 0,07 statt
+    0,30) und rechnet an allen Käfigpunkten außer Kopf statt an den 4.000 Tabellenpunkten (Fassung 11, unter dem Saum lag keiner) — danach 0 von 5 rot, Prio 1 13 → 7.
+    Seit 29.10. mittags hält „koerper“ die Gelenke der Glieder auf den Zielen der KI (Größe „ki“, Fassung 12 — vorher kürzte er an edgar die Beine, Oberschenkel 386 statt 417 mm, die linke
+    Ferse stand 28 mm über dem Mesh) und den Kopf ohne Mundraum und Lider auf der Haut des Meshs (Größe „kopfhaut“, Fassung 13 — das Gesicht lag in der Tiefe hinter dem Mesh): „Haltung folgt
+    der KI“ und „Knochenlängen der KI“ grün, „Form des Kopfes“ 47 → 22–30 cm².
+    Kette edgar ab „figur“, 21:06: „innen“ 2,91 → 0,37 mm, Summe 0,0439 → 0,0197; „Hose zeigt Haut“ nicht mehr rot; offen: knapp unter dem Saum steht das Gesäß noch 2 cm hinter dem Mesh,
+    „Loch in der Haut“ links 0,37 %, rechts 0,41 % rot — ein stärkeres Gewicht (15) verschob das Gesicht um 4,3 mm und wurde verworfen); der Kopf wird nach dem
+    Kopfnetz an das Mesh angeglichen (<a href="#kopf">Kopf aus der KI</a>).
+    Seit 29.10. abends (Edgar: „falten in Brust und in Rücken“): Prüfungen „Höhe am Halsansatz wie der Eingang“ (<code>Kostuemhalsansatz</code>, Oberkante der Schulter je Bildspalte von vorn)
+    und „Falten in der Haut wie der Eingang“ (<code>Kostuemfalten</code>, Knick je Kante des Käfigs gegen den Eingang und in Ruhe gegen die Grundfigur; edgar vorn 228, hinten 113 cm rot).
+    „koerper“ Fassung 15 kostet denselben Knick in Ruhe (Größe „glatt“, <code>Koerperangleichglatt</code>; Fassung 14 mit dem Laplace der Verschiebung ließ 10–15° durch): Falten 0 von 6
+    Bereichen rot. Fassung 16 misst die Oberkante der Schulter neben dem Hals je Spalte gegen den Eingang (Größe „halsansatz“, <code>Koerperangleichhalsansatz</code>, wie die Prüfung, in 3D) —
+    vorher sah „koerper“ die 1 cm zu tiefe linke Schulter kaum. Offen: am Eingang ist die Schulter links 10–14 mm höher als rechts, am Trapez gibt es aber keinen Anfasser und die Regler wirken
+    paarweise — die Form kann den Unterschied nur auf beide Seiten aufteilen. Seit 26.10. rechnet jeder Schritt auf der Karte, Körper und Kopf als CUDA-Graph, und die Kette ist reproduzierbar
     (<a href="#karte">Auf der Karte</a>). Jede Klasse mit Aufruf-Logik steht unter <a href="#klassen">Alle Klassen</a> — alles beim Aufruf aus dem Code gelesen.
   </div>
 
@@ -48,6 +69,7 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
   {# 24.10.2026 abends: zuerst die Übersicht, wie die KIs aufgerufen werden, und je KI eine Grafik (Edgar: „für alle KIs eine einzelne Grafik … eine übergeordnete Grafik mit Kästchen und Ablauf“) #}
   {% if kis %}{% include "hilfe/_architektur_mesh3dai_kis.html" %}{% endif %}
   {% include "hilfe/_architektur_mesh3dai_reglerki.html" %}
+  {% include "hilfe/_architektur_mesh3dai_meshanpassung.html" %}
   {% include "hilfe/_architektur_mesh3dai_kurz.html" %}
   {# 24.10.2026: der heutige Ablauf zuerst — Rechnen per Knopf, Kopf aus der KI, Kleider heute (Kostüm-Weg A), alle Klassen mit Aufruf-Logik (ohne Nummer) #}
   {% if rechenlauf %}{% include "hilfe/_architektur_mesh3dai_rechenlauf.html" %}{% endif %}

@@ -89,7 +89,7 @@ class Architekturgenesis:
         ('Genesis9/meshgrundstellung.py', 'G9meshgrundstellung', 'genauer Weg (CPU) für Regler, deren Drehung aus Faktor- oder seltenen Formeln kommt'),
         ('Genesis9/meshinnen.py', 'G9meshinnen', 'Ziel nach innen, Hülle ohne vergrabene Dreiecke, Abstand mit Vorzeichen, Zahlen, Rest „nach innen“'),
         ('Genesis9/meshvorzeichen.py', 'G9meshvorzeichen', 'innen/außen: Pseudo-Normale am nächsten Punkt, Windungszahl, vergrabene Dreiecke'),
-        ('Genesis9/meshinnenstufe.py', 'G9meshinnenstufe', 'Versatzfeld glatt ins Ziel (Adam, Laplace, Strafverfahren)'),
+        ('Genesis9/meshinnenstufe.py', 'G9meshinnenstufe', 'Versatzfeld glatt ins Ziel (je Runde linear gelöst: Ziele auf dem Mindestabstand + Graph-Laplace, CG)'),
         ('Genesis9/reglersperre.py', 'G9reglersperre', 'Regler, die eine KI nicht stellen darf — nur im Bedienfeld'),
         ('Genesis9/meshgrenzen.py', 'G9meshgrenzen', 'Haltung in Daz\' Gelenkgrenzen (Genesis9.dsf), Euler je Reihenfolge'),
         ('Genesis9/meshziel.py', 'G9meshziel', 'Das Ziel: Punkte, Normalen, Klasse je Punkt, Teile'),

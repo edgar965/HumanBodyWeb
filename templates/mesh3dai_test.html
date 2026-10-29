@@ -44,6 +44,8 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
     <ol class="mesh3dai-rechnen-schritte" data-schritte></ol>
 </section>
 
+{% include "_mesh3dai_meshanpassung.html" with kennung=test.kennung %}
+
 <section class="card mesh3dai-zeile" id="mesh3dai-test" data-kennung="{{ test.kennung }}">
     {# Geschlecht der Figur (16.10.2026 abends, Edgar: „ganz oben im Testjob soll die Einstellung änderbar sein, ob es weiblich oder männlich ist“) — `Mesh3daitest.geschlecht_setzen`. #}
     <div class="mesh3dai-test-einstellung">
@@ -171,6 +173,8 @@ import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %
 import { Mesh3dairechnen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dairechnen.js' %}";
 import { Mesh3daitestmesspunkte } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestmesspunkte.js' %}";
 import { Mesh3dailinien } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailinien.js' %}";
+import { Mesh3daimeshanpassung } from "{% fassungspfad 'viewer/mesh3dai/mesh3daimeshanpassung.js' %}";
+Mesh3daimeshanpassung.starten(document.getElementById('mesh3dai-meshanpassung'));
 Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
 Mesh3dailinien.testStarten(document.getElementById('mesh3dai-linien'));
 Mesh3daitestmesspunkte.starten(document.getElementById('mesh3dai-messpunkte'));

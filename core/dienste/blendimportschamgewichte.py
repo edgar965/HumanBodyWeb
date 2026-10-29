@@ -172,14 +172,17 @@ class Blendimportschamgewichte:
 
     # ----------------------------------------------------------------- Lauf
 
-    def gewichte(self, p, dreiecke, ring=None):
+    def gewichte(self, p, dreiecke, ring=None, dicht=None):
         """`{knochen: [[punkt, gewicht], …]}` für die Stückpunkte `p` mit dem Netz `dreiecke` (Format von
         `G9mbstuecke.gewichte`, wie es `G9dsonschreiber` liest). `ring`: `(lage, ring_punkte)` des Hautlochs — der Rand des Stücks
-        trägt dann die Gewichte der Haut auf diesem Ring (`an_ring`)."""
+        trägt dann die Gewichte der Haut auf diesem Ring (`an_ring`). `dicht` `(N, len(knochen))`: Gewichte, die das Stück selbst mitbringt
+        (Daz-Geograft, `Dazgeograftgewichte`, seit 28.10.2026) — dann keine Verdecker, nur der Ring."""
         p = np.asarray(p, dtype=np.float64)
         dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        nachbar, kosten = self.verdecker(p)
-        dicht = self.kuerzen(self.glaetten(self.dicht(nachbar, kosten), dreiecke))
+        if dicht is None:
+            nachbar, kosten = self.verdecker(p)
+            dicht = self.glaetten(self.dicht(nachbar, kosten), dreiecke)
+        dicht = self.kuerzen(np.asarray(dicht, dtype=np.float64))
         if ring is not None:
             dicht = self.kuerzen(self.an_ring(dicht, p, dreiecke, *ring))
         self.bericht['punkte'] = int(len(p))

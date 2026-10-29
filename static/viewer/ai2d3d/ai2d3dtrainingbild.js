@@ -6,8 +6,9 @@
  * gemessen im Mittel 10 mm neben der des Trainings). Je Foto (Nummer wie `seite_<nr>.png`): die Umrisse der Kopf-Eigenregler — blau der Rand im Foto, grün der Rand der Figur des
  * Trainings (das, was der Verlust misst), rot je Strahl blau → grün — und die Gesichtspunkte (insightface im Foto, an der Figur die Punkte, auf die trainiert wurde). In den Körperzeilen
  * (`koerper`) der Umriss des ganzen Körpers (`Umrissabstand.zeichnung`): blau Foto, grün Figur, rot je Punkt zum nächsten der anderen Seite.
- * Ausschnitt und Maßstab wie die übrigen Felder der Zeile (27.10.2026, Edgar: „mach das Geometrie bild im gleichen Massstab wie die anderen“), darauf schwarz die Linien des
- * Genesis-Ergebnisses aus Feld 2 („mach die schwarze Linie drauf des Genesis Ergebnisses“). Hintergrund: das Foto, blass.
+ * Ausschnitt und Maßstab wie die übrigen Felder der Zeile (27.10.2026, Edgar: „mach das Geometrie bild im gleichen Massstab wie die anderen“), darauf schwarz der Umriss des
+ * Genesis-Ergebnisses („mach die schwarze Linie drauf des Genesis Ergebnisses“) — seit 29.10.2026 das des Laufs aus training.json (`_genesis`), vorher die Linien des Blocks.
+ * Hintergrund: das Foto, blass.
  */
 import { Ai2d3dmessstrich } from './ai2d3dmessstrich.js';
 
@@ -44,13 +45,14 @@ export class Ai2d3dtrainingbild {
         const auf = p => [(p[0] - kx) * a.s, (p[1] - ky) * a.s], F = Ai2d3dtrainingbild.FARBE;
         if (k) Ai2d3dtrainingbild._koerper(c, auf, k, zeile, F);
         else Ai2d3dtrainingbild._kopf(c, auf, f, zeile, F);
-        // Hover wie in den anderen Feldern (27.10.2026, `Ai2d3dmesszeiger`): die blauen und schwarzen Linien der Zeile, der Punkt unter dem Zeiger blau (Foto) und schwarz (Genesis)
+        // Hover wie in den anderen Feldern (27.10.2026, `Ai2d3dmesszeiger`): der Punkt unter dem Zeiger blau (Foto) — schwarz nicht mehr (29.10.2026): die Punkte der Zeile gehören
+        // zum Rendering des Blocks, Schwarz in diesem Feld ist das Genesis-Ergebnis des Laufs (`_genesis`)
         if (zeile.zeiger) {
             zeile.zeiger.anmelden(flaeche);
             zeile.zeiger.merken(flaeche, auf, zeile.f, 'beide');
             for (const p of zeile.f.punkte) {
                 if (!zeile.zeiger.zeigt(p.nr)) continue;
-                for (const [seite, farbe] of [['vorlage', F.vorlage], ['ergebnis', F.genesis]]) {
+                for (const [seite, farbe] of [['vorlage', F.vorlage]]) {
                     if (!p[seite]) continue;
                     const [x, y] = auf(p[seite]);
                     c.fillStyle = farbe;
@@ -67,16 +69,21 @@ export class Ai2d3dtrainingbild {
         const teil = (t, m) => (m ? `${t} ${z(m.mittel)} mm (90 %: ${z(m.p90)} mm, ${m.punkte} Punkte)` : `${t} —`);
         const umriss = k?.mm_gerechnet !== undefined ? `${teil('gerechnet', k.mm_gerechnet)}, ${teil('nur geprüft', k.mm_geprueft)}`
             : teil('Umriss des Körpers', k?.mm);
-        info.textContent = k ? `Lauf ${daten.lauf} · ${f.datei}: ${umriss} — blau Foto, grün die gerechnete Figur, schwarz das Genesis-Ergebnis.`
+        const g = f.koerper?.genesis;
+        const schwarz = g ? `schwarz das Genesis-Ergebnis (${teil('Umriss', g.mm)})` : 'schwarz: zu diesem Lauf noch kein Genesis-Ergebnis';
+        info.textContent = k ? `Lauf ${daten.lauf} · ${f.datei}: ${umriss} — blau Foto, grün die gerechnete Figur, ${schwarz}.`
             : `Lauf ${daten.lauf} · ${f.datei}: Umriss ${z(f.mm.umriss)} mm (${f.mm.strahlen} Strahlen), Gesicht ${z(f.mm.gesicht)} mm${neu}, `
-            + `ViTPose ${z(f.mm.vit)} mm — blau Foto, grün die gerechnete Figur, schwarz das Genesis-Ergebnis.`;
+            + `ViTPose ${z(f.mm.vit)} mm — blau Foto, grün die gerechnete Figur, ${schwarz}.`;
     }
 
-    /** Die Linien des Genesis-Ergebnisses aus Feld 2 (Umrisse und Ketten der Zeile), schwarz und dünn. */
-    static _genesis(c, auf, zeile, F) {
-        const farbe = { ergebnis: F.genesis };
-        if (zeile.f.umrisse) Ai2d3dmessstrich.umrisse(c, auf, zeile.f.umrisse, ['ergebnis'], farbe, null);
-        Ai2d3dmessstrich.ketten(c, auf, zeile.f.zeilen, zeile.f.punkte, ['ergebnis'], farbe, null);
+    /**
+     * Schwarz: der Umriss des Genesis-Ergebnisses DIESES Laufs (29.10.2026, Edgar: „den Unterschied zwischen den linien siehst du. Das soll als Fehlerfall gelten“) — Genesis-Figur
+     * mit Augen und Hüllen in derselben Kamera wie Blau und Grün (`Genesisumriss`, `koerper.genesis` in training.json). Bis dahin die Linien des Blocks: am 27.10.2026 gerendert und
+     * gemessen (Stand nurjob4), also eine andere Figur als die des Laufs. Fehlt das Ergebnis, steht kein Schwarz da — nie das eines anderen Laufs.
+     */
+    static _genesis(c, auf, f, F) {
+        const g = f.koerper?.genesis;
+        if (g) Ai2d3dtrainingbild._punkte(c, auf, g.ergebnis, F.genesis, 1.6);
     }
 
     static _kopf(c, auf, f, zeile, F) {
@@ -84,7 +91,7 @@ export class Ai2d3dtrainingbild {
         c.lineWidth = 4;
         c.strokeStyle = F.vorlage;
         for (const u of f.umrisse) Ai2d3dmessstrich._kette(c, auf, u.vorlage, u.geschlossen);
-        Ai2d3dtrainingbild._genesis(c, auf, zeile, F);
+        Ai2d3dtrainingbild._genesis(c, auf, f, F);
         Ai2d3dmessstrich.umrisse(c, auf, f.umrisse, ['ergebnis'], F, null);
         c.strokeStyle = F.verbindung;
         for (const u of f.umrisse) u.vorlage.forEach((p, i) => { if (p && u.ergebnis[i]) Ai2d3dmessstrich.strich(c, auf(p), auf(u.ergebnis[i])); });
@@ -126,8 +133,8 @@ export class Ai2d3dtrainingbild {
     }
 
     /** Körper: Umriss als Punkte (ungeordnet, darum keine Kette) — blau Foto, rot je Punkt zum nächsten der anderen Seite, grün die Figur. */
-    static _koerper(c, auf, k, zeile, F) {
-        Ai2d3dtrainingbild._genesis(c, auf, zeile, F);
+    static _koerper(c, auf, k, _zeile, F) {
+        Ai2d3dtrainingbild._genesis(c, auf, { koerper: k }, F);
         Ai2d3dtrainingbild._punkte(c, auf, k.vorlage, F.vorlage, 2);
         c.strokeStyle = F.verbindung;
         c.lineWidth = 1;

@@ -5,12 +5,15 @@ Aufbau wie Einstellungen → Mesh3D-AI: der Wert liegt in `AppSettings.ui_prefs`
 woher die Gelenke der Person in den Fotos kommen (`Ai2d3dposewahl`), und seit 25.10.2026 wie stark die Haut-KI das Licht des Eingangs aus der Haut herausrechnet (`Hautentlichtung`, Edgar:
 „in % die Entlichtung … bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“ — gilt für die Haut-KI, die heute Mesh3D-AI einsetzt), seit 27.10.2026 der Erkenner der
 Gesichtspunkte (`Ai2d3dgesichtswahl`, Edgar: „in den Einstellungen umschaltbar zwischen Insight und MediaPipe“), seit 28.10.2026 die Portierung, mit der Genesis in die geometrische
-Figur eingepasst wird (`Ai2d3dmeshwahl`, Edgar: „mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“).
+Figur eingepasst wird (`Ai2d3dmeshwahl`, Edgar: „mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“), und der Versatz danach
+(`Ai2d3dmeshversatz`, 28.10.2026 abends, Edgar: „mach deinen Vorschlag“ — längs der Normale statt frei je Punkt).
 """
 
 from django.views.generic import TemplateView
 
+from ..dienste.ai2d3dformki import Ai2d3dformki
 from ..dienste.ai2d3dgesichtswahl import Ai2d3dgesichtswahl
+from ..dienste.ai2d3dmeshversatz import Ai2d3dmeshversatz
 from ..dienste.ai2d3dmeshwahl import Ai2d3dmeshwahl
 from ..dienste.ai2d3dposewahl import Ai2d3dposewahl
 from ..dienste.hautentlichtung import Hautentlichtung
@@ -35,7 +38,12 @@ class Ai2d3dEinstellungenSeite(TemplateView):
                     gesicht_vorgabe=Ai2d3dgesichtswahl.text(Ai2d3dgesichtswahl.VORGABE),
                     gesicht_erkenner=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dgesichtswahl.BESCHREIBUNG[w]} for w, t in Ai2d3dgesichtswahl.WERTE],
                     mesh_schluessel=Ai2d3dmeshwahl.SCHLUESSEL, mesh_wert=Ai2d3dmeshwahl.aus(prefs), mesh_vorgabe=Ai2d3dmeshwahl.text(Ai2d3dmeshwahl.VORGABE),
-                    mesh_verfahren=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dmeshwahl.BESCHREIBUNG[w]} for w, t in Ai2d3dmeshwahl.WERTE])
+                    mesh_verfahren=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dmeshwahl.BESCHREIBUNG[w]} for w, t in Ai2d3dmeshwahl.WERTE],
+                    versatz_schluessel=Ai2d3dmeshversatz.SCHLUESSEL, versatz_wert=Ai2d3dmeshversatz.aus(prefs),
+                    versatz_vorgabe=Ai2d3dmeshversatz.text(Ai2d3dmeshversatz.VORGABE),
+                    versatz_arten=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dmeshversatz.BESCHREIBUNG[w]} for w, t in Ai2d3dmeshversatz.WERTE],
+                    formki_schluessel=Ai2d3dformki.SCHLUESSEL, formki_wert=Ai2d3dformki.aus(prefs), formki_vorgabe=Ai2d3dformki.text(Ai2d3dformki.VORGABE),
+                    formki_arten=[{'wert': w, 'text': t, 'beschreibung': Ai2d3dformki.BESCHREIBUNG[w]} for w, t in Ai2d3dformki.WERTE])
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heißt sonst ``view``.

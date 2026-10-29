@@ -8,7 +8,7 @@ Naht, Hautgewichte, `hoehe_mm` und die Regler des Penis (`G9penis`, `pen_*`) ohn
     Quelle    Käfig des Geografts (+ Realism-Morph, Vorgabe 1) → Stufe 1 (Catmull-Clark) → Doppelgänger an UV-Nähten verschweißt   (`Dazgeograftquelle`)
     Loch      die verdeckten Käfigflächen der Figur als Dreiecke der Stufe 1                                                 (`Dazgeografthaut`)
     Naht      Ring des Lochs geglättet, Rand des Geografts genau auf dessen Ecken                                            (`Blendimportschamloch/-ring/-naht`)
-    Schreiben OBJ → `.duf` mit den Hautgewichten der verdeckenden Hautpunkte, `.ersetzt.json` (anatomie, loch, hoehe_mm)    (`G9eigenstueck`, `G9stueckersatz`)
+    Schreiben OBJ → `.duf` mit Dazs Hautgewichten (seit 28.10.2026), `.ersetzt.json` (anatomie, loch, hoehe_mm)              (`Dazgeograftgewichte`, `G9eigenstueck`, `G9stueckersatz`)
 
 Die Knochen des Geografts (`Gen1`–`Gen6`, `Testes`) fallen weg: Neigung und Erektion rechnen die Regler selbst (`G9penismorphe`); Länge und Umfang sind dort
 dieselben Griffe wie Dazs `Penile Length`/`Penile Width`. Eigene Regler für das, was nur Daz kennt: `Dazgeograftregler`.
@@ -58,6 +58,7 @@ class Dazgeograft:
 
         quelle = Dazgeograftquelle(self.geschlecht)
         kaefig = quelle.punkte + float(realism) * quelle.morph(self.REALISM)
+        self._quelle, self._kaefig = quelle, kaefig          # für die Hautgewichte in `schreiben` (`gewichte`)
         punkte, dreiecke, uv_ecken = self.stufe1(quelle, kaefig)
         figur = self.figur()
         maske, loch_bericht = self.loch_maske(figur, quelle)
@@ -193,8 +194,24 @@ class Dazgeograft:
                 'ring_punkte': ring_punkte, 'verschiebung': verschiebung, 'ring_d': lage - lage0}
         return punkte, dreiecke, uv_ecken, loch, dict(haut.bericht(maske, ring), **naht)
 
+    def gewichte(self, figur, punkte, flaechen, ring, ring_punkte, quelle=None, kaefig=None):
+        """Hautgewichte des Stücks `{knochen: [[punkt, gewicht], …]}`: Dazs eigene Hautbindung (`Dazgeograftgewichte`), der Rand auf der Haut des Rings
+        (`Blendimportschamgewichte.an_ring`). Bis 28.10.2026 die Gewichte der verdeckenden Hautpunkte — beim Mann trugen so 26 % die Oberschenkel, das Stück zerknüllte in
+        jeder Haltung mit gespreizten Beinen (Docstring von `Dazgeograftgewichte`). `quelle`/`kaefig` ohne Angabe die des laufenden Baus."""
+        from .blendimportschamgewichte import Blendimportschamgewichte
+        from .dazgeograftgewichte import Dazgeograftgewichte
+
+        quelle = quelle if quelle is not None else self._quelle
+        kaefig = kaefig if kaefig is not None else self._kaefig
+        haut = Blendimportschamgewichte.fuer_figur(figur)
+        daz = Dazgeograftgewichte(quelle, haut.knochen)
+        dicht = daz.dicht(punkte, self._stufe_von(quelle), self.stufe_punkte(quelle, kaefig))
+        aus = haut.gewichte(punkte, flaechen, ring=(ring, ring_punkte), dicht=dicht)
+        self.gewichte_bericht = dict(daz.bericht, ring=haut.bericht.get('ring'))
+        return aus
+
     def schreiben(self, figur, punkte, dreiecke, uv_ecken, loch):
-        """OBJ → Stück: Gewichte der verdeckenden Hautpunkte, Höhe über der Haut, Loch — wie `Blendimportstuecke.scham_stueck`."""
+        """OBJ → Stück: Gewichte aus Dazs Hautbindung (`gewichte`), Höhe über der Haut, Loch — wie `Blendimportstuecke.scham_stueck`."""
         import trimesh
         from Genesis9.eigenstueck import G9eigenstueck
         from Genesis9.objleser import G9objleser
@@ -202,7 +219,6 @@ class Dazgeograft:
 
         from .blendimportbilder import Blendimportbilder
         from .blendimportscham import Blendimportscham
-        from .blendimportschamgewichte import Blendimportschamgewichte
         from .blendimportschamhoehe import Blendimportschamhoehe
         from .blendimportstuecke import Blendimportstuecke
 
@@ -216,8 +232,7 @@ class Dazgeograft:
                             rauheit_bild=str(self.bilder['rauheit']), shininess=None)
         netz = G9objleser.lesen(str(Blendimportbilder.obj(ordner, punkte, dreiecke, uv_ecken, material)))
         roh = np.asarray(netz['punkte'], dtype=np.float64)
-        gewichte = Blendimportschamgewichte.fuer_figur(figur).gewichte(roh, np.asarray(netz['flaechen'], dtype=np.int64),
-                                                                       ring=(loch['ring'], loch['ring_punkte']))
+        gewichte = self.gewichte(figur, roh, np.asarray(netz['flaechen'], dtype=np.int64), loch['ring'], loch['ring_punkte'])
         bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, self.KATEGORIE, material, heben=False, wicklung=False, gewichte=gewichte)
         flaeche = trimesh.Trimesh(figur['punkte'], figur['dreiecke'], process=False)
         hoehe = np.round(Blendimportschamhoehe.ueber_figur(roh, flaeche), 1).tolist()

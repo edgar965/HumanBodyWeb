@@ -15,6 +15,11 @@ abstimmen muss“, „kette muss Reproduzierbar sein“). Daten: `Architekturmes
     Rechenlauf NICHT setzt</strong>{% endif %}; Kindprozesse erben sie. Eingeschaltet in {% for r in k.rufer %}<code>{{ r }}</code>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}.
     Andere Läufe mit der GPU-Sperre (2d-3d-AI, Trainings) bleiben ohne die Variable, wie sie sind.</li>
 </ol>
+<p><strong>Ein Prozess (29.10.2026):</strong> Gerechnet wird nur im Skriptdienst (<code>mesh3dai_skriptdienst.py</code>), daneben läuft der Arbeitsprozess (<code>manage.py mesh3dai_rechnen</code>).
+  Am Lauf von 19:23 rechneten „figur“ (<code>mesh3dai_formfigur.py</code>), „rig“ (<code>mesh3dai_vorstufe.py</code>) und „form“ der Regler-KI noch als eigene Prozesse (fehlten in
+  <code>Skriptdienstruf.ERLAUBT</code>), MIA als zweiter Dauerprozess, und die Sperre holten zwei Hilfsprozesse je Schritt. Jetzt stehen alle drei in <code>ERLAUBT</code>, MIA rechnet im Dienst
+  (<code>Miadauer.im_prozess</code>), die Sperre ist überall <code>Gpusperre</code>. Bestätigt während „figur“ eines Laufs (Prozessliste: nur Dienst und Arbeitsprozess); „rig“ und „form“ im Dienst
+  sind noch nicht an einem ganzen Lauf gezählt.</p>
 
 <h3>Gemessen</h3>
 <table class="doku">

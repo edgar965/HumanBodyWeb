@@ -1,0 +1,29 @@
+{% comment %}
+Erste Zeile der Testseite (28.10.2026, Edgar: „Die andere Session hat eine Anpassung des Genesis Modells an das Mesh eingebaut. Schau nach und übernimm die bitte. Mache in deinem Jobview auch eine
+erste Zeile mit der reinen Anpassung des Genesis Modells an das Mesh. Also ohne KI.“): die Genesis-Figur, mit `G9meshgenesis` in das Netz eingepasst, ohne Regler-KI. Gerechnet von
+`mesh3dai/mesh3dai_meshanpassung.py`, Daten `Mesh3daitestanpassung`, Seite `static/viewer/mesh3dai/mesh3daimeshanpassung.js`.
+{% endcomment %}
+<section class="card mesh3dai-zeile" id="mesh3dai-meshanpassung" data-kennung="{{ kennung }}">
+    <div class="mesh3dai-zeilenkopf">
+        <h2>Genesis ins Mesh eingepasst — ohne KI</h2>
+        <span class="schalterleiste mesh3dai-ma-ansicht" title="Ansichtsart — dieselben Arten wie in den Zeilen darunter"></span>
+    </div>
+    <p class="hb-hinweis" data-info="anpassung-kopf">Wird geladen …</p>
+    <div class="mesh3dai-bereiche">
+        <div class="mesh3dai-bereich">
+            <h2><span class="mesh3dai-nummer">1</span> Mesh</h2>
+            <div class="mesh3dai-leinwand" data-art="anpassung-netz"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="anpassung-netz"></div>
+        </div>
+        <div class="mesh3dai-bereich">
+            <h2><span class="mesh3dai-nummer">2</span> Genesis eingepasst</h2>
+            <div class="mesh3dai-leinwand" data-art="anpassung-figur"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="anpassung-figur"></div>
+        </div>
+        <div class="mesh3dai-bereich">
+            <h2><span class="mesh3dai-nummer">3</span> Genesis im Mesh</h2>
+            <div class="mesh3dai-leinwand" data-art="anpassung-beide"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="anpassung-beide"></div>
+        </div>
+    </div>
+</section>

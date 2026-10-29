@@ -20,6 +20,14 @@ export class Mesh3daitestansicht {
         this._kleiderKnopf = this._knopf('fa-tshirt', 'Kleider', 'Die Kleider und Bestandteile der Karte darunter in der Ausgabe ein- und ausblenden; das Haar bleibt, die Haut darunter wird wieder gezeigt.',
             () => this._setzen({ kleider: !this.kleider }));
         wahl?.querySelector('.mesh3dai-rigleiste')?.replaceChildren(this._rigKnopf, this._kleiderKnopf);
+        // Die Ansichtsart gilt für alle Zeilen (28.10.2026): ein Klick in der ersten Zeile („ohne KI“, eigene Knöpfe) stellt auch diese um.
+        document.addEventListener(Mesh3daiansichtgedaechtnis.EREIGNIS, e => {
+            const modus = e.detail?.modus;
+            if (!modus || modus === this.modus) return;
+            this.modus = modus;
+            this._anzeigen();
+            this.beiAenderung?.('modus');
+        });
         this._anzeigen();
     }
 
@@ -43,8 +51,8 @@ export class Mesh3daitestansicht {
     }
 
     _setzen(neu) {
+        Object.assign(this, neu);           // vor `merken`: dessen Ereignis erreicht auch diese Ansicht, die dann nichts mehr zu tun hat
         Mesh3daiansichtgedaechtnis.merken(neu);
-        Object.assign(this, neu);
         this._anzeigen();
         this.beiAenderung?.(Object.keys(neu)[0]);
     }

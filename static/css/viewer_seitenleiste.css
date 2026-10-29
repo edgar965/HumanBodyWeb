@@ -186,3 +186,8 @@
 .daz-eigen > .daz-eigen-knopf { margin-left: 0; font-weight: 600; }
 .daz-eigen > .daz-eigen-block.genesis9-stueckregler { margin-left: 6px; }
 .daz-eigen-meldung { font-size: 0.72rem; margin: 2px 0 4px; }
+/* Für die KI gesperrte Regler (`G9reglersperre`, 28.10.2026, Edgar: „markiere die gesperrten Regler rot im UI“): von Hand bedienbar, rot mit Schloss. */
+/* doppelte Klasse: `.hb-formblock .slider-row label` (genesis9material.css, später geladen) setzt die Farbe mit gleicher Spezifität */
+.slider-row.ki-gesperrt.ki-gesperrt > label { color: var(--danger, #e5484d); }
+.slider-row.ki-gesperrt > label > .fa-lock { margin-right: 4px; }
+.slider-row.ki-gesperrt > input[type="range"] { accent-color: var(--danger, #e5484d); }

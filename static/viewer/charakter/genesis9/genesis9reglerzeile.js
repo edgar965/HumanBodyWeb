@@ -69,8 +69,9 @@ export class Genesis9reglerzeile {
         // `hinweis`: ein Sammelregler (Alter, `G9alter`) sagt, was er stellt; ein gemessener Platz, warum er dort steht (`G9reglerplatz`).
         const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : (regler.hinweis || regler.name);
         const { unten, oben } = Genesis9reglerzeile.bereich(regler, wert);
-        // für die KI gesperrt (`G9reglersperre`, 28.10.2026): von Hand bedienbar, mit Schloss — der Grund steht im Hinweis
-        const schloss = regler.ki_gesperrt ? '<i class="fas fa-lock" style="opacity:.55;margin-right:3px" aria-label="für KI gesperrt"></i>' : '';
+        // für die KI gesperrt (`G9reglersperre`, 28.10.2026): von Hand bedienbar, rot mit Schloss (`viewer_seitenleiste.css`) — der Grund steht im Hinweis
+        if (regler.ki_gesperrt) zeile.classList.add('ki-gesperrt');
+        const schloss = regler.ki_gesperrt ? '<i class="fas fa-lock" aria-label="für KI gesperrt"></i>' : '';
         zeile.innerHTML = `
             <label for="${kennung}" title="${escapeHtml(titel)}">${schloss}${escapeHtml(regler.anzeige)}</label>
             <input type="range" id="${kennung}" min="${unten}" max="${oben}"
