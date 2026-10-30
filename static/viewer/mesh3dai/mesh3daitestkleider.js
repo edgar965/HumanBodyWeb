@@ -203,14 +203,14 @@ export class Mesh3daitestkleider {
 
     /**
      * Die Dreiecke der Figur, die die gewählten Stücke verdecken (Server: `verdeckt` = Bits je Dreieck, base64, little-endian) — die Figur lässt sie weg, sonst sticht die Haut durch den Stoff.
-     * `nurHaar`: Knopf „Kleider“ aus — nur das Haar verdeckt.
+     * Knopf „Kleider“ aus: die Seite fragt gar nicht (seit 30.10.2026 auch ohne Haar).
      * @returns {Uint8Array|null}
      */
-    verdeckt(anzahl, nurHaar = false) {
+    verdeckt(anzahl) {
         if (!this.liste) return null;
         let aus = null;
         for (const st of this.liste.stuecke) {
-            const bits = st.wahl !== 'aus' && (!nurHaar || st.art === 'haar') ? st[st.wahl]?.verdeckt : null;
+            const bits = st.wahl !== 'aus' ? st[st.wahl]?.verdeckt : null;
             if (!bits) continue;
             aus ??= new Uint8Array(anzahl);
             const bytes = Uint8Array.from(atob(bits), c => c.charCodeAt(0));
@@ -234,10 +234,10 @@ export class Mesh3daitestkleider {
         }
     }
 
-    /** Die Objekte der wirksamen Wahl (für das Feld „Ausgabe“); `nurHaar`: Knopf „Kleider“ aus. */
-    sichtbare(nurHaar = false) {
+    /** Die Objekte der wirksamen Wahl (für das Feld „Ausgabe“); bei Knopf „Kleider“ aus fragt die Seite nicht. */
+    sichtbare() {
         if (!this.liste) return [];
-        return this.liste.stuecke.filter(st => st.art !== 'haut' && st.wahl !== 'aus' && (!nurHaar || st.art === 'haar')).map(st => this.objekte.get(`${st.wahl}/${st.id}`)).filter(Boolean);
+        return this.liste.stuecke.filter(st => st.art !== 'haut' && st.wahl !== 'aus').map(st => this.objekte.get(`${st.wahl}/${st.id}`)).filter(Boolean);
     }
 
     async speichern() {

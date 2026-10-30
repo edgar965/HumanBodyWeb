@@ -10,16 +10,24 @@ Trainingsdatum nicht ändern. Gezählt wird die jüngste Änderungszeit einer Da
   * das jüngste gemeinsame Training, das den Job nennt (`Mesh3daitrainingsdatum`, `wo=('vorstufe',)`).
 Nicht gezählt: `einstellung.json` und `name.json` (schreibt der Server auf einen Klick), Nebendateien `*.neu`, beiseitegelegte Stände (`*_vor_*`, `verworfen*`, `vergleich_*`, `_diagnose`).
 Ein Lauf, der gerade schreibt, zählt mit (seine Dateien sind schon da). Je Job 30 s gemerkt — der Datensatz hat bis 190 Probenordner.
+Seit 30.10.2026 rechnet ein Wert, der älter als `MERKEN_S`, aber jünger als `HINTERGRUND_S` ist, ein Hintergrundfaden neu, und die Seite bekommt bis dahin den gemerkten: der Gang über
+alle Tests (16.876 Verzeichnisse, 0,9 s, `ProjektTemp/_wegwerf/liste_messen/mesh3dai_liste_zeit.py --abgelaufen`) lag sonst alle 30 s im Aufruf von /mesh-3D-AI/ und wurde unter
+der Last des Studios zu mehreren Sekunden (Edgar: „wenn ich /studio/ öffne, und schnell eine andere Seite klicke, dauert es ewig“). Älter als `HINTERGRUND_S` wird wie
+bisher im Aufruf gerechnet — die Spalte zeigt nie einen Stand von vor Stunden.
 
     Mesh3dairechendatum.letztes(job) -> None | {'zeit': float (Unix), 'was': Text, 'datei': Pfad relativ zu mesh3dai/}
     Mesh3dairechendatum.test(kennung) -> dasselbe für einen Test (nur `_test/<kennung>/**`)
 """
 
+import logging
 import os
+import threading
 import time
 
 from .mesh3daipaare import Mesh3daipaare
 from .mesh3daitrainingsdatum import Mesh3daitrainingsdatum
+
+logger = logging.getLogger('core')
 
 __all__ = ['Mesh3dairechendatum']
 
@@ -27,34 +35,62 @@ __all__ = ['Mesh3dairechendatum']
 class Mesh3dairechendatum:
     NIE = frozenset({'einstellung.json', 'name.json'})
     MERKEN_S = 30
+    HINTERGRUND_S = 600          # Setzung: so alt darf ein gezeigter Wert höchstens sein, während der Hintergrundfaden den neuen rechnet
+    WARTEN_S = 2.0               # erst nach der Seite, die ihn auslöste — im selben Prozess nähme er ihr sonst die GIL (die Liste braucht warm 0,4 s)
     _gemerkt = {}
+    _offen = {}                  # Schlüssel → Rechnung, die der Hintergrundfaden noch erneuern soll
+    _faden = None
+    _sperre = threading.Lock()
 
     @classmethod
     def letztes(cls, job):
-        schluessel = (job['id'], job['ordner'], bool(job.get('paar')))
-        jetzt = time.monotonic()
-        alt = cls._gemerkt.get(schluessel)
-        if alt and jetzt - alt[0] < cls.MERKEN_S:
-            return alt[1]
-        wert = cls._rechnen(job)
-        cls._gemerkt[schluessel] = (jetzt, wert)
-        return wert
+        return cls._gemerkt_oder((job['id'], job['ordner'], bool(job.get('paar'))), lambda: cls._rechnen(job))
 
     @classmethod
     def test(cls, kennung):
         """Dasselbe für einen Test (`_test/<kennung>/**`, Reiter „Test“; 23.10.2026, Edgar: „warum ist da kein neuer Output???“ — die Spalte las `test.json` → `gerechnet`, das nur der
         Testlauf schreibt; Kostüm- und Kleiderläufe blieben unsichtbar)."""
-        schluessel = ('test', kennung)
-        jetzt = time.monotonic()
-        alt = cls._gemerkt.get(schluessel)
-        if alt and jetzt - alt[0] < cls.MERKEN_S:
-            return alt[1]
+        return cls._gemerkt_oder(('test', kennung), lambda: cls._test_rechnen(kennung))
+
+    @classmethod
+    def _test_rechnen(cls, kennung):
         wurzel = Mesh3daipaare.ordner()
         wert = cls._neueste(wurzel / '_test' / kennung, 8, cls._testschritt)
         if wert:
             wert['datei'] = os.path.relpath(wert['datei'], wurzel).replace('\\', '/')
-        cls._gemerkt[schluessel] = (jetzt, wert)
         return wert
+
+    @classmethod
+    def _gemerkt_oder(cls, schluessel, rechnen):
+        alt = cls._gemerkt.get(schluessel)
+        alter = time.monotonic() - alt[0] if alt else None
+        if alter is not None and alter < cls.MERKEN_S:
+            return alt[1]
+        if alter is not None and alter < cls.HINTERGRUND_S:
+            with cls._sperre:
+                cls._offen[schluessel] = rechnen
+                if cls._faden is None:
+                    cls._faden = threading.Timer(cls.WARTEN_S, cls._erneuern)
+                    cls._faden.name, cls._faden.daemon = 'Mesh3dairechendatum', True
+                    cls._faden.start()
+            return alt[1]
+        wert = rechnen()
+        cls._gemerkt[schluessel] = (time.monotonic(), wert)
+        return wert
+
+    @classmethod
+    def _erneuern(cls):
+        """Der Hintergrundfaden: die offenen Schlüssel nacheinander neu rechnen, dann enden."""
+        while True:
+            with cls._sperre:
+                if not cls._offen:
+                    cls._faden = None
+                    return
+                schluessel, rechnen = cls._offen.popitem()
+            try:
+                cls._gemerkt[schluessel] = (time.monotonic(), rechnen())
+            except Exception:          # noqa: BLE001 — der alte Wert bleibt; der nächste Aufruf nach HINTERGRUND_S rechnet im Aufruf und zeigt den Fehler dort
+                logger.exception('Mesh3dairechendatum: %s nicht neu gerechnet', schluessel)
 
     @classmethod
     def _rechnen(cls, job):

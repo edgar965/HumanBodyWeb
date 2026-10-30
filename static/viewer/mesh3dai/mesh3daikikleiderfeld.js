@@ -72,14 +72,14 @@ export class Mesh3daikikleiderfeld {
     }
 
     /**
-     * Schalter „Kleider“ der Jobseite (21.10.2026): Stücke außer Haar ein- oder ausblenden, mit ihnen die Stoffe der Hautverdeckung (`Hautverdeckung.zaehlt` übergeht ausgeblendete).
-     * → true, wenn sich etwas geändert hat (dann muss die Hautverdeckung neu planen).
+     * Schalter „Kleider“ der Jobseite (21.10.2026): alle Stücke ein- oder ausblenden — seit 30.10.2026 auch das Haar (Edgar: „die Haare werden nicht deaktiviert“) —, mit ihnen die Stoffe der
+     * Hautverdeckung (`Hautverdeckung.zaehlt` übergeht ausgeblendete). → true, wenn sich etwas geändert hat (dann muss die Hautverdeckung neu planen).
      */
     static kleiderZeigen(ki, an) {
         if (!ki || ki.kleiderAn === an) return false;
         ki.kleiderAn = an;
-        for (const kind of ki.gruppe.children) kind.visible = an || kind.userData.art === 'haar';
-        for (const netz of Object.values(ki.haut || {})) netz.visible = an || netz.userData.haar;
+        for (const kind of ki.gruppe.children) kind.visible = an;
+        for (const netz of Object.values(ki.haut || {})) netz.visible = an;
         return true;
     }
 

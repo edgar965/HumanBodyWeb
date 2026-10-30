@@ -130,7 +130,7 @@ export class Mesh3daifigurbewegung {
             const mesh = Mesh3daibewegungskleid.binden(st.netz, this.modell.skelett, q.knochen, this._abbildung);
             if (!mesh) continue;
             mesh.userData.art = st.art;
-            mesh.visible = this._kleiderAn || st.art === 'haar';
+            mesh.visible = this._kleiderAn;
             Eigenhaut.einhaengen(this.modell.group, mesh, this.modell.skelett);
             this.kleider.push({ mesh, art: st.art });
         }
@@ -191,12 +191,12 @@ export class Mesh3daifigurbewegung {
         inhalt.add(gruppe);
     }
 
-    /** Schalter „Kleider“ der Zeile: Stücke außer Haar ein- oder aus, mit ihnen die Stoffe der Hautverdeckung. */
+    /** Schalter „Kleider“ der Zeile: alle Stücke samt Haar ein- oder aus (seit 30.10.2026), mit ihnen die Stoffe der Hautverdeckung. */
     _kleiderZeigen(an) {
         if (this._kleiderAn === an) return;
         this._kleiderAn = an;
-        for (const k of this.kleider) k.mesh.visible = an || k.art === 'haar';
-        for (const netz of Object.values(this.modell.hautStuecke || {})) netz.visible = an || netz.userData.haar;
+        for (const k of this.kleider) k.mesh.visible = an;
+        for (const netz of Object.values(this.modell.hautStuecke || {})) netz.visible = an;
         Hautverdeckung.planen(this.modell);
     }
 

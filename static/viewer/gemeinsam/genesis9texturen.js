@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Genesis9texturbasis } from './genesis9texturbasis.js';
 import { Genesis9texturblock } from './genesis9texturblock.js';
+import { Seitenabbruch } from './seitenabbruch.js';
 import { Texturweg } from './texturweg.js';
 
 /**
@@ -107,12 +108,14 @@ export class Genesis9texturen {
         try {
             const pfade = [...offen.keys()], wahl = abfrage ? `?${abfrage}` : '';
             const adresse = `${Genesis9texturen.BUENDEL}${wahl || '?'}${wahl ? '&' : ''}${pfade.map(p => `p=${encodeURIComponent(p)}`).join('&')}`;
-            const antwort = adresse.length <= Genesis9texturen.ADRESSE_MAX ? await fetch(adresse)
-                : await fetch(Genesis9texturen.BUENDEL + wahl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pfade }) });
+            const signal = Seitenabbruch.signal;           // endet beim Verlassen der Seite (30.10.2026, `Seitenabbruch`)
+            const antwort = adresse.length <= Genesis9texturen.ADRESSE_MAX ? await fetch(adresse, { signal })
+                : await fetch(Genesis9texturen.BUENDEL + wahl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pfade }), signal });
             if (!antwort.ok || !antwort.body) throw new Error(`HTTP ${antwort.status}`);
             await Genesis9texturen._buendelLesen(antwort.body.getReader(), offen);
         } catch (fehler) {
-            // Was noch fehlt (kein Bündel, Strom abgerissen): einzeln.
+            // Was noch fehlt (kein Bündel, Strom abgerissen): einzeln — nach einem Abbruch beim Verlassen erst, wenn die Seite doch bleibt.
+            await Seitenabbruch.geblieben();
         }
         for (const [pfad, eintrag] of offen) Genesis9texturen._einzeln(pfad, eintrag);
     }

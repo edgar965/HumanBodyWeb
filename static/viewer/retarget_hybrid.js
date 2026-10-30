@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { Serverabruf } from './gemeinsam/serverabruf.js';
 import { Protokoll } from './gemeinsam/protokoll.js';
+import { Seitenabbruch } from './gemeinsam/seitenabbruch.js';
 
 // =========================================================================
 // BVH format detection
@@ -179,13 +180,17 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
     // speicher des Browsers kommen kann.
     const rumpf = (opts.makro || opts.regler)
         ? { makro: opts.makro || null, regler: opts.regler || null } : null;
-    const resp = rumpf
-        ? await fetch(url, { method: 'POST',
-                             headers: { 'Content-Type': 'application/json' },
-                             body: JSON.stringify(rumpf) })
-        : await fetch(url);
-    if (!resp.ok) throw await retargetFehler(resp);
-    const data = await resp.json();
+    // Reine Rechnung, auch als POST: endet beim Verlassen der Seite (`Seitenabbruch`, 30.10.2026 — drei Retargets des Studios liefen nach dem Klick
+    // auf eine andere Seite noch je 2,2 s neben ihr).
+    const data = await Seitenabbruch.mit(async signal => {
+        const resp = rumpf
+            ? await fetch(url, { method: 'POST',
+                                 headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify(rumpf), signal })
+            : await fetch(url, { signal });
+        if (!resp.ok) throw await retargetFehler(resp);
+        return resp.json();
+    });
     Protokoll.debug('RETARGET',
         `${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
     return buildClipFromRetargetData(data, rigifySkel);

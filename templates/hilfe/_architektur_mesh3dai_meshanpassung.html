@@ -12,7 +12,8 @@ Implementierung sauber auf GPU in einem Prozess ist.“ Zahlen: `ProjektTemp/_we
   <tbody>
     <tr><td>Netz</td><td>das Netz der Datei im Rahmen der Regler-KI in der Pose des Eingangs (Ausrichtung und Größe wie <code>Reglerkitest.eingang</code>), danach mit den Füßen auf y = 0, wie
       <code>G9meshziel</code> es erwartet (der Rahmen hat sie bei <code>ruhehoehe</code>, an edgar 0,950 m); auf 6 mm zusammengefasst, doppelte Dreiecke nur einmal</td></tr>
-    <tr><td>Klasse je Punkt</td><td>Art des nächsten Punkts der A-Pose-Wolke (Zerlegung): Haut, Haar, sonst Kleidung; weiter als 20 mm von der Wolke: ungesehen (Setzung)</td></tr>
+    <tr><td>Klasse je Punkt</td><td>seit 30.10.2026 die Art der Kostüm-Erkennung (<code>Mesh3daimeshbild</code>: Sapiens2 + SAM 3 + Farbregeln, die meisten Flächen der Zelle): Haut, Haar, sonst
+      Kleidung; bis dahin die Art des nächsten Punkts der A-Pose-Wolke nach der Zerlegungs-KI. Weiter als 20 mm von der Wolke: ungesehen (Setzung)</td></tr>
     <tr><td>Teil je Punkt</td><td>der Genesis-Teil des MIA-Knochens mit dem größten Hautgewicht (<code>MIA_TEIL</code>) — die Schranke der Suche (nur gleicher oder Nachbarteil)</td></tr>
     <tr><td>Start</td><td>die Genesis-Grundfigur des eingestellten Geschlechts, keine Regler einer KI</td></tr>
   </tbody>
@@ -144,3 +145,14 @@ Implementierung sauber auf GPU in einem Prozess ist.“ Zahlen: `ProjektTemp/_we
   haben in <code>Genesis9.dsf</code> −180…180° auf ihrer Achse (2d-3d-AI-Sitzung, <code>diag_twistgrenzen.py</code>), ein Haltungsprior fehlt (Hilfe → Architektur → Genesis, Offen);
   ein Fix käme allgemein, nicht an edgar;
   nicht in der Kette (Knopf „Rechnen“), gerechnet nur von Hand: <code>python14 mesh3dai/mesh3dai_meshanpassung.py --nur &lt;Test&gt; [--mesh-regler]</code>.</p>
+<p><strong>Fassung 7: Klassen aus der Kostüm-Erkennung</strong> (30.10.2026 abends; Edgar: „dann untersuche das Problem bei den anderen Jobs!“, dann „mach“). Nur edgar bestand die Abnahme.
+  Die Zerlegungs-KI nannte Kostüm Haut (Haut nach Zerlegung gegen Erkennung: koenigin1 78,9 gegen 3,1 %, mann_gold 38,8 gegen 4,0 %, ballerina_bunt 33,2 gegen 15,4 %, randy_tropical
+  29,9 gegen 11,3 %), Zeile 1 zog die Figur in Kleid, Tutu und Stäbe. Erst die Prüfung: <code>Mesh3daimeshklassen</code> („Klassen des Ziels wie die Kostüm-Erkennung“, höchstens 10 % der
+  Haut ist Kostüm, höchstens 10 % des Haars fehlt) war mit den alten Klassen an allen sechs Tests rot (auch edgar: Haar 24,9 %), mit den neuen an allen grün
+  (<code>klassen_gegenprobe.py</code>). Bezug ist das Urteil nach den Farbregeln — an koenigin1 nennen Sapiens2 und SAM 3 die Spitze auf der Haut Kostüm. Dann der Fix:
+  <code>Mesh3daimeshbild</code> rechnet die Erkennung wie der Schritt „kleider“ und gibt je Zelle die Art mit den meisten Flächen. Beim Weg „rig“ (MIAs Rückfall) liegen die Ruhegelenke
+  im gestreckten Rahmen von Mesh-3D; <code>gelenke_datei</code> rechnet sie in den Rahmen der Datei (mann_gold 0,904 → 1,844 m hoch, Drehung 0 → −20,0°). Kopfbedeckung nie anliegend.
+  koenigin1 neu gerechnet: Zeile 1 Haltung max 107 → 58°, 18 → 4 Teile rot, Falte Rumpf vorn 314 → 106 cm, neu rot die Gelenkdicke 0,83–0,90; Zeile 2 Prio 1 190 von 284 → 68 von 343,
+  Umriss 4 → 0 von 4.</p>
+<p class="hint">Offen: randy_tropical, venus, ballerina_bunt, mann_gold nicht neu gerechnet; mann_gold 51,6 % des Ziels ungesehen (die A-Pose-Wolke des Wegs „rig“ hat keine Punkte auf den
+  Stäben); die Erkennung kennt kein Rock/Kleid, die Sperre gegen „anliegend“ greift bei Kleidern nicht mehr (koenigin1 Oberteil 70 % ohne Stufe, Grenze 75 %).</p>

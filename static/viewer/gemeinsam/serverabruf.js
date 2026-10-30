@@ -23,6 +23,7 @@
 import { Serverabruf as ServerabrufBasis } from '/static/djangobase/js/serverabruf.js';
 import { fn } from './registrierung.js';
 import { Netzpaket } from './netzpaket.js';
+import { Seitenabbruch } from './seitenabbruch.js';
 import { Serverfehler } from './serverfehler.js';
 
 export class Serverabruf extends ServerabrufBasis {
@@ -58,14 +59,17 @@ export class Serverabruf extends ServerabrufBasis {
         }));
     }
 
+    /** Reine Rechnung (`_mitWiederholung`): endet beim Verlassen der Seite (`Seitenabbruch`), auch als POST. */
     static async _netzAbruf(adresse, wahl = undefined) {
         const gewuenscht = { Accept: `${Netzpaket.ANNAHME}, application/json` };     // 16-Bit-Felder bestellt (19.10.2026); `Netzpaket.lesen` rechnet sie zurück
-        const antwort = await Serverabruf._mitWiederholung(adresse, () => fetch(adresse, {
-            ...wahl, headers: { ...gewuenscht, ...(wahl?.headers || {}) },
-        }));
-        if (!antwort.ok) throw await ServerabrufBasis._fehler(antwort, adresse);
-        if (Netzpaket.erkannt(antwort)) return Netzpaket.lesen(await antwort.arrayBuffer());
-        return antwort.json();
+        return Seitenabbruch.mit(async signal => {
+            const antwort = await Serverabruf._mitWiederholung(adresse, () => fetch(adresse, {
+                ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal), headers: { ...gewuenscht, ...(wahl?.headers || {}) },
+            }));
+            if (!antwort.ok) throw await ServerabrufBasis._fehler(antwort, adresse);
+            if (Netzpaket.erkannt(antwort)) return Netzpaket.lesen(await antwort.arrayBuffer());
+            return antwort.json();
+        });
     }
 
     /**
@@ -96,12 +100,29 @@ export class Serverabruf extends ServerabrufBasis {
         }
     }
 
+    /** Ein GET endet beim Verlassen der Seite (`Seitenabbruch`); was schreibt, läuft durch — es ginge sonst in Chromes Schlange verloren. */
     static async json(adresse, wahl = undefined) {
-        return Serverabruf._geloggt('GET', adresse, () => super.json(adresse, wahl));
+        if (!Serverabruf._lesend(wahl)) return Serverabruf._geloggt('GET', adresse, () => super.json(adresse, wahl));
+        return Serverabruf._geloggt('GET', adresse, () => Seitenabbruch.mit(signal => super.json(adresse, { ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal) })));
     }
 
     static async text(adresse, wahl = undefined) {
-        return Serverabruf._geloggt('GET', adresse, () => super.text(adresse, wahl));
+        if (!Serverabruf._lesend(wahl)) return Serverabruf._geloggt('GET', adresse, () => super.text(adresse, wahl));
+        return Serverabruf._geloggt('GET', adresse, () => Seitenabbruch.mit(signal => super.text(adresse, { ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal) })));
+    }
+
+    static _lesend(wahl) {
+        return !wahl?.method || String(wahl.method).toUpperCase() === 'GET';
+    }
+
+    /** Ein POST, der nur rechnet und nichts schreibt (Retarget mit den Reglern im Rumpf): endet beim Verlassen der Seite wie ein GET (`Seitenabbruch`). */
+    static async rechnen(adresse, nutzlast, kopf = {}) {
+        return Serverabruf._geloggt('POST', adresse, () => Seitenabbruch.mit(signal => ServerabrufBasis.json(adresse, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...ServerabrufBasis._csrfKopf(), ...kopf },
+            body: JSON.stringify(nutzlast),
+            signal,
+        })));
     }
 
     static async senden(adresse, nutzlast, kopf = {}) {

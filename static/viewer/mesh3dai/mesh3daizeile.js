@@ -97,14 +97,14 @@ export class Mesh3daizeile {
 
     /**
      * Der Schaltknopf „Kleider“ (21.10.2026, Edgar: „mach auch einen Toggle ‚Kleider‘, mit dem ich die Kleider im Ergebnis aus- und einblenden kann“): blendet die Kleider aus der KI im Feld
-     * „Ergebnis“ aus (das Haar bleibt), die Haut darunter kommt wieder (`Mesh3daigenesisfigur.einhaengen`). Ziel und Start bleiben unberührt; gilt für alle Zeilen, gemerkt wie „Rig“.
+     * „Ergebnis“ aus (seit 30.10.2026 auch das Haar), die Haut darunter kommt wieder (`Mesh3daigenesisfigur.einhaengen`). Ziel und Start bleiben unberührt; gilt für alle Zeilen, gemerkt wie „Rig“.
      */
     _kleiderknopf() {
         const knopf = document.createElement('button');
         knopf.type = 'button';
         knopf.className = 'schaltknopf';
         knopf.dataset.kleider = '';
-        knopf.title = 'Die Kleider aus der KI im Ergebnis ein- und ausblenden — in allen Zeilen; das Haar bleibt, die Haut darunter wird wieder gezeigt.';
+        knopf.title = 'Die Kleider und das Haar aus der KI im Ergebnis ein- und ausblenden — in allen Zeilen; die Haut darunter wird wieder gezeigt.';
         knopf.innerHTML = '<i class="fas fa-tshirt"></i> ';
         knopf.append('Kleider');
         knopf.addEventListener('click', () => {

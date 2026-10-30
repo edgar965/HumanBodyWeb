@@ -99,7 +99,7 @@ export class Mesh3daitestseite {
         if (!d?.figur_genesis) return null;
         const stuecke = [];
         for (const st of this.kleider?.liste?.stuecke ?? []) {
-            if (!this.ansicht.kleider && st.art !== 'haar') continue;          // Knopf „Kleider“ aus: nur das Haar bewegt sich mit
+            if (!this.ansicht.kleider) break;          // Knopf „Kleider“ aus: kein Stück bewegt sich mit, auch das Haar nicht (30.10.2026, Edgar: „die Haare werden nicht deaktiviert“)
             const netz = st.art !== 'haut' && st.wahl !== 'aus' ? this.kleider.netze.get(`${st.wahl}/${st.id}`) : null;
             if (netz) stuecke.push({ id: st.id, art: st.art, netz: await netz.catch(() => null) });
         }
@@ -216,7 +216,7 @@ export class Mesh3daitestseite {
         const netz = (await this.kleider?.hautNetz()) || this.figurNetz;
         if (netz && this.matrizen) {
             this.figur?.geometry.dispose();          // nur die Geometrie: Materialien und Attribute teilt sie mit dem Anzeigenetz
-            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, this.kleider?.verdeckt(netz.material.length, !this.ansicht.kleider));
+            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, this.ansicht.kleider ? this.kleider?.verdeckt(netz.material.length) : null);
         }
         this.zeigen();
     }
@@ -225,7 +225,7 @@ export class Mesh3daitestseite {
         const modus = this.ansicht.modus;
         const objekt = art === 'eingabe' ? this.netz : this.figur;
         if (objekt) inhalt.add(Mesh3daiansichtart.anwenden(objekt, modus));
-        if (art === 'ausgabe' && this.figur && this.kleider) for (const o of this.kleider.sichtbare(!this.ansicht.kleider)) inhalt.add(Mesh3daiansichtart.anwenden(o, modus));
+        if (art === 'ausgabe' && this.figur && this.kleider && this.ansicht.kleider) for (const o of this.kleider.sichtbare()) inhalt.add(Mesh3daiansichtart.anwenden(o, modus));
         if (this.ansicht.rig && this.daten) {
             const beschr = this.daten.rig;
             inhalt.add(Mesh3dairigzeichner.zeichnen(beschr, beschr.knochen.map((_k, j) => j), this.daten.ausgabe));

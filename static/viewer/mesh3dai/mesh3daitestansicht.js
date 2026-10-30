@@ -17,7 +17,7 @@ export class Mesh3daitestansicht {
         Mesh3daimaterial.MODI.forEach((m, i) => { this._modusKnoepfe[i].dataset.modus = m.schluessel; });
         wahl?.querySelector('.mesh3dai-ansicht')?.replaceChildren(...this._modusKnoepfe);
         this._rigKnopf = this._knopf('fa-bone', 'Rig', 'Das Rig, das Mesh3D-AI vorhersagt, ein- und ausblenden — über beiden Feldern, in jeder Ansichtsart.', () => this._setzen({ rig: !this.rig }));
-        this._kleiderKnopf = this._knopf('fa-tshirt', 'Kleider', 'Die Kleider und Bestandteile der Karte darunter in der Ausgabe ein- und ausblenden; das Haar bleibt, die Haut darunter wird wieder gezeigt.',
+        this._kleiderKnopf = this._knopf('fa-tshirt', 'Kleider', 'Die Kleider, Bestandteile und das Haar der Karte darunter in der Ausgabe ein- und ausblenden; die Haut darunter wird wieder gezeigt.',
             () => this._setzen({ kleider: !this.kleider }));
         wahl?.querySelector('.mesh3dai-rigleiste')?.replaceChildren(this._rigKnopf, this._kleiderKnopf);
         // Die Ansichtsart gilt für alle Zeilen (28.10.2026): ein Klick in der ersten Zeile („ohne KI“, eigene Knöpfe) stellt auch diese um.

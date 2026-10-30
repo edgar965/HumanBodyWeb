@@ -108,8 +108,8 @@ export class Clipanimation {
                              10 * 60 * 1000);
         const start = performance.now();
         try {
-            // MakeHuman und UMA Python schicken ihre Regler im Rumpf (POST).
-            const daten = ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)
+            // MakeHuman und UMA Python schicken ihre Regler im Rumpf (POST) — eine reine Rechnung, die beim Verlassen der Seite endet (`Serverabruf.rechnen`).
+            const daten = ziel.rumpf ? await Serverabruf.rechnen(adresse, ziel.rumpf)
                                      : await Serverabruf.json(adresse);
             const sekunden = (performance.now() - start) / 1000;
             Studioanzeige.melden(`Bewegung „${clip.name}" geladen`

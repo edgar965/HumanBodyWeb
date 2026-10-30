@@ -93,11 +93,29 @@ class Mesh3dailaufzeit:
         if not ordner.is_dir():
             return aus
         for datei in ordner.glob('*/*/eintrag.json'):
-            e = cls._json(datei)
-            if isinstance(e, dict) and e.get('sekunden') is not None:
+            sekunden = cls._sekunden(datei)
+            if sekunden is not None:
                 s, z = aus.get(datei.parent.parent.name, (0.0, 0))
-                aus[datei.parent.parent.name] = (s + float(e['sekunden']), z + 1)
+                aus[datei.parent.parent.name] = (s + sekunden, z + 1)
         return aus
+
+    #: `sekunden` je `eintrag.json`, neu gelesen nur bei geänderter Zeit oder Größe (30.10.2026): die Testtabelle las sonst bei jedem Aufruf von /mesh-3D-AI/ alle 838 Einträge
+    _eintraege = {}
+
+    @classmethod
+    def _sekunden(cls, datei):
+        try:
+            st = datei.stat()
+        except OSError:
+            return None
+        stand = (st.st_mtime_ns, st.st_size)
+        alt = cls._eintraege.get(datei)
+        if alt is not None and alt[0] == stand:
+            return alt[1]
+        e = cls._json(datei)
+        sekunden = float(e['sekunden']) if isinstance(e, dict) and e.get('sekunden') is not None else None
+        cls._eintraege[datei] = (stand, sekunden)
+        return sekunden
 
     #: wie `Mesh3dairechendatum`: 30 s gemerkt — alle Jobs kalt 0,38 s (gemessen 20.10.2026, `laufzeit_spalte_zeit.py`), die Tabelle lädt bei jedem Aufruf
     MERKEN_S = 30
