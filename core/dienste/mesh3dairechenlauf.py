@@ -35,7 +35,6 @@ class Mesh3dairechenlauf:
         ('rig', 'Rig und A-Pose (Make-It-Animatable, Netz der Vorstufe)', ['-u', 'mesh3dai_vorstufe.py', 'test', '{k}', '--weg', 'mia', '--netz-mia', '{vorstufe_mia_pfad}',
                                                                                   '--netz', '{vorstufe_pfad}']),
         ('haltung', 'Haltung aus der KI', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form.py', '--vorhersagen', '--lauf', '{haltung}', '--nur', '{k}']),
-        ('form', 'Form aus der KI (Genesis-Regler)', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form_apose.py', '--lauf', '{formkopf}', '--als-form', '--nur', '{k}']),
         ('figur', 'Figur bauen', ['mesh3dai_formfigur.py', '--parallel', '1', '--nur', '{k}']),          # im Skriptdienst nur ein Faden (29.10.2026, `Skriptdienstruf.ERLAUBT`)
         ('anpassen', 'Figur in die Haltung legen', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form.py', '--anpassen', '--nur', '{k}']),
         ('haltung2', 'Haltung aus Gelenken und Enden', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_test_form_haltung.py', '--nur', '{k}']),
@@ -43,17 +42,11 @@ class Mesh3dairechenlauf:
         # Haut aus der KI (23.10.2026 nachts, Edgar: „Haut: Die Haut-KI ist nicht angebunden“ → „mach alles“): Stufe 2 braucht die Zerlegung des Tests; sie schreibt `haut_<g>/` und Stücke des
         # Wegs g — die Kleider der Seite kommen danach aus dem Kostüm-Weg (der Schritt danach schreibt `ki.json` neu, die Wahl je Stück bleibt „k“).
         ('zerlegung', 'Zerlegung aus der KI (Haut, Haar, Kleidungsstücke je Punkt)', ['mesh3dai_stimmen_lauf.py', 'mesh3dai_kleider_zerlegung.py', '--nur', '{k}', '--lauf', '{zerlegung}']),
-        # Kopf an das Mesh (24.10.2026, Edgar: „eine Logik … NACH dem Kopfnetz, die noch ein paar weitere Iterationen macht falls zu weit auseinander, und das Tripo nutzt in Zusammenspiel mit den
-        # Messungen der Nase usw. und den Genesis reglern“): Kopfnetz, dann die Kopfregler gegen Gesichtsmaße, Landmarken und Haut des Eingangs (`Kopfangleich`); braucht Haltung und Zerlegung,
-        # baut bei Übernahme die Figur neu und rechnet „anpassen“ und „haltung2“ selbst nach — die Haut danach liegt schon auf dem neuen Kopf
-        ('kopf', 'Kopf an das Mesh angleichen (Kopfnetz, Gesichtsmaße, Haut — in Runden)', ['-u', 'mesh3dai_kopfangleich_lauf.py', '--nur', '{k}', '--geschlecht', '{g}', '--kopfnetz', '{kopfnetz}']),
-        # Haltung an den Eingang (24.10.2026 nachts, Edgar zu randy: „rumpf nun zu groß … mit mediapipe, rechne das aus … und korrigiere“): ViTPose an Eingang und Figur aus vier Richtungen,
-        # Versatz je Gelenk in die Ziele der Winkelanpassung, in Runden (`Lageangleich`); NACH „kopf“, weil dessen Neubau die Ziele ändert (die Korrektur gilt nur für die gemessenen)
-        ('lage', 'Haltung an den Eingang angleichen (Messpunkte an Eingang und Figur, in Runden)', ['-u', 'mesh3dai_lageangleich_lauf.py', '--nur', '{k}']),
-        # Körper in die Außenmaße des Eingangs (25.10.2026, Edgar: „Körper muss in die aussenmasse reinkommen“, „Warum machst du keine Angleichungen für den Körper??“): Körperregler,
-        # Proportionen und Haltung gegen Umriss, Haut und anliegenden Stoff des Eingangs (`Koerperangleich`); NACH „lage“ (er schreibt die Haltung selbst, eine Winkelanpassung danach nähme sie
-        # zurück) und VOR „haut“ (die Haut-KI liest die Figur)
-        ('koerper', 'Körper in die Außenmaße des Eingangs (Form, Proportionen, Haltung — in Runden)', ['-u', 'mesh3dai_koerperangleich_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # Zeile 2 baut auf Zeile 1 auf (30.10.2026, Edgar: „du solltest diese Berechnungen aus der 1. Zeile für die 2. Zeile nutzen, was machst du stattdessen?“ — gewählt „Figur aus Zeile 1“):
+        # die Mesh-Anpassung ohne KI (`Mesh3daimeshanpassung`, braucht Vorstufe und Zerlegung), dann ihre Regler, ihr Versatz und ihre Haltung als Figur der Kette (`Zeile1figur`). Sie
+        # ersetzen „form“ (Regler-KI bzw. Formkopf), „kopf“, „lage“ und „koerper“ (bis 29.10.2026, Module bleiben in `mesh3dai/`); Haut und Kleider rechnen auf dieser Figur.
+        ('meshanpassung', 'Genesis ins Mesh einpassen — ohne KI (Zeile 1)', ['-u', 'mesh3dai_meshanpassung.py', '--nur', '{k}']),
+        ('zeile1', 'Figur aus Zeile 1 (Regler, Versatz und Haltung der Einpassung)', ['-u', 'mesh3dai_zeile1figur.py', '--nur', '{k}', '--geschlecht', '{g}']),
         # `--hautki` (24.10.2026 abends): steht in den KI-Fassungen ein Lauf der Haut-KI im Bildraum, schreibt sie die Hautkacheln (`Hautkieinsatz`), sonst das Netz `haut` von Stufe 2
         ('haut', 'Haut aus der KI (Stufe 2: Farbe je Texel)', ['-u', 'mesh3dai_stufe2_lauf.py', '--nur-einsatz', '{stufe2}', '--fassung', '{stufe2_fassung}', '--test', '{k}', '--job', '',
                                                                 '--geschlecht', '{g}', '--hautki', '{hautki}']),

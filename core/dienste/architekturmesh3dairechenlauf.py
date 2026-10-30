@@ -120,7 +120,17 @@ class Architekturmesh3dairechenlauf:
 
     @staticmethod
     def _konstanten(koerper):
-        return {k.targets[0].id: k.value for k in koerper if isinstance(k, ast.Assign) and len(k.targets) == 1 and isinstance(k.targets[0], ast.Name)}
+        """Konstanten `NAME = …` und (seit 30.10.2026, `Kostuemfalten`) `A, B = x, y`."""
+        aus = {}
+        for k in koerper:
+            if not isinstance(k, ast.Assign) or len(k.targets) != 1:
+                continue
+            ziel = k.targets[0]
+            if isinstance(ziel, ast.Name):
+                aus[ziel.id] = k.value
+            elif isinstance(ziel, ast.Tuple) and isinstance(k.value, ast.Tuple) and len(ziel.elts) == len(k.value.elts):
+                aus.update({n.id: w for n, w in zip(ziel.elts, k.value.elts, strict=True) if isinstance(n, ast.Name)})
+        return aus
 
     @classmethod
     def _wert(cls, knoten, quelle, ordner, klasse=None):
@@ -142,9 +152,10 @@ class Architekturmesh3dairechenlauf:
                 fremd = (ordner / (module[k.value.id] + '.py')).read_text(encoding='utf-8')
                 kl = next(c for c in ast.parse(fremd).body if isinstance(c, ast.ClassDef) and c.name == k.value.id)
                 return cls._wert(cls._konstanten(kl.body)[k.attr], fremd, ordner, kl)
-            if isinstance(k, ast.BinOp) and isinstance(k.op, (ast.Mod, ast.Add)):
-                links, rechts = auswerten(k.left), auswerten(k.right)
-                return links % rechts if isinstance(k.op, ast.Mod) else links + rechts
+            # `*`, `-`, `/` seit 30.10.2026: ein Text rechnet `100 * ANTEIL_MAX` — ohne sie fiel der ganze Abschnitt aus („Rechenlauf: ValueError: Testfälle: 100 * ANTEIL_MAX“)
+            rechnung = {ast.Mod: lambda a, b: a % b, ast.Add: lambda a, b: a + b, ast.Mult: lambda a, b: a * b, ast.Sub: lambda a, b: a - b, ast.Div: lambda a, b: a / b}
+            if isinstance(k, ast.BinOp) and type(k.op) in rechnung:
+                return rechnung[type(k.op)](auswerten(k.left), auswerten(k.right))
             if isinstance(k, ast.UnaryOp) and isinstance(k.op, ast.USub):
                 return -auswerten(k.operand)
             if isinstance(k, (ast.Tuple, ast.List)):

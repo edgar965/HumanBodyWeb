@@ -1,0 +1,61 @@
+{% comment %}30.10.2026, Edgar: „aufgrund dieser Schritte sollst du ja die Modelle rechnen, oder machst du was anderes??“ und „du solltest diese Berechnungen aus der 1. Zeile für die 2. Zeile
+nutzen, was machst du stattdessen?“ — gewählt „Figur aus Zeile 1“. Zahlen: `_test/edgar/zeile1/zeile1figur_maennlich.json`, `kostuem/lauf_2026.10.30.00.35.json`,
+`ProjektTemp/_wegwerf/regler_ki/zeile1_gesicht_probe.py`; Vollfassung `Docu/regeln/mesh3dai-rechenlauf.md`.{% endcomment %}
+<h2 id="zeile1">Zeile 2 baut auf Zeile 1 auf (seit 30.10.2026)</h2>
+<p>Bis 29.10.2026 rechnete die Ausgabe der Testseite (Zeile 2) eine eigene Kette — Form aus der Regler-KI, dann „kopf“, „lage“ und „koerper“ — und las das Ergebnis der Mesh-Anpassung
+  (Zeile 1) nirgends. Seit 30.10. steht die Mesh-Anpassung in der Kette (Schritt „meshanpassung“), und der Schritt „zeile1“ (<code>mesh3dai/mesh3dai_zeile1figur.py</code>, Klasse
+  <code>Zeile1figur</code>) macht aus ihr die Figur der Kette; Haut-KI und Kleider rechnen darauf. „form“, „kopf“, „lage“ und „koerper“ sind aus der Kette (die Module bleiben).</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Teil</th><th>Wie</th><th>edgar, 30.10. 00:31</th></tr></thead>
+  <tbody>
+    <tr><td>Figur</td><td>die Regler der Einpassung + ihr Versatz in Ruhe als Mesh-Regler (<code>eigen:mesh_m3a_&lt;test&gt;_&lt;teil&gt;</code>, auch wenn die Abnahme der Einpassung
+      nicht besteht), Neubau</td><td>355 + 32 Regler; gebaute Figur gegen die Ruheform 0,0 mm</td></tr>
+    <tr><td>Rahmen</td><td>Zeile 1 steht im Rahmen der Regler-KI, die Kette im Rahmen der Form; mit Höhe = m · Höhe der Datei und Figurmaßstab 1 ist die Umrechnung exakt
+      (X = Rᵀ(X₁ − O) + (Rᵀ·C − B)·m), die Ziele der KI gehen mit</td><td>Probe am Netz von Zeile 1: 0,04 mm</td></tr>
+    <tr><td>Haltung</td><td>die Daz-Winkel der Kette gegen die Haltung von Zeile 1: erst die Drehung je Knochen, dann alle Winkel gegen die Käfigpunkte (feste Paare), auf der Karte</td>
+      <td>Rest je Käfigpunkt Mittel 1,61, p90 4,52, max 11,94 mm</td></tr>
+  </tbody>
+</table>
+<p><strong>Prüfung an edgar:</strong> Prio 1 24 von 340 rot (mit „koerper“ Fassung 16 am 29.10. 22:52: 13 von 339). Neu rot: Falten in der Haut (Rumpf vorn 98 cm), Gesicht
+  (Nasenbreite × 1,35), Lage des Gesichts (67 mm zu tief), Haltung folgt der KI (Kopf 38,6 mm), Saum, Tanz, Durchsicht; grün geworden: Form des Kopfes, Zeichnung der Haut.
+  Das Gesicht liegt schon in Zeile 1 so: dort sind Hals und Kopf um 17° und 22° um die Querachse gedreht, die Gesichtspunkte von Zeile 1 und Kette liegen im Mittel 2,5 mm
+  auseinander. Den Kopf stellt in der Einpassung <code>G9meshkopf</code> (2d-3d-AI) gegen die Hautpunkte des Kopfes, ohne Gesichtspunkte.</p>
+<p><strong>Zeile 1 mit Gesichtspunkten und Glättung (Mesh-Anpassung Fassung 3 und 4, 30.10. vormittags):</strong> Nach der Einpassung des Körpers lag die Gesichtsmitte an edgar
+  66,7 mm zu tief. Der Kopf (<code>Mesh3daimeshkopf</code>) und der freie Versatz rechnen jetzt auch gegen die Gesichtspunkte des Eingangs (<code>Mesh3daimeshgesicht</code>: MediaPipe am
+  gerenderten Mesh, frontal, wie die Prüfung). Danach liegt die Gesichtsmitte 0,0 mm daneben, und die Abnahme der Einpassung besteht. Die Falten kamen aus dem Normalversatz: in Ruhe nur mit den Reglern
+  0–14 cm je Bereich, mit Versatz 117–229 cm. <code>Mesh3daimeshglatt</code> glättet die Knicke danach in der Haltung und in Ruhe gegen die Figur ohne Versatz, das Ziel und
+  die Grundfigur (Weg im Mittel 0,33 mm). Zeile 2 an edgar: Prio 1 <strong>10 von 340</strong> (KI-Kette 13), Gesicht, Lage des Gesichts und Falten grün. Rot bleiben Durchsicht 3,
+  Haut am Saum 3, Tanz 2, Haut durch Stück 1 und „Haltung folgt der KI“ (die Haltung kommt aus Zeile 1). Die anderen vier Jobs sind damit noch nicht gerechnet.</p>
+<p><strong>Offene Punkte an edgar (Mesh-Anpassung Fassung 5 und 6, Kostüm-Prüfung Fassung 28–30, 30.10. nachmittags):</strong> Zeile 2 an edgar
+  <strong>Prio 1 0 von 340</strong>, Prio 2 0 von 8, Prio 3 0 von 4, Abnahme OK. Die Schritte:</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Punkt</th><th>Ursache (gemessen)</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr><td>Haltung folgt der KI (17 mm)</td><td>die Haltung kommt aus Zeile 1; das Skelett der gebauten Figur saß 9,9 mm zu tief im Netz (<code>morph_fuer</code> hebt das Soll auf den
+      Boden der Regler)</td><td>„Haltung folgt Zeile 1“ (1,1 mm); <code>Zeile1figur._abgleichen</code> ohne den Hub</td></tr>
+    <tr><td>Saum, Haar, Bart</td><td>die Figur lag schon in Zeile 1 bis 16 mm vor dem Eingang</td><td>Strafe „nicht vor dem Eingang“ (<code>Mesh3daimeshvorne</code>) in der Glättung;
+      am Kopf eine eigene Glättung nach dem freien Versatz, mit den Gesichtspunkten</td></tr>
+    <tr><td>Saum an der Uhr, Falte am Handgelenk</td><td>die Hand bekam weder Versatz noch Glättung; am Gelenk bis 15,7 mm vor dem Eingang, an ihrer Grenze zum Unterarm die Falte</td>
+      <td>die Mittelhand in Glättung und Strafe (Finger weiter nur über die Haltung)</td></tr>
+    <tr><td>Haut durch Haar 5,2 %</td><td>Messfehler: die Art als Kennfarbe, über vier Abtastpunkte gemittelt — Hose halb über Hintergrund ergab die Nummer von Haar</td>
+      <td>Kennfarbe ungemittelt (1,6 %)</td></tr>
+    <tr><td>Durchsicht 3 von 4</td><td>die Hautmaske nahm Dreiecke weg, deren Ecken ein Stück deckte, die Fläche aber nicht (Bart, Ohr, Rand des Armbands); die Prüfung renderte
+      die Stücke einseitig, die Seite zeichnet sie zweiseitig</td><td>Hautmaske Fassung 3 (Mitte und Kantenmitten, bei Abstand über 10 mm gekippte Strahlen); Durchsicht zweiseitig</td></tr>
+    <tr><td>Haar im Tanz</td><td>Messfehler: Mundwinkel galten als „bedeckt“ vom Bart der anderen Wange, quer durch den Mund</td><td>bedeckt nur ohne gezeichnete eigene Haut dazwischen</td></tr>
+  </tbody>
+</table>
+<p>Offen: die anderen vier Jobs und mann_gold sind mit Fassung 6 nicht gerechnet; in Zeile 1 bleiben die Hände rot und eine Falte am Rücken (15 cm, in Zeile 2 grün); das JS der
+  Jobseite (<code>hautmaske.js</code>) prüft weiter nur die Ecken.</p>
+<p><strong>Fünf Jobs (30.10. 00:31–02:16, Prio 1 rot, Fassung 2):</strong> Zeile 2 übernimmt die Fehler von Zeile 1; die Einpassung startet bei der Grundfigur und besteht ihre eigene Abnahme
+  an keinem Job. Die Prüfungen Saum, Finger, Falten und Halsansatz gab es am 27.10. noch nicht.</p>
+<table class="doku m3a-schichten">
+  <thead><tr><th>Job</th><th>KI-Kette</th><th>Zeile 2 aus Zeile 1</th><th>Rest der Haltung (mm)</th><th>in Zeile 1</th></tr></thead>
+  <tbody>
+    <tr><td>edgar</td><td data-sort-key="13">13 / 339 (29.10.)</td><td data-sort-key="23">23 / 340</td><td>1,5 / 11</td><td>Hals 17°, Kopf 22° gedreht, Gesicht 67 mm zu tief</td></tr>
+    <tr><td>randy_tropical</td><td data-sort-key="48">48 / 350</td><td data-sort-key="101">101 / 393</td><td>2,0 / 20</td><td>Gesicht × 1,3, Oberschenkel 371 statt 467 mm</td></tr>
+    <tr><td>venus</td><td data-sort-key="59">59 / 312</td><td data-sort-key="90">90 / 330</td><td>4,8 / 72</td><td>Oberarm-Twist 57° (in Daz' Grenzen nicht nachstellbar)</td></tr>
+    <tr><td>ballerina_bunt</td><td data-sort-key="134">134 / 390</td><td data-sort-key="268">268 / 438</td><td>12 / 325</td><td>Oberschenkel-Twists 89–100°, 2.094 Dreiecke umgeklappt</td></tr>
+    <tr><td>koenigin1</td><td data-sort-key="103">103 / 311</td><td data-sort-key="187">187 / 270</td><td>49 / 369</td><td>Unterarm 107°, Twists 90–96°, Versatz bis 228 mm</td></tr>
+    <tr><td>mann_gold</td><td data-sort-key="0">—</td><td data-sort-key="0">Abbruch</td><td>—</td><td>MIA: linker Oberarm ohne Punkte, auch mit neuem Rig</td></tr>
+  </tbody>
+</table>

@@ -73,30 +73,59 @@ class Mesh3dairechenschlange:
             logger.info('Mesh3D-AI Rechenlauf: Arbeitsprozess %d gestartet für %s', p.pid, kennung)
         return stand
 
+    #: Sperrdatei des Arbeitsprozesses (30.10.2026): exklusiv angelegt (`os.O_EXCL`), Inhalt die PID; eine leere Datei ist höchstens so alt (s) noch „wird gerade geschrieben“
+    SPERRE, SPERRE_LEER_S = 'arbeiter.sperre', 60.0
+
+    @classmethod
+    def _beanspruchen(cls):
+        """Die Schlange exklusiv übernehmen → True, wenn dieser Prozess die Sperre hält. Bis 30.10.2026 prüfte `abarbeiten` `laeuft.json` und schrieb es erst danach — zwei kurz
+        nacheinander gestartete Arbeiter kamen beide durch und rechneten ballerina_bunt doppelt (29.10.2026). Die Sperre eines toten Prozesses wird weggeräumt."""
+        import os
+        datei = cls.ordner() / cls.SPERRE
+        for _ in range(3):
+            try:
+                fd = os.open(datei, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                try:
+                    inhalt, alter = datei.read_text(encoding='utf-8').strip(), time.time() - datei.stat().st_mtime
+                except OSError:
+                    continue                                      # eben weggeräumt — noch einmal versuchen
+                if (inhalt and cls._lebt(inhalt)) or (not inhalt and alter < cls.SPERRE_LEER_S):
+                    return False
+                datei.unlink(missing_ok=True)
+                continue
+            with os.fdopen(fd, 'w', encoding='utf-8') as aus:
+                aus.write(str(os.getpid()))
+            return True
+        return False
+
     @classmethod
     def abarbeiten(cls):
-        """Im Arbeitsprozess: die Schlange abarbeiten (ein Lauf zur Zeit). → Zahl der Läufe."""
+        """Im Arbeitsprozess: die Schlange abarbeiten (ein Lauf zur Zeit). → Zahl der Läufe. Nach dem Freigeben noch einmal nachsehen: wer einreihte, während dieser Prozess schon
+        aufhörte, sah ihn noch leben und startete keinen neuen Arbeiter."""
         import os
-        if cls.laeuft() is not None:
-            return 0
         cls.ordner().mkdir(parents=True, exist_ok=True)
-        AtomarSchreiber.json_schreiben(cls.ordner() / 'laeuft.json', {'pid': os.getpid(), 'kennung': None, 'seit': time.strftime('%Y-%m-%dT%H:%M:%S')})
         zahl = 0
-        try:
-            while True:
-                schlange = cls.schlange()
-                if not schlange:
-                    break
-                kennung = schlange.pop(0)
-                AtomarSchreiber.json_schreiben(cls.ordner() / 'schlange.json', schlange)
-                AtomarSchreiber.json_schreiben(cls.ordner() / 'laeuft.json', {'pid': os.getpid(), 'kennung': kennung, 'seit': time.strftime('%Y-%m-%dT%H:%M:%S')})
-                try:
-                    Mesh3dairechenlauf(kennung).ausfuehren()
-                except Exception:          # noqa: BLE001 — ein Lauf scheitert, die Schlange läuft weiter; der Fehler steht im Log
-                    logger.exception('Mesh3D-AI Rechenlauf %s abgebrochen', kennung)
-                zahl += 1
-        finally:
-            (cls.ordner() / 'laeuft.json').unlink(missing_ok=True)
+        while cls._beanspruchen():
+            AtomarSchreiber.json_schreiben(cls.ordner() / 'laeuft.json', {'pid': os.getpid(), 'kennung': None, 'seit': time.strftime('%Y-%m-%dT%H:%M:%S')})
+            try:
+                while True:
+                    schlange = cls.schlange()
+                    if not schlange:
+                        break
+                    kennung = schlange.pop(0)
+                    AtomarSchreiber.json_schreiben(cls.ordner() / 'schlange.json', schlange)
+                    AtomarSchreiber.json_schreiben(cls.ordner() / 'laeuft.json', {'pid': os.getpid(), 'kennung': kennung, 'seit': time.strftime('%Y-%m-%dT%H:%M:%S')})
+                    try:
+                        Mesh3dairechenlauf(kennung).ausfuehren()
+                    except Exception:          # noqa: BLE001 — ein Lauf scheitert, die Schlange läuft weiter; der Fehler steht im Log
+                        logger.exception('Mesh3D-AI Rechenlauf %s abgebrochen', kennung)
+                    zahl += 1
+            finally:
+                (cls.ordner() / 'laeuft.json').unlink(missing_ok=True)
+                (cls.ordner() / cls.SPERRE).unlink(missing_ok=True)
+            if not cls.schlange():
+                break
         return zahl
 
     @classmethod
