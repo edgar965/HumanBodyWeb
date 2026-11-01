@@ -19,7 +19,29 @@ Von Hand, Quelle: Docstrings von `mesh3dai/mesh3dai_kostuem_lauf.py`, `…_erken
     Hose im Tanz grün, Prio 1 21 → 12 Fehler; ohne Heben (Gegenprobe, <code>ProjektTemp/_wegwerf/regler_ki/kostuem_ohne_heben.py</code>) wären diese wieder rot. Offen: die Uhr im Tanz
     (Bild 188, 5,7 % ihrer Hautpunkte, auch ohne Heben).</li>
   <li><strong>Auflegen</strong> (Stufe 1, <code>Kostuemrueckhaeutung</code>): jedes Stück bleibt genau dort, wo es im Eingang liegt — jeder Punkt bekommt Knochen und Gewichte der nächsten Hautstelle
-    der Figur und seine Ruhelage so, dass die Häutung ihn wieder an seine Stelle legt. Folge: steht ein Glied der Figur nicht im Glied des Eingangs, sieht man es doppelt (Prüfung „Glied im Eingang“).</li>
+    der Figur und seine Ruhelage so, dass die Häutung ihn wieder an seine Stelle legt. Folge: steht ein Glied der Figur nicht im Glied des Eingangs, sieht man es doppelt (Prüfung „Glied im Eingang“).
+    Seit 30.10.2026 nachts (Fassung 3, <code>Kostuemergaenzung</code>) behalten nur Punkte, die höchstens 6 cm von ihrer Hautstelle entfernt sind, deren Gewichte; die übrigen werden über die Kanten
+    des Stücks harmonisch ergänzt (wie Abdrashitov u. a., „Robust Skin Weights Transfer via Weight Inpainting“, SIGGRAPH Asia 2023). Anlass: der Rock von koenigin1 hing Punkt für Punkt am
+    linken oder rechten Bein und riss im Tanz dazwischen auf (2.047 Kanten, Prüfung „Stück gedehnt im Tanz“); an den abgelegten Stücken danach 0. Ebenso unsicher sind Punkte binnen 1,5 cm um eine
+    <em>Sprungkante</em>: zwei Nachbarpunkte, die sich ihre Gewichte kaum teilen (Überdeckung unter 0,5) — so riss bei randy_tropical das Hemd zwischen Arm und Rumpf und die Hose im Schritt,
+    nahe an der Haut (1.897 bzw. 286 Kanten, danach 0). Ein breiteres Band lässt den Stoff hinter der Haut zurück („Haut durch Stück im Tanz“, edgars Hose bei 5 cm 15 Punkte statt 5).
+    Seit 01.11.2026 (Ergänzung Fassung 3) gilt eine Überdeckung unter 0,75 als Sprung: am Tutu von ballerina_bunt teilten sich Nachbarpunkte 2 mm auseinander das Becken (60 %), die
+    übrigen 40 % sprangen vom rechten zum linken Oberschenkel. Eine Insel des Stücks ohne festen Punkt bekommt das Mittel ihrer Gewichte und bewegt sich als Ganzes (ohne festen Rand ist die
+    harmonische Lösung konstant). Vorher behielt sie die Gewichte Punkt für Punkt, und ein Splitter von 23 Punkten vor dem Unterarm zog einen Faden von 67 cm. „Stück gedehnt“ an den
+    abgelegten Stücken: ballerina Oberteil 34 → 0, venus Haar 10 → 0, edgar, randy und koenigin1 unverändert.
+    Kleidung hängt nie an Hand und Fingern (<code>Kostuemarten.TRAEGER</code>): das Tutu von ballerina_bunt riss an Fingerknochen (5.299 → 1.780 Kanten), und randys Hosenbund hing ohne
+    festen Träger an den Beinen („Haut durch Stück im Tanz“ 54 → 13).
+    Seit 31.10.2026 (Fassung 4) trägt ein Glied ein Stück nicht, wenn es außen am Stück liegt (<code>Kostuemrueckhaeutung.glieder</code>: bei mehr als 40 % seiner Punkte liegt die Haut auf der
+    Außenseite des Stücks) — ballerinas Unterarm ruht auf dem Tutu, 12,2 % des Kleids hingen am Arm, im Tanz zogen die Arme Segel aus dem Rock (Ärmel 2–6 %, Hosen 3–5 %, Armbänder 8 %, das Kleid
+    48 %). Und eine Strähne oder ein Kronenteil, als eigenes Stück geschnitten und ohne umschlossenes Glied (<code>Kostuemumschluss</code>), hängt an dem Stück, mit dem es im Eingang verbunden ist:
+    seine gemeinsamen Randpunkte tragen dessen Gewichte, der Rest wird ergänzt (<code>Kostuembindung</code>) — bei venus folgten die Strähnen sonst der Hand und den Beinen (bis 102 cm vom Haar).
+    Seit 31.10.2026 abends (Fassung 5) gilt der Träger auch für die Nebengewichte (<code>Kostuemrueckhaeutung.nur_traeger</code>): der Hautpunkt wurde nur nach seinem stärksten Knochen gewählt,
+    an der Leiste kam der Oberschenkel mit, an der Schulter der Schulterknochen, am Handgelenk die Hand — venus Haar 46 % der Punkte, koenigin1 Haar 54 %, ballerinas Kleid 5,8 % (Prüfung
+    „Stück an fremden Knochen“, danach überall 0). Fassung 6 entscheidet das Außenliegen je Abschnitt (Oberarm, Unterarm, Hand, Oberschenkel …, Grenze 55 %) statt je Körperstelle: je
+    Körperstelle kippte ballerinas Arm nach einer kleinen Änderung der Haltung von 48 auf 40 % und trug das Kleid wieder (4.821 gerissene Kanten); je Abschnitt liegen ihre Unterarme bei 85
+    und 69 %, Ärmel und Hosen höchstens bei 45 %.
+    Offen: wo im Eingang eine Hand auf einem Stück liegt, fehlt der Stoff darunter (randys Hosentasche, koenigin1s Krone und Kopfhaut) — bei randy schneidet die Erkennung die Hand als
+    Teil der Hose, im Tanz bleibt sie hautfarben an der Tasche. Strähnen, die im Eingang auf dem Oberschenkel liegen, hängen am Becken und schweben im Tanz neben dem gehobenen Bein.</li>
   <li><strong>Hautmasken</strong>: Haut unter einem Stück wird ausgeblendet (<code>Kostuemszene</code>).</li>
   <li><strong>Prüfung</strong> (<code>Kostuempruefung</code>): Eingang und Ergebnis nebeneinander, Testfälle siehe <a href="#rechenlauf">Rechnen per Knopf</a> — jeder gemeldete Fehler wurde zuerst ein
     Testfall, am Ziel geeicht und am damaligen Ergebnis rot. Die Testseite zeigt zwei Zeilen davon im Format der 2d-3d-AI (<code>Ai2d3dmesspunkte</code>; blau Eingang, schwarz Ergebnis, Feld 3 nur
@@ -27,5 +49,44 @@ Von Hand, Quelle: Docstrings von `mesh3dai/mesh3dai_kostuem_lauf.py`, `…_erken
     (MediaPipe)“ (<code>Kostuemgesichtszeile</code>): 478 MediaPipe-Punkte am Eingang gegen dieselben festen Netzstellen der Figur, mit den Maßen der Prüfung „Gesicht wie der Eingang“.
     Gegenprobe an edgar (27.10.2026, <code>ProjektTemp/_wegwerf/regler_ki/gesicht_versatz_gegenprobe.py</code>): feste Netzstellen gegen MediaPipe auf derselben Figur 0,2 mm Verschiebung — die
     Netzstellen messen richtig. Die roten Linien bei edgar (Median 4,1 mm) sind zu 91 % dieselbe Verschiebung: das Gesicht der Figur liegt 4,2 mm höher als im Eingang (MediaPipe auf beiden
-    Bildern: 4,16 mm); nach ihrem Abzug bleibt median 1,2 mm Form.</li>
+    Bildern: 4,16 mm); nach ihrem Abzug bleibt median 1,2 mm Form.
+    Seit 31.10.2026 (Fassung 33): „Gelenke wie MIA“ zählt ein Beingelenk nur, wo der Eingang die Beine einzeln trägt — die Strecke zwischen MIAs linkem und rechtem Glied muss das Netz des
+    Eingangs schneiden (<code>Miagelenke.anhalt</code>); unter Rock oder Ballkleid rät MIA (koenigin1: Hüften 105/138 mm), das steht nur im Text. „Knochenlängen der KI“ zählt nur, wenn die
+    Haltung aus der Haltungs-KI kommt, nicht bei der Haltung aus Zeile 1. „Stück gedehnt im Tanz“ zählt Kanten ab 10 cm statt 15 cm (edgar und randy_tropical bleiben bei 0).
+    Fassung 34 (31.10.2026 nachmittags): „Stücke getrennt im Tanz“ (<code>Kostuemstuecknaht</code>) — Randpunkte zweier Stücke, die im Stand zusammenliegen, dürfen im Tanz nicht weiter als 10 cm
+    auseinandergehen; ein Stück, das als Ganzes der Hand folgt, dehnt sich nicht und war für „Stück gedehnt“ unsichtbar.
+    Fassung 35 (31.10.2026 abends): „Stück an fremden Knochen“ (<code>Kostuemtraeger</code>) — je Stück mit festem Träger höchstens 1 % der Punkte mit mehr als 5 % Gewicht außerhalb der Träger
+    seiner Art; „Gelenke wie MIA“ misst auch die Ausrichtung jeder Hand (Richtung zum Mittelfinger und Drehung der Handfläche, höchstens 30°, <code>Miagelenke</code> 3) — koenigin1s Finger
+    lagen quer über Stirn und Auge, die Handgelenke allein waren grün. Dazu beginnt IPNet mit den Händen an MIA, wenn eine Hand weit daneben liegt (<code>Mesh3daimeshstart.HAND_PAARE</code>).
+    Fassung 39 (31.10.2026 nachts, Edgar: „Mach dir testcases die diese Fehler als rot markieren … an den Animationen … bei jedem 5. Frame“, „diese testcases für die Animation sollen
+    generisch sein“): alle Tanz-Prüfungen über einen Einstieg für jede BVH (<code>Kostuemtanzpruefungen</code>, Vorgabe die Animation der Testseite), jedes 5. Bild statt 8 Bilder
+    (<code>Kostuemtanzbilder</code> 2, DanceKurz: 201 von 1.004). Neu: „Haar im Körper im Tanz“ und „Körper durch Stück im Tanz“ (<code>Kostuemtanzkoerper</code>: Stückpunkte mehr als 5 mm
+    in einem Körperteil, an dem das Stück nicht hängt), „Verdecktes Stück ergänzt“ (<code>Kostuemstueckfehlt</code>: offene Haut, die der Eingang nicht zeigt und die das Stück umgibt —
+    Spiegelseite oder halber Ring von 3 cm), „Ergänzte Haut wie die Umgebung“ (<code>Kostuemhautumgebung</code>: ungesehene Haut gegen gesehene Haut bis 5 cm, ΔE über 8, geeicht an
+    gesehener Haut). Die Fixes dazu sind allgemein: Kapseln um die Glieder (<code>KoerperKI_alle.koerperkollision</code> → <code>kleider_&lt;g&gt;/k/kapseln.json</code>), im Shader der
+    bewegten Stücke werden Punkte aus fremden Gliedern geschoben (<code>mesh3daikollision.js</code>, für jede Animation; alle Tanz-Prüfungen rechnen dasselbe über
+    <code>Kostuemtanzbilder.stueck</code>, ebenso der GLB-Export von 2d-3d-AI). Fassung 2 der Kollision (01.11.2026 nachts, Edgar zu ballerina_bunt: „jetzt kommen zacken aus dem Tutu“):
+    Achse aus dem Skelett statt aus der Hauptrichtung der Punkte (bei l_thightwist1 46° daneben), Kapsel nur auf dem Knochen, geschoben wird nur, was tiefer liegt als in der Ruhe, weich
+    nach dem Gewicht am Kapselknochen, höchstens 4 cm — die alte Regel legte 35.148 Punkte des Oberteils, die schon in der Ruhe in fremden Kapseln lagen, als Fächer nach außen
+    („Stück gedehnt“ 37 → 177 Kanten); jetzt keine Kante mehr als ohne Kollision, das Oberteil steckt mit 12.299 statt 29.186 Punkten im Schenkel. „Stück gedehnt“ ist seit Fassung 3
+    (Kostüm-Prüfung 40) auch rot, wenn eine einzige Kante länger als 30 cm wird: der Faden am Tutu waren 3 Kanten. Ohne Faden liegt die längste Kante je Stück bei höchstens 18 cm.
+    Neu „Splitter im Stück“ (<code>Kostuemsplitter</code>): eine Insel mit weniger als 100 Punkten und einer Kante über dem 20-Fachen der üblichen Kante des Stücks, grobe Dreiecke aus dem
+    Eingang, wo ein Arm am Tutu lag. Im Tanz standen sie als dunkle Spitzen ab (ballerina Oberteil 5, koenigin1 Oberteil, Krone und Haar, venus Haar 10; edgar, randy_tropical und mann_gold
+    keine). Lange Kanten allein trennen nicht, gesunde große Inseln haben sie auch. Der Kostüm-Schnitt (Fassung 2) nimmt dasselbe Maß und schneidet Splitter in kein Stück.
+    Fassung 41 (01.11.2026): „Haar hängt am Kopf“ (<code>Kostuemhaarkopf</code>, Edgar zu venus: „keine losen Teile, immer Verbindung zum Kopf“) — Haar, Freie Form und Kopfbedeckung
+    zerfallen in verschweißte Inseln. Zwei Inseln hängen zusammen, wenn sich Punkte bis 5 mm nahe kommen, am Kopf ist eine Insel bis 3 cm an Käfigpunkten des Kopfs. Rot ist Haar mit mehr
+    als 1 cm² ohne Kette zum Kopf. venus vorher 21 lose Inseln mit 133 cm², nach dem Schnitt (Fassung 3, dasselbe Maß, nimmt lose Haarinseln heraus) grün. „Keine neue Haut im Tanz“
+    (<code>Kostuemtanzhaut</code>, Edgar zu koenigin1: „keine Haut … wenn die in der Grundposition an der Stelle nicht zu sehen ist“): ein im Stand bedeckter Hautpunkt, vor oder hinter
+    dem in einem Tanzbild kein Stück mehr liegt, rot ab 10 cm² je Stück und Bild. „Glied durch Stück im Tanz“ (<code>Kostuemgliedseite</code>, ballerina „die rechte Hand geht durch
+    das Tutu“): ein Punkt von Hand, Arm, Bein oder Fuß bis 5 cm über einem Stück, an dem es nicht hängt, liegt auf der anderen Seite der Fläche als im Stand. Ergänzung Fassung 4: ein
+    Sprung zwischen 0,5 und 0,75 Überdeckung zählt nicht, wenn der übrige Anteil längs einer Kette des Skeletts fließt (Ahne oder Nachfahre, höchstens zwei Glieder). Bei koenigin1
+    steckte sonst die Freie Form im Tanz im Unterkiefer („Körper durch Stück im Tanz“, Freie Form 1/2: 9/38 Punkte → 0/0).
+    <code>Hautkieinsatz.ergaenzen</code>
+    füllt ungesehene Hauttexel erst von der Spiegelseite, dann aus der Umgebung (<code>KoerperKI_alle.ergaenzung</code>). Verworfen: <code>Kostuemarmflicken</code> 2 (jede Körperstelle
+    ohne Stück und Haut im Eingang füllen) — venus bekam einen Haarrock (Haarflicken 302 → 7.786 Flächen).</li>
+  <li><strong>Glieder ohne Eingang</strong> (<code>Kostuemohneeingang</code>, 31.10.2026, Edgar zu mann_gold: „Beine und Arme nicht vorhanden im Mesh“): je Knochen an Arm, Hand, Bein, Fuß der
+    Anteil der Figurpunkte, die im Stand weiter als 4 cm vom Eingang liegen; über der Hälfte steht er in <code>kleider_&lt;g&gt;/ohne_eingang.json</code>. Seit Fassung 2 fehlt ein Abschnitt
+    auch, wenn seine Achse und die eines Nachbarn in der Kette zu weniger als der Hälfte im Eingang liegen (wie „Glied im Eingang“) — die Drähte von mann_gold laufen näher als 4 cm an den
+    Unterschenkeln vorbei; ein einzelner Abschnitt draußen ist ein Haltungsfehler und bleibt sichtbar. Der Knopf „Ohne fehlende Glieder“ der Testseite (Vorgabe aus) blendet deren Haut aus,
+    im Stand und im Tanz. Offen: Arme in einer geschlossenen Hülle (mann_gold) sind geometrisch nicht von einem Ärmel zu unterscheiden.</li>
 </ol>

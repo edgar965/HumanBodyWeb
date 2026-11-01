@@ -144,7 +144,8 @@ export class Anatomiehaut {
                 if (ablage && m.map && m.map !== ablage.hautKarte) { ablage.karte = m.map; m.map = null; }   // die EIGENE Karte kam nach dem Umstellen an: wieder weg
                 const eigen = Anatomiehaut.eigenton(ablage ? { map: ablage.karte, color: ablage.farbe } : m, netz.geometry);
                 if (!eigen) { fertig = false; continue; }
-                const bleibt = !inst.haut && Boolean(ablage ? ablage.karte : m.map);    // Katalog-Haut + eigene Karte (Genitalvariante): bleibt, siehe oben
+                // Katalog-Haut + eigene Karte (Genitalvariante): bleibt, siehe oben — nicht auf Fotokacheln (`fototextur`), die sind keine Katalog-Haut
+                const bleibt = !inst.haut && !Anatomiehaut.fotohaut(inst) && Boolean(ablage ? ablage.karte : m.map);
                 // Mit Karten der Haut (`schluessel`) folgt das Stück JEDER Haut; nur ohne sie (Haut ohne Farbkarte) entscheidet der Ton.
                 if (haut && !bleibt && (schluessel || !Anatomiehaut.passt(eigen, haut))) {
                     if (schluessel && !gebacken) Anatomiebacken.anstossen(inst, netz, Anatomiekarten.original(m), schluessel, Anatomiehaut.HAUT, () => Anatomiehaut._neu(inst));
@@ -156,6 +157,14 @@ export class Anatomiehaut {
             }
         }
         return fertig;
+    }
+
+    /**
+     * Trägt der Körper Fotokacheln (`inst.fototextur`, Haut-KI von Mesh3D-AI und 2d-3d-AI, Mesh to 3D)? Dann ist `inst.haut` leer, aber die Haut nicht die des Katalogs, und
+     * das Stück folgt ihr (31.10.2026, Venus: Ursulas Genitalkarte auf der KI-Haut, Edgar: „Geschlechtsteil hat Einheitsfarbe, nicht Körperfarbe“).
+     */
+    static fotohaut(inst) {
+        return Object.keys(inst?.fototextur || {}).some(k => /^10\d\d$/.test(k));
     }
 
     /** Die gerechneten Karten sind da: beim nächsten `nachziehen` gilt der Stand als verändert. */

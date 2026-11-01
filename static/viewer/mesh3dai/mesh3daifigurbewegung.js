@@ -14,12 +14,15 @@ import * as THREE from 'three';
 import { Eigenhaut } from '../gemeinsam/eigenhaut.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
-import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { fetchRetarget } from '../retarget_hybrid.js';
+import { Mesh3daianatomiehuelle } from './mesh3daianatomiehuelle.js';
 import { Mesh3daibewegungsfigur } from './mesh3daibewegungsfigur.js';
+import { Mesh3daibodenstand } from './mesh3daibodenstand.js';
 import { Mesh3daibewegungskleid } from './mesh3daibewegungskleid.js';
 import { Mesh3daigenesisfigur } from './mesh3daigenesisfigur.js';
 import { Mesh3daikikleiderfeld } from './mesh3daikikleiderfeld.js';
+import { Mesh3daikollision } from './mesh3daikollision.js';
+import { Mesh3daiohneglieder } from './mesh3daiohneglieder.js';
 
 export class Mesh3daifigurbewegung {
     static _nummer = 0;
@@ -37,17 +40,13 @@ export class Mesh3daifigurbewegung {
         this.wahl = null;               // 'Kategorie/Name' (Standardanimation, von der Leiste gesetzt)
         this.modell = null;
         this.kleider = [];              // {mesh, art, netz}
-        this.clip = null;
-        this.mixer = null;
-        this.action = null;
-        this.dauer = 0;
-        this.bilder = 0;
+        this.clip = null; this.mixer = null; this.action = null;
+        this.dauer = 0; this.bilder = 0;
         this.fps = 30;
         this.rahmenMm = null;           // Abstand Ruhegelenke der Kinematik ↔ Knochen der gebauten Figur nach starrer Ausrichtung
         this.text = '';
         this.beiAenderung = null;       // die Leiste zieht ihre Anzeige nach
-        this._schluessel = null;
-        this._q = null;
+        this._schluessel = null; this._q = null;
         this._clipWahl = null;
         this._wurzel = null;
         this._kleiderWurzel = null;
@@ -102,19 +101,19 @@ export class Mesh3daifigurbewegung {
             return false;
         }
         this.modell = modell;
-        this._q = q;
-        this._schluessel = q.schluessel;
+        this._q = q; this._schluessel = q.schluessel;
+        Mesh3daiohneglieder.figurAnwenden(modell, q.ohneKnochen);          // Knopf „Ohne fehlende Glieder“ (31.10.2026)
         this._wurzel = null;
         // Rahmen der Stücke (Kinematik der Figur) gegen die gebaute Figur: über die Ruhegelenke gemessen, starr ausgeglichen.
         const rahmen = Mesh3daibewegungsfigur.rahmen(modell, q.knochen, q.ruhezentren);
-        this._abbildung = rahmen.abbildung;
-        this.rahmenMm = rahmen.rest_mm;
+        this._abbildung = rahmen.abbildung; this.rahmenMm = rahmen.rest_mm;
         this._kleiderBinden();
         modell.hautStuecke = Mesh3daikikleiderfeld.hautStuecke({
             stuecke: (q.stuecke || []).map(st => ({ id: st.id, art: st.art, kostuem: st.kostuem, ruhe: Mesh3daibewegungskleid.ruhe(st.netz, this._abbildung), dreiecke: st.netz.dreiecke })),
         });
         this._kleiderAn = true;
-        Hautverdeckung.planen(modell);
+        modell.anatomieUnterHose = () => !!q.ohneAnatomie && this._kleiderAn;          // die Quelle sagt, ob eine Hose das Anatomie-Stück deckt (`Ai2d3dexportfigur`)
+        Mesh3daianatomiehuelle.planen(modell);          // Hautverdeckung; unter der Hose der KI kein Anatomie-Stück (31.10.2026, „das Geschlechtsteil [kommt] aus der hose“)
         this._melden('');
         return true;
     }
@@ -129,9 +128,10 @@ export class Mesh3daifigurbewegung {
         for (const st of q?.stuecke || []) {
             const mesh = Mesh3daibewegungskleid.binden(st.netz, this.modell.skelett, q.knochen, this._abbildung);
             if (!mesh) continue;
-            mesh.userData.art = st.art;
+            mesh.userData.art = st.art; mesh.name = `ki_${st.id}`;      // Name = Schlüssel in `hautStuecke` (Exportleiste: `Exportleistefigur.hautDeckt`, Knotenname in GLB und .blend)
             mesh.visible = this._kleiderAn;
             Eigenhaut.einhaengen(this.modell.group, mesh, this.modell.skelett);
+            Mesh3daikollision.anbringen(mesh, q.kapseln, this.modell.skelett, this._abbildung);    // Stücke aus fremden Gliedern geschoben (31.10.2026 nachts)
             this.kleider.push({ mesh, art: st.art });
         }
         this._kleiderWurzel = this.modell.skelett?.rootBone || null;
@@ -164,7 +164,7 @@ export class Mesh3daifigurbewegung {
         const zeit = this.action ? this.action.time : 0;
         const lief = this.action ? this.action.isScheduled() && !this.action.paused : false;
         this.mixer?.stopAllAction();
-        if (this._kleiderWurzel !== wurzel) this._kleiderBinden();
+        if (this._kleiderWurzel !== wurzel) { this._kleiderBinden(); Mesh3daianatomiehuelle.planen(this.modell, true); }    // die neue Stufe baut das Anatomie-Stück sichtbar neu
         this._wurzel = wurzel;
         this.mixer = new THREE.AnimationMixer(this.modell.group);
         this.action = this.mixer.clipAction(this.clip);
@@ -197,7 +197,7 @@ export class Mesh3daifigurbewegung {
         this._kleiderAn = an;
         for (const k of this.kleider) k.mesh.visible = an;
         for (const netz of Object.values(this.modell.hautStuecke || {})) netz.visible = an;
-        Hautverdeckung.planen(this.modell);
+        Mesh3daianatomiehuelle.planen(this.modell);
     }
 
     _zeigen() {
@@ -208,7 +208,9 @@ export class Mesh3daifigurbewegung {
     }
 
     _bild() {
+        if (this.action) Mesh3daibodenstand.richten(this.modell, this.kleider);     // wie die Charakter-Seite: tiefster Punkt auf den Boden (31.10.2026)
         Genesis9gelenke.takt(this.modell);
+        Mesh3daikollision.stellen(this.kleider, this.modell.group);
         this.ansicht.zeichnen();
         this.beiAenderung?.();
     }
@@ -269,9 +271,7 @@ export class Mesh3daifigurbewegung {
         this.wahl = wahl;
         this.spielt = false;
         this.mixer?.stopAllAction();
-        this.clip = null;
-        this.mixer = null;
-        this.action = null;
+        this.clip = null; this.mixer = null; this.action = null;
         this._wurzel = null;
         return lief;
     }
@@ -285,9 +285,7 @@ export class Mesh3daifigurbewegung {
         this.kleider = [];
         this.modell?.dispose?.();
         this.modell = null;
-        this.clip = null;
-        this.mixer = null;
-        this.action = null;
+        this.clip = null; this.mixer = null; this.action = null;
         this._schluessel = null;
         this._q = null;
         this._clipWahl = null;

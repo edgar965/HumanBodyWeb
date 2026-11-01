@@ -116,7 +116,17 @@ class Mesh3daitestkleider:
         # Name und Kategorie in der Garderobe (22.10.2026, `Mesh3daitestkleidspeichern`)
         Mesh3daitestkleidspeichern.ergaenzen(stuecke, cls.einstellung(p), geschlecht)
         return {'vorgabe': vorgabe, 'stuecke': stuecke, 'quelle': kopf.get('quelle'), 'grund': kopf.get('grund'), 'gerechnet': kopf.get('gerechnet'),
-                'katalog': kopf.get('katalog'), 'ki': ki_info, 'wege_texte': Mesh3daitestkikleider.TEXTE, 'kategorien': Mesh3daitestkleidspeichern.kategorien()}
+                'katalog': kopf.get('katalog'), 'ki': ki_info, 'wege_texte': Mesh3daitestkikleider.TEXTE, 'kategorien': Mesh3daitestkleidspeichern.kategorien(),
+                'ohne_eingang': cls.ohne_eingang(ordner)}
+
+    @staticmethod
+    def ohne_eingang(ordner):
+        """Die Glieder der Figur, die das Netz des Eingangs nicht hat (`mesh3dai_kostuem_ohneeingang.py`, Schritt „kleider“, 31.10.2026) — `{knochen: [Namen], …}` oder None."""
+        try:
+            wert = json.loads((ordner / 'ohne_eingang.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return None
+        return wert if isinstance(wert, dict) and isinstance(wert.get('knochen'), list) else None
 
     @classmethod
     def speichern_setzen(cls, kennung, geschlecht, stueck, name, kategorie):

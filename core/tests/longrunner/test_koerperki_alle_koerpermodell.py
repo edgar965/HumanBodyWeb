@@ -54,12 +54,14 @@ class DasKoerpermodell(unittest.TestCase):
             self.assertGreater(float((x - self.n.ruhe[auswahl]).norm(dim=1).max()), 0.05)          # die Haltung ist wirklich gebeugt
 
     def test_frei_nur_wirksame_koerperregler(self):
+        """Wirkung = stärkster Punkt an der Figur (`Koerpermodell._wirkung_max`, seit 25.10.2026), nicht der
+        RMS `wirkung_mm` der Liste (body_ctrl_BodyFitness an EdgarTrip 01.11.2026: 2,1 gegen 14,4 mm)."""
         frei = self.frei()
         self.assertGreater(len(frei), 50)
         for i in frei:
             r = self.km.fm.liste[i]
             self.assertNotIn(r.get('bereich'), self.K.AUS_BEREICHE, r['name'])
-            self.assertGreaterEqual(float(r.get('wirkung_mm') or 0), self.K.WIRKUNG_MIN_MM, r['name'])
+            self.assertGreaterEqual(float(self.km.wirkung_mm[i]), self.K.WIRKUNG_MIN_MM, r['name'])
 
     def test_kein_freier_regler_formt_den_kopf(self):
         """Kopfform = Formmass2-Kopfteil, Lage abgezogen, RMS über die Kopfpunkte, Regler von der Figur bis an seine Grenze (größere Seite)."""

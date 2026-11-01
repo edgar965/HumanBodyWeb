@@ -23,6 +23,9 @@ from .wurzeln import BASE_DIR  # noqa: F401
 
 SECRET_KEY = 'django-insecure-mocapnet-dev-key-change-in-production'
 DEBUG = True
+# Eigener Name statt „sessionid“ (Edgar, 31.10.2026): Cookies gelten je Host, nicht je Port. Auf 127.0.0.1 laufen
+# mehrere Django-Projekte; am 31.10.2026 löschte ein Fehler 500 hier (15:35:51) StayNestors Anmeldung mit.
+SESSION_COOKIE_NAME = '3dtools_sitzung'
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [

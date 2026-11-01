@@ -2,7 +2,7 @@
  * Mesh3daitestansicht — die Knöpfe über den Feldern der Testseite (24.10.2026, Edgar: „es fehlen die View Buttons für Kleider an / aus, usw. alle von …/mesh-3D-AI/rainy/“): die Ansichtsarten aus
  * `Mesh3daimaterial.MODI`, „Rig“ und „Kleider“ — dieselben Knöpfe, Texte und derselbe gemerkte Stand wie auf den Jobseiten (`Mesh3daizeile`, `Mesh3daiansichtgedaechtnis`). Kein „Ziel als Geist“ und keine
  * Wahl des Wegs: ein Test hat kein Ziel und nur einen Weg.
- * Die Testseite hält ihre Objekte fertig gehäutet; die Art legt `Mesh3daiansichtart` beim Zeichnen darüber. `beiAenderung(was)` ruft die Seite mit 'modus', 'rig' oder 'kleider'.
+ * Die Testseite hält ihre Objekte fertig gehäutet; die Art legt `Mesh3daiansichtart` beim Zeichnen darüber. `beiAenderung(was)` ruft die Seite mit 'modus', 'rig', 'kleider' oder 'ohneGlieder'.
  */
 import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
 import { Mesh3daimaterial } from './mesh3daimaterial.js';
@@ -19,7 +19,11 @@ export class Mesh3daitestansicht {
         this._rigKnopf = this._knopf('fa-bone', 'Rig', 'Das Rig, das Mesh3D-AI vorhersagt, ein- und ausblenden — über beiden Feldern, in jeder Ansichtsart.', () => this._setzen({ rig: !this.rig }));
         this._kleiderKnopf = this._knopf('fa-tshirt', 'Kleider', 'Die Kleider, Bestandteile und das Haar der Karte darunter in der Ausgabe ein- und ausblenden; die Haut darunter wird wieder gezeigt.',
             () => this._setzen({ kleider: !this.kleider }));
-        wahl?.querySelector('.mesh3dai-rigleiste')?.replaceChildren(this._rigKnopf, this._kleiderKnopf);
+        // 31.10.2026, Edgar (mann_gold): „bei dem Modell sind die Beine und Arme nicht vorhanden im Mesh. Kannst du eine Option machen, so dass die beim Ergebnis nicht angezeigt werden?“
+        this.ohneGlieder = false;
+        this._ohneKnopf = this._knopf('fa-user-slash', 'Ohne fehlende Glieder', 'Die Haut der Glieder, die das Netz des Eingangs nicht hat (Schritt „Kleider“: mehr als die Hälfte '
+            + 'eines Knochens liegt weiter als 4 cm vom Eingang, z. B. Arme in einer geschlossenen Kugel), in der Ausgabe ausblenden — im Stand und im Tanz.', () => this._setzen({ ohneGlieder: !this.ohneGlieder }));
+        wahl?.querySelector('.mesh3dai-rigleiste')?.replaceChildren(this._rigKnopf, this._kleiderKnopf, this._ohneKnopf);
         // Die Ansichtsart gilt für alle Zeilen (28.10.2026): ein Klick in der ersten Zeile („ohne KI“, eigene Knöpfe) stellt auch diese um.
         document.addEventListener(Mesh3daiansichtgedaechtnis.EREIGNIS, e => {
             const modus = e.detail?.modus;
@@ -47,6 +51,7 @@ export class Mesh3daitestansicht {
         if (Mesh3daimaterial.MODI.some(m => m.schluessel === stand?.modus)) this.modus = stand.modus;
         if (typeof stand?.rig === 'boolean') this.rig = stand.rig;
         if (typeof stand?.kleider === 'boolean') this.kleider = stand.kleider;
+        if (typeof stand?.ohneGlieder === 'boolean') this.ohneGlieder = stand.ohneGlieder;
         this._anzeigen();
     }
 
@@ -59,7 +64,7 @@ export class Mesh3daitestansicht {
 
     _anzeigen() {
         for (const k of this._modusKnoepfe) k.classList.toggle('active', k.dataset.modus === this.modus);
-        for (const [knopf, an] of [[this._rigKnopf, this.rig], [this._kleiderKnopf, this.kleider]]) {
+        for (const [knopf, an] of [[this._rigKnopf, this.rig], [this._kleiderKnopf, this.kleider], [this._ohneKnopf, this.ohneGlieder]]) {
             knopf.classList.toggle('active', an);
             knopf.setAttribute('aria-pressed', String(an));
         }

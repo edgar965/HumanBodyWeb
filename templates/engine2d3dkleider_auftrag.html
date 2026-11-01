@@ -23,6 +23,7 @@ unverändert benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Kata
 <link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleider.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleidernachbesserung.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleidergesichtsvergleich.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/exportleiste.css' %}">
 {% comment %}Dieselbe Importkarte wie die Szene und „Mesh to 3D": three r170 VOLLSTÄNDIG — der Export (`Modellexport` mit
 GLTFExporter) und die Netzlader fehlen in der lokalen Kopie unter static/vendor, und die Szenenmodule des Exports
 erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
@@ -340,106 +341,10 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
             <div>
                 <h2>Ergebnis</h2>
                 <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
-                {% comment %}Export (Engine2d3dKleideranimexport, 03.10.2026): das Modell, das die Bühne zeigt, als GLB oder Blender-Datei — wahlweise mit der
-                BVH-Animation und mit Audio (beides vorgewählt, Pfade änderbar; Vorgaben aus den Optionen unter „Film“). Ein GLB kann kein Audio tragen: Es liegt
-                als Datei daneben und läuft in der .blend als Tonstreifen mit.{% endcomment %}
-                <div class="meshfigur-export" id="export-block">
-                    <div class="meshfigur-exportoptionen" id="export-optionen">
-                        <label class="engine2d3dkleider-exportzeile" title="Die Bewegung dieser BVH-Datei kommt als Animation in die Datei (Vorgabe: der Tanz; Optionen → Film → BVH-Datei)">
-                            <input type="checkbox" id="export-bvh" checked> <span>BVH-Animation</span>
-                            <input type="text" id="export-bvh-pfad" autocomplete="off" spellcheck="false" placeholder="Pfad der BVH-Datei"></label>
-                        <label class="engine2d3dkleider-exportzeile" title="Die Tonspur: als Datei neben dem Export, in der .blend als Tonstreifen (Vorgabe: die Audiospur des aktuellen BVH-Studio-Projekts; Optionen → Film → Tonspur)">
-                            <input type="checkbox" id="export-audio" checked> <span>Audio</span>
-                            <input type="text" id="export-audio-pfad" autocomplete="off" spellcheck="false" placeholder="Pfad der Audiodatei"></label>
-                        <label class="meshfigur-exportname">Dateiname
-                            <input type="text" id="export-name" autocomplete="off" spellcheck="false"></label>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" id="export-glb" disabled>
-                        <i class="fas fa-file-export"></i> <span>Figur als GLB exportieren</span></button>
-                    <button type="button" class="btn btn-primary btn-sm" id="export-blend" disabled>
-                        <i class="fas fa-cube"></i> <span>In Blender exportieren</span></button>
-                    <div class="hb-hinweis" id="export-meldung"></div>
-                </div>
-                {% comment %}Render (Engine2d3dKleiderrender, 03.10.2026): das Modell mit der BVH-Bewegung und dem Ton als Video — Länge in Sekunden bis zur ganzen
-                BVH. Audio und BVH gelten wie beim Export (Haken und Pfade darüber). Das Ergebnis steht mit Pfad unter dem Knopf.{% endcomment %}
-                <div class="meshfigur-export" id="render-block">
-                    <div class="meshfigur-exportoptionen">
-                        <label class="engine2d3dkleider-exportzeile" title="Wie lang das Video wird: 10 Bilder bis zur ganzen BVH">
-                            <span>Länge (s)</span>
-                            <input type="number" id="render-sekunden" min="0.33" step="0.01" value="0.33">
-                            <span class="hb-hinweis" id="render-max"></span>
-                            <button type="button" class="btn btn-secondary btn-sm" id="render-10" title="10 Bilder = 0,33 s: erst die Qualität prüfen">10 Bilder</button>
-                            <button type="button" class="btn btn-secondary btn-sm" id="render-30" title="30 Bilder = 1 s">30 Bilder</button>
-                            <button type="button" class="btn btn-secondary btn-sm" id="render-ganz">ganze BVH</button></label>
-                        <label>Kamera
-                            <select id="render-kamera" class="viewer-select">
-                                <option value="zoom_ein" selected>Zoom hinein</option>
-                                <option value="zoom_aus">Zoom hinaus</option>
-                                <option value="zoom_ein_langsam">Zoom hinein, langsam</option>
-                                <option value="gesicht">Nah: Gesicht, Bart und Federn</option>
-                                <option value="brust">Nah: Brust, Hemd und Ketten</option>
-                            </select></label>
-                        <label>Größe
-                            <select id="render-groesse" class="viewer-select">
-                                <option value="960x1200" selected>960 × 1200 (wie Frank)</option>
-                                <option value="480x600">480 × 600 (Probe)</option>
-                            </select></label>
-                        <label>Qualität
-                            <select id="render-spp" class="viewer-select" title="Proben je Pixel vor dem Entrauschen" data-reihenfolge="fest">
-                                <option value="16">Probe (16 Proben)</option>
-                                <option value="96" selected>Standard (96)</option>
-                                <option value="192">Hoch (192)</option>
-                            </select></label>
-                        <label class="engine2d3dkleider-exportzeile" title="Was ist gegenüber dem Lauf davor anders? Kommt in die Liste der Läufe">
-                            <span>Anmerkung</span>
-                            <input type="text" id="render-anmerkung" maxlength="600" placeholder="was ist anders als im letzten Lauf?"></label>
-                    </div>
-                    {% comment %}Regler für Rendering und Physik (04.10.2026, Edgar: „Baue ALLE Regler ein" — Windstärke, Lichtverhältnisse, Mimik …): fünf Gruppen aus `Figurfilm.Filmregler`
-                    (Katalog vom Server, gespeichert im Auftrag wie die anderen Optionen, vom Arbeitsprozess als `regler.json` an die Skripte gegeben). Die Behälter heißen
-                    `engine2d3dkleider-optionen-<gruppe>`; das Formular baut `Meshoptionenformular`.{% endcomment %}
-                    <div class="engine2d3dkleider-renderregler" id="render-regler">
-                        <h4 class="engine2d3dkleider-reglertitel">Einstellungen für Rendering und Physik</h4>
-                        <details class="engine2d3dkleider-reglergruppe">
-                            <summary>Qualität, Bildaufbau und Stoffmodus</summary>
-                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderqualitaet"></div></details>
-                        <details class="engine2d3dkleider-reglergruppe">
-                            <summary>Licht und Hintergrund</summary>
-                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderlicht"></div></details>
-                        <details class="engine2d3dkleider-reglergruppe">
-                            <summary>Haut und Material</summary>
-                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderhaut"></div></details>
-                        <details class="engine2d3dkleider-reglergruppe">
-                            <summary>Physik: Wind, Haar, Bart, Ketten, Federn, Stoff, Uhr</summary>
-                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderphysik"></div></details>
-                        <details class="engine2d3dkleider-reglergruppe">
-                            <summary>Mimik und Lebendigkeit (wie im Studio)</summary>
-                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-rendermimik"></div></details>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" id="render-starten" disabled>
-                        <i class="fas fa-film"></i> <span>Rendern</span></button>
-                    <div class="hb-hinweis" id="render-meldung"></div>
-                    {% comment %}Die Render-Läufe als eigener Abschnitt (`Engine2d3dKleiderrenderlaeufe`): Nummer, Bilder, Größe, Proben, Dauer, Bogen, Video, Anmerkung.{% endcomment %}
-                    <div class="engine2d3dkleider-renderlaeufe" id="render-laeufe"></div>
-                </div>
-                <div class="meshfigur-export">
-                    <div class="meshfigur-exportoptionen">
-                        <label>Format
-                            <select id="modell-format" class="viewer-select">
-                                <option value="genesis" selected>Eigenes Format (Genesis-Preset)</option>
-                                <option value="glb">GLB</option>
-                                <option value="blend">Blender (.blend)</option>
-                                <option value="obj">OBJ</option>
-                            </select>
-                        </label>
-                        <label class="meshfigur-exportname">Name
-                            <input type="text" id="modell-name" autocomplete="off" spellcheck="false"></label>
-                    </div>
-                    <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
-                        <i class="fas fa-save"></i> <span>Modell speichern</span></button>
-                    <div class="hb-hinweis" id="modell-meldung">Genesis-Preset erscheint unter „Charakter hinzufügen →
-                        Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre); GLB/Blender/OBJ gehen in die
-                        Export-Ablage des Auftrags.</div>
-                </div>
+                {% comment %}Exportleiste (31.10.2026, Edgar „mach beides“ — die Spalte war ihr Vorbild): Modell speichern, Export GLB/OBJ/Blender mit BVH und Audio, Render mit den Reglern
+                für Rendering und Physik und den Läufen. GLB, Blender und Render nehmen das Stand-Modell des Auftrags (`Engine2d3dKleiderexportquelle`, eigenes Modell mit Stoff und
+                Strähnen), OBJ schreibt die Seite aus der Figur der Bühne. „Modell speichern“ (Genesis-Preset) bindet `Meshfigurspeicher` an die Felder der Leiste.{% endcomment %}
+                {% include "_exportleiste.html" with bereich="engine2d3dkleider" kennung=job.id speichern_text="Modell speichern" speichern_hinweis="Genesis-Preset: erscheint unter „Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre)." %}
             </div>
             <div class="engine2d3dkleider-netzkarte">
                 <h3 class="mesh-pfadkopf">Gespeichert unter</h3>
@@ -595,8 +500,11 @@ import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloesch
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 import { Engine2d3dKleiderbuehnengroesse } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleiderbuehnengroesse.js' %}";
 import { Engine2d3dKleiderreferenz } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleiderreferenz.js' %}";
-Engine2d3dKleiderseite.starten("{{ job.id }}");
+import { Engine2d3dKleiderexportquelle } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleiderexportquelle.js' %}";
+import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
+const seite = Engine2d3dKleiderseite.starten("{{ job.id }}");
 Engine2d3dKleiderreferenz.starten("{{ job.id }}");
+Exportleiste.starten(document.getElementById('exportleiste'), new Engine2d3dKleiderexportquelle(seite));
 Auftragloeschen.binden();
 Auftragname.binden();
 new Engine2d3dKleiderbuehnengroesse();

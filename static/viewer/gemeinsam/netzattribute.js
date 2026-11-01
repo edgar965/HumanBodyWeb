@@ -14,6 +14,7 @@
  * Export.
  */
 import { Einzugbacken } from './einzugbacken.js';
+import { Punktfarbengruppen } from './punktfarbengruppen.js';
 
 export class Netzattribute {
 
@@ -53,10 +54,11 @@ export class Netzattribute {
      * @returns Rücksetz-Funktion, oder `null` wenn nichts zu tauschen war.
      */
     static tauschen(objekte) {
-        const betroffen = objekte.filter((o) => o.geometry && Netzattribute.hatEigene(o.geometry));
+        // Seit 31.10.2026 auch Netze, deren Punktfarben glTF anders zeigte als die Szene (`Punktfarbengruppen`, Venus: Haar dunkelbraun statt golden)
+        const betroffen = objekte.filter((o) => o.geometry && (Netzattribute.hatEigene(o.geometry) || Punktfarbengruppen.abweichend(o)));
         if (!betroffen.length) return null;
         const original = betroffen.map((o) => o.geometry);
-        betroffen.forEach((o) => { o.geometry = Netzattribute.eigeneEntfernen(o.geometry.clone()); });
+        betroffen.forEach((o) => { o.geometry = Punktfarbengruppen.angleichen(Netzattribute.eigeneEntfernen(o.geometry.clone()), o); });
         return () => betroffen.forEach((o, i) => { o.geometry = original[i]; });
     }
 }

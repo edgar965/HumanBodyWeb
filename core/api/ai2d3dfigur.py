@@ -7,9 +7,12 @@ GET /api/2d3dai/<job>/figur/<geschlecht>/bild/<name>                 Bild der Ha
 GET /api/2d3dai/<job>/figur/kleider/<geschlecht>/                    Stücke aus den Fotos
 GET /api/2d3dai/<job>/figur/kleid/<geschlecht>/<weg>/<id>/netz/      ein Stück als Anzeigenetz
 GET /api/2d3dai/<job>/figur/kleid/<geschlecht>/<weg>/<id>/bild/<n>   seine Textur
+GET|POST /api/2d3dai/<job>/figur/modell/                             Stand von „Als Modell speichern“ / starten mit `{name}` (`Ai2d3dmodell`, 31.10.2026)
 """
+import json
+
 from django.http import Http404, HttpResponse, JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 
 from ..dienste.ai2d3dfigur import Ai2d3dfigur
 from ..dienste.auftragsdatei import Auftragsdatei
@@ -41,6 +44,22 @@ class Ai2d3dfigurendpunkte:
         if pfad is None:
             raise Http404('Kein Bild %s für Job %s (%s)' % (name, job, geschlecht))
         return Auftragsdatei.antwort(request, pfad)
+
+    @staticmethod
+    @require_http_methods(['GET', 'POST'])
+    def modell(request, job):
+        from ..dienste.ai2d3dmodell import Ai2d3dmodell
+        geschlecht = Ai2d3dmodell.geschlecht(job)
+        if geschlecht is None:
+            return JsonResponse({'error': 'Job %s hat keine gebaute Figur' % job}, status=404)
+        if request.method == 'GET':
+            return JsonResponse(dict(Ai2d3dmodell.stand(job, geschlecht) or {'status': 'nie'}, geschlecht=geschlecht))
+        try:
+            rumpf = json.loads(request.body or b'{}')
+        except ValueError:
+            rumpf = {}
+        antwort, status = Ai2d3dmodell.starten(job, geschlecht, str((rumpf if isinstance(rumpf, dict) else {}).get('name') or '').strip())
+        return JsonResponse(antwort, status=status)
 
     @staticmethod
     @require_GET

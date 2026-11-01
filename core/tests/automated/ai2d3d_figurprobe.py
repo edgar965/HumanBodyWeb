@@ -4,7 +4,7 @@ Masken der Person. Gemeinsam für die Tests Geschlecht, Textur und Augen (29.10.
 
   Projektion  wie `KoerperKI_Fotos.Fotoeinpassung.bild`: Lochkamera aus der Kamera der Seite (ort, ziel, oben, fov) mit dem Bildpunkt des Ziels `versatz_px` — das Ziel liegt im
               Foto nicht in der Bildmitte (ohne ihn 120–280 px daneben, `diag_mesh_pruefungen.py`)
-  sichtbar    Tiefenpuffer über Ecken und Dreiecksmitten in Zellen von ZELLE_PX: sichtbar ist, wer höchstens TIEFE_MM hinter dem vordersten Punkt seiner Zelle liegt
+  sichtbar    Tiefenpuffer in Zellen von ZELLE_PX über die dicht abgetasteten Dreiecke: sichtbar ist, wer höchstens TIEFE_MM hinter der vordersten Fläche seiner Zelle liegt
   Masken      Sapiens2 je Foto aus der Segmentablage des Jobs (`<arbeitsordner>/segmente/<Foto>_*.npz`, `KopfKI.Fotosegmentablage`): person, haut, haar, bart; die jüngste Datei
 
     p = Ai2d3dfigurprobe(objects_root, 'EdgarTrip')
@@ -62,32 +62,67 @@ class Ai2d3dfigurprobe:
         t = k['versatz_px']
         return np.stack([t[0] + brenn * (d @ rechts) / z, t[1] - brenn * (d @ hoch) / z], 1), z
 
+    #: Stützpunkte je Dreieckskante für den Tiefenpuffer: (S+1)(S+2)/2 Punkte je Dreieck. Mit Ecken und Mitten allein (bis 29.10.2026 23 Uhr) blieben an den Oberschenkeln
+    #: (Dreiecke 40–50 px) Zellen ohne vordere Fläche — im Profil galten Punkte des Schritts HINTER dem Oberschenkel als sichtbar (`diag_mesh_reste.py`, 3.jpg und 4.jpg)
+    STUETZ = 8
+
+    def _baryzentrisch(self):
+        s = self.STUETZ
+        a, b = np.meshgrid(np.arange(s + 1), np.arange(s + 1), indexing='ij')
+        gut = a + b <= s
+        return np.stack([a[gut], b[gut], s - a[gut] - b[gut]], 1) / s           # (K, 3)
+
     def sichtbar(self, uv, z, f, dreiecke=None):
-        """(N,) bool — Tiefenpuffer über Ecken und Dreiecksmitten (`dreiecke`: Vorgabe die der Figur)."""
+        """(N,) bool — Tiefenpuffer über die Dreiecke, je Dreieck dicht abgetastet (`dreiecke`: Vorgabe die der Figur)."""
         tri = self.dreiecke if dreiecke is None else dreiecke
         h, w = f['kamera']['hoehe'], f['kamera']['breite']
-        a_uv = np.concatenate([uv, uv[tri].mean(1)])
-        a_z = np.concatenate([z, z[tri].mean(1)])
-        zx, zy = np.floor(a_uv[:, 0] / self.ZELLE_PX).astype(np.int64), np.floor(a_uv[:, 1] / self.ZELLE_PX).astype(np.int64)
         breite, hoehe = w // self.ZELLE_PX + 2, h // self.ZELLE_PX + 2
+        vorn = np.full(breite * hoehe, np.inf)
+        bary = self._baryzentrisch()
+        for i in range(0, len(tri), 8192):
+            t = tri[i:i + 8192]
+            p_uv = np.einsum('kj,tjc->tkc', bary, uv[t]).reshape(-1, 2)
+            p_z = np.einsum('kj,tj->tk', bary, z[t]).reshape(-1)
+            zx, zy = np.floor(p_uv[:, 0] / self.ZELLE_PX).astype(np.int64), np.floor(p_uv[:, 1] / self.ZELLE_PX).astype(np.int64)
+            gut = (zx >= 0) & (zy >= 0) & (zx < breite) & (zy < hoehe)
+            np.minimum.at(vorn, zy[gut] * breite + zx[gut], p_z[gut])
+        zx, zy = np.floor(uv[:, 0] / self.ZELLE_PX).astype(np.int64), np.floor(uv[:, 1] / self.ZELLE_PX).astype(np.int64)
         gut = (zx >= 0) & (zy >= 0) & (zx < breite) & (zy < hoehe)
         zelle = np.where(gut, zy * breite + zx, 0)
-        vorn = np.full(breite * hoehe, np.inf)
-        np.minimum.at(vorn, zelle[gut], a_z[gut])
-        n = len(z)
-        return gut[:n] & (z <= vorn[zelle[:n]] + self.TIEFE_MM / 1000)
+        return gut & (z <= vorn[zelle] + self.TIEFE_MM / 1000)
+
+    #: Klassen von Sapiens2 (`Sapiens2Torch/segmentierung.py`, `S2segmentierung.KLASSEN`) — Index = Wert in `klassen` der Segmentablage
+    SAPIENS = ('Background', 'Apparel', 'Eyeglass', 'Face_Neck', 'Hair', 'Left_Foot', 'Left_Hand', 'Left_Lower_Arm', 'Left_Lower_Leg', 'Left_Shoe', 'Left_Sock',
+               'Left_Upper_Arm', 'Left_Upper_Leg', 'Lower_Clothing', 'Right_Foot', 'Right_Hand', 'Right_Lower_Arm', 'Right_Lower_Leg', 'Right_Shoe', 'Right_Sock',
+               'Right_Upper_Arm', 'Right_Upper_Leg', 'Torso', 'Upper_Clothing', 'Lower_Lip', 'Upper_Lip', 'Lower_Teeth', 'Upper_Teeth', 'Tongue')
+
+    def _ablage(self, datei):
+        ablage = Path(self.job.get('arbeitsordner', '')) / 'segmente'
+        alle = sorted(ablage.glob('%s_*.npz' % Path(datei).stem), key=lambda p: p.stat().st_mtime) if ablage.is_dir() else []
+        return alle[-1] if alle else None
 
     def masken(self, datei):
         """{person, haut, haar, bart, …: (H, W) bool} des Fotos aus der Segmentablage des Jobs, oder None."""
         if datei not in self._masken:
-            ablage = Path(self.job.get('arbeitsordner', '')) / 'segmente'
-            alle = sorted(ablage.glob('%s_*.npz' % Path(datei).stem), key=lambda p: p.stat().st_mtime) if ablage.is_dir() else []
-            if not alle:
+            pfad = self._ablage(datei)
+            if pfad is None:
                 self._masken[datei] = None
             else:
-                with np.load(alle[-1]) as z:
-                    self._masken[datei] = {k: z[k].astype(bool) for k in z.files if z[k].ndim == 2}
+                with np.load(pfad) as z:
+                    self._masken[datei] = {k: z[k].astype(bool) for k in z.files if z[k].ndim == 2 and k != 'klassen'}
         return self._masken[datei]
+
+    def klassen(self, datei):
+        """(H, W) uint8 — Sapiens-Klasse je Pixel (Index in SAPIENS), oder None."""
+        pfad = self._ablage(datei)
+        if pfad is None:
+            return None
+        with np.load(pfad) as z:
+            return z['klassen'] if 'klassen' in z.files else None
+
+    @classmethod
+    def klassen_index(cls, *namen):
+        return [cls.SAPIENS.index(n) for n in namen]
 
     def bild(self, datei):
         """(H, W, 3) int64 — das Foto des Jobs mit diesem Dateinamen."""

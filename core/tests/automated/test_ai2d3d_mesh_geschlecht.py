@@ -8,8 +8,8 @@ Hose; 4.jpg 6 Punkte, bis 17,9 mm.
 
 Gemessen je Foto: die Punkte der Anatomie-Zone (`Genesis9.G9meshanatomie.zone`, die Käfigpunkte unter Daz' Anatomie-Stücken — gleiches Netz wie die Figur), sichtbar in diesem
 Foto (`Ai2d3dfigurprobe.sichtbar`). Liegt die Mehrheit von ihnen im Foto auf Kleidung (Person ohne Haut, Haar, Bart; Sapiens2), ist die Person dort bekleidet — dann darf kein
-sichtbarer Punkt der Zone auf Haut weiter als GRENZE_MM von der Kleidung entfernt liegen (der Saum selbst ist eine Grenze der Segmentierung). Liegt die Mehrheit auf Haut (nackt),
-gilt die Prüfung für dieses Foto nicht.
+sichtbarer Punkt der Zone weiter als GRENZE_MM neben der Kleidung liegen, weder auf Haut noch auf dem Hintergrund (der Saum selbst ist eine Grenze der Segmentierung). Liegt die
+Mehrheit auf Haut (nackt), gilt die Prüfung für dieses Foto nicht.
 
 Nur lesen. Ohne training_figur.json wird übersprungen; eine ohne `versatz_px` in der Kamera fällt durch (der Lauf ist vor dem 29.10.2026 abends ausgegeben — neu ausgeben).
 
@@ -43,32 +43,37 @@ class Ai2d3dMeshGeschlecht(SimpleTestCase):
         return p, zone
 
     @classmethod
+    def _lage(cls, p, f, x, zone, kleid):
+        uv, z = p.projektion(f, x)
+        zs = zone & p.sichtbar(uv, z, f)
+        ix, iy = p.pixel(uv, kleid.shape)
+        return zs, ix, iy
+
+    @classmethod
     def messen(cls, p, zone, senken_mm=0.0):
-        """[(Foto, sichtbare Zonenpunkte, davon auf Kleidung, auf Haut über GRENZE_MM, größter Abstand mm)] — nur bekleidete Fotos."""
+        """[(Foto, sichtbare Zonenpunkte, davon auf Kleidung, daneben über GRENZE_MM, größter Abstand mm)] — nur bekleidete Fotos. Ob ein Foto bekleidet ist, entscheidet die
+        Figur des Laufs (Mehrheit ihrer sichtbaren Zonenpunkte auf Kleidung) — auch für die Gegenprobe, die die Zone danach senkt. Daneben = auf Haut ODER auf dem Hintergrund."""
         aus = []
         for nr, f in p.fotos():
             m = p.masken(f['datei'])
             if m is None:
                 continue
-            x = p.punkte(f)
-            x[zone, 1] -= senken_mm / 1000
-            uv, z = p.projektion(f, x)
-            zs = zone & p.sichtbar(uv, z, f)
-            if not zs.any():
-                continue
-            ix, iy = p.pixel(uv, m['person'].shape)
             kleid = m['person'] & ~m['haut'] & ~m['haar'] & ~m['bart']
-            auf_kleid = int((zs & kleid[iy, ix]).sum())
-            if auf_kleid < cls.KLEID_MIN * int(zs.sum()):
+            x = p.punkte(f)
+            zs, ix, iy = cls._lage(p, f, x, zone, kleid)
+            if not zs.any() or int((zs & kleid[iy, ix]).sum()) < cls.KLEID_MIN * int(zs.sum()):
                 continue
-            haut = zs & m['haut'][iy, ix]
-            d = (ndimage.distance_transform_edt(~kleid) * p.mm_je_px(nr))[iy, ix][haut]
-            aus.append((f['datei'], int(zs.sum()), auf_kleid, int((d > cls.GRENZE_MM).sum()), float(d.max()) if len(d) else 0.0))
+            if senken_mm:
+                x[zone, 1] -= senken_mm / 1000
+                zs, ix, iy = cls._lage(p, f, x, zone, kleid)
+            auf_kleid = zs & kleid[iy, ix]
+            d = (ndimage.distance_transform_edt(~kleid) * p.mm_je_px(nr))[iy, ix][zs & ~auf_kleid]
+            aus.append((f['datei'], int(zs.sum()), int(auf_kleid.sum()), int((d > cls.GRENZE_MM).sum()), float(d.max()) if len(d) else 0.0))
         return aus
 
     @staticmethod
     def _text(fotos):
-        return ' | '.join('%s: %d sichtbar, %d auf Kleidung, %d auf Haut über der Grenze, max %.1f mm' % e for e in fotos)
+        return ' | '.join('%s: %d sichtbar, %d auf Kleidung, %d daneben über der Grenze, max %.1f mm' % e for e in fotos)
 
     def test_geschlecht_liegt_unter_der_hose(self):
         p, zone = self._probe()

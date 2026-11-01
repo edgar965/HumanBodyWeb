@@ -13,8 +13,8 @@ from django.conf import settings
 sys.path.insert(0, str(settings.TOOLS_ROOT))
 sys.path.insert(0, str(settings.TOOLS_ROOT / 'mesh3dai'))
 
+from HaarKI.haarschale import Haarschale  # noqa: E402
 from KopfKI.fotobart import Fotobart  # noqa: E402
-from KopfKI.fotohaarschale import Fotohaarschale  # noqa: E402
 from Sam3Torch.roiausrichtung import S3roiausrichtung  # noqa: E402
 from Sam3Torch.tokenizer import S3tokenizer  # noqa: E402
 from Sapiens2Torch.safetensoren import S2safetensoren  # noqa: E402
@@ -87,7 +87,7 @@ class DieTeilungDerHaarschale(unittest.TestCase):
     def test_ein_dreieck_wird_vier(self):
         p = torch.tensor([[0.0, 0, 0], [1, 0, 0], [0, 1, 0]])
         d = torch.tensor([[0, 1, 2]])
-        p2, d2, b2 = Fotohaarschale.teilen(p, d, torch.arange(3))
+        p2, d2, b2 = Haarschale.teilen(p, d, torch.arange(3))        # seit 01.11.2026 die einzige Teilung (vorher Kopie `Fotohaarschale.teilen`)
         self.assertEqual(len(p2), 6)
         self.assertEqual(len(d2), 4)
         flaeche = 0.5 * torch.cross(p2[d2[:, 1]] - p2[d2[:, 0]], p2[d2[:, 2]] - p2[d2[:, 0]], dim=1)

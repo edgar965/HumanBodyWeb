@@ -1,0 +1,109 @@
+{% comment %}
+Exportleiste (31.10.2026, Edgar: „baue die ganze Exportleiste auf mit Physik usw." — Vorbild die rechte Spalte von „2D3D Kleider" —, „mach das als wiederverwendbares Modul").
+Aufruf: {% include "_exportleiste.html" with bereich="mesh3daitest" kennung=test.kennung %} und auf der Seite `Exportleiste.starten(document.getElementById('exportleiste'), quelle)`
+(`static/viewer/exportleiste/exportleiste.js`; die Quelle gibt die Figur der Seite). Server: `core/api/exportleiste.py`, Bereiche in `Exportleistebereiche`.
+„Modell speichern" bindet die Seite selbst (Felder `exportleiste-modell-*`): Was ein gespeichertes Modell ist, weiß nur der Bereich.
+CSS: `css/exportleiste.css`.
+{% endcomment %}
+<div class="exportleiste" id="exportleiste" data-adresse="/api/exportleiste/{{ bereich }}/{{ kennung }}/">
+    <section class="exportleiste-block">
+        <h4>Modell speichern <small class="hb-hinweis">— die Figur in die Modellbibliothek (Charakter hinzufügen → Genesis 9)</small></h4>
+        <label class="exportleiste-zeile"><span>Modellname</span>
+            <input type="text" id="exportleiste-modell-name" maxlength="80" autocomplete="off" spellcheck="false"></label>
+        <div class="exportleiste-knoepfe">
+            <button type="button" class="btn btn-primary btn-sm" id="exportleiste-modell-speichern" disabled><i class="fas fa-save"></i> {{ speichern_text|default:"Als Modell speichern" }}</button>
+        </div>
+        <div class="hb-hinweis" id="exportleiste-modell-meldung">{{ speichern_hinweis }}</div>
+    </section>
+
+    <section class="exportleiste-block">
+        <h4>Exportieren <small class="hb-hinweis">— das 3D-Modell als Datei (GLB, OBJ, Blender) oder die Bewegung als Video (MP4)</small></h4>
+        <label class="exportleiste-zeile" title="Die Bewegung dieser BVH-Datei kommt als Animation in GLB und Blender-Datei (Vorgabe: die Standardanimation der Seite). OBJ trägt keine Animation.">
+            <input type="checkbox" id="exportleiste-animation" checked> <span>Mit Animation (BVH)</span>
+            <input type="text" id="exportleiste-bvh" autocomplete="off" spellcheck="false" placeholder="Pfad der BVH-Datei"></label>
+        <label class="exportleiste-zeile" title="Die Tonspur: als Datei neben dem Export, in der .blend als Tonstreifen (Vorgabe: die Audiospur des jüngsten Studio-Projekts)">
+            <input type="checkbox" id="exportleiste-audio"> <span>Audio</span>
+            <input type="text" id="exportleiste-audio-pfad" autocomplete="off" spellcheck="false" placeholder="Pfad der Audiodatei"></label>
+        <div class="exportleiste-zeile">
+            <span>Ordner</span>
+            <input type="text" id="exportleiste-ordner" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn btn-secondary btn-sm" id="exportleiste-suchen" title="Fenster „Ordner suchen“ öffnen"><i class="fas fa-folder-open"></i> Suchen …</button>
+        </div>
+        <label class="exportleiste-zeile"><span>Dateiname</span>
+            <input type="text" id="exportleiste-name" autocomplete="off" spellcheck="false"></label>
+        {# 31.10.2026, Edgar: „ein Export auch als mp4 video … (mit und ohne Physik), mit Auflösung die man einstellen kann“ — die ganze BVH über den Render-Weg, Kamera und Qualität aus „Rendern“. #}
+        <div class="exportleiste-zeile exportleiste-wahlen" title="Nur für MP4: Auflösung des Videos und ob Stoff, Haar und Wind simuliert werden">
+            <label>MP4-Auflösung
+                <select id="exportleiste-mp4-groesse" class="viewer-select" data-reihenfolge="fest">{% include "_exportleiste_aufloesungen.html" with vorgabe="1920x1080" %}</select></label>
+            <input type="number" id="exportleiste-mp4-breite" min="64" max="4096" step="2" title="Breite in Pixeln"> ×
+            <input type="number" id="exportleiste-mp4-hoehe" min="64" max="4096" step="2" title="Höhe in Pixeln">
+            <label title="An: Stoff, Haar, Bart und Wind werden simuliert (wie „Rendern“, dauert). Aus: alles starr am Körper — schneller."><input type="checkbox" id="exportleiste-mp4-physik"> mit Physik</label>
+        </div>
+        <div class="exportleiste-knoepfe">
+            <button type="button" class="btn btn-primary btn-sm" data-format="glb" disabled><i class="fas fa-file-export"></i> GLB</button>
+            <button type="button" class="btn btn-primary btn-sm" data-format="obj" disabled><i class="fas fa-file-export"></i> OBJ</button>
+            <button type="button" class="btn btn-primary btn-sm" data-format="blend" disabled><i class="fas fa-cube"></i> Blender</button>
+            <button type="button" class="btn btn-primary btn-sm" data-format="mp4" disabled title="Die ganze Animation als Video in diesen Ordner — gerechnet wie „Rendern“ (Kamera und Qualität von dort)"><i class="fas fa-video"></i> MP4</button>
+        </div>
+        <div class="hb-hinweis" id="exportleiste-export-meldung"></div>
+    </section>
+
+    <section class="exportleiste-block">
+        <h4>Rendern <small class="hb-hinweis">— ein Video (MP4) der Figur mit Bewegung, Licht und Physik</small></h4>
+        <div class="exportleiste-zeile" title="Wie lang das Video wird: 10 Bilder bis zur ganzen BVH">
+            <span>Länge (s)</span>
+            <input type="number" id="exportleiste-sekunden" min="0.33" step="0.01" value="0.33">
+            <span class="hb-hinweis" id="exportleiste-max"></span>
+            <button type="button" class="btn btn-secondary btn-sm" data-bilder="10" title="10 Bilder = 0,33 s: erst die Qualität prüfen">10 Bilder</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-bilder="30" title="30 Bilder = 1 s">30 Bilder</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-bilder="ganz">ganze BVH</button>
+        </div>
+        <div class="exportleiste-zeile exportleiste-wahlen">
+            <label>Kamera
+                <select id="exportleiste-kamera" class="viewer-select">
+                    <option value="zoom_ein" selected>Zoom hinein</option>
+                    <option value="zoom_aus">Zoom hinaus</option>
+                    <option value="zoom_ein_langsam">Zoom hinein, langsam</option>
+                    <option value="gesicht">Nah: Gesicht</option>
+                    <option value="brust">Nah: Brust</option>
+                </select></label>
+            <label>Größe
+                <select id="exportleiste-groesse" class="viewer-select" data-reihenfolge="fest">{% include "_exportleiste_aufloesungen.html" with vorgabe="960x1200" %}</select></label>
+            <input type="number" id="exportleiste-breite" min="64" max="4096" step="2" title="Breite in Pixeln"> ×
+            <input type="number" id="exportleiste-hoehe" min="64" max="4096" step="2" title="Höhe in Pixeln">
+            <label title="An: Stoff, Haar, Bart und Wind werden simuliert. Aus: alles starr am Körper — schneller."><input type="checkbox" id="exportleiste-physik" checked> mit Physik</label>
+            <label>Qualität
+                <select id="exportleiste-spp" class="viewer-select" title="Proben je Pixel vor dem Entrauschen" data-reihenfolge="fest">
+                    <option value="16">Probe (16 Proben)</option>
+                    <option value="96" selected>Standard (96)</option>
+                    <option value="192">Hoch (192)</option>
+                </select></label>
+        </div>
+        <label class="exportleiste-zeile" title="Was ist gegenüber dem Lauf davor anders? Kommt in die Liste der Läufe"><span>Anmerkung</span>
+            <input type="text" id="exportleiste-anmerkung" maxlength="600" placeholder="was ist anders als im letzten Lauf?"></label>
+        <h5 class="exportleiste-reglertitel">Einstellungen für Rendering und Physik</h5>
+        {# Fünf Gruppen aus `Figurfilm.Filmregler` (Katalog im Zustand), gebaut von `Exportleisteregler` mit `Meshoptionenformular`. #}
+        <div id="exportleiste-regler"></div>
+        <div class="hb-hinweis" id="exportleiste-regler-meldung"></div>
+        {# 31.10.2026, Edgar: „ich verstehe nicht, wo die gerenderte Datei gespeichert wird … Speicherst du schon beim Klick auf den Render-Button?“ — ja: eigenes Ziel des Videos. #}
+        <div class="exportleiste-zeile" title="Wohin das fertige Video kommt (Vorgabe: der Exportordner des Modells)">
+            <span>Video nach</span>
+            <input type="text" id="exportleiste-render-ordner" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn btn-secondary btn-sm" id="exportleiste-render-suchen" title="Fenster „Ordner suchen“ öffnen"><i class="fas fa-folder-open"></i> Suchen …</button>
+        </div>
+        <label class="exportleiste-zeile" title="Name der Videodatei ohne Endung; gibt es sie schon, wird nicht überschrieben (_2, _3 …)"><span>Dateiname</span>
+            <input type="text" id="exportleiste-render-datei" autocomplete="off" spellcheck="false"> <span class="hb-hinweis">.mp4</span></label>
+        <div class="hb-hinweis">„Rendern“ speichert das Video selbst unter diesem Pfad, sobald es fertig ist — ein eigener Speichern-Schritt ist nicht nötig. Jeder Lauf bleibt
+            zusätzlich in der Liste darunter.</div>
+        <div class="exportleiste-knoepfe">
+            <button type="button" class="btn btn-primary btn-sm" id="exportleiste-rendern" disabled><i class="fas fa-film"></i> Rendern und Video speichern</button>
+        </div>
+        <div class="hb-hinweis" id="exportleiste-render-meldung"></div>
+        <div class="exportleiste-laeufe" id="exportleiste-laeufe"></div>
+    </section>
+
+    <section class="exportleiste-block">
+        <h4>Gespeichert unter</h4>
+        <div class="mesh-pfade" id="exportleiste-pfade"></div>
+    </section>
+</div>

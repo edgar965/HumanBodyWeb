@@ -3,13 +3,15 @@
 
     1  Seitenpaare: MakeHuman `_r-`/`_l-` und Daz `Right`/`Left` finden ihr Gegenstück, nur unter freien Reglern; ein Regler ohne Gegenstück bleibt allein
     2  Regler zurück in die Figur: nur freie und geänderte (|Δ| ≥ 0,005); unter 0,01 fällt der Regler weg; nicht freie und fremde bleiben wie vorher
-    3  Platz in der Kette: nach „lage“, vor „haut“, Skript im Skriptdienst erlaubt
-    4  Haut des Eingangs nur nah am Körper (`HAUT_NAH_M` steht, der Grund — der Stab des Zauberers — im Docstring)
+    3  Skript im Skriptdienst erlaubt (die Schritte „lage“ und „koerper“ der Kette `Mesh3dairechenlauf`
+       fielen am 30.10.2026 weg; `Koerperangleich` rechnet weiter für die Eigen-KI, `mesh3dai_eigenki_daten.py`)
+    4  Haut des Eingangs nur nah am Körper (`HAUT_NAH_M` steht, der Grund — der Stab des Zauberers — im
+       Docstring von `Koerperangleichnetz`)
     5  Größe „gesicht“ (Fassung 5, `Koerpergesicht`): die Gesichtsmitte folgt dem Knochen `head` starr und dem Mittel der Kopfpunkte; gemessen wird nur in der Bildebene (Tiefe zählt nicht)
     6  Prüfung „Stück in Hautfarbe“ (Fassung 20): Requisiten und Haar zählen nicht, andere Stücke ja
     7  Anfasser der Eigenregler (Fassung 6, `Koerperangleichstellen`, echte `Eigenbasis` an zwei Kunstspalten): Verschiebung nur um e − e_Stand, Zug gegen den Start der Figur, Klemme ± 0,15 m,
        bewegt ab 1 mm, Rückschrieb in m (≈ 0 fällt heraus, fremde Regler bleiben); ohne Eigenregler keine Verschiebung und kein Zug
-Sabotage (von Hand): in `_paare` `maske[j]` streichen → Fall 1 rot; in `_regler` die Schwelle 0,005 auf 0 → Fall 2 rot; Schritt „koerper“ vor „lage“ → Fall 3 rot;
+Sabotage (von Hand): in `_paare` `maske[j]` streichen → Fall 1 rot; in `_regler` die Schwelle 0,005 auf 0 → Fall 2 rot; Skript aus `Skriptdienstruf.ERLAUBT` → Fall 3 rot;
 in `Koerpergesicht._mitte` `d[self.h] @` streichen → Fall 5 rot; in `Kostuemhautpruefung.stuecke` die Bedingung `NIE_HAUT` streichen → Fall 6 rot;
 in `Koerperangleichstellen._eigen_schieben` `- self.eigen.verschiebung(e_stand)` streichen → Fall 7 rot.
 """
@@ -61,21 +63,16 @@ class KoerperangleichTest(unittest.TestCase):
         self.assertEqual(neu['d'], 0.3)                  # nicht frei
         self.assertEqual(neu['fremd'], 1.0)
 
-    def test_3_platz_in_der_kette(self):
+    def test_3_im_skriptdienst_erlaubt(self):
         from pathlib import Path
-        from core.dienste.mesh3dairechenlauf import Mesh3dairechenlauf
-        folge = [s for s, _t, _a in Mesh3dairechenlauf.SCHRITTE]
-        self.assertLess(folge.index('lage'), folge.index('koerper'))
-        self.assertLess(folge.index('koerper'), folge.index('haut'))
-        roh = dict((s, a) for s, _t, a in Mesh3dairechenlauf.SCHRITTE)['koerper']
-        self.assertIn('mesh3dai_koerperangleich_lauf.py', roh)
         ruf = (Path(settings.TOOLS_ROOT) / 'mesh3dai' / 'mesh3dai_skriptdienstruf.py').read_text(encoding='utf-8')
         self.assertIn("'mesh3dai_koerperangleich_lauf.py'", ruf)
 
     def test_4_haut_nur_nah(self):
+        from mesh3dai_koerperangleich_netz import Koerperangleichnetz
         self.assertGreater(self.K.HAUT_NAH_M, 0)
         self.assertLessEqual(self.K.HAUT_NAH_M, 0.08)
-        self.assertIn('Stab', self.K.__module__ and sys.modules[self.K.__module__].__doc__)
+        self.assertIn('Stab', sys.modules[Koerperangleichnetz.__module__].__doc__)
 
     def test_5_gesicht_folgt_dem_kopf(self):
         t = self.torch
@@ -120,6 +117,8 @@ class KoerperangleichTest(unittest.TestCase):
         eb.e0 = t.tensor([0.0, 2.0])
         a = self.a
         a.eigen, a.e0 = eb, eb.e0.clone()
+        # wie `_eigen_an` (seit 28.10.2026): keine Hand, nichts fest
+        a.eigen_fest = t.tensor([any(m in n for m in self.K.EIGEN_FEST) for n in eb.namen])
         stand, e = t.tensor([0.5, 2.0]), t.tensor([1.0, 2.0])
         d = a._eigen_schieben(e, stand)
         self.assertAlmostEqual(float(d[0, 0]), 0.005, places=6)          # nur e − e_Stand (0,5 Einheiten), nicht e − e_Start

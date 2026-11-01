@@ -11,10 +11,12 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/figurbewegung.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dairechnen.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dailinien.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/exportleiste.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 {% comment %}Die Animation der Ausgabe ist eine Genesis-Figur aus dem Code der Charakter-Seite (22.10.2026, `Mesh3daifigurbewegung`) — dieselben Angaben wie auf der Jobseite (`mesh3dai.html`):
@@ -23,7 +25,8 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
 <meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
 <meta name="schnellanzeige" content="an">
 <meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
-{% include "_importmap.html" %}
+{# subdivide und mesh_bvh: Die Exportleiste schreibt GLB und OBJ mit `Modellexport` der Charakter-Seite, dessen Module beide erwarten (wie `meshfigur_auftrag.html`). #}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
 {% endblock %}
 
 {% block content %}
@@ -74,6 +77,8 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
             {% url 'mesh3dai_teststandardanimation' test.kennung as standardanimation %}
             {% include "_mesh3dai_figurbewegung.html" with adresse=standardanimation tasten=True %}
             <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
+            {# Exportleiste rechts unten (31.10.2026, Edgar: „mach mir die Buttons zum speichern des Modells in dem Bereich ‚Ganzer Körper‘, rechts unten … export als glb, obj, blend“). #}
+            {% include "_exportleiste.html" with bereich="mesh3daitest" kennung=test.kennung speichern_text="Übernehmen und als Modell speichern" speichern_hinweis="Übernimmt die Wahl der Karte „Kleider und Bestandteile“ und speichert die Figur als Genesis-Modell (Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle)." %}
         </div>
     </div>
 </section>
@@ -148,12 +153,7 @@ Kleider und Bestandteile (17.10.2026 nachts, Edgar: „Toggle für jedes Kleidun
         <thead><tr><th>Stück</th><th>Name im Modell</th><th>Kategorie</th><th>Wege</th><th>Wahl</th></tr></thead>
         <tbody data-kleider="tabelle"></tbody>
     </table>
-    <div class="mesh3dai-kleider-speichern">
-        <label for="mesh3dai-kleider-name">Modellname:</label>
-        <input type="text" id="mesh3dai-kleider-name" maxlength="80">
-        <button type="button" class="btn btn-primary" id="mesh3dai-kleider-speichern" disabled><i class="fas fa-save"></i> Übernehmen und als Modell speichern</button>
-        <span class="hb-hinweis" data-kleider="stand"></span>
-    </div>
+    {# „Übernehmen und als Modell speichern“ steht seit 31.10.2026 in der Exportleiste unter der Ausgabe (Zeile „Ganzer Körper“). #}
 </section>
 
 {% comment %}
@@ -174,8 +174,12 @@ import { Mesh3dairechnen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dairechne
 import { Mesh3daitestmesspunkte } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestmesspunkte.js' %}";
 import { Mesh3dailinien } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailinien.js' %}";
 import { Mesh3daimeshanpassung } from "{% fassungspfad 'viewer/mesh3dai/mesh3daimeshanpassung.js' %}";
+import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
+import { Mesh3daiexportquelle } from "{% fassungspfad 'viewer/mesh3dai/mesh3daiexportquelle.js' %}";
 Mesh3daimeshanpassung.starten(document.getElementById('mesh3dai-meshanpassung'));
 Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
+// `starten` legt die Seite (und ihre bewegte Figur) gleich an, bevor es lädt — `window.__mesh3daitest`
+Exportleiste.starten(document.getElementById('exportleiste'), new Mesh3daiexportquelle(() => window.__mesh3daitest?.bewegung));
 Mesh3dailinien.testStarten(document.getElementById('mesh3dai-linien'));
 Mesh3daitestmesspunkte.starten(document.getElementById('mesh3dai-messpunkte'));
 Mesh3daitestmesspunkte.gesichtStarten(document.getElementById('mesh3dai-gesichtspunkte'));

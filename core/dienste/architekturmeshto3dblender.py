@@ -25,7 +25,9 @@ class Architekturmeshto3dblender:
                                   '(Abstimmnetz mit 150.000 Flächen), „Mesh to 3D“ nimmt Hautton und Kleidungsmaske daraus. Am Zauberer-Netz (1.935.797 Dreiecke) 200,7 s; Flächen mit Stimme: 1,5 % auf dem Rohnetz, 57,3 % auf dem Abstimmnetz.',
          ['Blendimportsegmentierung', 'Blendimportweg']),
         ('pose', 'nein', 'Einstellung „Pose bestimmen“ (Vorgabe aus): SAM 3D Body findet die Gelenke am Rendering des Körpers, „Mesh to 3D“ nimmt sie statt MediaPipe (`landmarken_hand`). Ist die Einstellung aus, tut der Schritt nichts. '
-                         'Am Zauberer-Netz 80–97 s, Übereinstimmung Netz ↔ Rendering (IoU) 0,977.', ['Blendimportpose', 'Posebestimmung']),
+                         'SAM 3D Body rechnet seit 01.11.2026 im Prozess (`Sam3dbodyTorch`), '
+                         'vorher in python12. Am Zauberer-Netz 80–97 s (noch mit python12), '
+                         'Übereinstimmung Netz ↔ Rendering (IoU) 0,977.', ['Blendimportpose', 'Posebestimmung']),
         ('figur', 'nein', 'Mesh to 3D auf diesem Körper (dieser Reiter): Regler, Gesicht, Eigenmorph. Die Optionen stehen in `Blendimportfigur.OPTIONEN`.', ['Blendimportfigur', 'Meshfigurlauf']),
         ('finger', 'nein', 'Die Finger der Figur an die Hände des Originals anpassen; ein Griff für das Requisit in der Hand.', ['Blendimportfinger']),
         ('stuecke', 'nein', 'Kleider und Haar als eigene Genesis-Stücke: Ruhelage über Kleidungsentposen (Haar: Kabsch am Kopf), OBJ mit der Original-Textur, `G9eigenstueck.schreiben`. Es wird nichts gebacken; die Gewichte der .blend '

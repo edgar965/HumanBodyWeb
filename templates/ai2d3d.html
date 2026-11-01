@@ -12,13 +12,16 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/exportleiste.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/figurbewegung.css' %}">
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
 <meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
 {% comment %}keine Schnellanzeige (Pixeldichte 1, grobes Netz) — die kam am 24.10.2026 mit der Kopie von mesh3dai.html; Edgar wollte sie nur für Mesh3D-AI (19.10.2026), und hier
    war das Gesicht oben deshalb schlechter als in den Bildern unten (25.10.2026: Leinwand 668 × 735 bei devicePixelRatio 1,575){% endcomment %}
 <meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
-{% include "_importmap.html" %}
+{# subdivide und mesh_bvh: Die Exportleiste schreibt GLB und OBJ mit `Modellexport` der Charakter-Seite, dessen Module beide erwarten (wie `meshfigur_auftrag.html`). #}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
 {% endblock %}
 
 {% block content %}
@@ -69,6 +72,10 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
             <h2><span class="ai2d3d-nummer">{% if daten.trainingfigur %}3{% else %}2{% endif %}</span> Genesis-Modell</h2>
             <div class="ai2d3d-leinwand" data-feld="genesis"></div>
             <p class="hb-hinweis" id="ai2d3d-genesisinfo"></p>
+            {# Abspielleiste (31.10.2026, `Ai2d3dbewegung`) — wie auf der Mesh3D-AI-Testseite #}
+            {% if daten.test.eigen %}{% url 'ai2d3d_standardanimation' job.id as bewegung_adresse %}{% include "_mesh3dai_figurbewegung.html" with adresse=bewegung_adresse %}{% endif %}
+            {# Exportleiste (31.10.2026, Edgar: „baue diese Exportleiste … auch für /2d-3d-AI/test/edgartrip/“) — nur mit eigener Figur aus den Fotos (`Ai2d3dexportquelle`). #}
+            {% if daten.test.eigen %}{% include "_exportleiste.html" with bereich="ai2d3d" kennung=job.id %}{% endif %}
         </section>
         {% if not daten.trainingfigur %}<section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">3</span> Ergebnis</h2>
@@ -138,6 +145,14 @@ import { Ai2d3dseite } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dseite.js' %}";
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 Ai2d3dkoerpergroesse.binden(document.getElementById('ai2d3d-groesse'));
 Auftragname.binden();
-{% endif %}Ai2d3dseite.aufbauen();
-</script>
+{% endif %}const seite = Ai2d3dseite.aufbauen();
+{% if daten.test.eigen %}import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
+import { Ai2d3dbewegung } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dbewegung.js' %}";
+import { Ai2d3dexportfigur } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dexportfigur.js' %}";
+import { Ai2d3dmodellspeichern } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dmodellspeichern.js' %}";
+const figur = new Ai2d3dexportfigur('{{ daten.test.adresse|escapejs }}', seite.genesisfeld);
+Exportleiste.starten(document.getElementById('exportleiste'), figur);
+Ai2d3dbewegung.leisten(seite, figur);
+Ai2d3dmodellspeichern.binden('{{ daten.test.adresse|escapejs }}', '{{ job.name|escapejs }} 2d-3d-AI');
+{% endif %}</script>
 {% endblock %}

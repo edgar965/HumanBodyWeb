@@ -2,7 +2,7 @@
 """Engine2d3dKleiderpose — Schritt „pose" von „2D3D Kleider": die Gelenke der Person am Foto finden, ins Netz legen und den Maßstab ableiten (11.10.2026).
 
 Edgar (11.10.2026), nach den Proben am Gemälde „Modigliani": „baue das in die Job Pipeline hinein, als extra Schritt, wo man auch das Ergebnis sehen kann". Warum: an einem liegenden Netz findet die Körper-Kette
-(MediaPipe auf Renderings) 1 von 33 Landmarken und hält ein 3,62 langes Netz für Zentimeter (Tor „Rumpftiefe nicht messbar"); SAM 3D Body findet die Gelenke am FOTO (Drehung gewählt, `_run_sam3dpose.py`).
+(MediaPipe auf Renderings) 1 von 33 Landmarken und hält ein 3,62 langes Netz für Zentimeter (Tor „Rumpftiefe nicht messbar"); SAM 3D Body findet die Gelenke am FOTO (Drehung gewählt, `Posebestimmung`).
 Konzept, Proben, Zahlen: `Docu/konzepte/2026-10-11_gemaelde-schnelldurchlauf-und-freie-pose-konzept.md`.
 
 Ablauf: (1) das vorbereitete Foto mit Rolle „vorne" durch SAM 3D Body in allen vier Drehungen (`pose/sam3d.json`; der Lauf ist an Foto und Fassung gebunden — dieselben Gelenke werden nicht neu gerechnet,

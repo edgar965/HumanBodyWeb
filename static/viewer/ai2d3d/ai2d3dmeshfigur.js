@@ -42,7 +42,9 @@ export class Ai2d3dmeshfigur {
         return netze;
     }
 
-    static STUECKE = ['augen', 'haar', 'kleid'];
+    /** Kleidung seit 30.10.2026 je Art ein Stück (Edgar: „Unterhose nicht erkannt (stattdessen T-Shirt an der Stelle gebaut)“, `Genesishuellen`); `kleid` = sonstige
+     *  Kleidung bzw. die eine Hülle älterer Läufe. */
+    static STUECKE = ['augen', 'haar', 'kleid', 'oberteil', 'unterteil', 'socken'];
 
     /** Zeichner von `Mesh3daiansicht`: `d = {nr, modus}`. */
     zeichnen(inhalt, _art, d) {

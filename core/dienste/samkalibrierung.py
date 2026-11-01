@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Samkalibrierung — Genesis selbst durch SAM 3D Body schicken (12.10.2026), damit „Mesh to 3D" die Gelenke aus der Pose (`landmarken_hand`) mit dem Versatz liest, den SAM auf Genesis zeigt.
 
-Derselbe Weg wie beim Netz des Imports: die Grundfigur als GLB (`G9figurglb`), von vorn gerendert (`Mesh3dansicht`), SAM 3D Body (`Posebestimmung`, python12), die Gelenke ins Netz gelegt (Tiefe = Mitte der Dicke,
+Derselbe Weg wie beim Netz des Imports: die Grundfigur als GLB (`G9figurglb`), von vorn gerendert (`Mesh3dansicht`), SAM 3D Body (`Posebestimmung`, im Prozess), die Gelenke ins Netz gelegt (Tiefe = Mitte der Dicke,
 `Engine2d3dKleiderposeabbildung.TIEFE`). Der Versatz je Gelenk ist SAM-Punkt − Daz-Gelenk des Anker-Knochens (`G9netzlandmarken.ANKER`); er kommt als `G9netzlandmarkensam` in die Ablage.
 
 Warum es das braucht (gemessen 12.10.2026, Auftrag „Edgar"): die Tabelle für MediaPipe liegt bis 4,2 cm neben den SAM-Punkten (Hüfte), und mit dem Median als Tiefe lagen die SAM-Hüften 8–12 cm daneben

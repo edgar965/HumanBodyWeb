@@ -30,9 +30,10 @@ export class Mesh3daitestkleider {
         this.matrizen = null;
         this.tabelle = karte.querySelector('[data-kleider="tabelle"]');
         this.info = karte.querySelector('[data-kleider="info"]');
-        this.stand = karte.querySelector('[data-kleider="stand"]');
-        this.name = karte.querySelector('#mesh3dai-kleider-name');
-        this.knopf = karte.querySelector('#mesh3dai-kleider-speichern');
+        // „Modell speichern“ steht seit 31.10.2026 in der Exportleiste unter der Ausgabe (`_exportleiste.html`, Edgar: „in dem Bereich ‚Ganzer Körper‘, rechts unten“)
+        this.stand = document.getElementById('exportleiste-modell-meldung');
+        this.name = document.getElementById('exportleiste-modell-name');
+        this.knopf = document.getElementById('exportleiste-modell-speichern');
         karte.querySelectorAll('[data-kleider-alle]').forEach(k => k.addEventListener('click', () => this.alle(k.dataset.kleiderAlle)));
         this.knopf?.addEventListener('click', () => this.speichern());
     }

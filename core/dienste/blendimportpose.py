@@ -3,7 +3,7 @@
 
 Edgar (11.10.2026, Jobseite „Mesh-3D“): „Entposen — wenn das Modell in einer anderen Pose als A-Pose ist, bitte berücksichtige das, mit SAM 3D.“ Steht das Modell nicht in A-Haltung und hat kein Auto-Rig-Pro-Rig
 (`umposen`), muss „Mesh to 3D“ die Haltung aus 8 Renderings des Körpers mit MediaPipe schätzen — bei liegenden, sitzenden oder stark verdrehten Figuren findet MediaPipe sie nicht (am Gemälde „Modigliani“ 1 von 33 Punkten).
-Mit der Einstellung `pose = sam` rendert dieser Schritt den Körper (`koerper.glb`) von vorn (`Mesh3dansicht`), SAM 3D Body findet die Gelenke (`Posebestimmung`, python12), sie werden ins Netz gelegt und als
+Mit der Einstellung `pose = sam` rendert dieser Schritt den Körper (`koerper.glb`) von vorn (`Mesh3dansicht`), SAM 3D Body findet die Gelenke (`Posebestimmung`, im Prozess), sie werden ins Netz gelegt und als
 `landmarken_hand` an „Mesh to 3D“ gereicht (`Meshfigurerkennungsschritt._von_hand`: ersetzt dessen Detektor). Danach findet die Anpassung die Haltung, und `Kleidungsentposen` rechnet die Kleidung mit dem Käfig der
 gefundenen Haltung in die Ruhelage zurück (`Blendimportlage`).
 

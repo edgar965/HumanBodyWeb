@@ -29,6 +29,8 @@ class Mesh3daitesteigenstueck:
     HAAR_KATEGORIE = ('Follower/Hair', '/Default/Hair')
     #: Folgt das geschriebene Stück dem Ziel schlechter als so (p99, mm), rechnet ein zweiter Durchgang gegen die gelesene Datei nach (wie `Blendimportstuecke.NACHRECHNEN_MM`).
     NACHRECHNEN_MM = 3.0
+    #: Kante des gebackenen Bildes für Stücke nur mit Punktfarben (`_gebacken`)
+    BACKEN_KANTE = 2048
 
     def __init__(self, stueck_ordner, stueck, regler, praefix, rig_namen):
         """`stueck_ordner`: `kleider_<g>/b/<id>` (mit `anzeige/`); `stueck`: Eintrag aus `stuecke.json`; `regler`: Stellung der vorhergesagten Figur; `praefix`: Anfang des Stücknamens
@@ -45,6 +47,9 @@ class Mesh3daitesteigenstueck:
             h.update((self.ordner / 'anzeige' / datei).read_bytes())
         h.update(json.dumps(self.regler, sort_keys=True).encode('utf-8'))
         h.update(self.praefix.encode('utf-8'))
+        with np.load(self.ordner / 'anzeige' / 'netz.npz') as z:                # seit 31.10.2026 gebacken (`_gebacken`): ein früher einfarbig geschriebenes Stück passt nicht mehr
+            if 'punktfarbe' in z.files and not np.ptp(z['uv'], axis=0).any():
+                h.update(b'gebacken %d' % self.BACKEN_KANTE)
         return '%d:%s' % (self.FASSUNG, h.hexdigest()[:16])
 
     def holen(self):
@@ -62,6 +67,17 @@ class Mesh3daitesteigenstueck:
         bilanz['marke'] = marke
         merk.write_text(json.dumps(bilanz, ensure_ascii=False, indent=1), encoding='utf-8')
         return bilanz
+
+    def _gebacken(self, arbeit, kennung, punkte, dreiecke, farben):
+        """Ein Stück nur mit Punktfarben (uint8 sRGB je Punkt, UV überall 0 — die Stücke aus den Fotos von 2d-3d-AI, 31.10.2026) bekommt eine Abwicklung (`Uvabwicklung`, LSCM) und ein
+        gebackenes Bild (`Texturbacker.farbe_je_punkt`, Kante `BACKEN_KANTE`), beides aus dem Stoffsolver; sonst trüge das Genesis-Stück nur eine Farbe. Gemessen am Haar von EdgarTrip
+        (`ProjektTemp/_wegwerf/exportleiste/abwicklung_probe.py`): 24.846 Dreiecke, 706 Inseln, 6,2 s Abwicklung, 3,3 s Backen. → (Bild, UV je Ecke (3T, 2), v nach oben wie OBJ)."""
+        from Stoffsolver.texturbacker import Texturbacker
+        from Stoffsolver.uvabwicklung import Uvabwicklung
+        erg = Uvabwicklung(punkte, dreiecke).rechnen()
+        bild = arbeit / ('%s_farbe.png' % kennung)
+        Texturbacker.als_png(Texturbacker(punkte, dreiecke, erg.uv, groesse=self.BACKEN_KANTE).farbe_je_punkt(farben), str(bild))
+        return bild, np.asarray(erg.uv, dtype=np.float64).reshape(-1, 2)
 
     def _art(self):
         """(Kategorie, Ordnerart, Knochen) — Haar und starre Bestandteile an EINEM Knochen."""
@@ -88,19 +104,22 @@ class Mesh3daitesteigenstueck:
             punkte = np.asarray(z['ruhe'], dtype=np.float64)
             dreiecke = np.asarray(z['dreiecke'], dtype=np.int64)
             uv = np.asarray(z['uv'], dtype=np.float64)
+            punktfarbe = z['punktfarbe'] if 'punktfarbe' in z.files else None
         mat = json.loads((anzeige / 'materialien.json').read_text(encoding='utf-8'))[0]
         kennung, anzeige_name = G9eigenstueck.kennung_und_name('%s %s' % (self.praefix, self.stueck.get('name')))
         arbeit = G9eigenstueck.arbeitsordner(kennung)
         arbeit.mkdir(parents=True, exist_ok=True)
-        bild = None
+        bild, uv_ecken = None, uv[dreiecke].reshape(-1, 2)
         if mat.get('bild'):
             bild = arbeit / ('%s_farbe.jpg' % kennung)
             shutil.copyfile(anzeige / 'bilder' / mat['bild'], bild)
+        elif punktfarbe is not None and not np.ptp(uv, axis=0).any():
+            bild, uv_ecken = self._gebacken(arbeit, kennung, punkte, dreiecke, punktfarbe)
         lin = np.asarray(mat.get('farbe') or [1.0, 1.0, 1.0], dtype=np.float64)
         farbe = tuple(round(float(Blendimportbilder.srgb(w)), 4) for w in lin) if bild is None else (1.0, 1.0, 1.0)
         material = {'name': kennung + '_Mat', 'farbe': farbe, 'bild': str(bild) if bild else None, 'normalen': None, 'rauheit_bild': None, 'alpha_bild': None,
                     'detailnormalen': None, 'detail_kachel': None, 'alpha_schwelle': None, 'shininess': None, 'opacity': None}
-        obj = Blendimportbilder.obj(arbeit, punkte, dreiecke, uv[dreiecke].reshape(-1, 2), material)
+        obj = Blendimportbilder.obj(arbeit, punkte, dreiecke, uv_ecken, material)
         netz = G9objleser.lesen(str(obj))
         roh = np.asarray(netz['punkte'], dtype=np.float64)
         kategorie, art, knochen = self._art()

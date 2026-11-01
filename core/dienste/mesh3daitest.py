@@ -216,6 +216,7 @@ class Mesh3daitest:
         geschlecht = cls.geschlecht(p, info)
         form = cls.form(p, info, geschlecht)
         from .mesh3daiergebnisfigur import Mesh3daiergebnisfigur
+        from .mesh3daitesthaut import Mesh3daitesthaut
         if form:
             figur, hinweis, job, datei, kin_datei = 'Form', '', None, form['datei'], form['kinematik']
         else:
@@ -246,12 +247,21 @@ class Mesh3daitest:
             'figur_netz': '/api/mesh3dai/test/%s/figur/%s' % (kennung, geschlecht) if form else None, 'form_regler': form['regler'] if form else None,
             'form_regler_gesamt': form.get('regler_gesamt') if form else None,
             # Die Figur als Genesis-Modell (22.10.2026, Animation der Ausgabe wie Mesh-3D): dieselbe wie im Ergebnis der Jobseite eines Tripo-Jobs (`Mesh3daiergebnisfigur`).
-            'figur_genesis': Mesh3daiergebnisfigur._figur(geschlecht, form['regler']) if form else None,
+            # Seit 31.10.2026 mit der Haut der KI als `fototextur` (`Mesh3daitesthaut.kacheln`) — sonst trug sie die Katalog-Haut, anders als das Standbild.
+            'figur_genesis': dict(Mesh3daiergebnisfigur._figur(geschlecht, form['regler']), fototextur=Mesh3daitesthaut.kacheln(kennung, geschlecht)) if form else None,
             'ausgabe': np.round(e['rig'].astype(float), 4).tolist(),
             'dreh': np.round(Mesh3daidaten._quaternionen(e['dreh'].astype(float)), 5).tolist(),
             'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist(),
             'netz': '/api/mesh3dai/test/%s/netz/?v=%d%s' % (kennung, int((p / ('vorschau%s.glb' % endung)).stat().st_mtime), endung),
+            # Kapseln um die Glieder für die Kollision der Stücke in der Bewegung (31.10.2026 nachts, `KoerperKI_alle.Koerperkollision` → `mesh3daikollision.js`)
+            'kapseln': cls.kapseln(p, geschlecht),
         }
+
+    @staticmethod
+    def kapseln(p, geschlecht):
+        """`kleider_<g>/k/kapseln.json` (`Koerperkollision`) oder None, wenn der Kostüm-Weg sie (noch) nicht geschrieben hat."""
+        from KoerperKI_alle.koerperkollision import Koerperkollision
+        return Koerperkollision.lesen(p / ('kleider_%s' % geschlecht) / 'k')          # ein Schalter für Seite, Prüfung und GLB-Export (`Koerperkollision.AN`)
 
     @classmethod
     def geschlecht_setzen(cls, kennung, wert):

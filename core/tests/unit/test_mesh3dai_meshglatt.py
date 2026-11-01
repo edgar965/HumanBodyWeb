@@ -5,7 +5,9 @@ Fläche: ebenes Gitter 21 × 21 Punkte im Abstand von 6 mm (wie das Ziel, `Mesh3
     1  eben → keine Falte; `rechnen` bewegt nichts
     2  ein Punkt 4 mm vor der Ebene (Knick ringsum ~34°, Ziel und Figur ohne Versatz 0°) → Falte „Rumpf vorn“; nach `rechnen` keine Falte mehr, der Punkt
        ist zur Ebene zurückgegangen, und ein nicht freier Punkt hat sich nicht bewegt
-Sabotage (von Hand): in `rechnen` die Knickstrafe streichen → Fall 2 rot; `frei` nicht anwenden (m = 1) → Fall 2 rot (der feste Punkt wandert).
+    3  (01.11.2026) dieselbe Beule im Ziel: ist das Ziel dort Haut, gilt sein Knick (`k_ziel`), ist es Kleidung, nie (NaN) — unter einem Ärmel ist das Ziel der Stoff
+Sabotage (von Hand): in `rechnen` die Knickstrafe streichen → Fall 2 rot; `frei` nicht anwenden (m = 1) → Fall 2 rot (der feste Punkt wandert); in `_ziel_normale` die Klasse nicht
+prüfen → Fall 3 rot.
 """
 import sys
 import unittest
@@ -35,13 +37,17 @@ class Mesh3daimeshglattTest(unittest.TestCase):
         return torch.as_tensor(p, dtype=torch.float32), np.asarray(f, dtype=np.int64)
 
     @classmethod
-    def glatt(cls, frei=None):
+    def glatt(cls, frei=None, ziel_p=None, klasse=None):
+        """`ziel_p` Punkte des Ziels (Vorgabe: die Fläche), `klasse` je Zielpunkt (`G9meshziel`: 0 Haut, 2 Kleidung; Vorgabe Haut)."""
         import torch
         from Genesis9.koerperteile import G9koerperteile
+        from Genesis9.meshziel import G9meshziel
         from mesh3dai_meshglatt import Mesh3daimeshglatt
         p, f = cls.flaeche()
-        ziel = type('Ziel', (), {})()
-        ziel.g, ziel.p, ziel.n = torch.device('cpu'), p.clone(), torch.tensor([[0.0, 0.0, 1.0]]).expand(len(p), 3).contiguous()
+        ziel = type('Ziel', (), {'HAUT': G9meshziel.HAUT})()
+        ziel.g, ziel.p = torch.device('cpu'), (p if ziel_p is None else ziel_p).clone()
+        ziel.n = G9meshziel.normalen(ziel.p, torch.as_tensor(f))
+        ziel.klasse = torch.full((len(p),), G9meshziel.HAUT if klasse is None else klasse, dtype=torch.long)
         teil = np.full(len(p), G9koerperteile.NUMMER['rumpf'])
         frei = torch.ones(len(p), dtype=torch.bool) if frei is None else frei
         return Mesh3daimeshglatt(ziel, f, teil, frei, p), p
@@ -69,3 +75,15 @@ class Mesh3daimeshglattTest(unittest.TestCase):
         self.assertTrue(all(v['cm'] == 0 for v in nachher.values()), nachher)
         self.assertLess(float(neu[mitte, 2]), 0.002)
         self.assertLess(float((neu[fest] - beule[fest]).abs().max()), 1e-9)
+
+    def test_3_knick_des_ziels_nur_auf_haut(self):
+        from Genesis9.meshziel import G9meshziel
+        mitte = (self.N // 2) * self.N + self.N // 2
+        p, _f = self.flaeche()
+        beule = p.clone()
+        beule[mitte, 2] = 0.004
+        import torch
+        haut, _p = self.glatt(ziel_p=beule, klasse=G9meshziel.HAUT)
+        kleid, _p = self.glatt(ziel_p=beule, klasse=G9meshziel.KLEID)
+        self.assertFalse(bool(torch.isnan(haut.k_ziel).all()))          # auf Haut gilt der Knick des Ziels
+        self.assertTrue(bool(torch.isnan(kleid.k_ziel).all()))          # unter Kleidung nie

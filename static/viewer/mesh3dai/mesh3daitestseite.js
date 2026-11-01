@@ -16,6 +16,7 @@ import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 import { Mesh3dairigzeichner } from './mesh3dairigzeichner.js';
 import { Mesh3daitestfaelle } from './mesh3daitestfaelle.js';
+import { Mesh3daiohneglieder } from './mesh3daiohneglieder.js';
 import { Mesh3daitestansicht } from './mesh3daitestansicht.js';
 import { Mesh3daitestkleider } from './mesh3daitestkleider.js';
 import { Mesh3daitestnetzbau } from './mesh3daitestnetzbau.js';
@@ -53,7 +54,7 @@ export class Mesh3daitestseite {
             new Mesh3daifigurbewegungsleiste(leiste, this.bewegung, { tasten: true }).wahlLaden(leiste.dataset.adresse);
         }
         // „Kleider“ baut die Figur neu (die Haut unter den Stücken kommt zurück), Rig und Ansichtsart zeichnen nur neu.
-        this.ansicht = new Mesh3daitestansicht(wurzel.querySelector('.mesh3dai-ansichtwahl'), was => (was === 'kleider' ? this.figurNeu() : this.zeigen()));
+        this.ansicht = new Mesh3daitestansicht(wurzel.querySelector('.mesh3dai-ansichtwahl'), was => (was === 'kleider' || was === 'ohneGlieder' ? this.figurNeu() : this.zeigen()));
         Mesh3daiflaechennetz.nachLaden = () => this.zeigen();
         // Geschlecht der Figur (16.10.2026 abends): der Server nimmt unter den Figuren dieses Geschlechts die mit dem kleinsten Rest — gerechnet ist schon alles, die Seite lädt nur neu.
         this.wahl = wurzel.querySelector('#mesh3dai-test-geschlecht');
@@ -103,7 +104,14 @@ export class Mesh3daitestseite {
             const netz = st.art !== 'haut' && st.wahl !== 'aus' ? this.kleider.netze.get(`${st.wahl}/${st.id}`) : null;
             if (netz) stuecke.push({ id: st.id, art: st.art, netz: await netz.catch(() => null) });
         }
-        return { schluessel: `${this.kennung}|${d.info.geschlecht}`, figur: d.figur_genesis, stuecke: stuecke.filter(s => s.netz), knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren };
+        const ohneKnochen = this._ohneKnochen();
+        return { schluessel: `${this.kennung}|${d.info.geschlecht}|${ohneKnochen.join(',')}`, figur: d.figur_genesis, stuecke: stuecke.filter(s => s.netz), knochen: d.rig.knochen.map(k => k.name),
+                 ruhezentren: d.ruhezentren, ohneKnochen, kapseln: d.kapseln };
+    }
+
+    /** Knopf „Ohne fehlende Glieder“ an: die Knochen, die der Eingang nicht hat (Kleiderliste, `ohne_eingang`), sonst keine. */
+    _ohneKnochen() {
+        return this.ansicht.ohneGlieder ? (this.kleider?.liste?.ohne_eingang?.knochen || []) : [];
     }
 
     async laden() {
@@ -216,7 +224,10 @@ export class Mesh3daitestseite {
         const netz = (await this.kleider?.hautNetz()) || this.figurNetz;
         if (netz && this.matrizen) {
             this.figur?.geometry.dispose();          // nur die Geometrie: Materialien und Attribute teilt sie mit dem Anzeigenetz
-            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, this.ansicht.kleider ? this.kleider?.verdeckt(netz.material.length) : null);
+            let weg = this.ansicht.kleider ? this.kleider?.verdeckt(netz.material.length) : null;
+            const ohne = Mesh3daiohneglieder.dreiecke(netz, this.daten?.rig?.knochen?.map(k => k.name) || [], this._ohneKnochen());
+            if (ohne) weg = weg ? weg.map((v, i) => v | ohne[i]) : ohne;
+            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, weg);
         }
         this.zeigen();
     }

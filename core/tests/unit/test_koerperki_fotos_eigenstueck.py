@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests für Stufe K4 der eigenen Kleider (25.10.2026, Besitzer 2d-3d-AI): `KoerperKI_Fotos.Fotoeigenstueck.schnitt` (Säume aus der Foto-Schale), `Eigenstueckbau` (Sitz und
-Schnitt wie der Shader `EigenkleidGLSL`/`EigenkleidschnittGLSL`) und `Flaechenabstand.naechster` (nächster Punkt auf einem Dreieck) — an Kunstwerten, ohne Figur und ohne Karte.
+Schnitt wie der Shader `EigenkleidGLSL`/`EigenkleidschnittGLSL`) und der nächste Punkt auf einem Dreieck, den `Flaechenabstand` seit 01.11.2026 aus `Kleidergpu.naechste_stelle`
+(Mesh3D-AI) nimmt — an Kunstwerten, ohne Figur; nur dieser letzte Test braucht die Grafikkarte (Kleidergpu rechnet nur dort).
 
 WARUM: Die Gegenprobe „Foto-Schale → eigenes Stück“ misst den Abstand und die Saumlage mit diesen drei Bausteinen. Ein Schnitt auf der falschen Seite, ein vertauschter Sitzwert
 (oben ↔ unten) oder ein nächster Punkt außerhalb des Dreiecks ergäbe Millimeter, die nach Übereinstimmung aussehen.
@@ -8,15 +9,17 @@ WARUM: Die Gegenprobe „Foto-Schale → eigenes Stück“ misst den Abstand und
 import math
 import sys
 import unittest
+from pathlib import Path
 
 import torch
 from django.conf import settings
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
+sys.path.insert(0, str(Path(settings.TOOLS_ROOT) / 'mesh3dai'))
 
 from KoerperKI_Fotos.eigenstueckbau import Eigenstueckbau  # noqa: E402
-from KoerperKI_Fotos.flaechenabstand import Flaechenabstand  # noqa: E402
 from KoerperKI_Fotos.fotoeigenstueck import Fotoeigenstueck  # noqa: E402
+from mesh3dai_kleidergpu import Kleidergpu  # noqa: E402
 
 D = torch.float64
 
@@ -80,9 +83,11 @@ class DerBau(unittest.TestCase):
 class DerNaechstePunkt(unittest.TestCase):
 
     def test_innen_kante_und_ecke(self):
-        a, b, c = (torch.tensor(v, dtype=D) for v in ([0.0, 0, 0], [1.0, 0, 0], [0.0, 1, 0]))
-        q = torch.tensor([[0.2, 0.2, 0.005], [0.5, -0.3, 0.0], [-1.0, -1.0, 0.0]], dtype=D)
-        bary = Flaechenabstand.naechster(q, a.expand(3, 3), b.expand(3, 3), c.expand(3, 3))
+        kg = Kleidergpu.an()
+        self.assertIsNotNone(kg, Kleidergpu.abgeschaltet)
+        a, b, c = (torch.tensor(v, dtype=D, device=kg.g) for v in ([0.0, 0, 0], [1.0, 0, 0], [0.0, 1, 0]))
+        q = torch.tensor([[0.2, 0.2, 0.005], [0.5, -0.3, 0.0], [-1.0, -1.0, 0.0]], dtype=D, device=kg.g)
+        bary = kg.naechste_stelle(q, a.expand(3, 3), b.expand(3, 3), c.expand(3, 3))
         fuss = bary[:, :1] * a + bary[:, 1:2] * b + bary[:, 2:] * c
         self.assertAlmostEqual(float((q[0] - fuss[0]).norm()), 0.005, places=9)     # ein Sitz von 5 mm über der Fläche
         self.assertEqual([round(float(v), 6) for v in fuss[1]], [0.5, 0.0, 0.0])

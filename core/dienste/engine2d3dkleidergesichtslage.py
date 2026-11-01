@@ -171,12 +171,10 @@ class Engine2d3dKleiderGesichtslage:
 
     @staticmethod
     def _kabsch(a, b):
-        """Starre Abbildung `a → b`: `(Drehung, Versatz)` mit `b ≈ a @ Drehung.T + Versatz`."""
-        ma, mb = a.mean(axis=0), b.mean(axis=0)
-        u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))
-        vorzeichen = np.sign(np.linalg.det(vt.T @ u.T))
-        drehung = vt.T @ np.diag([1.0, 1.0, vorzeichen]) @ u.T
-        return drehung, mb - drehung @ ma
+        """Starre Abbildung `a → b`: `(Drehung, Versatz)` mit `b ≈ a @ Drehung.T + Versatz` — `KoerperKI_alle.Kabsch` seit 01.11.2026."""
+        from KoerperKI_alle.kabsch import Kabsch
+        _s, drehung, versatz = Kabsch.lage(np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64))
+        return drehung, versatz
 
     @staticmethod
     def _anwenden(punkte, matrix):

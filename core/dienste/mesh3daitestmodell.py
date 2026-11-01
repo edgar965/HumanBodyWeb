@@ -34,10 +34,30 @@ class Mesh3daitestmodell:
     STAND = 'modell_stand.json'
     LOG = 'modell.log'
     HERKUNFT = 'mesh3dai test'
+    #: Datei, ohne die der Ordner keine Stücke hat (2d-3d-AI: `ki.json`, `Ai2d3dmodell`)
+    STUECKE = 'stuecke.json'
+
+    # Die Quelle (31.10.2026, `Ai2d3dmodell` überschreibt diese drei): Ordner der Stücke und des Stands, Form der Figur, Liste der Stücke mit Wahl.
+    @classmethod
+    def ordner(cls, kennung, geschlecht):
+        return Mesh3daitestkleider.ordner(kennung, geschlecht)
+
+    @classmethod
+    def form(cls, kennung, geschlecht):
+        return json.loads((Mesh3daitest.pfad(kennung) / ('form_%s' % geschlecht) / 'modell.json').read_text(encoding='utf-8'))
+
+    @classmethod
+    def liste(cls, kennung, geschlecht):
+        return Mesh3daitestkleider.liste(kennung, geschlecht)
+
+    @classmethod
+    def kacheln(cls, kennung, geschlecht):
+        """Fotohaut `{kachel: Adresse}`, wenn die Liste keine „Haut b“ trägt — hier keine."""
+        return None
 
     @classmethod
     def stand(cls, kennung, geschlecht):
-        ordner = Mesh3daitestkleider.ordner(kennung, geschlecht)
+        ordner = cls.ordner(kennung, geschlecht)
         if ordner is None:
             return None
         try:
@@ -68,8 +88,8 @@ class Mesh3daitestmodell:
     def starten(cls, kennung, geschlecht, name):
         """(Antwort, HTTP-Status) — startet den Prozess; 409, wenn für diesen Test und dieses Geschlecht schon einer läuft."""
         from .auftragsarbeiter import Auftragsarbeiter
-        ordner = Mesh3daitestkleider.ordner(kennung, geschlecht)
-        if ordner is None or not (ordner / 'stuecke.json').is_file():
+        ordner = cls.ordner(kennung, geschlecht)
+        if ordner is None or not (ordner / cls.STUECKE).is_file():
             return {'error': 'Für Test %s (%s) sind keine Kleider gerechnet' % (kennung, geschlecht)}, 404
         name = cls.name_saeubern(name)
         if not name:
@@ -81,7 +101,7 @@ class Mesh3daitestmodell:
         with open(ordner / cls.LOG, 'ab') as protokoll:
             prozess = Auftragsarbeiter._popen(befehl, protokoll)
         stand = cls._schreiben(ordner, pid=prozess.pid)
-        logger.info('Mesh3D-AI Test %s (%s): Übernahme ins Modell „%s“, Prozess %s', kennung, geschlecht, name, prozess.pid)
+        logger.info('%s %s (%s): Übernahme ins Modell „%s“, Prozess %s', cls.HERKUNFT, kennung, geschlecht, name, prozess.pid)
         return {'ok': True, 'stand': stand}, 202
 
     @classmethod
@@ -122,12 +142,11 @@ class Mesh3daitestmodell:
         """Im Arbeitsprozess: Stücke sammeln (b → eigene Stücke), Modell schreiben. `ziel_ordner` nur für Probeläufe (sonst `HUMANBODY_MODELS_DIR`). Gibt den Namen."""
         from .mesh3dairig import Mesh3dairig
         from .mesh3daitesteigenstueck import Mesh3daitesteigenstueck
-        ordner = Mesh3daitestkleider.ordner(kennung, geschlecht)
-        p = Mesh3daitest.pfad(kennung)
+        ordner = cls.ordner(kennung, geschlecht)
         try:
-            form = json.loads((p / ('form_%s' % geschlecht) / 'modell.json').read_text(encoding='utf-8'))
+            form = cls.form(kennung, geschlecht)
             name = cls.freier_name(wunsch, kennung, geschlecht, ziel_ordner)
-            liste = Mesh3daitestkleider.liste(kennung, geschlecht)
+            liste = cls.liste(kennung, geschlecht)
             kleidung, bericht, fototextur = {}, [], None
             for st in liste['stuecke']:
                 wahl = st['wahl']
@@ -153,6 +172,7 @@ class Mesh3daitestmodell:
                     sp = st.get('speichern') or {}
                     garderobe = Mesh3daitestkleidspeichern.anwenden(eigen['stueck'], {'name': sp.get('name'), 'kategorie': sp.get('kategorie')}, G9garderobe.eintrag(eigen['stueck']))
                     bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': eigen['stueck'], 'angezogen': eigen.get('angezogen'), 'gemerkt': bool(eigen.get('gemerkt')), 'garderobe': garderobe})
+            fototextur = fototextur or cls.kacheln(kennung, geschlecht)
             daten = cls.modelldaten(name, kennung, geschlecht, form, kleidung, fototextur)
             if fototextur and ziel_ordner is None:
                 # Die Kacheln neben das Modell (überleben das Löschen des Mesh-3D-Laufs) — wie jedes Speichern mit Fotohaut. Ein Probelauf mit `ziel_ordner` behält die Adressen des Laufs.
@@ -161,9 +181,9 @@ class Mesh3daitestmodell:
             ziel = Path(ziel_ordner or settings.HUMANBODY_MODELS_DIR) / (name + '.json')
             ziel.write_text(json.dumps(daten, ensure_ascii=False, indent=2), encoding='utf-8')
             cls._schreiben(ordner, status='fertig', modell=name, meldung='Modell „%s“ gespeichert (%d Stücke)' % (name, len(kleidung)), stuecke=bericht, datei=str(ziel))
-            logger.info('Mesh3D-AI Test %s (%s): Modell %s gespeichert, %s', kennung, geschlecht, name, bericht)
+            logger.info('%s %s (%s): Modell %s gespeichert, %s', cls.HERKUNFT, kennung, geschlecht, name, bericht)
             return name
         except Exception as fehler:
-            logger.exception('Mesh3D-AI Test %s (%s): Übernahme gescheitert', kennung, geschlecht)
+            logger.exception('%s %s (%s): Übernahme gescheitert', cls.HERKUNFT, kennung, geschlecht)
             cls._schreiben(ordner, status='fehler', fehler='%s: %s' % (type(fehler).__name__, fehler), meldung='gescheitert')
             raise

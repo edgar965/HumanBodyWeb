@@ -144,6 +144,10 @@ MESHFIGUR_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshTo3D'
 BLENDERMODELL_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'BlenderModel'
 # Bereich „2D3D Kleider" (Vorlagenfotos -> Figur mit Kleidern, 30.09.2026): wie BlenderModel, ein Ordner je Auftrag.
 ENGINE2D3DKLEIDER_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Engine2d3dKleider'
+# Exportleiste der Tests von Mesh3D-AI (31.10.2026, `Mesh3daitestexportquelle`): ein Ordner je Test, Vorgabe des Feldes „Ordner".
+MESH3DAI_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Mesh3DAI'
+# Exportleiste der Tests von 2d-3d-AI (31.10.2026, `Ai2d3dexportquelle`): ein Ordner je Test.
+AI2D3D_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / '2d3dAI'
 #: Blender-Skript, das eine GLB in eine .blend und/oder .fbx umschreibt — nur gerufen,
 #: wenn eins davon im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
 MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'

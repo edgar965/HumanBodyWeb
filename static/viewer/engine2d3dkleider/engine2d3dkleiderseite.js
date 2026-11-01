@@ -10,7 +10,6 @@ import { Meshfigurhaar } from '../meshfigur/meshfigurhaar.js';
 import { Meshfigurkleidung } from '../meshfigur/meshfigurkleidung.js';
 import { Meshfigurspeicher } from '../meshfigur/meshfigurspeicher.js';
 import { Engine2d3dKleideranimation } from './engine2d3dkleideranimation.js';
-import { Engine2d3dKleideranimexport } from './engine2d3dkleideranimexport.js';
 import { Engine2d3dKleiderfilmansicht } from './engine2d3dkleiderfilmansicht.js';
 import { Engine2d3dKleiderbuehnenmodell } from './engine2d3dkleiderbuehnenmodell.js';
 import { Engine2d3dKleiderbegutachtung } from './engine2d3dkleiderbegutachtung.js';
@@ -24,7 +23,6 @@ import { Engine2d3dKleiderformen } from './engine2d3dkleiderformen.js';
 import { Engine2d3dKleidermalen } from './engine2d3dkleidermalen.js';
 import { Engine2d3dKleidermeshkarte } from './engine2d3dkleidermeshkarte.js';
 import { Engine2d3dKleidernetzansicht } from './engine2d3dkleidernetzansicht.js';
-import { Engine2d3dKleiderrender } from './engine2d3dkleiderrender.js';
 import { Engine2d3dKleidersegmentierung } from './engine2d3dkleidersegmentierung.js';
 import { Engine2d3dKleiderstuecke } from './engine2d3dkleiderstuecke.js';
 import { Engine2d3dKleidersystemspeichern } from './engine2d3dkleidersystemspeichern.js';
@@ -108,7 +106,7 @@ export class Engine2d3dKleiderseite {
         document.getElementById('laufband-anhalten').addEventListener('click', () => this.anhalten());
         document.addEventListener('visibilitychange', () => { if (!document.hidden) this.aktualisieren(); });
         // Der Vorschlag für „Als Genesis-Figur speichern": `Meshfigurspeicher` schriebe „<Name> Mesh".
-        const modellname = document.getElementById('modell-name');
+        const modellname = document.getElementById('exportleiste-modell-name');
         if (modellname && !modellname.value) modellname.value = this.zustand.modell || `${this.zustand.name} 2D3D Kleider`;
         this.einstellungen = new Engine2d3dKleidereinstellungen(this);
         this.meshkarte = new Engine2d3dKleidermeshkarte(this);
@@ -129,13 +127,11 @@ export class Engine2d3dKleiderseite {
         this.formen = new Engine2d3dKleiderformen(this, this.buehne, this.buehnenmodell);
         this.film = new Engine2d3dKleiderfilmansicht(this);
         this.animation = new Engine2d3dKleideranimation(this, this.buehne);
-        this.animexport = new Engine2d3dKleideranimexport(this);
-        this.render = new Engine2d3dKleiderrender(this);
         this.berichte = new Meshfigurberichte(this);
         this.haar = new Meshfigurhaar(this);
         this.kleidung = new Meshfigurkleidung(this);
         this.frisur = new Meshfigurfrisur();
-        this.speicher = new Meshfigurspeicher(this);
+        this.speicher = new Meshfigurspeicher(this, Meshfigurspeicher.EXPORTLEISTE);     // „Modell speichern" steht seit 31.10.2026 in der Exportleiste
         this.systemspeicher = new Engine2d3dKleidersystemspeichern(this);
         this.zeigen();
         this.verfolgen();
@@ -259,8 +255,6 @@ export class Engine2d3dKleiderseite {
         this.netzansicht.zeigen(z);
         this.film.zeigen(z);
         this.animation.zeigen(z);
-        this.animexport.zeigen(z);
-        this.render.zeigen(z);
         this.speicher.zeigen(z);
         this.systemspeicher.zeigen(z);
     }

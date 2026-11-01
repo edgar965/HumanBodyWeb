@@ -1,0 +1,10 @@
+{% comment %}Auflösungen der Exportleiste (31.10.2026, MP4-Export und Rendern) — `vorgabe` ist gewählt; „frei“ = die Felder Breite × Höhe daneben (`Exportleisteaufloesung`).{% endcomment %}
+<option value="480x600"{% if vorgabe == "480x600" %} selected{% endif %}>480 × 600 (Probe)</option>
+<option value="960x1200"{% if vorgabe == "960x1200" %} selected{% endif %}>960 × 1200 (hochkant)</option>
+<option value="1080x1350"{% if vorgabe == "1080x1350" %} selected{% endif %}>1080 × 1350 (hochkant)</option>
+<option value="1080x1920"{% if vorgabe == "1080x1920" %} selected{% endif %}>1080 × 1920 (hochkant, Handy)</option>
+<option value="1280x720"{% if vorgabe == "1280x720" %} selected{% endif %}>1280 × 720 (HD)</option>
+<option value="1920x1080"{% if vorgabe == "1920x1080" %} selected{% endif %}>1920 × 1080 (Full HD)</option>
+<option value="2560x1440"{% if vorgabe == "2560x1440" %} selected{% endif %}>2560 × 1440</option>
+<option value="3840x2160"{% if vorgabe == "3840x2160" %} selected{% endif %}>3840 × 2160 (4K)</option>
+<option value="frei">frei (Breite × Höhe)</option>

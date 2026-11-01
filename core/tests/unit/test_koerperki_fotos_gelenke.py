@@ -3,7 +3,8 @@
 
 WARUM: Edgar, 24.10.2026: „wenn du meinst, ViTPose ist besser, kannst du das auch ausprobieren, ggf. optional? … damit man das später beides ausprobieren kann“. Beide Quellen müssen dasselbe
 liefern — {Gelenk: (xy, Gewicht)} mit „_l“ = linke Körperseite der Person —, sonst passt das Einpassen je nach Einstellung spiegelverkehrt ein. ViTPose und SAM 3D Body laufen hier nicht:
-an ihrer Stelle stehen Attrappen mit der Signatur der Originale (`Vppunkte.punkte`, `Posebestimmung` über `autospec`).
+an ihrer Stelle stehen Attrappen mit der Signatur der Originale (`Vppunkte.punkte`; `S3dbschaetzer` über `autospec`, seit 01.11.2026 statt `Posebestimmung` — SAM 3D Body läuft
+im Prozess und schreibt nichts mehr in den Ordner des Laufs).
 """
 import shutil
 import sys
@@ -15,7 +16,6 @@ from unittest import mock
 import numpy as np
 import torch
 from django.conf import settings
-from PIL import Image
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
 
@@ -91,44 +91,34 @@ class DieFotogelenke(unittest.TestCase):
         self.assertEqual(sorted(g), ['a.jpg'])
         self.assertEqual(len(g['a.jpg']), 12)
 
-    def _sam(self, k2, namen):
-        return {'namen': namen, 'drehungen': {'0': {'k2': k2}}}
-
     def test_sam3dbody_bildpunkte_nach_namen_gewicht_faktor(self):
         namen = ['nose'] + list(reversed(Engine2d3dKleiderposegelenke.HAUPT))
-        k2 = [[float(i), 100.0 + i] for i in range(len(namen))]
-        k2[namen.index('left-knee')] = [float('nan'), float('nan')]
-        with mock.patch('core.dienste.posebestimmung.Posebestimmung', autospec=True) as pb:
-            pb.return_value.sam.return_value = (self._sam(k2, namen), True)
+        k2 = np.array([[float(i), 100.0 + i] for i in range(len(namen))])
+        k2[namen.index('left-knee')] = np.nan
+        with mock.patch('Sam3dbodyTorch.schaetzer.S3dbschaetzer', autospec=True) as s:
+            s.return_value.punkte.return_value = {'namen': namen, 'k2': k2}
             g = Fotogelenke('sam3dbody').holen({'a.jpg': self.rgb}, {'a.jpg': {'person': self.person}}, self.ordner, log=lambda *_: None)['a.jpg']
-        ziel = self.ordner / 'sam3d_a'
-        self.assertEqual(pb.call_args.args[0], ziel)
-        self.assertEqual(pb.return_value.sam.call_args.kwargs, {'drehungen': (0,)})
+        rgb, person = s.return_value.punkte.call_args.args
+        self.assertIs(rgb, self.rgb)
+        self.assertIs(person, self.person)
         self.assertNotIn('knie_l', g)
         self.assertEqual(len(g), 11)
         i = namen.index('left-shoulder')
         self.assertEqual(g['schulter_l'][0].tolist(), [float(i), 100.0 + i])
         self.assertEqual(g['schulter_l'][1], 0.5)
         self.assertEqual(g['knoechel_r'][1], 1.0)
-        rgba = np.asarray(Image.open(ziel / 'eingabe.png'))
-        self.assertEqual(rgba.shape, (50, 30, 4))
-        self.assertTrue(np.array_equal(rgba[..., 3] > 0, self.person.numpy()))
 
-    def test_sam3dbody_gleiches_bild_nicht_neu_geschrieben(self):
-        namen = list(Engine2d3dKleiderposegelenke.HAUPT)
-        with mock.patch('core.dienste.posebestimmung.Posebestimmung', autospec=True) as pb:
-            pb.return_value.sam.return_value = (self._sam([[1.0, 2.0]] * 12, namen), False)
-            fg = Fotogelenke('sam3dbody')
-            fg.holen({'a.jpg': self.rgb}, {'a.jpg': {'person': self.person}}, self.ordner, log=lambda *_: None)
-            png = self.ordner / 'sam3d_a' / 'eingabe.png'
-            vorher = png.stat().st_mtime_ns
-            fg.holen({'a.jpg': self.rgb}, {'a.jpg': {'person': self.person}}, self.ordner, log=lambda *_: None)
-        self.assertEqual(png.stat().st_mtime_ns, vorher)
+    def test_sam3dbody_schreibt_nichts(self):
+        """Nur das Endergebnis wird gespeichert (Projektregel): kein PNG, kein JSON im Ordner des Laufs."""
+        with mock.patch('Sam3dbodyTorch.schaetzer.S3dbschaetzer', autospec=True) as s:
+            s.return_value.punkte.return_value = {'namen': list(Engine2d3dKleiderposegelenke.HAUPT), 'k2': np.ones((12, 2))}
+            Fotogelenke('sam3dbody').holen({'a.jpg': self.rgb}, {'a.jpg': {'person': self.person}}, self.ordner, log=lambda *_: None)
+        self.assertEqual(list(self.ordner.iterdir()), [])
 
     def test_sam3dbody_ohne_ergebnis_meldet_das_foto(self):
-        with mock.patch('core.dienste.posebestimmung.Posebestimmung', autospec=True) as pb:
-            pb.return_value.sam.return_value = ({'namen': [], 'drehungen': {'0': {'fehler': 'keine Person'}}}, True)
-            with self.assertRaisesRegex(RuntimeError, 'a.jpg.*keine Person'):
+        with mock.patch('Sam3dbodyTorch.schaetzer.S3dbschaetzer', autospec=True) as s:
+            s.return_value.punkte.side_effect = RuntimeError('SAM 3D Body hat nichts geliefert (keine Ausgabe)')
+            with self.assertRaisesRegex(RuntimeError, 'a.jpg.*keine Ausgabe'):
                 Fotogelenke('sam3dbody').holen({'a.jpg': self.rgb}, {'a.jpg': {'person': self.person}}, self.ordner, log=lambda *_: None)
 
 

@@ -147,8 +147,6 @@
 .mesh3dai-kleider-tabelle th, .mesh3dai-kleider-tabelle td { background: transparent; color: inherit; }
 .mesh3dai-kleider-tabelle th, .mesh3dai-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }
 .mesh3dai-kleider-wahl { flex-wrap: nowrap; }
-.mesh3dai-kleider-speichern { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.mesh3dai-kleider-speichern input { min-width: 22em; }
 
 /* Testfälle der Kleider-KI (22.10.2026, `mesh3daitestfaelle.js`): Tabellen wie die Kleiderkarte, FEHLER rot, keine grün — in den Farben des Themes. */
 .mesh3dai-testfaelle { margin-top: 12px; }
@@ -158,13 +156,7 @@
 .mesh3dai-testfaelle .mesh3dai-gruen, .mesh3dai-testfaelle-tabelle td.mesh3dai-gruen { color: var(--success, #27ae60); }
 .mesh3dai-testfaelle-tabelle td.mesh3dai-testfaelle-fehler { font-size: 0.85rem; }
 .mesh3dai-testfaelle-tabelle tr.mesh3dai-testfaelle-gewaehlt td { font-weight: 600; }
-/* Standardanimation der Ergebnisfigur (22.10.2026, `_mesh3dai_figurbewegung.html`): Leiste wie bei Mesh-3D (`mesh3d.css`, `.mesh3d-animationsleiste`), Zahlen mit fester Breite, damit der Schieber nicht wandert. */
-.mesh3dai-figurbewegung { display: flex; flex-direction: column; gap: 4px; }
-.mesh3dai-figurbewegung-leiste, .mesh3dai-figurbewegung-wahl { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
-.mesh3dai-figurbewegung-schieber { flex: 1 1 140px; min-width: 120px; accent-color: var(--accent, #e94560); }
-.mesh3dai-figurbewegung-zahl { font-size: 0.82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mesh3dai-figurbewegung-wahl label { font-size: 0.85rem; color: var(--text-muted, #8a93a6); margin: 0; }
-.mesh3dai-figurbewegung-wahl select { max-width: 16em; }
+/* Standardanimation der Ergebnisfigur (`_mesh3dai_figurbewegung.html`): die Regeln der Leiste stehen seit 31.10.2026 in figurbewegung.css (auch auf der Jobseite von 2d-3d-AI). */
 /* Name und Kategorie je Stück in der Kleiderkarte der Testseite (22.10.2026, `Mesh3daitestkleidname`). */
 .mesh3dai-kleider-stueckname { width: 100%; min-width: 14em; }
 .mesh3dai-kleider-kategorie { min-width: 9em; }

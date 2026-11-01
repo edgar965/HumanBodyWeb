@@ -61,7 +61,7 @@ export class Ai2d3dseite {
             this.trainingfeld = new Ai2d3dansicht(feld('trainingfigur'), 'ausgabe', this.trainingfigur, Ai2d3dseite.KAMERA);
             this.trainingfigur.bereit.then(() => { this._trainingZeigen(); this._kameras(); });
         }
-        this.genesis = daten.genesis ? new Ai2d3dgenesis(daten.genesis) : daten.test?.adresse ? new Ai2d3dtestfigur(daten.test) : null;
+        this.genesis = daten.genesis ? new Ai2d3dgenesis(daten.genesis) : daten.test?.adresse ? new Ai2d3dtestfigur(daten.test, this) : null;
         this.genesisfeld = new Ai2d3dansicht(feld('genesis'), 'ausgabe', this.genesis ?? { zeichnen: inhalt => { inhalt.userData.hinweis = Ai2d3dseite.ohneGenesis(daten); } }, Ai2d3dseite.KAMERA);
         this.genesisInfo = document.getElementById('ai2d3d-genesisinfo');
         // alle 3D-Felder drehen gemeinsam (24.10.2026, „synchron … so wie bei Mesh3d-AI“), seit 28.10.2026 auch die der Mesh-Zeile ganz oben (`Ai2d3dmeshzeile`)
@@ -105,7 +105,7 @@ export class Ai2d3dseite {
     }
 
     _geaendert(was) {
-        if (was !== 'netz') { this._trainingZeigen(); this.meshzeile?.aktualisieren(); }
+        if (was !== 'netz') { this._trainingZeigen(); this.meshzeile?.aktualisieren(); if (was === 'foto') this._genesisZeigen(false); }   // Feld 3 je Foto (`Ai2d3dzeile1`)
         if (was === 'foto') {
             this.fotos.waehlen(this.steuerung.foto);
             for (const m of this.messpunkte) m.zeigen(this.steuerung.foto);

@@ -2,7 +2,7 @@
 """Engine2d3dKleiderposeoptionen — die Gruppe `pose` der Optionen von „2D3D Kleider": die Pose aus dem Foto (11.10.2026).
 
 Anlass: der Auftrag „Modigliani" (`2026.10.11.14.32.44`, liegender Akt, ein Foto). Die Körper-Kette findet an einem solchen Netz keine Pose (MediaPipe: 1 von 33 Punkten) und hielt das
-3,62 lange Netz für Zentimeter (`Meshfigurscan.einheit_anpassen`). Der Schritt „pose" findet die Gelenke am FOTO (SAM 3D Body, `_run_sam3dpose.py`), legt sie ins Netz und leitet daraus den Maßstab ab;
+3,62 lange Netz für Zentimeter (`Meshfigurscan.einheit_anpassen`). Der Schritt „pose" findet die Gelenke am FOTO (SAM 3D Body, `Posebestimmung`), legt sie ins Netz und leitet daraus den Maßstab ab;
 die Körper-Kette nimmt beides, wenn das Häkchen `rechnen` an ist (`Engine2d3dKleiderpose.fuer_koerper`). Konzept und Proben: `Docu/konzepte/2026-10-11_gemaelde-schnelldurchlauf-und-freie-pose-konzept.md`.
 
 `drehung` ist eine WAHL, keine Automatik: gemessen an den vier Läufen der Probe trennt kein Maß die Drehungen (Gelenke in der Silhouette 11–12 von 12 in jeder, Silhouetten-IoU des SAM-Körpers 0,31–0,38).

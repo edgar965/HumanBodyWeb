@@ -2,8 +2,8 @@
 """Ai2d3dtexturmass — „Hintergrund in der Textur“ einer Figur gegen die Fotos (29.10.2026 abends, Edgar mit einem Bild der geometrischen Figur: weiße Fingerspitzen, weißer Fleck
 an der Wölbung — „testcase für textur in der Mesherzeugung und fixen (z.B. handtextur ist falsch)“).
 
-Ein Punkt hat seine Farbe aus dem Hintergrund, wenn er in einem Foto sichtbar DEUTLICH neben der Person liegt (Personenmaske um RAND_PX erweitert) und seine Farbe der Farbe des
-Fotos dort um mindestens MARGE näher ist als jeder Farbe, die er in einem Foto AUF der Person hat (Maske um RAND_PX eingezogen, sichtbar) — und Hintergrund und Person dort
+Ein Punkt hat seine Farbe aus dem Hintergrund, wenn er in einem Foto sichtbar DEUTLICH neben der Person liegt (Personenmaske um RAND_PX erweitert), seine Farbe der Farbe des Fotos
+dort ähnelt (höchstens NAH) und ihr um mindestens MARGE näher ist als jeder Farbe, die er in einem Foto AUF der Person hat (Maske um RAND_PX eingezogen, sichtbar) — und Hintergrund und Person dort
 unterscheidbar sind (mindestens TRENN). Abstand zweier Farben = größter Kanal (sRGB 0–255). Punkte ohne Foto, das sie auf der Person zeigt, zählen nicht (nicht zu beurteilen).
 Gezählt je Zelle von ZELLE_MM im Foto, in dem der Punkt neben der Person liegt: eine Zelle mit mindestens MIN_PUNKTE solchen Punkten ist ein Fehler — örtlich wie der Umriss-Test.
 
@@ -17,6 +17,11 @@ __all__ = ['Ai2d3dtexturmass']
 
 class Ai2d3dtexturmass:
     RAND_PX, MARGE, TRENN, ZELLE_MM, MIN_PUNKTE = 3, 10, 40, 60.0, 5
+    #: und die Farbe muss dem Hintergrund ähneln (größter Kanal höchstens NAH). Ohne diese Bedingung meldete das Maß an Lauf 23.02 eine Zelle an der rechten Hand in 1.jpg, die keine
+    #: war (`diag_textur_zelle.py`): Punkt 17863 hat Hautfarbe (145, 87, 55) aus 3.jpg (dort nach dem groben Tiefenpuffer verdeckt), der Hintergrund in 1.jpg ist beige
+    #: (212, 179, 144), die einzige Farbe auf der Person (2.jpg) sehr hell (250, 213, 195) — Haut lag rechnerisch näher am Hintergrund. Die echten Fälle lagen bei Abstand ~6
+    #: (Figur (243, 229, 209) gegen die weiße Tür (241, 235, 213), Lauf 22.30)
+    NAH = 30
 
     def __init__(self, probe):
         self.p = probe
@@ -55,7 +60,8 @@ class Ai2d3dtexturmass:
             trenn = np.full(n, np.inf)
             for innen, fp in auf:
                 trenn = np.minimum(trenn, np.where(innen, np.abs(fp - hg).max(1), np.inf))
-            schlecht = daneben[:n] & np.isfinite(zur_person) & (np.abs(c - hg).max(1) + self.MARGE <= zur_person) & (trenn >= self.TRENN)
+            zum_hg = np.abs(c - hg).max(1)
+            schlecht = daneben[:n] & np.isfinite(zur_person) & (zum_hg <= self.NAH) & (zum_hg + self.MARGE <= zur_person) & (trenn >= self.TRENN)
             gesamt |= schlecht
             if schlecht.any():
                 z = np.floor(uv[:n][schlecht] / (self.ZELLE_MM / mm)).astype(np.int64)

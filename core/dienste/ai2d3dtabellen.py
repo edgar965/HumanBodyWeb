@@ -22,7 +22,9 @@ class Ai2d3dtabellen:
     def alle(cls):
         """Der Kontext der Liste: je Reiter die Tabelle (Schlüssel wie in `mesh3dai_liste.html`)."""
         jobs = Ai2d3djobs.alle()
-        exporte = [j for j in jobs if j['art'] == 'export']
+        # Ohne die Jobs von Mesh3D-AI (31.10.2026, Edgar: „In dieser Jobliste stehen Jobs drin, die nicht hierhin gehören. Alle Mesh-3D-Jobs NICHT in der Liste!“): ein Export mit
+        # Mesh3D-AI-Paar (`paar`, Messlatte A) ist ein Job von Mesh3D-AI und steht dort; seine Seite unter /2d-3d-AI/<id>/ bleibt erreichbar
+        exporte = [j for j in jobs if j['art'] == 'export' and not j.get('paar')]
         tests = [j for j in jobs if j['art'] == 'foto']
         return {
             'tabelle': cls._tabelle(Ai2d3djobtabelle.SCHLUESSEL, Ai2d3djobtabelle.spalten(), [Ai2d3djobtabelle.zeile(j) for j in exporte],

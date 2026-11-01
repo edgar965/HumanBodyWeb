@@ -17,11 +17,15 @@ import { Mesh3daikikleiderfeld } from '../mesh3dai/mesh3daikikleiderfeld.js';
 import { Mesh3dairigzeichner } from '../mesh3dai/mesh3dairigzeichner.js';
 import { Mesh3daitestnetzbau } from '../mesh3dai/mesh3daitestnetzbau.js';
 import { Ai2d3dnetz } from './ai2d3dnetz.js';
+import { Ai2d3dtrainingfigur } from './ai2d3dtrainingfigur.js';
+import { Ai2d3dzeile1 } from './ai2d3dzeile1.js';
 
 export class Ai2d3dtestfigur {
-    /** @param {{kennung: string, adresse: string}} test aus den Seitendaten (`Ai2d3dseitendaten`) */
-    constructor(test) {
+    /** @param {{kennung: string, adresse: string}} test aus den Seitendaten (`Ai2d3dseitendaten`) @param seite `Ai2d3dseite` (Fotowahl, Zeile 1 für `Ai2d3dzeile1`) oder null */
+    constructor(test, seite = null) {
         this.test = test;
+        this.seite = seite;
+        this.vorlage = null;         // `Ai2d3dzeile1`: Körper auf der Genesis-Figur der Zeile 1
         this.probe = null;           // die Antwort der Testschnittstelle, sobald die Figur gebaut ist
         this.figur = null;
         this.kleider = null;
@@ -70,6 +74,11 @@ export class Ai2d3dtestfigur {
             this.figur.userData.mesh3daiFremd = true;          // gehört nicht dem Feld (`Mesh3daiansicht._leeren` gibt es dann nicht frei)
             // `Mesh3daikikleiderfeld` beschriftet Weg k als „aus dem Netz geschnitten“ — hier sind die Stücke aus den Fotos geschnitten (`Fotoschale`)
             if (this.kleider && this.test.eigen) this.kleider.namen = this.kleider.namen.map(n => n.replace('aus dem Netz geschnitten', 'aus den Fotos geschnitten'));
+            const zeile1 = this.seite?.trainingfigur;
+            if (daten.zeile1_ursprung && zeile1) {
+                await zeile1.bereit;
+                if (zeile1.daten?.genesis) this.vorlage = new Ai2d3dzeile1(this.figur, [this.koerper.an, this.koerper.aus], Ai2d3dtrainingfigur._feld(daten.zeile1_ursprung, Int32Array));
+            }
             this.text = (this.test.eigen ? `Genesis-Modell dieses Jobs (<Job>/figur/, ${daten.info?.name ?? ''}) in der Haltung aus den Fotos`
                 : `Ausgabe des Mesh3D-AI-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) in der Haltung aus dem Netz`) + (this.augen ? ', mit Augäpfeln' : '')
                 + `${this.kleider ? `, ${this.kleider.namen.join(', ')}` : ''}.`;
@@ -136,7 +145,7 @@ export class Ai2d3dtestfigur {
 
     /** Zeichner von `Mesh3daiansicht`: `d` aus `auftrag` — Kleider (mit Haar) ein/aus, Ansichtsart als Ersatzmaterial, Rig (Knopf „Rig“) darüber. */
     zeichnen(inhalt, _art, d) {
-        if (!this.figur) {
+        if (!this.figur || !this.koerper) {          // `figur` steht schon, während die Liste der Stücke noch lädt — ein Fotowechsel dann warf (31.10.2026 nachts, Konsole)
             inhalt.userData.hinweis = this.fehler || 'Figur des Tests wird gebaut …';
             return;
         }
@@ -144,6 +153,7 @@ export class Ai2d3dtestfigur {
         if (this.kleider) this.kleider.gruppe.visible = an;
         this.koerper.an.visible = an;
         this.koerper.aus.visible = !an;
+        this.vorlage?.setzen(this.seite.steuerung.foto, this.seite.trainingfigur.daten.genesis);
         inhalt.add(this.figur);
         inhalt.userData.genesisErsatz = Ai2d3dnetz.ersatz(d?.modus ?? 'textur');
         if (d?.rig) inhalt.add(this.rigZeichnen());

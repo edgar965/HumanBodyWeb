@@ -54,6 +54,7 @@ from .api.umatextur import Umatextur
 from .cloth_export_api import Stoffexport
 from .daten.kennungskonverter import Kennungskonverter
 from .urls_charakter import CHARAKTER
+from .urls_exportleiste import EXPORTLEISTE
 
 register_converter(Kennungskonverter, 'kennung')
 
@@ -299,3 +300,5 @@ urlpatterns += MESH3D
 urlpatterns += MESH3DAI
 # Seite „2d-3d-AI" (leere Kopie der Seiten von Mesh3D-AI, `urls_ai2d3d.py`), 24.10.2026.
 urlpatterns += AI2D3D
+# Exportleiste (Export, Render mit Physik, Modell speichern) für jede Seite mit einer Figur, `urls_exportleiste.py`, 31.10.2026.
+urlpatterns += EXPORTLEISTE

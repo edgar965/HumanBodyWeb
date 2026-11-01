@@ -55,12 +55,7 @@ ERWARTET = {
         'schalter:nebeneinander', 'schalter:modell',
         # Die Bewegung
         'anim-zurueck', 'anim-play', 'anim-vor', 'anim-scrubber', 'anim-anfang', 'anim-ende', 'anim-stopp',
-        # Ausgabe
-        # Export seit 03.10.2026: GLB und Blender, mit den Beigaben BVH-Animation und Audio (je mit Pfad)
-        'export-bvh', 'export-bvh-pfad', 'export-audio', 'export-audio-pfad', 'export-name', 'export-glb', 'export-blend',
-        # Render seit 03.10.2026: Länge in Sekunden (bis zur ganzen BVH; 04.10.: Stufen 10 und 30 Bilder), Kamera, Größe
-        'render-sekunden', 'render-10', 'render-30', 'render-ganz', 'render-kamera', 'render-groesse', 'render-spp', 'render-anmerkung', 'render-starten',
-        'modell-format', 'modell-name', 'modell-speichern',
+        # Ausgabe: Export, Render und „Modell speichern" stehen seit 31.10.2026 in der Exportleiste (`_exportleiste.html`, eingebunden — `test_6_…`)
         # Der Reiter „Iterationen"
         'iterationen-weiter', 'iterationen-anhalten', 'iterationen-jede',
         'iterationen-alle-auf', 'iterationen-alle-zu', 'iterationen-loeschen',
@@ -111,8 +106,9 @@ class Engine2d3dKleiderknoepfeTest(SimpleTestCase):
                                  sorted(set(erwartet)))
 
     def test_2_die_zahl_der_bedienelemente(self):
-        """Gezählt am 08.10.2026: 9 auf der Übersicht, 60 auf der Auftragsseite (sie wächst mit jedem Knopf — dieser Wert ist die Mahnung, die Liste oben mitzupflegen)."""
-        self.assertEqual(sum(len(v) for v in ERWARTET.values()), 69)
+        """Gezählt am 08.10.2026: 9 auf der Übersicht, 60 auf der Auftragsseite (sie wächst mit jedem Knopf — dieser Wert ist die Mahnung, die Liste oben mitzupflegen).
+        31.10.2026: 41 auf der Auftragsseite — Export (7), Render (9) und „Modell speichern" (3) kommen aus der Exportleiste."""
+        self.assertEqual(sum(len(v) for v in ERWARTET.values()), 50)
 
     # ------------------------------------------------- jedes ist verdrahtet
 
@@ -151,6 +147,22 @@ class Engine2d3dKleiderknoepfeTest(SimpleTestCase):
         # `assertTrue` statt `assertIn`: ein Fehlschlag hängt sonst den ganzen Quelltext an die Meldung.
         self.assertTrue('anhalten' in modul, 'das Modul des Startknopfes kennt „anhalten" nicht')
         self.assertTrue('disabled' in modul, 'das Modul des Startknopfes sperrt nichts')
+
+    def test_6_die_exportleiste_ist_eingebunden_und_jedes_ihrer_elemente_verdrahtet(self):
+        u"""Seit 31.10.2026 trägt die Auftragsseite die Exportleiste (Bereich `engine2d3dkleider`, `Engine2d3dKleiderexportquelle`) statt eigener Blöcke für Export, Render und
+        „Modell speichern". Jedes Element der Leiste muss ein Modul der Leiste anfassen; die Felder von „Modell speichern" bindet `Meshfigurspeicher.EXPORTLEISTE`."""
+        auftrag = self.vorlagen['engine2d3dkleider_auftrag.html']
+        self.assertTrue(re.search(r'{%\s*include\s+"_exportleiste.html"\s+with\s+bereich="engine2d3dkleider"', auftrag), 'die Exportleiste ist nicht eingebunden')
+        self.assertTrue('new Engine2d3dKleiderexportquelle(' in auftrag and 'Exportleiste.starten(' in auftrag, 'die Exportleiste wird nicht gestartet')
+        wurzel = Path(settings.BASE_DIR)
+        leiste = (wurzel / 'templates' / '_exportleiste.html').read_text(encoding='utf-8')
+        js = self.js + '\n'.join(p.read_text(encoding='utf-8') for p in sorted((wurzel / 'static' / 'viewer' / 'exportleiste').glob('*.js')))
+        elemente = self._elemente(leiste)
+        self.assertGreaterEqual(len(elemente), 15)                     # gezählt 31.10.2026: 15 mit Kennung (dazu die Knöpfe mit `data-format`/`data-bilder`)
+        for kennung in elemente:
+            with self.subTest(element=kennung):
+                self.assertTrue(kennung in js, '%s wird in keinem Modul der Leiste angefasst' % kennung)
+        self.assertTrue('Meshfigurspeicher.EXPORTLEISTE' in self.js, '„Modell speichern" der Leiste ist nicht an Meshfigurspeicher gebunden')
 
     def _modul_mit(self, kennung):
         u"""Der Quelltext des ersten Moduls, das diese Kennung als Zeichenkette nennt (`'starten'`, `"starten"`, `#starten`) — nicht irgendeines, in dem das Wort nur vorkommt

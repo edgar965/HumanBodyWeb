@@ -8,6 +8,7 @@ from .api.ai2d3dabnahme import Ai2d3dabnahmeendpunkte
 from .api.ai2d3daktionen import Ai2d3daktionsendpunkte
 from .api.ai2d3ddaten import Ai2d3ddatenendpunkte
 from .api.ai2d3dfigur import Ai2d3dfigurendpunkte
+from .api.ai2d3dstandardanimation import Ai2d3dstandardanimationendpunkte
 from .api.seite_ai2d3d_einstellungen import ai2d3d_settings_page
 
 __all__ = ['AI2D3D']
@@ -41,7 +42,9 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/abnahme/haltungen/', Ai2d3dabnahmeendpunkte.haltungen, name='ai2d3d_abnahme_haltungen'),
     # Die Genesis-Figur aus `<Job>/figur/` (25.10.2026, Edgar: „das ist doch eine andere Pipeline“) — `Ai2d3dfigurendpunkte`; bis dahin über den Mesh3D-AI-Test edgar_foto.
     path('api/2d3dai/<slug:job>/figur/', Ai2d3dfigurendpunkte.daten, name='ai2d3d_figur'),
+    path('api/2d3dai/<slug:job>/standardanimation/', Ai2d3dstandardanimationendpunkte.job, name='ai2d3d_standardanimation'),
     path('api/2d3dai/<slug:job>/figur/kleider/<str:geschlecht>/', Ai2d3dfigurendpunkte.kleider, name='ai2d3d_figur_kleider'),
+    path('api/2d3dai/<slug:job>/figur/modell/', Ai2d3dfigurendpunkte.modell, name='ai2d3d_figur_modell'),
     path('api/2d3dai/<slug:job>/figur/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/netz/', Ai2d3dfigurendpunkte.kleidnetz, name='ai2d3d_figur_kleidnetz'),
     path('api/2d3dai/<slug:job>/figur/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/bild/<str:name>', Ai2d3dfigurendpunkte.kleidbild, name='ai2d3d_figur_kleidbild'),
     path('api/2d3dai/<slug:job>/figur/<str:geschlecht>/netz/', Ai2d3dfigurendpunkte.figurnetz, name='ai2d3d_figur_netz'),

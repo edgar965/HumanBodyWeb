@@ -17,12 +17,16 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
  */
 export class Meshfigurspeicher {
 
-    constructor(seite) {
+    static IDS = { format: 'modell-format', name: 'modell-name', knopf: 'modell-speichern', meldung: 'modell-meldung' };
+    /** Die Felder der Exportleiste (`_exportleiste.html`, Block „Modell speichern", 2D3D Kleider seit 31.10.2026): ohne Formatwahl — GLB, OBJ und Blender stehen dort unter „Exportieren". */
+    static EXPORTLEISTE = { format: null, name: 'exportleiste-modell-name', knopf: 'exportleiste-modell-speichern', meldung: 'exportleiste-modell-meldung' };
+
+    constructor(seite, ids = Meshfigurspeicher.IDS) {
         this.seite = seite;
-        this.format = document.getElementById('modell-format');
-        this.name = document.getElementById('modell-name');
-        this.knopf = document.getElementById('modell-speichern');
-        this.meldung = document.getElementById('modell-meldung');
+        this.format = ids.format ? document.getElementById(ids.format) : null;
+        this.name = document.getElementById(ids.name);
+        this.knopf = document.getElementById(ids.knopf);
+        this.meldung = document.getElementById(ids.meldung);
         this.knopf?.addEventListener('click', () => this.speichern());
     }
 

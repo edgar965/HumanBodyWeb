@@ -40,7 +40,7 @@ export class Modellexport {
 
     /**
      * @param inst      die Figur (`state.characters.get(...)`)
-     * @param optionen  {formate, rig, textur, assets, animation, pose, fps, ordner, name, direkt, modelldaten}
+     * @param optionen  {formate, rig, textur, assets, animation, pose, fps, ordner, name, direkt, modelldaten, endpunkt, felder} — `endpunkt`/`felder`: anderer Ablage-Server mit Zusatzfeldern (Exportleiste, OBJ)
      * @returns {ordner, dateien, warnungen} — vom Server
      */
     static async exportieren(inst, optionen) {
@@ -122,6 +122,13 @@ export class Modellexport {
         return Modellexport._senden(optionen, dateien, blendQuelle, warnungen, blender);
     }
 
+    /** Nur die GLB (Rig, Textur, Assets, ohne Animation) als ArrayBuffer, ohne Ablage — die Exportleiste schickt sie selbst an ihren Server (`Exportleistefigur`, 31.10.2026). */
+    static async glbBytes(inst, optionen) {
+        await Figuraufbaustand.warten(inst);
+        if (optionen.textur) await Genesis9texturen.wartenAufAlle();
+        return Modellexport._glb(Modellexportinhalt.objekte(inst, { assets: optionen.assets }), { rig: true, ...optionen }, false, null);
+    }
+
     // -------------------------------------------------------------- Formate
 
     static async _glb(objekte, optionen, animationOk, anim) {
@@ -131,11 +138,10 @@ export class Modellexport {
         // Bei „Rig aus" ist `objekte` schon `Netzpose.gebacken()`-Kopien, die
         // eigene Attribute bereits los sind — beim rigged (LIVE-)Pfad noch nicht.
         const zuruecksetzenGeo = optionen.rig ? Netzattribute.tauschen(objekte) : null;
-        // … und derselbe Pfad trägt den GEKÜRZTEN Index der Szene: ohne das
-        // hier behielte ein GLB mit Skelett die Löcher unter Kleid und Haaren
-        // (`Vollindex`). Nach `Netzattribute.tauschen`, damit die Kopie
-        // getauscht wird und nicht die lebende Geometrie.
-        const zuruecksetzenVoll = optionen.rig ? Vollindex.tauschen(objekte) : null;
+        // … und derselbe Pfad trägt den GEKÜRZTEN Index der Szene: ohne das hier behielte ein GLB mit Skelett die Löcher unter Kleid und Haaren
+        // (`Vollindex`). Nach `Netzattribute.tauschen`, damit die Kopie getauscht wird und nicht die lebende Geometrie. `hautWieSzene`: die
+        // Exportleiste will die Löcher (ihre GLB wird bewegt, die ganze Haut stäche durch den Stoff — `Exportleistefigur.glb`).
+        const zuruecksetzenVoll = optionen.rig && !optionen.hautWieSzene ? Vollindex.tauschen(objekte) : null;
         // Skelett-Wurzeln MIT ins Array — siehe `Modellexportinhalt.skelettWurzeln`.
         const wurzeln = optionen.rig ? Modellexportinhalt.skelettWurzeln(objekte) : [];
         const zuruecksetzenUserData = Zusatzdaten.leeren([...objekte, ...wurzeln]);
@@ -236,8 +242,7 @@ export class Modellexport {
 
     static async _senden(optionen, dateien, blendQuelle, warnungen, blender = []) {
         const formular = new FormData();
-        formular.append('ordner', optionen.ordner);
-        formular.append('name', optionen.name);
+        for (const [k, v] of Object.entries({ ordner: optionen.ordner, name: optionen.name, ...optionen.felder })) formular.append(k, v);
         formular.append('fps', String(optionen.fps));
         formular.append('polygone', String(optionen.polygone));
         // `direkt`: genau in diesen Ordner, ohne Unterordner je Export (Dialog der Szene, 18.10.2026).
@@ -246,7 +251,7 @@ export class Modellexport {
         formular.append('warnungen', JSON.stringify(warnungen));
         for (const d of dateien) formular.append('dateien', d.blob, d.name);
         if (blendQuelle) formular.append('blend_quelle', blendQuelle, `${Modellexport.PLATZHALTER}.glb`);
-        const antwort = await Serverabruf.formular(Modellexport.ENDPUNKT, formular);
+        const antwort = await Serverabruf.formular(optionen.endpunkt || Modellexport.ENDPUNKT, formular);
         return { ...antwort, warnungen: [...new Set([...warnungen, ...(antwort.warnungen || [])])] };
     }
 }

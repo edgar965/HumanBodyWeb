@@ -156,3 +156,22 @@ Implementierung sauber auf GPU in einem Prozess ist.“ Zahlen: `ProjektTemp/_we
   Umriss 4 → 0 von 4.</p>
 <p class="hint">Offen: randy_tropical, venus, ballerina_bunt, mann_gold nicht neu gerechnet; mann_gold 51,6 % des Ziels ungesehen (die A-Pose-Wolke des Wegs „rig“ hat keine Punkte auf den
   Stäben); die Erkennung kennt kein Rock/Kleid, die Sperre gegen „anliegend“ greift bei Kleidern nicht mehr (koenigin1 Oberteil 70 % ohne Stufe, Grenze 75 %).</p>
+<p><strong>Fassung 8: Start in der Haltung des Eingangs</strong> (30.10.2026 spätabends; Edgar: „Animation – die Arme sind doppelt, und kleider zum teil falsch geriggt“). Die Figur von koenigin1
+  hielt die Hände vor der Hüfte, im Eingang liegen sie auf dem Kopf: IPNet begann in der A-Pose, und Kleidung hält die Figur nur innen — die Arme gingen ins Kleid statt in die Ärmel. Die Ärmel
+  hingen dann am nächsten Hautpunkt, dem Kopf; im Stand unsichtbar, im Tanz doppelte Arme. Erst die Prüfung: <code>Miagelenke</code> („Gelenke wie MIA im Eingang“, hier und in der
+  Kostüm-Prüfung; Glieder höchstens 60 mm, Kopf 80 mm neben MIAs Gelenken) — edgar Glieder 10–23 mm, koenigin1 Handgelenke 761/765 mm. Dann der Fix: <code>Mesh3daimeshstart</code> stellt die
+  Startfigur an MIAs Gelenke (Richtung je Knochen, Hüfte), IPNet beginnt dort (Haken <code>G9meshgenesis.start</code>, für die 2d-3d-AI unverändert); „Figur aus Zeile 1“ sucht die
+  Daz-Winkel ab der Haltung der Einpassung (<code>Zeile1haltung._start</code>). koenigin1: Handgelenke 69/86 mm, Falte Rumpf vorn 106 → 13 cm, Haltungsrest in Zeile 2 3,2 mm im Mittel.
+  Für Zeile 2 dazu „Stück gedehnt im Tanz“ (<code>Kostuemdehnung</code>) und Träger je Art (<code>Kostuemarten.TRAEGER</code>: Krone und Haar hingen an den Händen): gedehnt 5 → 1 von 7.</p>
+<p><strong>Fassung 9: Start an MIA nur bei weit abweichender Haltung</strong> (31.10.2026 nachts). Mit Fassung 8 bekam edgar Falten bis 27 cm (Zeile 2 Prio 1 0 → 17); deterministisch
+  getrennt: mit Start Rumpf vorn 15,0 / Arm links 19,3 cm, ohne 2,4 / 4,7. Die A-Pose liegt bei edgar höchstens 39°, bei randy_tropical 47° neben MIA, die Arme von koenigin1 87–170° —
+  jetzt beginnt die Haltung an MIA nur, wenn ein Knochen über 60° abweicht (<code>Mesh3daimeshstart.WEIT_GRAD</code>), dann ganz; sonst wie in Fassung 7. Nur die weiten Knochen an MIA
+  (erster Versuch) ließ koenigin1s Beine in der A-Pose beginnen, und der Rock öffnete sich im Tanz vorne. Und nur, wenn MIAs Glieder zur Startfigur passen (0,5 bis 2 ×,
+  <code>GLIED_VERHAELTNIS</code>): bei der hockenden Goldfigur mann_gold ist MIAs Skelett unbrauchbar (Oberschenkel 139/82 mm), der Start machte sie schlechter (Prio 1 218 → 273).
+  Am 31.10.2026 beide Starts mit der Kostüm-Prüfung 33 verglichen (Zeile 2, Prio 1, nur die weiten Knochen / ganze Haltung): koenigin1 81 / 76 von 357, venus 38 / 57 — zusammen 119 / 133;
+  der Rock von koenigin1 reißt in beiden. Seitdem kommen wieder nur die weiten Knochen an MIA, die übrigen bleiben in der A-Pose (<code>Mesh3daimeshstart.NUR_WEITE</code>).</p>
+<p><strong>Teilverlust je Körperteil</strong> (31.10.2026, Edgar: koenigin1 „in der Ruhehaltung sind die Hände noch kaputt, oder sie ragen in den Kopf hinein“): der Teilverlust von IPNet zieht
+  die Glieder der Figur zu den gleichnamigen Teilen des Eingangs (aus MIAs Gewichten). Er zählte auf der Figurseite nur Punkte, deren nächstes Dreieck im ganzen Eingang Haut ist — eine Hand, die im
+  Kopf steckt, hat Haar oder Krone als nächstes Dreieck, also zog nichts sie heraus. Jetzt zählt der nächste Punkt desselben Teils (<code>G9meshipnet.forward_step</code>).</p>
+<p class="hint">Offen: die Rumpffalte hinten an edgar (15–19 cm auch ohne Start). Die Hüften von koenigin1 (MIA rät unter dem Ballkleid) zählt „Gelenke wie MIA“ seit der Prüfung 33 nicht mehr:
+  ein Beingelenk zählt nur, wo der Eingang die Beine einzeln trägt.</p>

@@ -75,7 +75,8 @@ class Engine2d3dKleiderrenderlaeufe:
             'nr': nr, 'zeit': time.strftime('%Y-%m-%d %H:%M:%S'), 'bilder': int(round(sekunden * self.render.FPS)), 'sekunden': sekunden,
             'groesse': '%dx%d' % (auftrag['breite'], auftrag['hoehe']), 'kamera': auftrag['kamera'], 'spp': int(auftrag.get('spp') or 48),
             'licht': auftrag.get('licht') or 'studio', 'ton': bool(auftrag.get('ton')), 'ton_pfad': str(auftrag.get('ton') or ''),
-            'name': str(auftrag.get('name') or ''), 'dauer_s': round(dauer_s, 1),
+            'name': str(auftrag.get('name') or ''), 'dauer_s': round(dauer_s, 1), 'bvh': str(auftrag.get('bvh') or ''),     # BVH, Physik: für „Neu rendern" der Exportleiste
+            'physik': auftrag.get('physik') is not False,
             'bytes': kopie.stat().st_size, 'video': kopie.name, 'anmerkung': str(auftrag.get('anmerkung') or '')[:600],
         }
         if self._bogen(kopie, ablage.ergebnis(name + '.png'), sekunden):
@@ -84,7 +85,29 @@ class Engine2d3dKleiderrenderlaeufe:
             laeufe.append(eintrag)
         else:
             laeufe[stelle] = eintrag
+        self._schreiben(laeufe)
+        return eintrag
+
+    def _schreiben(self, laeufe):
         zwischen = self.pfad.with_name(self.DATEI + '.teil')
         zwischen.write_text(json.dumps(laeufe, ensure_ascii=False, indent=1), encoding='utf-8')
         zwischen.replace(self.pfad)
-        return eintrag
+
+    def loeschen(self, nummern):
+        """Läufe mit diesen Nummern entfernen: Eintrag in `laeufe.json`, Video und Bogen in `ergebnis/` (31.10.2026, Edgar: „mit Löschen button und batch löschen").
+        Der Export im Exportordner bleibt — er gehört dem Nutzer. → die gelöschten Nummern."""
+        weg = {int(n) for n in nummern}
+        laeufe = self.lesen()
+        bleiben = [e for e in laeufe if int(e.get('nr') or 0) not in weg]
+        ordner = self.render.ablage.ergebnis().resolve()
+        for e in laeufe:
+            if int(e.get('nr') or 0) not in weg:
+                continue
+            for name in (e.get('video'), e.get('blatt')):
+                pfad = (ordner / name).resolve() if name else None
+                if pfad is not None and pfad.parent == ordner and pfad.is_file():
+                    pfad.unlink()
+        self._schreiben(bleiben)
+        geloescht = sorted(int(e.get('nr') or 0) for e in laeufe if int(e.get('nr') or 0) in weg)
+        logger.info('Render-Läufe %s gelöscht: %s', self.render.job.kennung, geloescht)
+        return geloescht

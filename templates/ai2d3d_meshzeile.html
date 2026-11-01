@@ -15,6 +15,8 @@ dritte Bild mit dem Mesh Modell anstelle von Genesis“ — `Ai2d3dmeshzeile` (a
             <h2><span class="ai2d3d-nummer">3</span> Genesis-Modell (Mesh-Methode)</h2>
             <div class="ai2d3d-leinwand" data-feld="mesh-genesis"></div>
             <p class="hb-hinweis" data-mesh-info></p>
+            {# Abspielleiste (31.10.2026, `Ai2d3dbewegung`): der Körper der Genesis-Figur in Bewegung #}
+            {% if daten.test.eigen %}{% url 'ai2d3d_standardanimation' job.id as bewegung_adresse %}{% include "_mesh3dai_figurbewegung.html" with adresse=bewegung_adresse %}{% endif %}
         </section>
     </div>
 </div>

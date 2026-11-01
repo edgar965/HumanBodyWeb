@@ -5,7 +5,9 @@ WARUM: Edgar, 29.10.2026 abends: „augen im mesh fehlen“ — der Käfig (Gene
 geometrische Figur nicht: die Augenhöhlen waren leer und zeigten den Hintergrund (weiß). Seit 29.10.2026 abends schreibt `Trainingfigur` sie mit (`Figurfarben.mit_augen`).
 
 Geprüft an training_figur.json: `augen` mit Dreiecken, Punkten je Foto und Farben; zwei Augäpfel (Zusammenhangskomponenten der Dreiecke) mit einem Abstand der Mitten von
-AUGENABSTAND_MM; jede Mitte höchstens HOEHLE_MM vom nächsten Punkt der Figur (sie sitzt in der Höhle, nicht davor); im Vorderfoto (das erste Foto) beide Augäpfel sichtbar.
+AUGENABSTAND_MM; jede Mitte höchstens HOEHLE_MM vom nächsten Punkt der Figur; im Vorderfoto (das erste Foto) beide Augäpfel sichtbar und keiner mehr als VORSTEHEN_MM vor der
+vordersten Stelle der Figur in seinem Umkreis (sie sitzen in der Höhle, nicht davor — die Nähe allein hielt eine Verschiebung um 30 mm nach vorn nicht auf: Nase und Brauen
+liegen so nah).
 
     manage.py test core.tests.automated.test_ai2d3d_mesh_augen
 """
@@ -23,6 +25,8 @@ class Ai2d3dMeshAugen(SimpleTestCase):
     JOB = 'EdgarTrip'
     AUGENABSTAND_MM = (50.0, 75.0)
     HOEHLE_MM = 20.0
+    #: der Augapfel darf im Vorderfoto höchstens so weit vor der vordersten Stelle der Figur im Umkreis (Lider, Brauen, Nasenwurzel) liegen
+    UMKREIS_MM, VORSTEHEN_MM = 20.0, 5.0
     #: Gegenprobe: so weit vor das Gesicht geschoben (mm, Blickrichtung der Kamera des Vorderfotos) muss die Prüfung durchfallen
     VOR_MM = 30.0
 
@@ -69,9 +73,18 @@ class Ai2d3dMeshAugen(SimpleTestCase):
             alle = np.concatenate([x, y])
             uv, z = p.projektion(f, alle)
             sb = p.sichtbar(uv, z, f, np.concatenate([p.dreiecke, tri + len(x)]))[len(x):]
+            mm = p.mm_je_px(nr) if p.training else 0.4
             for i in np.unique(teil):
                 if not sb[teil == i].any():
                     fehler.append('Augapfel %d im Vorderfoto %s verdeckt' % (i, f['datei']))
+                # vor dem Gesicht? Die vorderste Stelle des Augapfels gegen die vorderste Stelle der Figur in einem Kreis von UMKREIS_MM um seine Mitte im Bild
+                ja = teil == i
+                mitte = uv[len(x):][ja].mean(0)
+                nah = np.sqrt(((uv[:len(x)] - mitte) ** 2).sum(1)) * mm <= self.UMKREIS_MM
+                if nah.any():
+                    vor = 1000 * (z[:len(x)][nah].min() - z[len(x):][ja].min())
+                    if vor > self.VORSTEHEN_MM:
+                        fehler.append('Augapfel %d steht %.1f mm vor dem Gesicht (Grenze %.0f)' % (i, vor, self.VORSTEHEN_MM))
         return fehler
 
     def test_augaepfel_sitzen_in_den_augenhoehlen(self):
