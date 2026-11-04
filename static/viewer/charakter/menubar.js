@@ -11,6 +11,7 @@ import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Ursprungsfix } from './ursprungsfix.js';
 import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { Kleidersichtbarkeit } from '../gemeinsam/kleidersichtbarkeit.js';
+import { Modellcheck } from './modellcheck.js';
 
 export function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -96,6 +97,7 @@ export function handleMenuAction(action) {
         case 'mode-translate': fn.setTransformMode('translate'); break;
         case 'focus-char': if (state.selectedCharacterId) fn.focusCharacter(state.selectedCharacterId); break;
         case 'model-generator': fn.switchTab('modell'); fn.initModelGenerator(); break;
+        case 'model-check': Modellcheck.oeffnen(); break;          // Fehler der gewählten Figur, rot markiert (`Modellpruefung`)
         case 'reset-scene': fn.resetScene(); break;
         case 'reset-lighting': fn.resetLighting(); break;
         case 'reset-camera': fn.resetCamera(); break;

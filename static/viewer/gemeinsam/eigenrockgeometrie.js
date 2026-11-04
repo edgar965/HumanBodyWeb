@@ -19,6 +19,8 @@ export class Eigenrockgeometrie {
     static SPALTEN = 96;
     /** Toleranz im Anteil der Körperkoordinaten, mit der Bund und Saum ihre Höhe suchen (verdoppelt, bis Punkte da sind). */
     static BAND = 0.01;
+    /** So tief unter dem Bund (m) reicht ein Oberteil unter dem Rock (`EigenkleidschnittGLSL.ROCKUNTER_M` + 1 cm) — nur diese Punkte gehen in die Hülle. */
+    static UNTER_TIEFE_M = 0.04;
     /** Fenster der Hautgewichte in Richtungen (Fächer der Hülle): am Bund, dazu bis zum Saum. */
     static FENSTER = [2, 14];
 
@@ -49,9 +51,11 @@ export class Eigenrockgeometrie {
     /**
      * @param schale  BufferGeometry mit `position`, `kkKoord`, `skinIndex`, `skinWeight` (`Eigenkleidgeometrie`)
      * @param w       `{bund, laenge, sitz (m), weite: [vorn, hinten, seitlich] (m), falten: [Anzahl, Tiefe m]}`
-     * @returns `{geo, huelle, zeilen, spalten, breit, ySaum, ms}` oder null (Bund oder Saum nicht gefunden, Saum über dem Bund)
+     * @param unter   `{pos, stoff}` oder null — ein Oberteil darunter (`Eigenkleidbacken.unterlage`, gleiche Punktreihenfolge wie `schale`): seine Punkte bis
+     *                `UNTER_TIEFE_M` unter dem Bund gehen in die Hülle, der Rock liegt außen darüber
+     * @returns `{geo, huelle, zeilen, spalten, breit, yBund, ySaum, ms}` oder null (Bund oder Saum nicht gefunden, Saum über dem Bund)
      */
-    static bauen(schale, w) {
+    static bauen(schale, w, unter = null) {
         const t0 = performance.now(), Z = Eigenrockgeometrie.ZEILEN, S = Eigenrockgeometrie.SPALTEN;
         const a = schale.attributes, pos = a.position.array, koord = a.kkKoord.array;
         const yBund = Eigenrockgeometrie.hoehe(pos, koord, [1], w.bund, 2), ySaum = Eigenrockgeometrie.hoehe(pos, koord, [4, 5], w.laenge, 1);
@@ -59,7 +63,9 @@ export class Eigenrockgeometrie {
         let boden = Infinity;
         for (let i = 1; i < pos.length; i += 3) boden = Math.min(boden, pos[i]);
         const mitte = Eigenrockgeometrie.mitte(pos, koord, w.bund);
-        const huelle = new Eigenrockhuelle(pos, koord, yBund + 0.01, Math.max(boden, ySaum - 0.3), mitte);
+        const passt = unter && unter.stoff.length === koord.length / 4;
+        const huelle = new Eigenrockhuelle(pos, koord, yBund + 0.01, Math.max(boden, ySaum - 0.3), mitte,
+            passt ? { pos: unter.pos, stoff: unter.stoff, ab: yBund - Eigenrockgeometrie.UNTER_TIEFE_M } : null);
         huelle.zugabe = w.sitz;
         const r = new Float32Array((Z + 1) * S), y = new Float32Array(Z + 1);
         let breit = 0, best = -1;
@@ -96,7 +102,7 @@ export class Eigenrockgeometrie {
         Eigenrockgeometrie._haut(geo, schale, huelle, y, breit);
         geo.setIndex(index);
         Eigenrockgeometrie.normalen(geo, Z, S);
-        return { geo, huelle, zeilen: Z, spalten: S, breit, ySaum, ms: performance.now() - t0 };
+        return { geo, huelle, zeilen: Z, spalten: S, breit, yBund, ySaum, ms: performance.now() - t0 };
     }
 
     /** Hautgewichte je Punkt aus den Stützpunkten der Hülle (Kopf der Datei); die Nahtspalte wie Spalte 0. */

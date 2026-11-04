@@ -28,9 +28,24 @@
  * Der zweite Grund für helle Stellen oben an den Schultern war freiliegende Haut über dem Trapezmuskel (Ausschnitt ab Halsansatz, siehe AUSSCHNITT).
  * RELIEF (`uKkRelief`, Stoffregler „Relief“): Faktor auf Wulst, Steppnaht, Knöpfe und Falten — wie „Relief“ am Daz-Stück die eigene Normalkarte.
  * SOCKEN (`uKkArt` 3): Bündchen (t − B)·L_Bein an Beinpunkten; der Fuß ist ganz Stoff.
+ * ÄRMEL IN DER HALTUNG (`kkArmAnteil`, 02.11.2026, Edgar zu Allyne/Laura mit Bild: „Zacken beim Ärmel (kein Saum)“): Der Anteil t kommt aus der Karte, also von der
+ * Haut. Bei gehobenem Arm (Pose ins Netz gebacken, Bindlage = Haltung) liegt gestreckte Achselhaut mit t > 0 auf der Rumpfseite, der Ärmelschnitt (Ä − t) schnitt
+ * dort ein Loch in den Rumpf (Versuch `ProjektTemp/_wegwerf/tripo_wahrheit/pruefung/_versuch/Laura_fix.jpg`: ärmellos Loch, Ärmel 0,3 keins). Nahe der Wurzel
+ * (t < 0,15…0,3) und UNTER dem Schultergelenk zählt darum das Kleinere aus t und dem Weg des Punkts über das Gelenk hinaus entlang des Oberarms (Bindlage, ÷ Armlänge,
+ * `uKkSchulterL/R` = Gelenk xyz + Armlänge, `uKkAchseL/R` = Richtung zum Ellbogen; `Eigenkleid.schultern`). Über dem Gelenk (Schulterkappe) und am übrigen Arm
+ * bleibt t — in der Grundhaltung ändert sich der Schnitt nur in der Achsel. Ohne Gelenke (w = 0) wie bisher.
  */
 export class EigenkleidschnittGLSL {
 
+    /** Kleid: das Oberteil reicht so weit (Rumpfhöhe, ≈ 2,4 cm) unter die Taillennaht in den Rockbund — sonst sah man von der Seite und von oben Haut zwischen dem
+     *  anliegenden Saum und dem abstehenden Bund (02.11.2026, Afrikanerin, `wahrheit_pruefung.js`: Streifen rundum an der Taille). */
+    static KLEIDNAHT = 0.04;
+    /** Kleid und Oberteil unter einem eigenen Rock: der Rumpf endet waagrecht `ROCKUNTER_M` unter dem Bundring des Rocks (`uKkRockBund`, y der Bindlage;
+     *  `Eigenrock.beiBau`, `Eigenkleider.rockUeberOberteil`) statt an der Naht der Körperkoordinate. Die Naht lag an gebeugter Figur hinten über dem waagrechten Ring:
+     *  Haut am Rücken (02.11.2026 abends, Damira, Modell Check 48 px hinten, Allyne 40 px); ein Oberteil-Saum tief unter dem Bund stach fleckig durch den
+     *  ausgestellten Rock (Laura, Ostasiatin). Ohne Rock `OHNE_BUND` (Regel aus). */
+    static ROCKUNTER_M = 0.03;
+    static OHNE_BUND = -1000;
     static WULST_M = 0.0012;
     static KNOPF_M = 0.0055;
     static FALTENABSTAND_M = 0.03;
@@ -54,6 +69,12 @@ varying vec3 vKkLage;
 varying float vKkHub;
 varying float vKkOben;
 varying float vKkAnsatz;
+uniform vec4 uKkSchulterL;
+uniform vec4 uKkSchulterR;
+uniform vec3 uKkAchseL;
+uniform vec3 uKkAchseR;
+uniform vec4 uKkAermelform;
+uniform float uKkRockBund;
 float kkHash( vec3 p ) {
     p = fract( p * 0.3183099 + 0.1 );
     p *= 17.0;
@@ -77,11 +98,23 @@ float kkHals( float h, float x, float vorn ) {
     float ab = h - vKkAnsatz;                                  // Höhe unter dem Halsansatz dieses Umfangswinkels
     return uKkHals.x > 3.5 ? ab * uKkLaenge.x + uKkKragen.x : ( ab - tiefe ) * uKkLaenge.x;
 }
+float kkArmAnteil( float t ) {
+    vec4 s = vKkLage.x >= 0.0 ? uKkSchulterL : uKkSchulterR;
+    vec3 a = vKkLage.x >= 0.0 ? uKkAchseL : uKkAchseR;
+    if ( s.w <= 0.0 ) return t;
+    float tp = dot( vKkLage - s.xyz, a ) / s.w;
+    float w = ( 1.0 - smoothstep( 0.15, 0.3, t ) ) * smoothstep( 0.0, 0.03, s.y - vKkLage.y );
+    return mix( t, min( t, tp ), w );
+}
 float kkKante( float h, float t, float x, float vorn, vec4 k ) {
     float f = 1.0;
     if ( uKkArt < 1.5 ) {
-        if ( k.y < 0.5 ) f = min( f, ( uKkSaum.x - h ) * uKkLaenge.x );
-        if ( k.z < 0.5 ) f = min( f, ( uKkSaum.y - t ) * uKkLaenge.y );
+        if ( k.y < 0.5 ) {
+            float fs = ( uKkSaum.x + ( uKkAermelform.w > 0.5 ? KLEIDNAHT : 0.0 ) - h ) * uKkLaenge.x;
+            if ( uKkRockBund > -100.0 ) fs = vKkLage.y - ( uKkRockBund - ROCKUNTER );     // unter dem Rock: eingesteckt, endet waagrecht unter dem Bundring (Rumpf UND Beine)
+            f = min( f, fs );
+        }
+        if ( k.z < 0.5 ) f = min( f, ( uKkSaum.y - kkArmAnteil( t ) ) * uKkLaenge.y );
         f = min( f, kkHals( h, x, vorn ) );
         if ( k.x + k.y + k.z + k.w < 0.5 ) f = -1.0;
     } else if ( uKkArt < 2.5 ) {
@@ -154,7 +187,8 @@ diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * 0.25 + 0.02, kkKnop
     static get STELLEN() {
         const zahl = v => v.toFixed(6);
         const schnitt = EigenkleidschnittGLSL.SCHNITT.replaceAll('WULST', zahl(EigenkleidschnittGLSL.WULST_M)).replaceAll('KNOPF', zahl(EigenkleidschnittGLSL.KNOPF_M));
-        return [['common', EigenkleidschnittGLSL.KOPF], ['clipping_planes_fragment', schnitt], ['color_fragment', EigenkleidschnittGLSL.FARBE],
+        const kopf = EigenkleidschnittGLSL.KOPF.replaceAll('KLEIDNAHT', zahl(EigenkleidschnittGLSL.KLEIDNAHT)).replaceAll('ROCKUNTER', zahl(EigenkleidschnittGLSL.ROCKUNTER_M));
+        return [['common', kopf], ['clipping_planes_fragment', schnitt], ['color_fragment', EigenkleidschnittGLSL.FARBE],
             ['normal_fragment_maps', EigenkleidschnittGLSL.RELIEF]];
     }
 }

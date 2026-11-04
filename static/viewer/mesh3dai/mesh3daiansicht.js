@@ -147,6 +147,11 @@ export class Mesh3daiansicht {
         if (this._d !== undefined) this.zeigen(this._d, this._auftrag?.leer ?? null);
     }
 
+    /** Einen aufgeschobenen Inhalt sofort bauen, auch im verdeckten Feld — für Aufnahmen aus der Figur (`Ai2d3dseite.seitenbilder`), die nicht aufs Scrollen warten können. */
+    jetztFuellen() {
+        if (this._auftrag) this._fuellen();
+    }
+
     _fuellen() {
         const { d, leer } = this._auftrag;
         this._auftrag = null;

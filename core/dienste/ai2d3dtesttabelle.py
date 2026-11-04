@@ -13,6 +13,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .ai2d3dlaeufe import Ai2d3dlaeufe
+from .mesh3dairechendatum import Mesh3dairechendatum
 from .mesh3daitabelle import Mesh3daitabelle
 from .mesh3daitest import Mesh3daitest
 from .mesh3daitesttabelle import Mesh3daitesttabelle
@@ -43,8 +44,29 @@ class Ai2d3dtesttabelle:
 
     @classmethod
     def zeilen(cls, jobs):
+        """Jüngste zuerst (04.11.2026, Edgar: „immer die neuesten jobs am Anfang“) — nach der Zeit der
+        Spalte „Gerechnet“ (`zeile` → `zeit`)."""
         mesh3dai = {t['kennung']: t for t in Mesh3daitest.alle(mit_tripo=False)} if any(j['test'] for j in jobs) else {}
-        return [cls.zeile(j, mesh3dai.get(j['test'])) for j in jobs]
+        zeilen = [cls.zeile(j, mesh3dai.get(j['test'])) for j in jobs]
+        return sorted(zeilen, key=lambda z: z['zeit'] or 0, reverse=True)
+
+    @staticmethod
+    def _ohne_lauf(job):
+        """(Zeit, Text) für einen Job ohne Lauf und ohne Mesh3D-AI-Test (04.11.2026, Edgar: „es fehlen die
+        Zeiten / Datum“): PSHuman fertig (`pshuman/befund.json`), sonst angelegt (Erstellzeit des
+        Jobordners)."""
+        from .ai2d3dpshuman import Ai2d3dpshuman
+        if not job.get('ordner'):
+            return None, ''
+        ordner = Path(job['ordner'])
+        pshuman = Ai2d3dlaeufe.zeit(Ai2d3dpshuman.gerechnet(ordner))
+        if pshuman:
+            return pshuman, 'PSHuman'
+        try:
+            st = ordner.stat()
+        except OSError:
+            return None, ''
+        return getattr(st, 'st_birthtime', st.st_ctime), 'angelegt'
 
     @classmethod
     def zeile(cls, job, t):
@@ -59,8 +81,11 @@ class Ai2d3dtesttabelle:
         if laeufe:
             status = Ai2d3dlaeufe.status(laeufe[0])
             zellen += cls._lauf_zellen(laeufe[0], verlauf)
+            zeit = cls._lauf_zeit(laeufe[0])
         elif t:
             status = 'Fehler: %s' % t['fehler'] if t.get('fehler') else ('Messlatte A fertig' if t.get('fertig') else 'Messlatte A nicht fertig')
+            letztes = Mesh3dairechendatum.test(t['kennung'])
+            zeit = letztes['zeit'] if letztes else Mesh3daitesttabelle._zeit(t.get('gerechnet'))
             punkte = int(t.get('netz_punkte') or 0)
             zellen += [Mesh3daitesttabelle._gerechnet(t), Mesh3daitabelle.laufzeit_zelle(Mesh3daitesttabelle._laufzeit(t)),
                        format_html('<td class="num" data-sort="{}">{}</td>', punkte, f'{punkte:,}'.replace(',', '.')),
@@ -68,16 +93,25 @@ class Ai2d3dtesttabelle:
                        format_html('<td data-sort="{}">{}</td>', str(t.get('figur') or ''), str(t.get('figur') or '—'))]
         else:
             status = 'nur Fotos' + (' und Netz' if netz else '')
-            zellen += [Mesh3daitabelle.datum_zellen(None), Mesh3daitabelle.laufzeit_zelle(None), mark_safe('<td class="num" data-sort="0">—</td>'),
+            zeit, was = cls._ohne_lauf(job)
+            titel = 'Kein Lauf der Foto-Kette — %s' % was if zeit else ''
+            zellen += [Mesh3daitabelle.datum_zellen(zeit, titel, was),
+                       Mesh3daitabelle.laufzeit_zelle(None), mark_safe('<td class="num" data-sort="0">—</td>'),
                        mark_safe('<td data-sort="">—</td>'), mark_safe('<td data-sort="">—</td>')]
         zellen.append(format_html('<td data-sort="{}" title="{}">{}</td>', status, verlauf, status))
-        return {'id': job['id'], 'klasse': 'mesh3dai-zeile-test', 'html': mark_safe(''.join(zellen))}
+        return {'id': job['id'], 'klasse': 'mesh3dai-zeile-test', 'html': mark_safe(''.join(zellen)),
+                'zeit': zeit}
 
     @staticmethod
-    def _lauf_zellen(lauf, verlauf):
+    def _lauf_zeit(lauf):
+        laeuft = lauf.get('status') == 'läuft'
+        return Ai2d3dlaeufe.zeit(lauf.get('start') if laeuft else (lauf.get('ende') or lauf.get('start')))
+
+    @classmethod
+    def _lauf_zellen(cls, lauf, verlauf):
         """Gerechnet, Uhrzeit, Laufzeit, Punkte, Lauf, Figur aus dem jüngsten Lauf der Foto-Kette."""
         laeuft = lauf.get('status') == 'läuft'
-        zeit = Ai2d3dlaeufe.zeit(lauf.get('start') if laeuft else (lauf.get('ende') or lauf.get('start')))
+        zeit = cls._lauf_zeit(lauf)
         stand, figur = str(lauf.get('stand') or ''), Ai2d3dlaeufe.figur(lauf)
         return [Mesh3daitabelle.datum_zellen(zeit, ('Gestartet' if laeuft else 'Fertig') + ' — Foto-Kette, Stand %s' % stand, 'läuft' if laeuft else 'Foto-Kette'),
                 Mesh3daitabelle.laufzeit_zelle(Ai2d3dlaeufe.laufzeit(lauf)),

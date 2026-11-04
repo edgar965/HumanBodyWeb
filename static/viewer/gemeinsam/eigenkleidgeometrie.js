@@ -40,7 +40,8 @@ export class Eigenkleidgeometrie {
         geo.userData.quelle = quelle;
         geo.userData.indexGeteilt = !voll?.index;
         geo.userData.stand = extra.bruecke;                         // zum Nachsehen im Browser (Messung), keine Logik hängt daran
-        return { geo, laengen: extra.laengen, bruecke: extra.bruecke, uvMeter: extra.uvMeter };
+        geo.userData.oben = extra.oben;                             // Rumpfachse der Brücke (`Eigenkleidbruecke.rumpfrahmen`), aufrecht (0, 1, 0)
+        return { geo, laengen: extra.laengen, bruecke: extra.bruecke, uvMeter: extra.uvMeter, oben: extra.oben };
     }
 
     static _extra(quelle, index, gruppen, materialien, karte) {
@@ -60,6 +61,7 @@ export class Eigenkleidgeometrie {
             attributC: new THREE.BufferAttribute(b.feldC, 4),
             laengen: karte.laengen.map(l => l * skala),
             uvMeter: Stoffwerte.uvMeter(quelle),
+            oben: b.oben,
             bruecke: { punkte: b.punkte, maxHuelleM: b.maxHuelleM, maxFallM: b.maxFallM, ms: b.ms, rumpfM: b.rumpfLaenge, msKoord, verschweisst: koord.verschweisst },
             koordRoh: koord, faelle: new Map(),
         };

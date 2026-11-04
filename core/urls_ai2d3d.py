@@ -8,6 +8,7 @@ from .api.ai2d3dabnahme import Ai2d3dabnahmeendpunkte
 from .api.ai2d3daktionen import Ai2d3daktionsendpunkte
 from .api.ai2d3ddaten import Ai2d3ddatenendpunkte
 from .api.ai2d3dfigur import Ai2d3dfigurendpunkte
+from .api.ai2d3dpshumanendpunkte import Ai2d3dpshumanendpunkte
 from .api.ai2d3dstandardanimation import Ai2d3dstandardanimationendpunkte
 from .api.seite_ai2d3d_einstellungen import ai2d3d_settings_page
 
@@ -21,9 +22,26 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/foto/<int:nr>/', Ai2d3ddatenendpunkte.foto, name='ai2d3d_foto'),
     path('api/2d3dai/<slug:job>/netz/<slug:art>/', Ai2d3ddatenendpunkte.netz, name='ai2d3d_netz'),
     path('api/2d3dai/<slug:job>/kopf/<int:nr>/', Ai2d3ddatenendpunkte.kopfbild, name='ai2d3d_kopfbild'),
-    path('api/2d3dai/<slug:job>/kopfki/beispiel/<int:nr>/', Ai2d3ddatenendpunkte.kopfbeispiel, name='ai2d3d_kopfbeispiel'),
-    # Körpergröße der Person eines Tests (24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“) — `Ai2d3dkoerpergroesse`, schreibt in die job.json.
+    path('api/2d3dai/<slug:job>/kopfki/beispiel/<int:nr>/', Ai2d3ddatenendpunkte.kopfbeispiel, name='ai2d3d_kopfbeispiel'),    # Körpergröße der Person eines Tests (24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“) — `Ai2d3dkoerpergroesse`, schreibt in die job.json.
     path('api/2d3dai/<slug:job>/koerpergroesse/', Ai2d3daktionsendpunkte.koerpergroesse, name='ai2d3d_koerpergroesse'),
+    # Normalen-Engine eines Tests (03.11.2026, Edgar: „Combo box … Default: Econ“) — `Ai2d3dnormalen`.
+    path('api/2d3dai/<slug:job>/normalen/', Ai2d3daktionsendpunkte.normalen, name='ai2d3d_normalen'),
+    # Textur-Engine eines Tests (03.11.2026, „mach die textur umschaltbar“) — `Ai2d3dtextur`.
+    path('api/2d3dai/<slug:job>/textur/', Ai2d3daktionsendpunkte.textur, name='ai2d3d_textur'),
+    # Form-Engine eines Tests (03.11.2026, eigene Zutaten per Checkbox) — `Ai2d3dform`.
+    path('api/2d3dai/<slug:job>/form/', Ai2d3daktionsendpunkte.form, name='ai2d3d_form'),
+    # PSHuman-Weg eines Tests (03.11.2026, „pshuman als Option bei den jobs“) — `Ai2d3dpshuman`.
+    path('api/2d3dai/<slug:job>/pshuman/', Ai2d3daktionsendpunkte.pshuman, name='ai2d3d_pshuman'),
+    # Genesis-Grundfigur eines Tests (04.11.2026, „Auswahl ob Genesis Männlich, weiblich“) — `Ai2d3dgeschlecht`.
+    path('api/2d3dai/<slug:job>/geschlecht/', Ai2d3daktionsendpunkte.geschlecht, name='ai2d3d_geschlecht'),
+    # Bildplätze der PSHuman-Eingabe (03.11.2026, `Ai2d3dpshumaneingabe`): ein oder mehrere Fotos,
+    # Upload je Platz, erzeugte Ansichten
+    path('api/2d3dai/<slug:job>/pshuman/bild/<int:winkel>/<slug:art>/', Ai2d3dpshumanendpunkte.bild,
+         name='ai2d3d_pshuman_bild'),
+    path('api/2d3dai/<slug:job>/pshuman/eingabe/<int:winkel>/', Ai2d3dpshumanendpunkte.eingabe,
+         name='ai2d3d_pshuman_eingabe'),
+    path('api/2d3dai/<slug:job>/pshuman/eingabe/<int:winkel>/entfernen/', Ai2d3dpshumanendpunkte.entfernen,
+         name='ai2d3d_pshuman_entfernen'),
     # Name eines Tests (24.10.2026, Stift wie bei Mesh3D-AI) — `Mesh3dainame`, schreibt name.json in den Testordner.
     path('api/2d3dai/<slug:job>/name/', Ai2d3daktionsendpunkte.name, name='ai2d3d_name'),
     # Abnahme über das Rendering DER SEITE (24.10.2026, Edgar: „das musst du doch selber herausfinden, dass die nicht übereinstimmen“) — `Ai2d3dabnahmeendpunkte`, `Ai2d3dseitenbild`.

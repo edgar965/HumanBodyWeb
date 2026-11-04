@@ -17,7 +17,13 @@ from pathlib import Path
 
 from django.conf import settings
 
+from .ai2d3dform import Ai2d3dform
+from .ai2d3dgeschlecht import Ai2d3dgeschlecht
 from .ai2d3dkoerpergroesse import Ai2d3dkoerpergroesse
+from .ai2d3dnormalen import Ai2d3dnormalen
+from .ai2d3dpshuman import Ai2d3dpshuman
+from .ai2d3dpshumaneingabe import Ai2d3dpshumaneingabe
+from .ai2d3dtextur import Ai2d3dtextur
 from .mesh3dainame import Mesh3dainame
 
 logger = logging.getLogger('core')
@@ -28,7 +34,13 @@ __all__ = ['Ai2d3dfotojobs']
 class Ai2d3dfotojobs:
     #: ohne Tripo3D (26.10.2026, Edgar: „lösche das Tripo mesh aus dem Job, sonst schummelst du wieder. Lösche Tripo Meshes aus allen Jobs … auch als Vergleichsnetz“) — ein Netz dieser Art
     #: zeigt und liefert 2d-3d-AI nicht mehr, auch wenn eine job.json oder ein Exportordner (`tripo3d/`) es noch nennt; die Dateien selbst bleiben (Eingang von Mesh3D-AI)
-    NETZNAMEN = {'hunyuan3d': 'Hunyuan3D-2mv'}
+    #: 'pshuman' (03.11.2026, Edgar: „mach einen Job, so dass man die volle Qualität sehen kann mit PS Human“):
+    #: PSHumans eigene Rekonstruktion aus EINEM Foto, nur zum Ansehen
+    #: 'pshuman_smplx' (03.11.2026, Edgar: „im Job mach als zusätzliche 4. View in jeder Zeile das SMPLX
+    #: modell bei pshuman jobs, zum testen“): PSHumans eingepasstes SMPL-X (Start der freien Netzformung) —
+    #: nicht im Feld „Netz“, sondern Feld 4 jeder Zeile (`Ai2d3dseitendaten.SMPLX`)
+    NETZNAMEN = {'hunyuan3d': 'Hunyuan3D-2mv', 'pshuman': 'PSHuman (1 Foto)',
+                 'pshuman_smplx': 'SMPL-X (PSHuman)'}
     BILDENDUNGEN = ('.jpg', '.jpeg', '.png', '.webp')
 
     @staticmethod
@@ -70,7 +82,12 @@ class Ai2d3dfotojobs:
         name = Mesh3dainame.lesen(cls.ordner() / ordnername) or vorgabe
         return {'id': ordnername.lower(), 'name': name, 'name_vorgabe': vorgabe, 'art': 'foto', 'figur': '', 'fotos': fotos, 'paar': None, 'ordner': cls.ordner() / ordnername,
                 'test': test, 'wahrheit': False, 'netze': cls.netze([(n.get('art'), Path(str(n.get('datei') or ''))) for n in info.get('netze') or []]),
-                'hinweis': str(info.get('hinweis') or ''), 'kopf': cls.kopf(cls.ordner() / ordnername), 'koerpergroesse_m': Ai2d3dkoerpergroesse.lesen(info)}
+                'hinweis': str(info.get('hinweis') or ''), 'kopf': cls.kopf(cls.ordner() / ordnername), 'koerpergroesse_m': Ai2d3dkoerpergroesse.lesen(info), 'geschlecht': Ai2d3dgeschlecht.lesen(info),
+                'normalen': Ai2d3dnormalen.lesen(info),  # Combo-Boxen „Normalen“, „Textur“ (03.11.)
+                'textur': Ai2d3dtextur.lesen(info), 'form': Ai2d3dform.lesen(info),
+                'pshuman': dict(Ai2d3dpshuman.lesen(info),
+                                gerechnet=Ai2d3dpshuman.gerechnet(cls.ordner() / ordnername),
+                                eingabe=Ai2d3dpshumaneingabe.lesen(cls.ordner() / ordnername, info, fotos))}
 
     @staticmethod
     def kopf(ordner):

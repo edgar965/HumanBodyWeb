@@ -8,19 +8,20 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
  */
 export class Ai2d3dmodellspeichern {
 
-    /** @param adresse `/api/2d3dai/<job>/figur/`; @param standardname Vorgabe für das leere Namensfeld */
-    static binden(adresse, standardname) {
-        const s = new Ai2d3dmodellspeichern(adresse);
+    /** @param adresse `/api/2d3dai/<job>/figur/`; @param standardname Vorgabe für das leere Namensfeld; @param wurzel die Karte mit DIESER Exportleiste (seit 04.11.2026 können
+     *  mehrere auf der Seite stehen, `ai2d3d_genesiszeile.html`) */
+    static binden(adresse, standardname, wurzel = document) {
+        const s = new Ai2d3dmodellspeichern(adresse, wurzel);
         if (!s.name.value) s.name.value = standardname || '';
         s._standHolen();
         return s;
     }
 
-    constructor(adresse) {
+    constructor(adresse, wurzel = document) {
         this.adresse = `${adresse}modell/`;
-        this.knopf = document.getElementById('exportleiste-modell-speichern');
-        this.name = document.getElementById('exportleiste-modell-name');
-        this.stand = document.getElementById('exportleiste-modell-meldung');
+        this.knopf = wurzel.querySelector('#exportleiste-modell-speichern');
+        this.name = wurzel.querySelector('#exportleiste-modell-name');
+        this.stand = wurzel.querySelector('#exportleiste-modell-meldung');
         this.knopf.addEventListener('click', () => this.speichern());
     }
 

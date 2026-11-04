@@ -1,0 +1,8 @@
+{% comment %}03.11.2026, Edgar: „im Job mach als zusätzliche 4. View in jeder Zeile das SMPLX modell bei pshuman jobs, zum testen“ — PSHumans eingepasstes SMPL-X (Start der
+freien Netzformung, `pshuman_port14/lauf.py` legt es als `<case>_smpl.obj` ab; job.json `netze` Art 'pshuman_smplx'). Gezeichnet von `Ai2d3dsmplx` (ai2d3dsmplx.js), dreht mit den
+übrigen Feldern. `feld`: Name für `data-feld`, `nummer`: Nummer des Feldes (04.11.2026: bei PSHuman-Jobs 3, hinter dem PSHuman-Netz).{% endcomment %}
+<section class="card ai2d3d-bereich ai2d3d-smplxbereich">
+    <h2><span class="ai2d3d-nummer">{{ nummer }}</span> SMPL-X (PSHuman)</h2>
+    <div class="ai2d3d-leinwand" data-feld="{{ feld }}" data-smplx></div>
+    {% if not daten.smplx %}<p class="hb-hinweis">Für diesen Job noch kein SMPL-X von PSHuman gerechnet.</p>{% endif %}
+</section>

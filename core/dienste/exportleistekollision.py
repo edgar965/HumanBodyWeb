@@ -93,14 +93,15 @@ class Exportleistekollision:
         return len(self.j['bufferViews']) - 1
 
     def _ziel(self, versatz):
-        """Ein dünn besetztes POSITION-Ziel (Accessor-Index); ohne geschobenen Punkt ein Eintrag 0 (glTF verlangt count ≥ 1)."""
+        """Ein dünn besetztes POSITION-Ziel (Accessor-Index); ohne geschobenen Punkt ein Eintrag 0 (glTF verlangt count ≥ 1). `byteOffset` steht ausdrücklich da, obwohl glTF 0 als Vorgabe kennt:
+        F3D 3.5 verwirft die ganze Datei ohne ihn („Invalid accessor.sparse.indices.byteOffset value“, gemessen 04.11.2026 an Session3dTools_DanceKurz.glb, `_wegwerf/session3dtools/glb_byteoffset.py`)."""
         idx = np.nonzero(np.linalg.norm(versatz, axis=1) > 1e-6)[0].astype(np.uint32)
         if not len(idx):
             idx = np.zeros(1, dtype=np.uint32)
         self.j['accessors'].append({'componentType': 5126, 'count': len(versatz), 'type': 'VEC3',
                                     'min': np.minimum(versatz.min(0), 0).astype(float).tolist(), 'max': np.maximum(versatz.max(0), 0).astype(float).tolist(),
-                                    'sparse': {'count': int(len(idx)), 'indices': {'bufferView': self._ablegen(idx), 'componentType': 5125},
-                                               'values': {'bufferView': self._ablegen(versatz[idx].astype(np.float32))}}})
+                                    'sparse': {'count': int(len(idx)), 'indices': {'bufferView': self._ablegen(idx), 'byteOffset': 0, 'componentType': 5125},
+                                               'values': {'bufferView': self._ablegen(versatz[idx].astype(np.float32)), 'byteOffset': 0}}})
         return len(self.j['accessors']) - 1
 
     @contextmanager

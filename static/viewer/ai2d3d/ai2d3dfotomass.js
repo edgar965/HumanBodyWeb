@@ -10,26 +10,30 @@ export class Ai2d3dfotomass {
     static GRUND = 245;
     static _gemessen = new Map();
 
-    /** @param {HTMLImageElement} bild geladen @returns {{oben: number, unten: number}|null} Anteile der Bildhöhe */
+    /** @param {HTMLImageElement} bild geladen @returns {{oben: number, unten: number, links: number, rechts: number}|null} Anteile der Bildhöhe bzw. -breite */
     static anteil(bild) {
         if (Ai2d3dfotomass._gemessen.has(bild.src)) return Ai2d3dfotomass._gemessen.get(bild.src);
         const h = Ai2d3dfotomass.HOEHE, b = Math.max(1, Math.round(h * bild.naturalWidth / bild.naturalHeight));
         const c = Object.assign(document.createElement('canvas'), { width: b, height: h }).getContext('2d', { willReadFrequently: true });
         c.drawImage(bild, 0, 0, b, h);
         const d = c.getImageData(0, 0, b, h).data, g = Ai2d3dfotomass.GRUND;
-        let oben = -1, unten = -1;
+        let oben = -1, unten = -1, links = b, rechts = 0;
         for (let y = 0; y < h; y++) {
             let n = 0;
             for (let x = 0; x < b; x++) {
                 const i = 4 * (y * b + x);
-                if (d[i + 3] > 16 && (d[i] < g || d[i + 1] < g || d[i + 2] < g)) n++;
+                if (d[i + 3] > 16 && (d[i] < g || d[i + 1] < g || d[i + 2] < g)) {
+                    n++;
+                    links = Math.min(links, x);
+                    rechts = Math.max(rechts, x + 1);
+                }
             }
             if (n >= 2) {
                 if (oben < 0) oben = y;
                 unten = y + 1;
             }
         }
-        const aus = oben < 0 ? null : { oben: oben / h, unten: unten / h };
+        const aus = oben < 0 ? null : { oben: oben / h, unten: unten / h, links: links / b, rechts: rechts / b };
         Ai2d3dfotomass._gemessen.set(bild.src, aus);
         return aus;
     }

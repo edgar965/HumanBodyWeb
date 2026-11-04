@@ -68,6 +68,7 @@ class Command(BaseCommand):
     def _lauf(self, render):
         from Figurfilm.filmregler import Filmregler
 
+        from core.dienste.bewegungsschnitt import Bewegungsschnitt
         from core.dienste.engine2d3dkleiderrenderallgemein import Engine2d3dKleiderrenderallgemein
         from core.dienste.engine2d3dkleiderrenderlaeufe import Engine2d3dKleiderrenderlaeufe
         from core.dienste.engine2d3dkleiderrenderneu import Engine2d3dKleiderrenderneu
@@ -88,27 +89,36 @@ class Command(BaseCommand):
         glb = render.figur(Path(auftrag['glb']), auftrag.get('stellung') or {})
         render.melden(schritt='Bewegung wird auf die Figur gerechnet', fortschritt=0.03)
         voll = render.job.bewegung(Exportleistebewegung.pfad(auftrag['bvh']), auftrag.get('stellung') or {})
-        n = max(2, min(int(round(float(auftrag['sekunden']) * render.FPS)), int(voll.get('frame_count') or len(voll.get('times') or []))))
+        n = Bewegungsschnitt.bilder(voll, auftrag['sekunden'])          # 30 je Sekunde nach den Zeiten der Bewegung (DanceKurz kommt mit 60)
         bewegung = programme / 'bewegungen' / ('%s_bewegung.json' % name)
-        self._schneiden(voll, bewegung, n)
+        Bewegungsschnitt.schreiben(voll, bewegung, n)
         self._vorbereiten(programme, name, glb)
         optionen = render.leiste.optionen() if auftrag.get('physik') is not False else render.ohne_physik(render.leiste.optionen())
         regler = Filmregler.schreiben(render._datei('regler.json'), optionen)
         py = sys.executable
         gesamt = max(n, int(round(float(auftrag.get('bvh_sekunden') or 0) * render.FPS)))
         gemeinsam = [str(programme / 'video_bauen.py'), name, str(bewegung), '--glb', str(glb), '--regler', str(regler), '--gesamt-bilder', str(gesamt), '--start-bild', '0']
-        self._stufe(render, 'Figurcache wird gerechnet (CPU)', 0.08, [py] + gemeinsam + ['--cpu'])
+        # Variante B (01.11.2026, Edgar: „alles im Speicher“): mit dem allgemeinen Rezept häutet `film_video.py --speicher` die Figur je Bild auf der Karte (`Figurkarte`) —
+        # vorher nur Mimik- und Korrekturdaten (`video_bauen.py` ohne Stufe); bis dahin 504 s Figurcache auf der CPU und 5,7 GB PC2 (koenigin1, 502 Bilder). Eigene Rezepte wie bisher.
+        speicher = bool(rezept.get('allgemein'))
+        if speicher:
+            self._stufe(render, 'Mimik und Gelenkkorrektur werden vorbereitet (CPU)', 0.08, [py] + gemeinsam)
+        else:
+            self._stufe(render, 'Figurcache wird gerechnet (CPU)', 0.08, [py] + gemeinsam + ['--cpu'])
         ziel = render.ablage.ergebnis(render.VIDEO)
         befehl = [py, str(programme / 'film_video.py'), name, '--kamera', auftrag['kamera'], '--breite', str(auftrag['breite']), '--hoehe', str(auftrag['hoehe']),
                   '--spp', str(int(auftrag.get('spp') or 48)), '--von', '1', '--bis', str(n), '--ausname', 'film', '--zusammen', '--ausdatei', str(ziel), '--regler', str(regler)]
+        if speicher:
+            befehl.append('--speicher')
         if auftrag.get('ton'):
             befehl += ['--ton', str(auftrag['ton'])]
         sys.path.insert(0, self.GPUSPERRE)
         from mesh3dai_gpusperre import Gpusperre
         render.melden(schritt='Wartet auf die Grafikkarte (Gpusperre)')
         with Gpusperre('exportleiste_render_%s' % render.job.kennung, bedarf=self.GPU_BEDARF_GB):
-            self._stufe(render, 'Stoff und Strähnen werden simuliert (GPU)', 0.45, [py] + gemeinsam + ['--gpu'])
-            self._stufe(render, 'Bilder werden gerendert (GPU)', 0.6, befehl)
+            if not speicher:                           # die Stufe `--gpu` des allgemeinen Rezepts simuliert nichts
+                self._stufe(render, 'Stoff und Strähnen werden simuliert (GPU)', 0.45, [py] + gemeinsam + ['--gpu'])
+            self._stufe(render, 'Figur wird je Bild gehäutet und gerendert (GPU)' if speicher else 'Bilder werden gerendert (GPU)', 0.6, befehl)
         ordner = Modellexportziel.ordner(auftrag['ordner'])
         wunsch = Modellexportziel.name(auftrag['datei']) if auftrag.get('datei') else '%s_render' % Modellexportziel.name(auftrag.get('name'))
         stamm = Modellexportziel.eindeutiger_stamm(ordner, wunsch, ('.mp4',))
@@ -121,16 +131,6 @@ class Command(BaseCommand):
                       fortschritt=1.0, dauer_s=round(time.time() - t0, 1), lauf=lauf['nr'], ausgabe={
             'datei': render.VIDEO, 'pfad': str(ziel), 'export': str(kopie), 'ordner': str(ordner), 'bytes': ziel.stat().st_size, 'ton': auftrag.get('ton') or None,
             'adresse': '/api/exportleiste/%s/%s/datei/%s' % (q.BEREICH, q.kennung, render.VIDEO)})
-
-    @staticmethod
-    def _schneiden(d, ziel, n):
-        """Die ersten `n` Bilder der Bewegung (Quaternionen 4, Position 3 Werte je Bild), Zeiten auf 30 Bilder je Sekunde."""
-        neu = dict(d, tracks={k: v[:4 * n] for k, v in (d.get('tracks') or {}).items()})
-        if d.get('position_track'):
-            neu['position_track'] = dict(d['position_track'], values=d['position_track']['values'][:3 * n])
-        neu.update(times=[round(i / 30.0, 6) for i in range(n)], frame_count=n, duration=round(n / 30.0, 6))
-        ziel.parent.mkdir(parents=True, exist_ok=True)
-        ziel.write_text(json.dumps(neu), encoding='utf-8')
 
     @staticmethod
     def _vorbereiten(programme, name, glb):

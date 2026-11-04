@@ -9,9 +9,12 @@
  */
 import * as THREE from 'three';
 import { Mesh3daiansicht } from '../mesh3dai/mesh3daiansicht.js';
+import { Ai2d3dansichtsart } from './ai2d3dansichtsart.js';
 
 export class Ai2d3dansicht extends Mesh3daiansicht {
     static grund = 0xffffff;
+    /** „Normale“ / „Netz farbig“ der Leiste oben (`Ai2d3dsteuerung.art`, gesetzt von `Ai2d3dseite`) — gilt für jedes Feld ohne eigene Zeilenleiste (`zeilenart` null). */
+    static seitenart = null;
     /**
      * Fotolicht (24.10.2026 abends, Edgar: „jetzt hast du alle unterschiede, fixe!“): die Haut und die Stücke tragen die Farben der Fotos samt deren Schattierung. Unter dem Licht von
      * Mesh3D-AI (Halbkugel 1,1 + Richtung 1,6) kam die Haut auf der Seite 48–71 sRGB-Stufen dunkler als im Foto, Sapiens hielt die Beine dort für Hose (Abnahme `lauf6_messpunkte`).
@@ -27,6 +30,7 @@ export class Ai2d3dansicht extends Mesh3daiansicht {
         this.fotolicht.layers.enableAll();
         this.szene.add(this.fotolicht);
         this.licht(true);
+        this.zeilenart = null;          // Ansicht der Zeilenleiste (`Ai2d3dzeilenleiste`, 04.11.2026) — null: das Feld folgt allein seinem `modus`
     }
 
     /** Fotolicht (true) oder das Licht von Mesh3D-AI. */
@@ -36,10 +40,32 @@ export class Ai2d3dansicht extends Mesh3daiansicht {
         for (const l of this.modelllicht) l.visible = !foto;
     }
 
+    /**
+     * Sofort füllen, auch außerhalb des Bildes (04.11.2026, Edgar: „mach die Ergebnisse in ALLEN views sofort sichtbar, kein langes nachberechnen“): `Mesh3daiansicht` baut ein
+     * verdecktes Feld erst beim Hineinscrollen — bis dahin war seine Hülle leer, „Ergebnis“ maß „Keine sichtbare Genesis-Figur.“ (marta-wave: Zeile unter der PSHuman-Eingabe,
+     * im Chrome nachgestellt) und die Kameras fassten alle 250 ms nach. Gerendert wird weiter erst im Bild (`zeichnen`).
+     */
+    zeigen(d, leer = null) {
+        super.zeigen(d, leer);
+        this.jetztFuellen();
+    }
+
     zeichnen() {
         this.grund = Ai2d3dansicht.grund;
-        this.licht(!this.inhalt.userData.genesisErsatz);
+        // „Netz farbig“ mit dem Licht von Mesh3D-AI, damit die Form zu sehen ist (PSHuman beleuchtet es auch); Fotolicht nur für „Textur“
+        this.licht(!this.inhalt.userData.genesisErsatz && !Ai2d3dansichtsart.getauscht(this.ansichtsart));
         super.zeichnen();
+    }
+
+    /** Die Ansicht dieses Feldes: die seiner Zeilenleiste, ohne sie die der Leiste oben (nicht `art`: das ist bei `Mesh3daiansicht` 'eingabe' | 'ausgabe'). */
+    get ansichtsart() {
+        return this.zeilenart ?? Ai2d3dansicht.seitenart;
+    }
+
+    /** „Normale“ und „Netz farbig“: Materialien nur für diesen Durchgang getauscht (`Ai2d3dansichtsart.malen`). */
+    _malen(renderer) {
+        if (Ai2d3dansichtsart.getauscht(this.ansichtsart)) Ai2d3dansichtsart.malen(this, renderer, this.ansichtsart);
+        else super._malen(renderer);
     }
 
     _uebernehmen(von) {

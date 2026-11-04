@@ -51,15 +51,24 @@ export class Eigenkleidbruecke {
     static rechnen(position, koord, fall = Eigenkleidbruecke.FALL, saum = Infinity) {
         const t0 = performance.now();
         const n = koord.kette.length, dy = Eigenkleidbruecke.SCHEIBE_M, w = Eigenkleidbruecke.WINKEL;
+        // RUMPFRAHMEN (02.11.2026): Scheiben senkrecht zur Rumpfachse — ist die Haltung ins Netz gebacken und der Rumpf gebeugt (Birne kniend), schnitten waagrechte
+        // Scheiben den Rumpf längs, 119 cm² Stoff klappten um und der Shader verwarf sie (Löcher, `ProjektTemp/_wegwerf/tripo_wahrheit/wahrheit_pruefung.js`).
+        // Aufrecht (Achse < `AUFRECHT_GRAD` zur Senkrechten) bleibt alles wie bisher.
+        const rahmen = Eigenkleidbruecke.rumpfrahmen(position, koord);
+        // GEBEUGTE HÜFTE (02.11.2026, Birne kniend: Scheiben quer zum Rumpf schnitten die Oberschenkel längs, 112 cm² Hose klappten um): steht ein Oberschenkel mehr als
+        // `BEIN_GRAD` gegen die Rumpfachse, trägt und bekommt dieses Bein keine Brücke (sonst wie bisher: Beinpunkte über dem Schritt schließen den Ring am Gesäß).
+        const ohneBein = Eigenkleidbruecke.gebeugteBeine(position, koord, rahmen.oben);
+        if (rahmen.drehen) position = rahmen.drehen(position);
         let ymin = Infinity, ymax = -Infinity, m = 0, sh = 0, sy = 0, shh = 0, shy = 0;
+        const imBereich = (p, armanteil) => !ohneBein.has(koord.kette[p]) && Eigenkleidbruecke.imBereich(koord.kette[p], koord.hoehe[p], armanteil);
         for (let p = 0; p < n; p++) {
             const k = koord.kette[p], h = koord.hoehe[p], y = position[3 * p + 1];
             if (k === 1) { m++; sh += h; sy += y; shh += h * h; shy += h * y; }
-            if (Eigenkleidbruecke.imBereich(k, h)) { ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); }
+            if (imBereich(p)) { ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); }
         }
         const rumpfLaenge = m > 10 ? -(m * shy - sh * sy) / (m * shh - sh * sh) : null;
         const feld = new Float32Array(4 * n), feldB = new Float32Array(4 * n), feldC = new Float32Array(4 * n);
-        if (!Number.isFinite(ymin)) return { feld, feldB, feldC, rumpfLaenge, punkte: 0, ms: 0 };
+        if (!Number.isFinite(ymin)) return { feld, feldB, feldC, rumpfLaenge, oben: rahmen.oben, punkte: 0, ms: 0 };
         const s = Math.max(1, Math.ceil((ymax - ymin) / dy));
         // `glieder` bilden die Hülle (Stützen: ohne Schulterkappe, nur über dem Saum); `empfaenger` bekommen den Hub — ALLE Punkte des Bereichs. Bis 25.10.2026 23:55
         // waren beide dieselbe Menge: die Schulterkappe bekam 0 statt des ausgeblendeten Hubs (`_ort`), daneben voller Hub — Risse an der Achsel, Striche auf der
@@ -67,10 +76,10 @@ export class Eigenkleidbruecke {
         const glieder = Array.from({ length: s }, () => []), empfaenger = Array.from({ length: s }, () => []);
         const traegt = p => (koord.kette[p] === 1 ? koord.hoehe[p] <= saum + Eigenkleidbruecke.SAUM_RAND : saum >= 1);
         for (let p = 0; p < n; p++) {
-            if (!Eigenkleidbruecke.imBereich(koord.kette[p], koord.hoehe[p])) continue;
+            if (!imBereich(p)) continue;
             const i = Math.min(s - 1, Math.floor((position[3 * p + 1] - ymin) / dy));
             empfaenger[i].push(p);
-            if (Eigenkleidbruecke.imBereich(koord.kette[p], koord.hoehe[p], koord.anteil[p]) && traegt(p)) glieder[i].push(p);
+            if (imBereich(p, koord.anteil[p]) && traegt(p)) glieder[i].push(p);
         }
         const [cx, cz] = Eigenkleidbruecke._mitten(position, glieder);
         const huelle = new Float32Array(s * w), stuetze = new Float32Array(s * w), haut = new Float32Array(s * w);
@@ -86,6 +95,10 @@ export class Eigenkleidbruecke {
         const g = { huelle, stuetze, rund, zelt, rundFall, neigZ: Eigenkleidbruecke._neigung(zelt.e, s, w), neigR: Eigenkleidbruecke._neigung(rundFall.e, s, w) };
         let punkte = 0, maxH = 0, maxF = 0;
         const max = Eigenkleidbruecke.HUB_MAX_M;
+        // Stark gebeugter Rumpf (Birne kniend, 02.11.2026): auch im Rumpfrahmen klappten am Gesäß noch Dreiecke um (Loch am Rücken; ohne Brücke 0 Bildpunkte) — dort
+        // hängt Stoff ohnehin nach der Schwerkraft, nicht über Querschnitte. Die Brücke blendet über `GEBEUGT_AB`…`GEBEUGT_AUS` Grad Rumpfneigung aus.
+        const glatt = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+        const gebeugt = 1 - glatt(Eigenkleidbruecke.GEBEUGT_AB, Eigenkleidbruecke.GEBEUGT_AUS, rahmen.grad || 0);
         for (let i = 0; i < s; i++) {
             for (const p of empfaenger[i]) {
                 const lage =(position[3 * p + 1] - ymin) / dy - 0.5;
@@ -97,15 +110,84 @@ export class Eigenkleidbruecke {
                 const wert = v => (v[i0 * w + k0] * (1 - a) + v[i0 * w + k1] * a) * (1 - f) + (v[i1 * w + k0] * (1 - a) + v[i1 * w + k1] * a) * f;
                 const armanteil = koord.kette[p] === 1 ? koord.anteil[p] : -0.5;
                 const ort = Eigenkleidbruecke._ort(koord.hoehe[p], armanteil), ortV = Eigenkleidbruecke._ort(koord.hoehe[p], armanteil, true);
-                const hubH = ort * Math.min(max, Math.max(0, wert(huelle) - r)), hubF = Math.max(hubH, ortV * Math.min(max, Math.max(0, wert(g.zelt.e) - r)));
-                const rundH = ort * Math.min(max, Math.max(0, wert(rund) - r)), rundF = Math.max(rundH, ortV * Math.min(max, Math.max(0, wert(g.rundFall.e) - r)));
-                feld.set([dx / r, dz / r, hubH, hubF], 4 * p);
+                const hubH = gebeugt * ort * Math.min(max, Math.max(0, wert(huelle) - r)), hubF = Math.max(hubH, gebeugt * ortV * Math.min(max, Math.max(0, wert(g.zelt.e) - r)));
+                const rundH = gebeugt * ort * Math.min(max, Math.max(0, wert(rund) - r)), rundF = Math.max(rundH, gebeugt * ortV * Math.min(max, Math.max(0, wert(g.rundFall.e) - r)));
+                // Hubrichtung: im Rumpfrahmen waagrecht, zurück in den Objektraum gedreht (y in `feldC.z`, aufrecht 0)
+                const [rx, ry, rz] = rahmen.zurueck ? rahmen.zurueck(dx / r, dz / r) : [dx / r, 0, dz / r];
+                feld.set([rx, rz, hubH, hubF], 4 * p);
                 feldB.set([rundH, rundF, wert(stuetze), wert(g.zelt.weg)], 4 * p);
-                feldC.set([wert(g.neigZ), wert(g.neigR), 0, 0], 4 * p);
+                feldC.set([wert(g.neigZ), wert(g.neigR), ry, 0], 4 * p);
                 punkte++; maxH = Math.max(maxH, hubH); maxF = Math.max(maxF, hubF);
             }
         }
-        return { feld, feldB, feldC, rumpfLaenge, punkte, scheiben: s, maxHuelleM: maxH, maxFallM: maxF, ms: Math.round(performance.now() - t0) };
+        return { feld, feldB, feldC, rumpfLaenge, oben: rahmen.oben, punkte, scheiben: s, maxHuelleM: maxH, maxFallM: maxF, ms: Math.round(performance.now() - t0) };
+    }
+
+    static AUFRECHT_GRAD = 10;
+    static BEIN_GRAD = 35;
+    static GEBEUGT_AB = 30;
+    static GEBEUGT_AUS = 50;
+
+    /** Ketten der Beine (4, 5), deren Oberschenkel (Beinanteil < 0,45, Ausgleichsgerade der Lage über dem Anteil) mehr als `BEIN_GRAD` gegen „unten“ der Rumpfachse steht. */
+    static gebeugteBeine(position, koord, oben) {
+        const aus = new Set();
+        for (const kette of [4, 5]) {
+            let m = 0, st = 0, stt = 0;
+            const sp = [0, 0, 0], stp = [0, 0, 0];
+            for (let p = 0; p < koord.kette.length; p++) {
+                const t = koord.anteil[p];
+                if (koord.kette[p] !== kette || !(t >= 0 && t < 0.45)) continue;
+                m++; st += t; stt += t * t;
+                for (let a = 0; a < 3; a++) { sp[a] += position[3 * p + a]; stp[a] += t * position[3 * p + a]; }
+            }
+            const nenner = m * stt - st * st;
+            if (m < 10 || Math.abs(nenner) < 1e-9) continue;
+            const d = sp.map((s, a) => (m * stp[a] - st * s) / nenner), l = Math.hypot(...d);       // Steigung mit dem Anteil = zum Knie
+            if (l < 1e-6) continue;
+            const cos = -(d[0] * oben[0] + d[1] * oben[1] + d[2] * oben[2]) / l;
+            if (Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI > Eigenkleidbruecke.BEIN_GRAD) aus.add(kette);
+        }
+        return aus;
+    }
+
+    /**
+     * Rumpfachse aus den Rumpfpunkten (Kette 1): Ausgleichsgerade der Lage über der Rumpfhöhe (0 Halsansatz … 1 Schritt), „oben“ = gegen die Höhe. Unter
+     * `AUFRECHT_GRAD` zur Senkrechten → `{oben: [0, 1, 0]}` ohne Drehung (bitgleich wie vor dem 02.11.2026). Sonst `drehen(position)` → Lage im Rahmen (Achse → y)
+     * und `zurueck(x, z)` → Richtung im Objektraum.
+     */
+    static rumpfrahmen(position, koord) {
+        let m = 0, sh = 0, shh = 0;
+        const sp = [0, 0, 0], shp = [0, 0, 0];
+        for (let p = 0; p < koord.kette.length; p++) {
+            if (koord.kette[p] !== 1) continue;
+            const h = koord.hoehe[p];
+            m++; sh += h; shh += h * h;
+            for (let a = 0; a < 3; a++) { sp[a] += position[3 * p + a]; shp[a] += h * position[3 * p + a]; }
+        }
+        const nenner = m * shh - sh * sh;
+        if (m < 10 || Math.abs(nenner) < 1e-9) return { oben: [0, 1, 0] };
+        const d = sp.map((s, a) => -(m * shp[a] - sh * s) / nenner);            // Steigung gegen die Höhe = nach oben
+        const l = Math.hypot(...d);
+        if (l < 1e-6) return { oben: [0, 1, 0] };
+        const oben = d.map(v => v / l);
+        const grad = Math.acos(Math.max(-1, Math.min(1, oben[1]))) * 180 / Math.PI;
+        if (grad < Eigenkleidbruecke.AUFRECHT_GRAD) return { oben: [0, 1, 0], grad };
+        // Drehung oben → y (Rodrigues um oben × y = (−oz, 0, ox))
+        const kx = -oben[2], kz = oben[0], s = Math.hypot(kx, kz), c = oben[1];
+        const ax = kx / s, az = kz / s;
+        const dreh = (x, y, z, sinus) => {                                     // Drehung um (ax, 0, az) mit cos c, sin `sinus`
+            const kd = ax * x + az * z;
+            return [x * c + (-az * y) * sinus + ax * kd * (1 - c), y * c + (az * x - ax * z) * sinus, z * c + (ax * y) * sinus + az * kd * (1 - c)];
+        };
+        return {
+            oben, grad,
+            drehen: (pos) => {
+                const aus = new Float32Array(pos.length);
+                for (let i = 0; i < pos.length; i += 3) aus.set(dreh(pos[i], pos[i + 1], pos[i + 2], s), i);
+                return aus;
+            },
+            zurueck: (x, z) => dreh(x, 0, z, -s),
+        };
     }
 
     /**

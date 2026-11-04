@@ -15,9 +15,15 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET
 
+from ..dienste.ai2d3dform import Ai2d3dform
 from ..dienste.ai2d3djobs import Ai2d3djobs
+from ..dienste.ai2d3dnormalen import Ai2d3dnormalen
+from ..dienste.ai2d3dgeschlecht import Ai2d3dgeschlecht
+from ..dienste.ai2d3dpshuman import Ai2d3dpshuman
+from ..dienste.ai2d3dpshumaneingabe import Ai2d3dpshumaneingabe
 from ..dienste.ai2d3dseitendaten import Ai2d3dseitendaten
 from ..dienste.ai2d3dtabellen import Ai2d3dtabellen
+from ..dienste.ai2d3dtextur import Ai2d3dtextur
 from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
 
 __all__ = ['Ai2d3dendpunkte']
@@ -59,4 +65,19 @@ class Ai2d3dendpunkte:
     def _jobseite(request, job, test):
         daten = Ai2d3dseitendaten.fuer(job)
         return render(request, 'ai2d3d.html', {'job': job, 'daten': daten, 'netze': daten['netze'], 'ist_test': test,
-                                               'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
+                                               'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE,
+                                               'normalen_engines': Ai2d3dendpunkte._engines(),
+                                               'normalen_zusammen': Ai2d3dnormalen.ZUSAMMEN,
+                                               'textur_engines': Ai2d3dtextur.auswahl(),
+                                               'form_engines': Ai2d3dform.auswahl(),
+                                               'pshuman_wege': Ai2d3dpshuman.auswahl(),
+                                               'pshuman_anzahlen': Ai2d3dpshuman.ANZAHL,
+                                               'pshuman_dichten': Ai2d3dpshuman.DICHTEN,
+                                               'geschlechter': Ai2d3dgeschlecht.WAHL,
+                                               'pshuman_vorschlag': Ai2d3dpshumaneingabe.VORSCHLAG})
+
+    @staticmethod
+    def _engines():
+        """Combo-Box „Normalen“ (03.11.2026): Wert, Text, Beschreibung je Engine."""
+        b = Ai2d3dnormalen.BESCHREIBUNG
+        return [{'wert': w, 'text': t, 'beschreibung': b[w]} for w, t in Ai2d3dnormalen.ENGINES]

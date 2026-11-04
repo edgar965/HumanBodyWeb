@@ -6,6 +6,7 @@
  * Browser Breite und Höhe als Inline-Stil. Ein `ResizeObserver` schreibt jede
  * Änderung in den `localStorage` (`{b, h}` in Pixeln), beim nächsten Öffnen
  * gilt sie wieder. Unter 480 × 320 gilt der Merker als kaputt und wird ignoriert.
+ * Auch für ein Kästchen ohne `<dialog>` (Szenen-Dialog `.scene-modal`, Modell Check, 02.11.2026): gemerkt wird, solange es zu sehen ist (`offsetParent`).
  */
 export class Dialoggroesse {
 
@@ -23,7 +24,7 @@ export class Dialoggroesse {
         }
         if (typeof ResizeObserver === 'undefined') return;
         new ResizeObserver(() => {
-            if (!dialog.open) return;
+            if (!(dialog.open ?? dialog.offsetParent)) return;
             const b = Math.round(dialog.offsetWidth), h = Math.round(dialog.offsetHeight);
             if (b < min.b || h < min.h) return;
             try { localStorage.setItem(schluessel, JSON.stringify({ b, h })); } catch (e) { /* ohne Merker */ }

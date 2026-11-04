@@ -1,0 +1,8 @@
+{% comment %}04.11.2026, Edgar: „das ergebnis sollte doch auch ein Mesh sein, das ich im 3d View rotieren kann?“ — „pshuman als zusätzliches Feld / View“: PSHumans Endnetz
+(`pshuman_port14/lauf.py`, `result_clr_scale4_1.obj` mit Vertexfarben; job.json `netze` Art 'pshuman') als Feld 2 der Körperzeile („2. Zeile: Fotos, PSHuman, SMPLX
+(PSHUman)“). Gezeichnet von `Ai2d3dsmplx` (ai2d3dsmplx.js, Schlüssel 'pshuman'), dreht mit den übrigen Feldern. `feld`: Name für `data-feld`.{% endcomment %}
+<section class="card ai2d3d-bereich ai2d3d-pshumanbereich">
+    <h2><span class="ai2d3d-nummer">2</span> PSHuman-Netz</h2>
+    <div class="ai2d3d-leinwand" data-feld="{{ feld }}" data-pshuman></div>
+    {% if not daten.pshuman %}<p class="hb-hinweis">Für diesen Job noch kein PSHuman-Netz gerechnet.</p>{% endif %}
+</section>

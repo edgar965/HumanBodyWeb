@@ -1,0 +1,33 @@
+{# Szene → Werkzeuge → „Modell Check…“: Fehler der gewählten Genesis-9-Figur, rot markiert (charakter/modellcheck.js, gemeinsam/modellpruefung.js) #}
+<div class="scene-modal-overlay" id="modellcheck-dialog">
+    <div class="scene-modal modellcheck-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-stethoscope"></i> Modell Check <span class="modellcheck-figur" data-modellcheck="figur"></span></h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body modellcheck-koerper">
+            <div class="modellcheck-links">
+                <div class="modellcheck-stand" data-modellcheck="stand"></div>
+                <div class="modellcheck-liste" data-modellcheck="liste"></div>
+                <div class="modellcheck-befunde" data-modellcheck="befunde"></div>
+                <div class="modellcheck-erklaerung">Prüfbilder: Rot markiert ist Haut, wo Stoff sein muss (Löcher, Lücken, Bein durch den Rock, die Scham nur unter Stoff),
+                    Fußhaut unter dem Schuh. Bilder ohne Licht aus neun Richtungen und von unten auf die Füße.</div>
+                <div class="modellcheck-bilder" data-modellcheck="bilder"></div>
+            </div>
+            <div class="modellcheck-raum" data-modellcheck="raum">
+                <div class="modellcheck-schalter">
+                    <button type="button" data-schalter="textur" aria-pressed="false">Textur</button>
+                    <button type="button" data-schalter="kleider" aria-pressed="true">Kleider</button>
+                    <button type="button" data-schalter="draht" aria-pressed="false">Drahtmodell</button>
+                    <button type="button" data-schalter="mesh" aria-pressed="true">Mesh</button>
+                    <span class="modellcheck-hinweis">Rot: durchgefallene Befunde, beim Überfahren einer Tabellenzeile nur dieser · Ziehen dreht, Rad zoomt, rechte Taste verschiebt</span>
+                </div>
+                <div class="modellcheck-leinwand" data-modellcheck="leinwand"></div>
+            </div>
+        </div>
+        <div class="scene-modal-footer">
+            <span class="modellcheck-groessehinweis">Größe: an der Ecke unten rechts ziehen</span>
+            <button data-close>Schließen</button>
+        </div>
+    </div>
+</div>

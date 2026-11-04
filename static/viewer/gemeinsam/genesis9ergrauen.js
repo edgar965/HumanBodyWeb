@@ -11,8 +11,10 @@ import { Shaderpatch } from './shaderpatch.js';
  * - STRÄHNEN (`Genesis9strang`: Linien mit Punktfarben, `material.vertexColors`): die Punktfarben werden aus den gemerkten Originalen neu gerechnet. Die Strähnen sind die
  *   Zusammenhangskomponenten der Segmente (`[a, b, b]`); der Rang eines Punkts entlang der Strähne ist seine Reihenfolge nach Punktnummer (Wurzel zuerst — so schreibt
  *   `Genesis9/strang.py` sie; nicht an einer Frisur mit anderer Reihenfolge geprüft).
- * - KARTEN (Haarkarten mit Textur oder Alphakarte): ein Shaderzusatz mischt die Farbe zu Grau; eine Zufallszahl je Zelle der Kartenkoordinate (70 × 70 je UV) entscheidet,
- *   welche Stellen grau sind — die Karten haben keine Strähnennummer, also Flecken statt ganzer Strähnen. Ganz ohne Kartenkoordinate wird die Farbe um `anteil · 0,7` zu Grau gemischt.
+ * - KARTEN (Haarkarten mit Textur oder Alphakarte): ein Shaderzusatz mischt die Farbe zu Grau; eine Zufallszahl je Zelle der Kartenkoordinate entscheidet, welche Stellen
+ *   grau sind — die Karten haben keine Strähnennummer. Zellen schmal quer und lang entlang der Karte (512 × 6 je UV, die Längsgrenzen je Streifen versetzt): graue Streifen wie Strähnen. Bis 02.11.2026
+ *   abends 70 × 70 — quadratische graue Blöcke im Haar (Amala 61 J. mit charm_hair, Birne 47 J. mit sallymae_hair im Tripo-Datensatz). Angenommen: die Strähnen laufen
+ *   entlang v (so in den Bildern von Charm Hair, `ValCharmH_T03.jpg`); nicht an jeder Frisur geprüft. Ganz ohne Kartenkoordinate wird die Farbe um `anteil · 0,7` zu Grau gemischt.
  *
  * Grau ist `luma · 0,3 + 0,5` (linear): dunkles Haar wird Silber, helles bleibt hell. Gesetzt, nach Augenmaß.
  */
@@ -114,7 +116,9 @@ export class Genesis9ergrauen {
     #else
     vec2 egUv = vAlphaMapUv;
     #endif
-    float egZ = fract( sin( dot( floor( egUv * 70.0 ), vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
+    float egS = floor( egUv.x * 512.0 );                                                     // Streifen quer; längs je Streifen versetzt, sonst Stufen quer übers Haar
+    vec2 egC = vec2( egS, floor( egUv.y * 6.0 + fract( sin( egS * 7.13 ) * 43758.5453 ) ) );
+    float egZ = fract( sin( dot( egC, vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
     egG = smoothstep( egZ, egZ + 0.04, uErgrauen );
 #endif
     float egL = dot( diffuseColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );

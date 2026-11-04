@@ -15,17 +15,22 @@ export class Eigenrockhuelle {
     static KETTEN = new Set([1, 4, 5]);
     static SCHEIBE_M = 0.01;
     static WINKEL = 128;
+    /** Weiter als so (m) von seinem Hautpunkt zählt ein Punkt der Unterlage nicht — Schutz gegen eine Unterlage aus einer anderen Lage. */
+    static UNTER_WEG_M = 0.1;
 
     /**
      * @param pos    Float32Array (n·3) Hautpunkte in Ruhe (Bindlage des Körpers)
      * @param koord  Float32Array (n·4) Körperkoordinaten (Kette, Anteil, Höhe, Winkel)
      * @param oben   Höhe (m) der obersten Scheibe;  unten: der untersten
      * @param mitte  [x, z] der Achse
+     * @param unter  `{pos, stoff, ab}` oder null — ein Stück darunter (Oberteil unter dem Rock, `Eigenkleidbacken.unterlage`): seine verschobenen Punkte mit Stoff
+     *               (stoff ≥ 0) ab Höhe `ab` gehen mit in die Hülle, der Rock liegt außen darüber (02.11.2026 abends, Laura/Ostasiatin: Shirt stach durch den Bund)
      */
-    constructor(pos, koord, oben, unten, mitte) {
+    constructor(pos, koord, oben, unten, mitte, unter = null) {
         const S = Eigenrockhuelle.SCHEIBE_M, W = Eigenrockhuelle.WINKEL;
         this.oben = oben;
         this.mitte = mitte;
+        this.unter = unter;
         /** Abstand (m), um den `hinaus` über der Hülle hält — der Sitz des Rocks. */
         this.zugabe = 0;
         this.n = Math.max(2, Math.ceil((oben - unten) / S) + 1);
@@ -36,6 +41,11 @@ export class Eigenrockhuelle {
             if (!Eigenrockhuelle.KETTEN.has(Math.round(koord[4 * i]))) continue;
             const s = Math.floor((oben - pos[3 * i + 1]) / S);
             for (const t of [s, s + 1]) if (t >= 0 && t < this.n) scheiben[t].push(i);
+            const up = unter?.pos, weg = up ? Math.hypot(up[3 * i] - pos[3 * i], up[3 * i + 1] - pos[3 * i + 1], up[3 * i + 2] - pos[3 * i + 2]) : 0;
+            if (unter && unter.stoff[i] >= 0 && up[3 * i + 1] >= unter.ab && weg <= Eigenrockhuelle.UNTER_WEG_M) {     // Punkt des Stücks darunter: Index −1 − i
+                const su = Math.floor((oben - unter.pos[3 * i + 1]) / S);
+                for (const t of [su, su + 1]) if (t >= 0 && t < this.n) scheiben[t].push(-1 - i);
+            }
         }
         for (let s = 0; s < this.n; s++) this._scheibe(s, scheiben[s], pos);
         for (let s = 1; s < this.n; s++) {
@@ -48,12 +58,13 @@ export class Eigenrockhuelle {
     _scheibe(s, punkte, pos) {
         const W = Eigenrockhuelle.WINKEL, [cx, cz] = this.mitte;
         if (punkte.length < 3) return;
-        const xz = punkte.map(i => [pos[3 * i] - cx, pos[3 * i + 2] - cz]);
+        const u = this.unter?.pos;
+        const xz = punkte.map(i => (i >= 0 ? [pos[3 * i] - cx, pos[3 * i + 2] - cz] : [u[3 * (-1 - i)] - cx, u[3 * (-1 - i) + 2] - cz]));
         const weit = new Float32Array(W);
         for (let k = 0; k < punkte.length; k++) {
             const [x, z] = xz[k], r = Math.hypot(x, z);
             const w = Eigenrockhuelle.fach(Math.atan2(x, z) / (2 * Math.PI));
-            if (r > weit[w]) { weit[w] = r; this.stuetze[s * W + w] = punkte[k]; }
+            if (r > weit[w]) { weit[w] = r; this.stuetze[s * W + w] = punkte[k] >= 0 ? punkte[k] : -1 - punkte[k]; }     // Gewichte des Hautpunkts darunter
         }
         const h = Querschnitthuelle.huelle(xz);
         if (h.length < 3) return;

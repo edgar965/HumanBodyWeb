@@ -80,6 +80,7 @@ class Exportleisterender:
                 aus.update(json.loads(pfad.read_text(encoding='utf-8')))
         except (OSError, ValueError) as fehler:
             logger.info('Exportleiste %s: render/zustand.json nicht lesbar (%s)', self.job.kennung, fehler)
+        aus.setdefault('quelle', 'rendern')          # Zustände vor dem 01.11.2026 ohne `quelle` stammen aus dem Block „Rendern“
         aus['laeufe'] = Engine2d3dKleiderrenderlaeufe(self).neueste()
         if aus.get('status') == 'laeuft' and not self.laeuft():
             aus.update(status='fehler', fehler=aus.get('fehler') or 'Der Render-Prozess ist abgebrochen (siehe %s)' % self.ablage.log())
@@ -126,6 +127,8 @@ class Exportleisterender:
                 'name': str(angaben.get('name') or self.job.name())[:120], 'anmerkung': str(angaben.get('anmerkung') or '').strip()[:600],
                 'datei': str(angaben.get('datei') or '').strip()[:120],          # Dateiname des Videos ohne Endung (leer: `<name>_render`)
                 'bvh': str(bvh), 'bvh_sekunden': ganz, 'stellung': angaben.get('stellung') or {},
+                # welcher Knopf startete (01.11.2026, Edgar: „warum sind zwei Sanduhren am laufen? ich habe nur den Render button geklickt“) — die Sanduhr nur dort
+                'quelle': 'mp4' if angaben.get('quelle') == 'mp4' else 'rendern',
                 'ordner': str(Modellexportziel.pruefen(angaben.get('ordner') or str(self.job.exportordner())))}
 
     def _laeuft_schon(self):
@@ -204,7 +207,7 @@ class Exportleisterender:
         from .auftragsarbeiter import Auftragsarbeiter
         self._datei('auftrag.json').write_text(json.dumps(auftrag, ensure_ascii=False, indent=1), encoding='utf-8')
         self.melden(status='laeuft', schritt='Startet …', fortschritt=0.0, ausgabe=None, fehler=None, bilder=int(round(auftrag['sekunden'] * self.FPS)),
-                    sekunden=auftrag['sekunden'], neu_nr=auftrag.get('neu_nr'), wartend=wartend, start=time.time())
+                    sekunden=auftrag['sekunden'], neu_nr=auftrag.get('neu_nr'), wartend=wartend, start=time.time(), quelle=auftrag.get('quelle', 'rendern'))
         befehl = [sys.executable, str(Path(settings.BASE_DIR) / 'manage.py'), self.BEFEHL, self.job.BEREICH, self.job.kennung]
         with open(self.ablage.log(), 'ab') as protokoll:
             prozess = Auftragsarbeiter._popen(befehl, protokoll)

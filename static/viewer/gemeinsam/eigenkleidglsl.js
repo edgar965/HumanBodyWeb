@@ -18,14 +18,17 @@ import { EigenkleidschnittGLSL } from './eigenkleidschnitt.js';
  * Glättung; die Hose nimmt keinen Fall. Der Punkt wandert um den Hub waagrecht nach außen und entlang der Ruhenormale um max(Sitz − Hub, Abstand) — über der Brücke
  * liegt der Stoff also um „Abstand“ darüber, sonst im Sitz; nie unter 1 mm.
  * Beides VOR dem Skinning, mit der Ruhenormale (`objectNormal` nach `morphnormal_vertex`, bevor `skinnormal_vertex` sie dreht) — die Schale folgt jeder Haltung.
+ * RUMPFRAHMEN (02.11.2026, `Eigenkleidbruecke.rumpfrahmen`): Ist eine Pose ins Netz gebacken und der Rumpf gebeugt, rechnet die Brücke senkrecht zur Rumpfachse;
+ * „oben“ ist dann `uKkOben` (sonst (0, 1, 0)) und die Hubrichtung hat einen y-Anteil (`kkBrueckeC.z`, aufrecht 0) — aufrecht bitgleich wie vorher.
  */
 export class EigenkleidGLSL {
 
-    static SCHLUESSEL = 'eigenkleid-k3-7';
+    static SCHLUESSEL = 'eigenkleid-k3-11';
 
     /** Uniforms, die nach K2a dazukamen — `patchen` setzt sie, wenn der Rufer sie nicht mitbringt (ein älterer Rufer bekommt so dasselbe Bild wie vorher). */
     static VORGABEN() {
-        return { uKkRelief: { value: 1 }, uKkAermelform: { value: [0, 0, 0, 0] } };
+        return { uKkRelief: { value: 1 }, uKkAermelform: { value: [0, 0, 0, 0] }, uKkSchulterL: { value: [0, 0, 0, 0] }, uKkSchulterR: { value: [0, 0, 0, 0] },
+            uKkAchseL: { value: [0, -1, 0] }, uKkAchseR: { value: [0, -1, 0] }, uKkOben: { value: [0, 1, 0] }, uKkRockBund: { value: -1000 } };
     }
 
     static VERTEX_KOPF = `
@@ -39,6 +42,7 @@ uniform vec4 uKkAermelform;
 uniform vec4 uKkBand;
 uniform vec4 uKkBruecke;
 uniform vec2 uKkLage;
+uniform vec3 uKkOben;
 attribute vec4 kkBruecke;
 attribute vec4 kkBrueckeB;
 attribute vec4 kkBrueckeC;
@@ -55,7 +59,7 @@ varying float vKkAnsatz;
    Nach unten zeigende Flächen (unter der Brust, unter dem Gesäß) behalten sie — dort hängt der Stoff. */
 vec2 kkHub( vec3 n ) {
     float a = max( uKkBruecke.y, 0.001 );
-    float seitlich = 1.0 - smoothstep( 0.35, 0.65, n.y / max( length( n ), 1e-6 ) );    // nur nach OBEN zeigende Flächen; unter der Brust (nach unten) bleibt sie
+    float seitlich = 1.0 - smoothstep( 0.35, 0.65, dot( n, uKkOben ) / max( length( n ), 1e-6 ) );    // nur nach OBEN zeigende Flächen; unter der Brust (nach unten) bleibt sie
     float wH = 1.0 - smoothstep( 0.3 * a, a, kkBrueckeB.z );
     float wF = 1.0 - smoothstep( 0.3 * a, a, kkBrueckeB.w );
     float oben = uKkArt < 1.5 ? 1.0 : 0.0;
@@ -81,15 +85,15 @@ if ( dot( kkNormal, kkNormal ) > 0.25 ) objectNormal = kkNormal;      // an UV-N
 vec3 kkNormale = objectNormal;
 {
     vec2 kkHubN = kkHub( objectNormal );
-    vec3 kkDirN = vec3( kkBruecke.x, 0.0, kkBruecke.y );
+    vec3 kkDirN = vec3( kkBruecke.x, kkBrueckeC.z, kkBruecke.y );
     // Neigung dr/dy der Stofffläche (Zelt/rund) nur, wo der senkrechte Teil (Zelt, Fall) trägt; die waagrechte Hülle allein bleibt waagrecht wie bis K3
     float kkSenk = smoothstep( 0.0, 0.002, kkHubN.y );
-    vec3 kkNb = normalize( kkDirN - vec3( 0.0, mix( kkBrueckeC.x, kkBrueckeC.y, uKkBruecke.z ) * kkSenk, 0.0 ) );
+    vec3 kkNb = normalize( kkDirN - uKkOben * ( mix( kkBrueckeC.x, kkBrueckeC.y, uKkBruecke.z ) * kkSenk ) );
     // ganz die Normale der Stofffläche: im senkrechten Teil ab 2 mm (darunter zeichnete die Hautnormale die Brustunterseite ins Licht), sonst wie bis K3 ab 25 mm —
     // 25.10.2026 nachts einmal überall 1 mm: dunkle Streifen auf Schulter und Kragen (Edgar, mit Bild)
     // nach UNTEN gewandte Haut (Brustunterseite, unter dem Gesäß) ebenfalls ab 2 mm — dort trägt oft die waagrechte Hülle, und die Hautnormale zeichnete die
     // Unterkante der Brust (T-Shirt, im Chrome gesehen 26.10.2026 0:35); die Schulteroberseite zeigt nach oben und bleibt bei 25 mm
-    float kkUnten = ( 1.0 - smoothstep( -0.5, -0.15, objectNormal.y / max( length( objectNormal ), 1e-6 ) ) ) * smoothstep( 0.0, 0.002, kkHubN.x );
+    float kkUnten = ( 1.0 - smoothstep( -0.5, -0.15, dot( objectNormal, uKkOben ) / max( length( objectNormal ), 1e-6 ) ) ) * smoothstep( 0.0, 0.002, kkHubN.x );
     float kkGanz = max( max( smoothstep( 0.0, 0.025, kkHubN.x ), kkSenk ), kkUnten );
     if ( dot( kkDirN, kkDirN ) > 0.5 ) objectNormal = normalize( mix( objectNormal, kkNb, kkGanz ) );
 }
@@ -104,6 +108,11 @@ vec3 kkNormale = objectNormal;
     float kkVorn = cos( 6.2831853 * kkKoord.w );
     vec4 kkK = vec4( abs( kkKette - 1.0 ) < 0.5 ? 1.0 : 0.0, kkKette > 1.5 && kkKette < 3.5 ? 1.0 : 0.0,
                      kkKette > 3.5 && kkKette < 5.5 ? 1.0 : 0.0, kkKette > 5.5 && kkKette < 7.5 ? 1.0 : 0.0 );    // w: Hals UND Kopf (vorn führt der Kopf den Hals)
+    // Hände (Ketten 8, 9) beim Oberteil, Füße (10, 11) bei der Hose: Glied mit Anteil hinter dem Saum, wie die Füße der Socken (02.11.2026 abends, Amala Langarm) —
+    // mit Kette „keine“ und Anteil −0,5 lief der Anteil über die Dreiecke an der Grenze Arm/Hand von 1 auf −0,5, und wo das Armmerkmal noch ≥ 0,5 war, lag er
+    // unter dem Ärmelsaum: ein dünner Stoffring auf der Hand (Modell Check „Stoff auf den Händen“ 639/353 px). Erst ab Ärmel > 0,25 sichtbar, darum nur bei Langarm.
+    if ( uKkArt < 1.5 && kkKette > 7.5 && kkKette < 9.5 ) { kkK.y = 1.0; kkT = 1.05; }
+    if ( uKkArt > 1.5 && uKkArt < 2.5 && kkKette > 9.5 && kkKette < 11.5 ) { kkK.z = 1.0; kkT = 1.05; }
     float kkSitz;
     if ( uKkArt < 1.5 ) {
         float kkRs = kkH < 0.5 ? mix( uKkSitz.x, uKkSitz.y, smoothstep( 0.1, 0.5, kkH ) ) : mix( uKkSitz.y, uKkSitz.z, smoothstep( 0.5, 0.95, kkH ) );
@@ -125,7 +134,7 @@ vec3 kkNormale = objectNormal;
     }
     if ( uKkLage.x > 0.0 && kkH >= uKkLage.y && kkK.y < 0.5 ) kkSitz = max( kkSitz, uKkLage.x );     // Oberteil über der Hose: nie unter ihr
     vec3 kkN = normalize( kkNormale );
-    vec3 kkRichtung = vec3( kkBruecke.x, 0.0, kkBruecke.y );
+    vec3 kkRichtung = vec3( kkBruecke.x, kkBrueckeC.z, kkBruecke.y );
     vec2 kkHubV = kkHub( kkNormale );
     float kkHub = kkHubV.x;
     vKkKoord = vec4( kkH, kkT, position.x, kkVorn );
@@ -133,7 +142,7 @@ vec3 kkNormale = objectNormal;
     vKkFall = vec4( kkHubV.y, kkBruecke.x, kkBruecke.y, position.y );     // Faltenkoordinate: y der Ruhelage — stetig über alle Kettengrenzen
     vKkLage = position;
     vKkHub = kkHub;
-    vKkOben = kkN.y;
+    vKkOben = dot( kkN, uKkOben );
     vKkAnsatz = kkAnsatz;            // Höhe des Halsansatzes (Koerperkoordinatenpunkte.ansatz); fehlt das Attribut, liefert WebGL 0 = wie bis K2a
     float kkUeber = uKkBruecke.x * smoothstep( 0.0, 0.003, kkHub );
     transformed += kkRichtung * kkHub + kkN * max( max( kkSitz - kkHub * max( dot( kkN, kkRichtung ), 0.0 ), kkUeber ), 0.001 );

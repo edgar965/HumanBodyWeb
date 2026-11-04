@@ -15,9 +15,11 @@ import { Ai2d3dtestfigur } from './ai2d3dtestfigur.js';
 export class Ai2d3dexportfigur {
 
     /** @param adresse `/api/2d3dai/<job>/figur/` (`daten.test.adresse` der Seite) @param feld das Feld „Genesis-Modell“ (`Ai2d3dseite.genesisfeld`) — dann spielt die Abspielleiste
-     *  darin dieselbe Figur, die exportiert wird (`Ai2d3dbewegung`, 31.10.2026); ohne Feld nur für den Export */
-    constructor(adresse, feld = null) {
+     *  darin dieselbe Figur, die exportiert wird (`Ai2d3dbewegung`, 31.10.2026); ohne Feld nur für den Export
+     *  @param nackt ohne Stücke und ohne die Haut der KI (04.11.2026, Feld 1 der dritten Zeile: die Einpassung des Mesh3D-AI-Tests, `Ai2d3dgenesiszeile`) */
+    constructor(adresse, feld = null, { nackt = false } = {}) {
         this.adresse = adresse;
+        this.nackt = nackt;
         const ohneFeld = { neuZeigen() {}, zeichnen() {} };
         this.bewegung = new Mesh3daifigurbewegung(feld ?? ohneFeld, () => this._quelle());
         this.export = new Mesh3daiexportquelle(() => this.bewegung);
@@ -50,6 +52,10 @@ export class Ai2d3dexportfigur {
         if (!antwort.ok) throw new Error(d.error || `HTTP ${antwort.status}`);
         if (!d.figur_genesis) return null;
         const g = d.info.geschlecht;
+        if (this.nackt) {
+            const { fototextur: _haut, ...figur } = d.figur_genesis;
+            return { schluessel: `${this.adresse}|${g}|nackt`, figur, stuecke: [], knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren, ohneKnochen: [] };
+        }
         const liste = await fetch(`${this.adresse}kleider/${g}/`).then(a => (a.ok ? a.json() : null)).catch(() => null);
         this._liste = liste;
         const stuecke = [];

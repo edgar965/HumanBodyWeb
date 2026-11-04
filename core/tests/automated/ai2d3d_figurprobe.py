@@ -96,8 +96,20 @@ class Ai2d3dfigurprobe:
                'Left_Upper_Arm', 'Left_Upper_Leg', 'Lower_Clothing', 'Right_Foot', 'Right_Hand', 'Right_Lower_Arm', 'Right_Lower_Leg', 'Right_Shoe', 'Right_Sock',
                'Right_Upper_Arm', 'Right_Upper_Leg', 'Torso', 'Upper_Clothing', 'Lower_Lip', 'Upper_Lip', 'Lower_Teeth', 'Upper_Teeth', 'Tongue')
 
+    def arbeitsordner(self):
+        """Arbeitsordner der Kette wie `KoerperKI_Fotos.Fotojob` (ohne `arbeitsordner` in der job.json: `Fotojob.ARBEIT/<Job>`, so bei Probejobs — bis 02.11.2026 suchte die
+        Probe dort `segmente` im Arbeitsverzeichnis, fand keine Masken und die Tests maßen nichts)."""
+        if self.job.get('arbeitsordner'):
+            return Path(self.job['arbeitsordner'])
+        import sys
+        wurzel = str(self.ordner.parents[2])                       # <TOOLS>/3DObjects/ai2d3d/<Job>
+        if wurzel not in sys.path:
+            sys.path.append(wurzel)
+        from KoerperKI_Fotos.fotojob import Fotojob
+        return Fotojob.ARBEIT / self.ordner.name
+
     def _ablage(self, datei):
-        ablage = Path(self.job.get('arbeitsordner', '')) / 'segmente'
+        ablage = self.arbeitsordner() / 'segmente'
         alle = sorted(ablage.glob('%s_*.npz' % Path(datei).stem), key=lambda p: p.stat().st_mtime) if ablage.is_dir() else []
         return alle[-1] if alle else None
 

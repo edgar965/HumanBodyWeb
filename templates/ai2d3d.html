@@ -34,10 +34,21 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 
 <div class="ai2d3d-oben" id="ai2d3d-oben">
 <div class="card ai2d3d-band" role="note">
-    {% if job.wahrheit %}<strong><i class="fas fa-check-circle"></i> Export mit Wahrheit.</strong> Die Fotos sind aus der Genesis-Figur {{ job.figur }} gerendert (Charakter-Seite → Exportieren).
-    {% else %}<strong><i class="fas fa-camera"></i> Echte Fotos.</strong> {{ job.hinweis }}{% endif %}
+    {% if job.wahrheit %}<strong><i class="fas fa-check-circle"></i> Export mit Wahrheit.</strong> Die Fotos sind aus der Genesis-Figur {{ job.figur }} gerendert (Charakter-Seite → Exportieren).{% endif %}
     {% if job.paar %} Genesis-Modell heute: Messlatte A — <a href="/mesh-3D-AI/{{ job.paar.kennung }}/">Mesh3D-AI · {{ job.paar.name }}</a> (Tripo-Netz → KI).{% endif %}
-    {% if job.test %} Messlatte A steht auf der <a href="/mesh-3D-AI/test/{{ job.test }}/">Mesh3D-AI-Testseite {{ job.test }}</a>.{% endif %}
+    {% if job.wahrheit and job.test %} Messlatte A steht auf der <a href="/mesh-3D-AI/test/{{ job.test }}/">Mesh3D-AI-Testseite {{ job.test }}</a>.{% endif %}
+    {% comment %} 04.11.2026, Edgar: „mach den text weg … Stattdessen: Auswahl anzahl der fotos (1-6), wenn mehrere fotos dann Hochladen funktion bei den Ansichten. Auswahl ob Genesis Männlich, weiblich oder Kind“ — `Ai2d3djobwahl`, zu „Kind“ siehe `Ai2d3dgeschlecht`. {% endcomment %}
+    {% if ist_test %}<form class="ai2d3d-groesse" id="ai2d3d-jobwahl" data-job="{{ job.id }}">
+        <label for="ai2d3d-anzahl" title="Wie viele echte Fotos in PSHuman eingehen. Bei 1 erfindet PSHuman die übrigen fünf Ansichten, ab 2 lädst du die Fotos an den Ansichten unten hoch."><i class="fas fa-images"></i> Fotos</label>
+        <select id="ai2d3d-anzahl" name="anzahl" data-reihenfolge="fest">{% for n in pshuman_anzahlen %}<option value="{{ n }}"{% if n == job.pshuman.anzahl %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+        <label for="ai2d3d-geschlecht" title="Grundfigur, mit der die Genesis-Figur gerechnet wird."><i class="fas fa-user"></i> Genesis</label>
+        <select id="ai2d3d-geschlecht" name="geschlecht" data-reihenfolge="fest">{% if not job.geschlecht %}<option value="" selected disabled>wählen</option>{% endif %}{% for w, t in geschlechter %}<option value="{{ w }}"{% if w == job.geschlecht %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <label for="ai2d3d-dichte" title="Punkte des PSHuman-Netzes: normal 480 je Körperhöhe, dicht 960 (viermal so viele Punkte, schärfer bis zur Grenze der 768er-Ansichten)."><i class="fas fa-border-all"></i> Netz</label>
+        <select id="ai2d3d-dichte" name="dichte" data-reihenfolge="fest">{% for w, t in pshuman_dichten %}<option value="{{ w }}"{% if w == job.pshuman.dichte %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <label title="{{ pshuman_wege.5.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.5.text }}</label>
+        <label title="{{ pshuman_wege.4.beschreibung }}"><input type="checkbox" name="genesis_aus_foto"{% if job.pshuman.genesis_aus_foto %} checked{% endif %}> {{ pshuman_wege.4.text }}</label>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
     <a href="{% url 'ai2d3d' %}" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
     {% comment %} 24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“ — echte Fotos haben keinen Maßstab (dritter Einpass-Lauf: Figur 1,710 → 1,435 m). `Ai2d3dkoerpergroesse`. {% endcomment %}
     {% if ist_test %}<form class="ai2d3d-groesse" id="ai2d3d-groesse" data-job="{{ job.id }}"
@@ -48,19 +59,67 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
         <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
         <span class="hb-hinweis" data-meldung></span>
     </form>{% endif %}
+    {% comment %} 03.11.2026, Edgar: „bei den jobs möchte ich eine Combo box haben, wo ich die engine auswählen kann. Default: Econ“, „aus einem Foto (per UI wählbar) oder aus mehreren“
+    — `Ai2d3dnormalen`, job.json `normalen`, gelesen von `KoerperKI_Fotos.normalenwahl` im nächsten Lauf. {% endcomment %}
+    {% if ist_test %}<form class="ai2d3d-groesse ai2d3d-normalen" id="ai2d3d-normalen" data-job="{{ job.id }}"
+          title="Woher die Figur das Relief aus den Normalen der Fotos bekommt — gilt ab dem nächsten Lauf der Körperstufe.">
+        <label for="ai2d3d-normalen-engine"><i class="fas fa-compass"></i> Normalen</label>
+        <select id="ai2d3d-normalen-engine" name="engine" data-reihenfolge="fest">{% for q in normalen_engines %}<option value="{{ q.wert }}" title="{{ q.beschreibung }}"{% if q.wert == job.normalen.engine %} selected{% endif %}>{{ q.text }}</option>{% endfor %}</select>
+        <select name="foto" title="Aus einem Foto oder aus allen" data-reihenfolge="fest">
+            <option value="">aus allen Fotos</option>{% for f in job.fotos %}<option value="{{ f.original.name }}"{% if f.original.name == job.normalen.foto %} selected{% endif %}>nur aus {{ f.original.name }}</option>{% endfor %}
+        </select>
+        <select name="zusammen" data-reihenfolge="fest" title="Nur ECON: wie die d-BiNI-Flächen auf die Genesis-Figur kommen">{% for w, t in normalen_zusammen %}<option value="{{ w }}"{% if w == job.normalen.zusammen %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
+    {# 03.11.2026, Edgar: „mach die textur umschaltbar, über zusatzprojekte“ — `Ai2d3dtextur`, job.json `textur`, gelesen von `KoerperKI_Fotos.texturwahl` im nächsten Lauf. #}
+    {% if ist_test %}<form class="ai2d3d-groesse ai2d3d-textur" id="ai2d3d-textur" data-job="{{ job.id }}" title="Woher die Haut der Figur ihre Farben bekommt — gilt ab dem nächsten Lauf der Körperstufe.">
+        <label for="ai2d3d-textur-engine"><i class="fas fa-palette"></i> Textur</label>
+        <select id="ai2d3d-textur-engine" name="engine" data-reihenfolge="fest">{% for q in textur_engines %}<option value="{{ q.wert }}" title="{{ q.beschreibung }}"{% if q.wert == job.textur.engine %} selected{% endif %}>{{ q.text }}</option>{% endfor %}</select>
+        <label title="Eigene Zutat (Regel aus videoavatars): ein Foto färbt nur Dreiecke, deren Ecken in seiner Personenmaske liegen — nur für die Auswahl-Engine."><input type="checkbox" name="personenmaske"{% if job.textur.optionen.personenmaske %} checked{% endif %}> Personenmaske</label>
+        <label title="Eigene Zutat (Regel von Hautteile, semantischer Term wie Alldieck 2018): ein Foto färbt ein Dreieck nur, wenn an allen drei Ecken eine Sapiens-Klasse seines Körperteils liegt (Auswahl-Engine je Dreieck, TRELLIS je Pixel)."><input type="checkbox" name="teilmaske"{% if job.textur.optionen.teilmaske %} checked{% endif %}> Teilmaske</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>
+    {# 03.11.2026, Edgar: „mach zuerst das was die anderen machen“, „deine eigenen Zutaten optional, per Checkbox“ — `Ai2d3dform`, job.json `form`, gelesen von `Fotokonsens.wahl`. #}
+    <form class="ai2d3d-groesse ai2d3d-textur" id="ai2d3d-form" data-job="{{ job.id }}" title="Wie die Figur an die Umrisse der Fotos angepasst wird — gilt ab dem nächsten Lauf der Körperstufe.">
+        <label for="ai2d3d-form-engine"><i class="fas fa-user"></i> Form</label>
+        <select id="ai2d3d-form-engine" name="engine" data-reihenfolge="fest">{% for q in form_engines %}<option value="{{ q.wert }}" title="{{ q.beschreibung }}"{% if q.wert == job.form.engine %} selected{% endif %}>{{ q.text }}</option>{% endfor %}</select>
+        <label title="Eigene Zutat: videoavatars stimmt seine Strafen auf 120 Bilder ab, hier sind es wenige Fotos — der Silhouettenterm zählt 120 / Zahl der Fotos."><input type="checkbox" name="bilder"{% if job.form.bilder %} checked{% endif %}> Bildzahl-Ausgleich</label>
+        <label title="SMPLify-X: die Finger je Foto an die Handpunkte von ViTPose (nur mit videoavatars)."><input type="checkbox" name="finger"{% if job.form.finger %} checked{% endif %}> Finger</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>
+    {# 03.11.2026, Edgar: „pshuman als Option bei den jobs“, „mach beides, selektierbar“ — `Ai2d3dpshuman`, job.json `pshuman`. #}
+    <form class="ai2d3d-groesse ai2d3d-textur" id="ai2d3d-pshuman" data-job="{{ job.id }}" title="Ob und wie PSHuman (Netz aus dem Vorderfoto) die Genesis-Figur mitbestimmt — gilt ab dem nächsten Lauf.">
+        <span><i class="fas fa-cube"></i> PSHuman</span>
+        <label title="{{ pshuman_wege.0.beschreibung }}"><input type="checkbox" name="zeile1"{% if job.pshuman.zeile1 %} checked{% endif %}> {{ pshuman_wege.0.text }}</label>
+        <label title="{{ pshuman_wege.1.beschreibung }}"><input type="checkbox" name="drehteller"{% if job.pshuman.drehteller %} checked{% endif %}> {{ pshuman_wege.1.text }}</label>
+        <label title="{{ pshuman_wege.2.beschreibung }}"><input type="checkbox" name="vae_bildweise"{% if job.pshuman.vae_bildweise %} checked{% endif %}> {{ pshuman_wege.2.text }}</label>
+        <label title="{{ pshuman_wege.3.beschreibung }}"><input type="checkbox" name="genesis"{% if job.pshuman.genesis %} checked{% endif %}> {{ pshuman_wege.3.text }}</label>
+        <span class="hb-hinweis">{% if job.pshuman.gerechnet %}gerechnet {{ job.pshuman.gerechnet }}{% else %}für diesen Job noch nicht gerechnet{% endif %}</span>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
 </div>
 <div class="card ai2d3d-steuerung" id="ai2d3d-steuerung"></div>
 </div>
+{% if ist_test %}{% include "ai2d3d_pshumaneingabe.html" %}{% endif %}
 
 {% comment %} 24.10.2026, Edgar: „die zweite 3D Ansicht ‚Netz‘ ist ja nur zu Testzwecken da, kannst du die unter der ersten Zeile machen, sonst verwirrt sie“ — erste Zeile Fotos · Genesis-Modell ·
 Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, es fließt in keine Rechnung des Genesis-Modells ein. {% endcomment %}{% if daten.trainingfigur %}{% include "ai2d3d_meshzeile.html" %}{% endif %}
 <div class="ai2d3d-zeile ai2d3d-koerperzeile">
-    <div class="ai2d3d-bereiche">
+    {% comment %} 04.11.2026, Edgar: „smpl-x ergebnis in die dritte zeile verschieben (eine darunter), Genesis-Ergebnis (Mesh3D-AI) in die zweite Zeile (eine darüber)“: Zeile Fotos · PSHuman ·
+    Genesis-Ergebnis, Zeile Genesis – Mesh3D-AI · SMPL-X · Genesis – 2d3dai — bei jedem Test aus Fotos (`daten.genesiszeile`, vorher nur mit PSHuman-Netz) steht das Genesis-Modell in der Zeile darunter (ai2d3d_genesiszeile.html), das Ergebnis-Rendering entfällt (die Vergleichskarte bleibt). {% endcomment %}
+    {% if daten.genesiszeile %}<div class="ai2d3d-bereiche">{% else %}<div class="ai2d3d-bereiche{% if daten.smplx %} ai2d3d-bereiche-vier{% endif %}">{% endif %}
         <section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">1</span> Fotos</h2>
             <div class="ai2d3d-leinwand ai2d3d-fotofeld" data-feld="fotos"></div>
             <div class="ai2d3d-daumen" id="ai2d3d-daumen"></div>
         </section>
+        {% if daten.genesiszeile %}{% include "_ai2d3d_pshumanfeld.html" with feld="pshuman" %}
+        {% include "_ai2d3d_genesisergebnis.html" %}
+        {% else %}
         {% comment %} 27.10.2026, Edgar: „mach … anstelle des Fotos die geometrische Figur die du ausgerechnet hast, auch in einer 3D View“ — „das Genesis Modell an 3. Stellen (und das
         geometrische an 2. Stelle)“: mit gerechneter Figur (`Ai2d3dtrainingfigur`) 1 Fotos · 2 gerechnete Figur · 3 Genesis-Modell, das Ergebnis-Rendering entfällt. {% endcomment %}
         {% if daten.trainingfigur %}<section class="card ai2d3d-bereich">
@@ -68,27 +127,23 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
             <div class="ai2d3d-leinwand" data-feld="trainingfigur"></div>
             <p class="hb-hinweis" id="ai2d3d-trainingfigurinfo"></p>
         </section>{% endif %}
-        <section class="card ai2d3d-bereich">
-            <h2><span class="ai2d3d-nummer">{% if daten.trainingfigur %}3{% else %}2{% endif %}</span> Genesis-Modell</h2>
-            <div class="ai2d3d-leinwand" data-feld="genesis"></div>
-            <p class="hb-hinweis" id="ai2d3d-genesisinfo"></p>
-            {# Abspielleiste (31.10.2026, `Ai2d3dbewegung`) — wie auf der Mesh3D-AI-Testseite #}
-            {% if daten.test.eigen %}{% url 'ai2d3d_standardanimation' job.id as bewegung_adresse %}{% include "_mesh3dai_figurbewegung.html" with adresse=bewegung_adresse %}{% endif %}
-            {# Exportleiste (31.10.2026, Edgar: „baue diese Exportleiste … auch für /2d-3d-AI/test/edgartrip/“) — nur mit eigener Figur aus den Fotos (`Ai2d3dexportquelle`). #}
-            {% if daten.test.eigen %}{% include "_exportleiste.html" with bereich="ai2d3d" kennung=job.id %}{% endif %}
-        </section>
+        {% if daten.trainingfigur %}{% include "_ai2d3d_genesisfeld.html" with nummer=3 titel="Genesis-Modell" %}{% else %}{% include "_ai2d3d_genesisfeld.html" with nummer=2 titel="Genesis-Modell" %}{% endif %}
         {% if not daten.trainingfigur %}<section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">3</span> Ergebnis</h2>
             <div class="ai2d3d-leinwand ai2d3d-ergebnisfeld" data-feld="ergebnis"></div>
             <p class="hb-hinweis" id="ai2d3d-ergebnisinfo"></p>
         </section>{% endif %}
+        {% if daten.smplx %}{% include "_ai2d3d_smplxfeld.html" with feld="smplx" nummer=4 %}{% endif %}
+        {% endif %}
     </div>
 </div>
+{% if daten.genesiszeile %}{% include "ai2d3d_genesiszeile.html" %}{% endif %}
 {% if ist_test %}{% include "ai2d3d_bloecke.html" %}{% include "ai2d3d_gesichtspunkte.html" %}{% endif %}
 <details class="card ai2d3d-einzeln">
     <summary>Einzelmessungen und weitere Ansichten — Messpunkte von Körper, Kopf und Reglern, Umrisse aller Regler, Netz aus den Fotos, Vergleich mit allgemeiner Kamera</summary>
 {% include "ai2d3d_einzelmessungen.html" %}
 <div class="ai2d3d-zeile">
+    <div class="card ai2d3d-steuerung ai2d3d-zeilenleiste" data-zeilenleiste="netz"></div>{# eigene Leiste (04.11.2026), `Ai2d3dzeilenleiste` #}
     <div class="ai2d3d-bereiche">
         <section class="card ai2d3d-bereich">
             <h2>Test: Netz aus den Fotos</h2>
@@ -144,6 +199,18 @@ import { Ai2d3dseite } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dseite.js' %}";
 {% if ist_test %}import { Ai2d3dkoerpergroesse } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dkoerpergroesse.js' %}";
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 Ai2d3dkoerpergroesse.binden(document.getElementById('ai2d3d-groesse'));
+import { Ai2d3dnormalen } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dnormalen.js' %}";
+Ai2d3dnormalen.binden(document.getElementById('ai2d3d-normalen'));
+import { Ai2d3dtextur } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dtextur.js' %}";
+Ai2d3dtextur.binden(document.getElementById('ai2d3d-textur'));
+import { Ai2d3dform } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dform.js' %}";
+Ai2d3dform.binden(document.getElementById('ai2d3d-form'));
+import { Ai2d3dpshuman } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dpshuman.js' %}";
+Ai2d3dpshuman.binden(document.getElementById('ai2d3d-pshuman'));
+import { Ai2d3dpshumaneingabe } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dpshumaneingabe.js' %}";
+Ai2d3dpshumaneingabe.binden(document.getElementById('ai2d3d-pshumaneingabe'), document.getElementById('ai2d3d-jobwahl'));
+import { Ai2d3djobwahl } from "{% fassungspfad 'viewer/ai2d3d/ai2d3djobwahl.js' %}";
+Ai2d3djobwahl.binden(document.getElementById('ai2d3d-jobwahl'));
 Auftragname.binden();
 {% endif %}const seite = Ai2d3dseite.aufbauen();
 {% if daten.test.eigen %}import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
@@ -151,8 +218,9 @@ import { Ai2d3dbewegung } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dbewegung.js
 import { Ai2d3dexportfigur } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dexportfigur.js' %}";
 import { Ai2d3dmodellspeichern } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dmodellspeichern.js' %}";
 const figur = new Ai2d3dexportfigur('{{ daten.test.adresse|escapejs }}', seite.genesisfeld);
-Exportleiste.starten(document.getElementById('exportleiste'), figur);
+const genesiskarte = document.querySelector('[data-feld="genesis"]').closest('section');          // in der dritten Zeile tragen auch Feld 1 und 3 eine Exportleiste (04.11.2026)
+Exportleiste.starten(genesiskarte.querySelector('.exportleiste'), figur);
 Ai2d3dbewegung.leisten(seite, figur);
-Ai2d3dmodellspeichern.binden('{{ daten.test.adresse|escapejs }}', '{{ job.name|escapejs }} 2d-3d-AI');
+Ai2d3dmodellspeichern.binden('{{ daten.test.adresse|escapejs }}', '{{ job.name|escapejs }} 2d-3d-AI', genesiskarte);
 {% endif %}</script>
 {% endblock %}

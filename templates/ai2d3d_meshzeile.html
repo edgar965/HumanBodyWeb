@@ -2,7 +2,7 @@
 dritte Bild mit dem Mesh Modell anstelle von Genesis“ — `Ai2d3dmeshzeile` (ai2d3dmeshzeile.js): Foto · geometrische Figur · die Genesis-Figur aus `Genesis9.meshgenesis`
 (`genesis` in training_figur.json, `mesh_auf_genesis.py`). Nur mit gerechneter Figur eingebunden (ai2d3d.html).{% endcomment %}
 <div class="ai2d3d-zeile ai2d3d-meshzeile" id="ai2d3d-meshzeile">
-    <div class="ai2d3d-bereiche">
+    <div class="ai2d3d-bereiche{% if daten.smplx %} ai2d3d-bereiche-vier{% endif %}">
         <section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">1</span> Fotos</h2>
             <div class="ai2d3d-leinwand ai2d3d-fotofeld" data-feld="mesh-foto"></div>
@@ -18,5 +18,6 @@ dritte Bild mit dem Mesh Modell anstelle von Genesis“ — `Ai2d3dmeshzeile` (a
             {# Abspielleiste (31.10.2026, `Ai2d3dbewegung`): der Körper der Genesis-Figur in Bewegung #}
             {% if daten.test.eigen %}{% url 'ai2d3d_standardanimation' job.id as bewegung_adresse %}{% include "_mesh3dai_figurbewegung.html" with adresse=bewegung_adresse %}{% endif %}
         </section>
+        {% if daten.smplx %}{% include "_ai2d3d_smplxfeld.html" with feld="mesh-smplx" nummer=4 %}{% endif %}
     </div>
 </div>

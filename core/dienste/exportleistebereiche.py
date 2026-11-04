@@ -13,8 +13,11 @@ class Exportleistebereiche:
     def klassen():
         from .ai2d3dexportquelle import Ai2d3dexportquelle
         from .engine2d3dkleiderexportquelle import Engine2d3dKleiderexportquelle
+        from .mesh3daianpassungexportquelle import Mesh3daianpassungexportquelle
         from .mesh3daitestexportquelle import Mesh3daitestexportquelle
-        return {k.BEREICH: k for k in (Mesh3daitestexportquelle, Ai2d3dexportquelle, Engine2d3dKleiderexportquelle)}
+        klassen = (Mesh3daitestexportquelle, Mesh3daianpassungexportquelle, Ai2d3dexportquelle,
+                   Engine2d3dKleiderexportquelle)
+        return {k.BEREICH: k for k in klassen}
 
     @classmethod
     def quelle(cls, bereich, kennung):

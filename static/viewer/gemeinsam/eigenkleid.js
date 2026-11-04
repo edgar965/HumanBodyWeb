@@ -5,6 +5,7 @@ import { Eigenkleidgeometrie } from './eigenkleidgeometrie.js';
 import { Eigenkleidwerte } from './eigenkleidwerte.js';
 import { Eigenkragen } from './eigenkragen.js';
 import { Eigenrock } from './eigenrock.js';
+import { Eigenkleidbacken } from './eigenkleidbacken.js';
 import { Eigenkleidtreffer } from './eigenkleidtreffer.js';
 import { Sanduhr } from './sanduhr.js';
 import { Stoffshader } from './stoffshader.js';
@@ -53,6 +54,7 @@ export class Eigenkleid {
         this.weg = false;
         this.kragen = art === 'oberteil' || art === 'kleid' ? new Eigenkragen(this) : null;
         this.rock = art === 'kleid' ? new Eigenrock(inst, art, karte) : null;          // Kleid = Oberteil + Rockteil (Stufe K3)
+        if (this.rock) this.rock.beiBau = (y) => { this.u.uKkRockBund.value = y ?? EigenkleidschnittGLSL.OHNE_BUND; };   // Oberteil bis unter den Bundring
         this._entfernt = () => this._koerperWeg();
     }
 
@@ -63,7 +65,29 @@ export class Eigenkleid {
             uKkSaum: v4(), uKkSitz: v4(), uKkAermelform: v4(), uKkHals: v4(), uKkKragen: v4(), uKkBand: v4(), uKkBruecke: v4(), uKkLage: { value: new THREE.Vector2() },
             uKkFalten: { value: 0 }, uKkFaltenAbstand: { value: EigenkleidschnittGLSL.FALTENABSTAND_M }, uKkFaltenTiefe: { value: EigenkleidschnittGLSL.FALTENTIEFE_M },
             uKkRelief: { value: 1 },
+            uKkSchulterL: v4(), uKkSchulterR: v4(), uKkAchseL: { value: new THREE.Vector3(0, -1, 0) }, uKkAchseR: { value: new THREE.Vector3(0, -1, 0) },
+            uKkOben: { value: new THREE.Vector3(0, 1, 0) }, uKkRockBund: { value: EigenkleidschnittGLSL.OHNE_BUND },
         };
+    }
+
+    /**
+     * Schultergelenk, Armlänge und Oberarmrichtung je Seite im Objektraum der Bindlage (`EigenkleidschnittGLSL.kkArmAnteil`): Gelenk = Bindmatrix⁻¹ · Knochen-Inverse⁻¹ · 0.
+     * Ist die Haltung ins Netz gebacken (Daz-Pose), ist die Bindlage die Haltung; sonst die Ruhelage. Fehlt ein Knochen: Armlänge 0 = aus.
+     */
+    static schultern(koerper, u) {
+        const knochen = koerper.skeleton?.bones || [], inv = koerper.skeleton?.boneInverses || [];
+        const ort = (name) => {
+            const i = knochen.findIndex(b => b.name === name);
+            if (i < 0 || !inv[i]) return null;
+            const m = new THREE.Matrix4().copy(inv[i]).invert().premultiply(koerper.bindMatrixInverse);
+            return new THREE.Vector3().setFromMatrixPosition(m);
+        };
+        for (const [s, S] of [['l', 'L'], ['r', 'R']]) {
+            const a = ort(`${s}_upperarm`), e = ort(`${s}_forearm`), h = ort(`${s}_hand`);
+            if (!a || !e || !h || a.distanceTo(e) < 1e-4) { u[`uKkSchulter${S}`].value.set(0, 0, 0, 0); continue; }
+            u[`uKkSchulter${S}`].value.set(a.x, a.y, a.z, a.distanceTo(h));
+            u[`uKkAchse${S}`].value.copy(e.sub(a).normalize());
+        }
     }
 
     /** An den jetzigen Körper der Figur binden; false, solange keiner (gebunden) da ist. */
@@ -90,6 +114,7 @@ export class Eigenkleid {
             this.bruecke = neu.bruecke;
             this.uvMeter = neu.uvMeter;
             this.u.uKkLaenge.value.set(...neu.laengen);
+            this.u.uKkOben.value.set(...neu.oben);
         }
         if (!this.netz) {
             this.netz = new THREE.SkinnedMesh(this.geo, liste);
@@ -109,6 +134,7 @@ export class Eigenkleid {
         this.netz.updateMatrix();
         this.netz.bindMode = koerper.bindMode;
         this.netz.bind(koerper.skeleton, koerper.bindMatrix);
+        Eigenkleid.schultern(koerper, this.u);
         if (this.netz.parent !== koerper.parent) koerper.parent.add(this.netz);
         this.netz.visible = this.inst.kleiderSichtbar !== false;        // „Kleider aus“ gilt auch nach dem Neubau (`Kleidersichtbarkeit`)
         this.werteAnwenden();
@@ -175,6 +201,19 @@ export class Eigenkleid {
         }
         this.kragen?.nachfuehren(w);
         this.rock?.werteAnwenden(this.werte);
+        if (this.rock) this._unterlage();
+    }
+
+    /** Kleid: die verschobene Schale als Unterlage des Rockteils nach `UNTERLAGE_MS` Ruhe (`Eigenrock.unterlageSetzen`, wie `Eigenkleider.unterlageNachfuehren`). */
+    static UNTERLAGE_MS = 300;
+    _unterlage() {
+        clearTimeout(this._unterWarten);
+        const stand = JSON.stringify([this.inst?.bodyMesh?.geometry?.id, this.werte]);     // mit der Körpergeometrie: grob → fein lädt ein anderes Netz
+        if (stand === this.rock.unterStand) return;
+        this._unterWarten = setTimeout(() => {
+            Eigenkleidbacken.unterlage(this.inst, this.art).then((u) => { if (u && !this.weg) this.rock?.unterlageSetzen(u, stand); })
+                .catch((fehler) => Protokoll.warnung('Eigene Kleider', 'Unterlage des Rockteils nicht gerechnet', fehler));
+        }, Eigenkleid.UNTERLAGE_MS);
     }
 
     /**

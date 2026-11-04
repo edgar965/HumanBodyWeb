@@ -51,6 +51,23 @@ export class Eigenrock {
                  weite: [w('weite_vorn') / 100, w('weite_hinten') / 100, w('weite_seite') / 100], falten: [w('falten_zahl'), w('falten_tiefe') / 1000] };
     }
 
+    /**
+     * Das Oberteil darunter (`Eigenkleidbacken.unterlage`: verschobene Schale in der Bindlage) — der Bund nimmt die Hülle darüber (`Eigenrockhuelle`). `stand`
+     * kennzeichnet sie (Werte des Oberteils); neu gebaut wird nur bei geändertem Stand.
+     */
+    unterlageSetzen(unter, stand) {
+        if (stand === (this.unterStand || '')) return;
+        this.unter = unter;
+        this.unterStand = stand;
+        this.werteAnwenden(this.werte);
+    }
+
+    /** Reicht der Saum eines eigenen Oberteils (Rumpfhöhe) bis an den Bund dieses Rocks (− `BUND_SPIEL`)? Dann liegt der Rock darüber (`Eigenkleider.rockUeberOberteil`). */
+    static BUND_SPIEL = 0.02;
+    static reichtBisBund(werteOben, werteRock) {
+        return Eigenkleidwerte.shaderwerte('oberteil', werteOben).saum[0] >= Eigenrock.masse('rock', werteRock).bund - Eigenrock.BUND_SPIEL;
+    }
+
     /** An den jetzigen Körper der Figur binden; false, solange keiner (gebunden) da ist. */
     binden() {
         if (this.weg) return false;
@@ -80,7 +97,7 @@ export class Eigenrock {
         Stoffshader.werte(this.stoffU, w.stoff, 1);
         if (!this.koerper || this.weg) return;
         const masse = Eigenrock.masse(this.art, this.werte), drapiert = Number(this.werte.drapiert) >= 0.5;
-        const stand = JSON.stringify([this.koerper.geometry.id, masse]);
+        const stand = JSON.stringify([this.koerper.geometry.id, masse, this.unterStand || '']);
         if (neu || stand !== this._stand) {
             this._stand = stand;
             this._bauen(masse);
@@ -103,11 +120,12 @@ export class Eigenrock {
 
     _bauen(masse) {
         this._lauf++;
-        const bau = Eigenrockgeometrie.bauen(this._schale(this.koerper), masse);
+        const bau = Eigenrockgeometrie.bauen(this._schale(this.koerper), masse, this.unter);
         this.bau?.geo.dispose();
         this.bau = bau;
         if (!bau) {
             this.stand = null;
+            this.beiBau?.(null);
             if (this.netz) this.netz.visible = false;
             Protokoll.warnung('Eigene Kleider', `${this.art}: Bund oder Saum nicht gefunden (Bund ${masse.bund}, Länge ${masse.laenge}) — Rock bleibt verborgen`);
             return;
@@ -115,6 +133,8 @@ export class Eigenrock {
         bau.grund = Float32Array.from(bau.geo.attributes.position.array);
         this.stand = { ms: Math.round(bau.ms), punkte: bau.geo.attributes.position.count, drapiert: null };
         this._binden();
+        this.netz.userData.bund = bau.yBund;                                 // Höhe des waagrechten Bundrings (Bindlage) — das Kleid-Oberteil reicht darunter
+        this.beiBau?.(bau.yBund);
     }
 
     _binden() {

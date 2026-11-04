@@ -5,6 +5,9 @@
     POST /api/2d3dai/test-neu/    Formular: fotos (mehrere), name               → {ok, kennung, adresse}                           (`Ai2d3dfotoneu`, ohne Rechnen)
     POST /api/2d3dai/<job>/koerpergroesse/   {koerpergroesse_m: 1.85 | null}  → {ok, koerpergroesse_m}                          (`Ai2d3dkoerpergroesse`, nur Tests)
     POST /api/2d3dai/<job>/name/             {name}                            → {ok, name}                                      (`Mesh3dainame`, nur Tests)
+    POST /api/2d3dai/<job>/normalen/         {engine, foto, zusammen}          → {ok, normalen}                                  (`Ai2d3dnormalen`, nur Tests)
+    POST /api/2d3dai/<job>/pshuman/          {zeile1, drehteller}   → {ok, pshuman}   (`Ai2d3dpshuman`, nur Tests)
+    POST /api/2d3dai/<job>/geschlecht/       {geschlecht}           → {ok, geschlecht}   (`Ai2d3dgeschlecht`, nur Tests)
 """
 
 import json
@@ -13,10 +16,15 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
+from ..dienste.ai2d3dform import Ai2d3dform
 from ..dienste.ai2d3dfotoneu import Ai2d3dfotoneu
+from ..dienste.ai2d3dgeschlecht import Ai2d3dgeschlecht
 from ..dienste.ai2d3djobs import Ai2d3djobs
 from ..dienste.ai2d3dkoerpergroesse import Ai2d3dkoerpergroesse
+from ..dienste.ai2d3dnormalen import Ai2d3dnormalen
 from ..dienste.ai2d3dpapierkorb import Ai2d3dpapierkorb
+from ..dienste.ai2d3dpshuman import Ai2d3dpshuman
+from ..dienste.ai2d3dtextur import Ai2d3dtextur
 from ..dienste.mesh3dainame import Mesh3dainame
 
 logger = logging.getLogger('core')
@@ -62,6 +70,86 @@ class Ai2d3daktionsendpunkte:
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
         return JsonResponse({'ok': True, Ai2d3dkoerpergroesse.FELD: meter})
+
+    @staticmethod
+    @require_POST
+    def normalen(request, job):
+        """Normalen-Engine eines Tests in seine job.json (`Ai2d3dnormalen`), Combo-Boxen oben auf der Testseite."""
+        gefunden = Ai2d3djobs.job(job)
+        if gefunden is None:
+            return JsonResponse({'error': 'Kein Job %s' % job}, status=404)
+        try:
+            rumpf = json.loads(request.body or b'{}')
+            if not isinstance(rumpf, dict):
+                raise ValueError('Erwartet {engine, foto, zusammen}')
+            wahl = Ai2d3dnormalen.setzen(gefunden, rumpf)
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, Ai2d3dnormalen.FELD: wahl})
+
+    @staticmethod
+    @require_POST
+    def textur(request, job):
+        """Textur-Engine eines Tests in seine job.json (`Ai2d3dtextur`, Combo-Box „Textur“)."""
+        gefunden = Ai2d3djobs.job(job)
+        if gefunden is None:
+            return JsonResponse({'error': 'Kein Job %s' % job}, status=404)
+        try:
+            rumpf = json.loads(request.body or b'{}')
+            if not isinstance(rumpf, dict):
+                raise ValueError('Erwartet {engine}')
+            wahl = Ai2d3dtextur.setzen(gefunden, rumpf)
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, Ai2d3dtextur.FELD: wahl})
+
+    @staticmethod
+    @require_POST
+    def form(request, job):
+        """Form-Engine eines Tests in seine job.json (`Ai2d3dform`, Combo-Box „Form“ mit Checkboxen)."""
+        gefunden = Ai2d3djobs.job(job)
+        if gefunden is None:
+            return JsonResponse({'error': 'Kein Job %s' % job}, status=404)
+        try:
+            rumpf = json.loads(request.body or b'{}')
+            if not isinstance(rumpf, dict):
+                raise ValueError('Erwartet {engine, bilder, finger}')
+            wahl = Ai2d3dform.setzen(gefunden, rumpf)
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, Ai2d3dform.FELD: wahl})
+
+    @staticmethod
+    @require_POST
+    def pshuman(request, job):
+        """PSHuman-Weg eines Tests in seine job.json (`Ai2d3dpshuman`, Combo-Box „PSHuman“)."""
+        gefunden = Ai2d3djobs.job(job)
+        if gefunden is None:
+            return JsonResponse({'error': 'Kein Job %s' % job}, status=404)
+        try:
+            rumpf = json.loads(request.body or b'{}')
+            if not isinstance(rumpf, dict):
+                raise ValueError('Erwartet {zeile1, drehteller}')
+            wahl = Ai2d3dpshuman.setzen(gefunden, rumpf)
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, Ai2d3dpshuman.FELD: wahl})
+
+    @staticmethod
+    @require_POST
+    def geschlecht(request, job):
+        """Genesis-Grundfigur eines Tests in seine job.json und seinen Mesh3D-AI-Test (`Ai2d3dgeschlecht`, Auswahl „Genesis“)."""
+        gefunden = Ai2d3djobs.job(job)
+        if gefunden is None:
+            return JsonResponse({'error': 'Kein Job %s' % job}, status=404)
+        try:
+            rumpf = json.loads(request.body or b'{}')
+            if not isinstance(rumpf, dict) or Ai2d3dgeschlecht.FELD not in rumpf:
+                raise ValueError('Erwartet {%s}' % Ai2d3dgeschlecht.FELD)
+            wert = Ai2d3dgeschlecht.setzen(gefunden, rumpf[Ai2d3dgeschlecht.FELD])
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, Ai2d3dgeschlecht.FELD: wert})
 
     @staticmethod
     @require_POST

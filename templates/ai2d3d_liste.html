@@ -23,7 +23,8 @@ Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DO
 </div>
 
 <div class="seitenreiter" role="tablist" id="ai2d3d-reiter">
-    <button type="button" role="tab" data-reiter="jobs" aria-selected="true"><i class="fas fa-list"></i> Jobs</button>
+    {% comment %}Ohne eigene Exporte kein leerer Reiter „Jobs“ vorn (04.11.2026, Edgar: „wo sehe ich die ganzen jobs??“): die Exporte stehen seit 31.10. unter Mesh3D-AI, die Fotojobs unter „Test“.{% endcomment %}
+    {% if tabelle.zeilen %}<button type="button" role="tab" data-reiter="jobs" aria-selected="true"><i class="fas fa-list"></i> Jobs</button>{% endif %}
     <button type="button" role="tab" data-reiter="test" aria-selected="false"><i class="fas fa-vial"></i> Test ({{ testtabelle.zeilen|length }})</button>
     <button type="button" role="tab" data-reiter="formtraining" aria-selected="false"><i class="fas fa-shapes"></i> Formtraining ({{ formtraining.zeilen|length }})</button>
     <button type="button" role="tab" data-reiter="aktuell" aria-selected="false"><i class="fas fa-gauge-high"></i> Lauf Aktuell</button>

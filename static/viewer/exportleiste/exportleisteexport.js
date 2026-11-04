@@ -72,13 +72,17 @@ export class Exportleisteexport {
         if (!this._hand.name && !this.name.value) this.name.value = z.name || '';
         if (!this._hand.audio && !this.audioPfad.value) this.audioPfad.value = this._gemerkt('audiopfad') || z.ton_vorgabe || '';
         // `sperre`: der Bereich rechnet gerade (2D3D Kleider) — GLB und Blender kommen vom Server und warten; OBJ schreibt die Seite selbst
-        // Sanduhr (Edgar 31.10.2026): am Knopf des laufenden Exports, und an „MP4“, solange ein Video rechnet (eine Karte, ein Video nach dem anderen); gesperrt sind dann alle
+        // Sanduhr (Edgar 31.10.2026): am Knopf des laufenden Exports, und an „MP4“, solange SEIN Video rechnet; startete „Rendern“ das Video, ist „MP4“ nur gesperrt (eine Karte, ein Video
+        // nach dem anderen — 01.11.2026, Edgar: „warum sind zwei Sanduhren am laufen? ich habe nur den Render button geklickt“)
+        const rechnet = z.render?.status === 'laeuft' ? z.render.quelle || 'rendern' : null;
         for (const knopf of this.knoepfe) {
             const f = knopf.dataset.format;
-            const video = f === 'mp4' && z.render?.status === 'laeuft';
+            const video = f === 'mp4' && rechnet === 'mp4';
             const an = (this._laeuft && f === this._format) || video;
-            Knopfsanduhr.setzen(knopf, an, f === 'mp4' && video ? 'Video rechnet …' : '', this._laeuft || (f === 'mp4' && !z.render?.moeglich) || (!!z.sperre && f !== 'obj'));
+            Knopfsanduhr.setzen(knopf, an, video ? 'Video rechnet …' : '', this._laeuft || (f === 'mp4' && (!z.render?.moeglich || !!rechnet)) || (!!z.sperre && f !== 'obj'));
+            knopf.dataset.titel ??= knopf.title;
             if (z.sperre && f !== 'obj') knopf.title = z.sperre;
+            else if (f === 'mp4') knopf.title = rechnet === 'rendern' ? 'Ein Video aus dem Block „Rendern“ rechnet gerade — ein Video nach dem anderen' : knopf.dataset.titel;
         }
     }
 

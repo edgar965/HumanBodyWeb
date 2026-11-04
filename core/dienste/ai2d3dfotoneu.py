@@ -43,7 +43,10 @@ class Ai2d3dfotoneu:
         (ordner / 'fotos').mkdir(parents=True)
         fotos = []
         for i, d in enumerate(dateien):
-            ziel = ordner / 'fotos' / ('%02d_%s' % (i + 1, cls.NAME.sub('_', d.name)))
+            # Endung bleibt: bis 04.11.2026 machte NAME aus „bild.png“ „bild_png“ — `Ai2d3dfotojobs._job`
+            # verwarf das Foto (keine Bildendung), der Test hatte keine Fotos und die Seite gab 404
+            stamm, _punkt, endung = d.name.rpartition('.')
+            ziel = ordner / 'fotos' / ('%02d_%s.%s' % (i + 1, cls.NAME.sub('_', stamm), endung.lower()))
             with open(ziel, 'wb') as aus:
                 for stueck in d.chunks():
                     aus.write(stueck)

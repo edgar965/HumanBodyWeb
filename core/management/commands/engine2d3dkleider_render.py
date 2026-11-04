@@ -3,7 +3,7 @@
 
 Liest die Wahl der Seite aus `arbeit/render/auftrag.json` (`sekunden`, `kamera`, `breite`, `hoehe`, `ton`) und rechnet in Stufen mit den Programmen
 des Rezepts (`arbeit/render/rezept.json`): Bewegung auf die gewählte Länge schneiden → Figurcache (CPU) → Stoff und Strähnen (GPU) → Render
-(Mitsuba, Entrauscher) und Video mit Ton. Jede Stufe steht danach in `zustand.json`; die Seite zeigt sie im Takt des Zustands. Vor den GPU-Stufen
+(Mitsuba, Entrauscher) und Video mit Ton; mit dem allgemeinen Rezept ohne Figurcache und Simulation, die Figur wird im Render je Bild auf der Karte gehäutet (`--speicher`). Jede Stufe steht danach in `zustand.json`; die Seite zeigt sie im Takt des Zustands. Vor den GPU-Stufen
 wartet der Prozess, bis die Karte frei ist (weniger als `GPU_FREI_MB` belegt) — andere Aufträge (Pixal) füllen sie bis auf wenige MB.
 """
 
@@ -94,18 +94,27 @@ class Command(BaseCommand):
         # Die Regler und die Länge der GANZEN BVH (Mimik: friedlich → fröhlich ab der Mitte der BVH, nicht des geschnittenen Stücks) gehen an `video_bauen`.
         gemeinsam = [str(programme / 'video_bauen.py'), name, str(bewegung), '--glb', str(glb), '--regler', str(regler),
                      '--gesamt-bilder', str(max(n, int(round(render.bewegung_sekunden() * render.FPS)))), '--start-bild', '0']
-        self._stufe(render, 'Figurcache wird gerechnet (CPU)', 0.08, [py] + gemeinsam + ['--cpu'])
-        self._grafikkarte(render)
-        self._stufe(render, 'Stoff und Strähnen werden simuliert (GPU)', 0.45, [py] + gemeinsam + ['--gpu'])
+        # Variante B wie `exportleiste_render` (01.11.2026, Edgar: „alles im Speicher“): mit dem allgemeinen Rezept häutet `film_video.py --speicher` die Figur je Bild auf der
+        # Karte (`Figurkarte`), ohne PC2-Figurcache; vorher nur Mimik- und Korrekturdaten (`video_bauen.py` ohne Stufe). Dessen Stufe `--gpu` simuliert nichts, sie entfällt.
+        # Eigene Rezepte (Randy: Stoff und Strähnen) wie bisher.
+        speicher = bool(rezept.get('allgemein'))
+        if speicher:
+            self._stufe(render, 'Mimik und Gelenkkorrektur werden vorbereitet (CPU)', 0.08, [py] + gemeinsam)
+        else:
+            self._stufe(render, 'Figurcache wird gerechnet (CPU)', 0.08, [py] + gemeinsam + ['--cpu'])
+            self._grafikkarte(render)
+            self._stufe(render, 'Stoff und Strähnen werden simuliert (GPU)', 0.45, [py] + gemeinsam + ['--gpu'])
         ziel = render.ablage.ergebnis(render.VIDEO)
         befehl = [py, str(programme / 'film_video.py'), name, '--kamera', auftrag['kamera'], '--breite', str(auftrag['breite']),
                   '--hoehe', str(auftrag['hoehe']), '--spp', str(int(auftrag.get('spp') or 48)), '--von', '1', '--bis', str(n), '--ausname', 'film', '--zusammen',
                   '--ausdatei', str(ziel)]
         befehl += ['--regler', str(regler)]
+        if speicher:
+            befehl.append('--speicher')
         if auftrag.get('ton'):
             befehl += ['--ton', str(auftrag['ton'])]
         self._grafikkarte(render)
-        self._stufe(render, 'Bilder werden gerendert (GPU)', 0.6, befehl)
+        self._stufe(render, 'Figur wird je Bild gehäutet und gerendert (GPU)' if speicher else 'Bilder werden gerendert (GPU)', 0.6, befehl)
         ordner = Engine2d3dKleiderspeichern.zielordner_fuer(job)
         ordner.mkdir(parents=True, exist_ok=True)
         kopie = ordner / ('%s_render.mp4' % ((auftrag.get('name') or job.name or 'modell').strip() or 'modell'))
@@ -130,16 +139,12 @@ class Command(BaseCommand):
 
     @staticmethod
     def _schneiden(quelle, ziel, n):
-        """Die ersten `n` Bilder der Bewegung (Quaternionen 4, Position 3 Werte je Bild)."""
+        """`n` Bilder zu 30 je Sekunde nach den Zeiten der Bewegung (`Bewegungsschnitt`, 01.11.2026 — bis dahin die ersten `n` Bilder: eine 60er-Bewegung lief halb so schnell)."""
+        from core.dienste.bewegungsschnitt import Bewegungsschnitt
         d = json.loads(quelle.read_text(encoding='utf-8'))
-        if n > int(d.get('frame_count') or 0):
-            raise RuntimeError('Die Bewegung hat nur %d Bilder, gewünscht %d' % (int(d.get('frame_count') or 0), n))
-        neu = dict(d, tracks={k: v[:4 * n] for k, v in (d.get('tracks') or {}).items()})
-        if d.get('position_track'):
-            neu['position_track'] = dict(d['position_track'], values=d['position_track']['values'][:3 * n])
-        neu.update(times=[round(i / 30.0, 6) for i in range(n)], frame_count=n, duration=round(n / 30.0, 6))
-        ziel.parent.mkdir(parents=True, exist_ok=True)
-        ziel.write_text(json.dumps(neu), encoding='utf-8')
+        if n > Bewegungsschnitt.bilder(d, float('inf')):
+            raise RuntimeError('Die Bewegung reicht nur für %d Bilder zu 30 je Sekunde, gewünscht %d' % (Bewegungsschnitt.bilder(d, float('inf')), n))
+        Bewegungsschnitt.schreiben(d, ziel, n)
 
     @staticmethod
     def _vorbereiten(programme, name, glb):

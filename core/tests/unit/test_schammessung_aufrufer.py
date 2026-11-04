@@ -8,6 +8,8 @@ nochmal zehnmal das beauftragen?" Diese Prüfung hält die Aufrufer fest — nim
     Blender-Import, Schritt figur  `Blendimportlauf._figur` legt `ergebnis.figur.schammessung` ab (aus dem Auftrag von Mesh to 3D), auch wenn es kein Scham-Stück gibt
     Scham-Stück                    `Blendimportstuecke.scham_stueck` → `Schammessungablage.messen`; `Blendimporthaut.backen` → `Schammessungablage.nachtragen` (Farbe am Ring)
     Daz-Geograft                   `Dazgeograft.bauen` → `self.messen`
+    Mesh3D-AI, erste Zeile         `Mesh3daimeshanatomie.legen` → `_randseite` → `Mesh3daischammessung.messen`
+                                   (= `Schammessung.sicher`), Bericht `anatomie.messung` (01.11.2026)
 
 Die Prüfung liest nur Quelltext (`inspect.getsource`), startet nichts. Sabotage-Gegenprobe: eine der Zeilen in der jeweiligen Methode streichen → der zugehörige Fall wird rot.
 """
@@ -62,3 +64,28 @@ class SchammessungAufruferTest(SimpleTestCase):
         quelle = self._quelle(Dazgeograft, 'bauen')
         self.assertIn('self.messen(figur, punkte, dreiecke, uv_ecken, loch)', quelle)
         self.assertIn('Schammessung.sicher(', self._quelle(Dazgeograft, 'messen'))
+
+    def test_6_mesh3d_ai_misst_das_anatomie_stueck_der_ersten_zeile(self):
+        import ast
+        import sys
+        from pathlib import Path
+
+        from django.conf import settings
+
+        ordner = Path(settings.TOOLS_ROOT) / 'mesh3dai'
+        sys.path.insert(0, str(ordner))
+        from mesh3dai_meshanatomie import Mesh3daimeshanatomie
+        from mesh3dai_schammessung import Mesh3daischammessung
+
+        legen = self._quelle(Mesh3daimeshanatomie, 'legen')
+        self.assertIn('self._randseite(lage, dreiecke, figur, loch, ring_grob)', legen)
+        self.assertIn("'messung': messung", legen)
+        self.assertIn('Mesh3daischammessung.messen(', self._quelle(Mesh3daimeshanatomie, '_randseite'))
+        self.assertIn('Schammessung.sicher(', self._quelle(Mesh3daischammessung, 'messen'))
+        # `ablegen` legt jeden Auftrag ab, der Bericht von `legen` geht als `anatomie` in meshanpassung.json
+        # (Quelltext gelesen: das Modul richtet beim Import Pfade ein)
+        datei = (ordner / 'mesh3dai_meshanpassung.py').read_text(encoding='utf-8')
+        ablegen = next(ast.get_source_segment(datei, k) for k in ast.walk(ast.parse(datei))
+                       if isinstance(k, ast.FunctionDef) and k.name == 'ablegen')
+        self.assertIn('Mesh3daimeshanatomie(self.g, self.log).legen(start', ablegen)
+        self.assertIn('anatomie=anatomie_bericht', ablegen)

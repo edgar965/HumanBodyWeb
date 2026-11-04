@@ -129,8 +129,8 @@ class Mesh3dairechenschlange:
         return zahl
 
     @classmethod
-    def anlegen(cls, name, datei, geschlecht):
-        """Einen Test aus einer hochgeladenen Datei anlegen (Django `UploadedFile`). → Kennung."""
+    def anlegen(cls, name, datei, geschlecht, foto=None, maske=None):
+        """Einen Test aus einer hochgeladenen Datei anlegen (Django `UploadedFile`). → Kennung. `foto` und `maske` (beide oder keins): das Foto, aus dem das Netz entstand, für den Schritt „foto“ (`Mesh3daifotogelenke`)."""
         name = str(name or '').strip() or Path(datei.name).stem
         endung = Path(datei.name).suffix.lower()
         if endung not in cls.ENDUNGEN:
@@ -147,6 +147,12 @@ class Mesh3dairechenschlange:
         with open(ziel, 'wb') as aus:
             for stueck in datei.chunks():
                 aus.write(stueck)
+        for stamm_foto, quelle in (('foto', foto), ('maske', maske)):
+            if foto is not None and maske is not None:
+                (test / 'foto').mkdir(exist_ok=True)
+                with open(test / 'foto' / (stamm_foto + Path(quelle.name).suffix.lower()), 'wb') as aus:
+                    for stueck in quelle.chunks():
+                        aus.write(stueck)
         AtomarSchreiber.json_schreiben(test / 'anlage.json', {'name': name, 'quelle': str(ziel), 'geschlecht': geschlecht, 'datei': datei.name,
                                                              'angelegt': time.strftime('%Y-%m-%dT%H:%M:%S')})
         AtomarSchreiber.json_schreiben(test / 'einstellung.json', {'geschlecht': geschlecht})

@@ -2,7 +2,7 @@
 `Farblab`, `Achsdrehung`, `Baryanteile` — CPU, Kunstwerte, ohne Figur.
 
 1. Farblab: Weiß → L 100, a/b ≈ 0; Schwarz → 0; numpy und torch gleich; Gradient endlich an 0 und
-   an der Schwelle.
+   an der Schwelle. `srgb` kehrt `linear` um (numpy und torch), klemmt auf 0..1.
 2. Achsdrehung: orthonormal mit det 1, 90° um z bildet x auf y ab, w = 0 → Einheitsmatrix,
    gestapelt wie einzeln.
 3. Baryanteile: Punkt aus bekannten Anteilen kommt zurück; geklemmt ≥ 0 mit Summe 1; außerhalb
@@ -40,6 +40,16 @@ class Kleinbausteinetest(unittest.TestCase):
         self.assertLess(float(np.abs(lab_t.detach().numpy() - Farblab.aus_srgb(c)).max()), 1e-12)
         lab_t.sum().backward()
         self.assertTrue(bool(torch.isfinite(t.grad).all()))
+
+    def test_1b_farblab_srgb_kehrt_linear_um(self):
+        c = np.random.default_rng(2).uniform(0, 1, (50, 3))
+        c[0], c[1] = 0.0, 0.04045
+        self.assertLess(float(np.abs(Farblab.srgb(Farblab.linear(c)) - c).max()), 1e-12)
+        t = torch.tensor(c)
+        self.assertLess(float((Farblab.srgb(Farblab.linear(t)) - t).abs().max()), 1e-12)
+        geklemmt = Farblab.srgb(np.array([-0.5, 2.0]))          # 1,055 · 1 − 0,055 = 0,9999999999999999
+        self.assertEqual(float(geklemmt[0]), 0.0)
+        self.assertAlmostEqual(float(geklemmt[1]), 1.0, places=12)
 
     def test_2_achsdrehung(self):
         r = Achsdrehung.matrix(torch.tensor([0.0, 0.0, math.pi / 2], dtype=D))

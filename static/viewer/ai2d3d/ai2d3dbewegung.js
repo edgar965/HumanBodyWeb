@@ -14,7 +14,8 @@ export class Ai2d3dbewegung {
 
     /** @param seite `Ai2d3dseite` @param figur `Ai2d3dexportfigur` mit dem Feld der Zeile 2 */
     static leisten(seite, figur) {
-        const zeile2 = document.querySelector('.ai2d3d-koerperzeile [data-figurbewegung]');
+        // die Leiste im Feld „Genesis-Modell“ — seit 04.11.2026 bei PSHuman-Jobs in der dritten Zeile (`_ai2d3d_genesisfeld.html`), sonst in der Körperzeile
+        const zeile2 = document.querySelector('[data-feld="genesis"]')?.closest('section')?.querySelector('[data-figurbewegung]') ?? null;
         if (zeile2) new Mesh3daifigurbewegungsleiste(zeile2, figur.bewegung).wahlLaden(zeile2.dataset.adresse);
         const zeile1 = document.querySelector('#ai2d3d-meshzeile [data-figurbewegung]');
         if (zeile1 && seite.meshzeile) {

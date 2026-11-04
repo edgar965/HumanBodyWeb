@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="{% fassungspfad 'css/genesis9regler.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/genesis9eigenregler.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/seitenleistenebenen.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/modellcheck.css' %}">
 {# Der Stoffschwung-Worker (dForce-Kleidung) liegt außerhalb des Bündels: Pfad mit Fassung. #}
 <meta name="stoffarbeiter" content="{% fassungspfad 'viewer/gemeinsam/stoffarbeiter.js' %}">
 {# Die Haut-Maske rechnet in einem Worker (Hauptfaden frei zum Drehen), ebenfalls außerhalb des Bündels. #}
@@ -653,6 +654,7 @@
                 <div class="menu-title">Werkzeuge</div>
                 <div class="menu-dropdown">
                     <div class="menu-item" data-action="model-generator">Modell Erzeugen...</div>
+                    <div class="menu-item" data-action="model-check">Modell Check...</div>
                     <div class="menu-sep"></div>
                     <div class="menu-item" data-action="reset-scene">Szene zur&uuml;cksetzen</div>
                     <div class="menu-item" data-action="reset-lighting">Beleuchtung zur&uuml;cksetzen</div>
@@ -1772,6 +1774,7 @@
 
 <!-- Add Character Dialog -->
 {% include "_ursprungsfix_dialog.html" %}
+{% include "_modellcheck_dialog.html" %}
 {% include "_modellexport_dialog.html" %}
 
 <!-- Save Scene Dialog -->

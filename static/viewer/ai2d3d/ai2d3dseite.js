@@ -18,9 +18,12 @@ import { Ai2d3dmeshzeile } from './ai2d3dmeshzeile.js';
 import { Ai2d3dmesspunkte } from './ai2d3dmesspunkte.js';
 import { Ai2d3dnetz } from './ai2d3dnetz.js';
 import { Ai2d3dseitenbild } from './ai2d3dseitenbild.js';
+import { Ai2d3dsmplx } from './ai2d3dsmplx.js';
+import { Ai2d3dgenesiszeile } from './ai2d3dgenesiszeile.js';
 import { Ai2d3dsteuerung } from './ai2d3dsteuerung.js';
 import { Ai2d3dtestfigur } from './ai2d3dtestfigur.js';
 import { Ai2d3dtrainingfigur } from './ai2d3dtrainingfigur.js';
+import { Ai2d3dzeilenleiste } from './ai2d3dzeilenleiste.js';
 
 export class Ai2d3dseite {
     static KAMERA = { position: [0, 1, 4], ziel: [0, 0.9, 0], boden: false };
@@ -33,8 +36,20 @@ export class Ai2d3dseite {
         return window.__ai2d3d;
     }
 
-    /** Die Figur dieser Seite aus der Kamera jedes Fotos an den Server geben — Eingang der Abnahme (`Ai2d3dseitenbild`, `koerperpruefung_lauf.py --seite`). */
-    seitenbilder() {
+    /**
+     * Die Figur dieser Seite aus der Kamera jedes Fotos an den Server geben — Eingang der Abnahme (`Ai2d3dseitenbild`, `koerperpruefung_lauf.py --seite`).
+     * Das Feld der Figur baut erst, wenn es ins Bild kommt (`Mesh3daiansicht._auftrag`); ohne Scrollen brach die Aufnahme mit „zeigt keine Figur“ ab (03.11.2026). Darum hier auf die
+     * Figur warten und das Feld sofort bauen lassen — auch eine feinere Stufe, die währenddessen nachkommt, höchstens 60 s.
+     */
+    async seitenbilder() {
+        if (this.genesis) {
+            await this.genesis.bereit;
+            this.genesisfeld.jetztFuellen();
+            for (let i = 0; i < 240 && this.genesis instanceof Ai2d3dtestfigur && !this.genesis.figur?.parent; i++) {
+                await new Promise(r => setTimeout(r, 250));
+                this.genesisfeld.jetztFuellen();
+            }
+        }
         return Ai2d3dseitenbild.aufnehmen(this);
     }
 
@@ -50,6 +65,8 @@ export class Ai2d3dseite {
         Ai2d3dansicht.grund = new THREE.Color().setRGB(...grund.map(v => v / 255), THREE.SRGBColorSpace).getHex();
         document.documentElement.style.setProperty('--ai2d3d-grund', `rgb(${grund.join(', ')})`);
         this.steuerung = new Ai2d3dsteuerung(document.getElementById('ai2d3d-steuerung'), daten, was => this._geaendert(was));
+        // Zeile „Test: Netz aus den Fotos“ mit eigener Leiste (04.11.2026, „in jeder Zeile ab Zeile 3“) — ohne Kleider und Rig: das rohe Netz hat beides nicht
+        this.netzleiste = Ai2d3dzeilenleiste.aufbauen(document.querySelector('[data-zeilenleiste="netz"]'), () => this._netzZeigen(false), { kleider: false, rig: false });
         this.fotos = new Ai2d3dfotos(feld('fotos'), document.getElementById('ai2d3d-daumen'), daten.fotos, nr => this.steuerung.setzen('foto', nr));
         this.netz = new Ai2d3dnetz(text => { this.netzfeld.hinweis.hidden = false; this.netzfeld.hinweis.textContent = text; }, () => this._netzZeigen(true));
         this.netzfeld = new Ai2d3dansicht(feld('netz'), 'eingabe', this.netz, Ai2d3dseite.KAMERA);
@@ -58,7 +75,10 @@ export class Ai2d3dseite {
         // 27.10.2026: mit gerechneter Figur der Kopf-KI steht sie in Feld 2 (3D), das Genesis-Modell in Feld 3, kein Ergebnis-Feld (`Ai2d3dtrainingfigur`, Template)
         if (daten.trainingfigur) {
             this.trainingfigur = new Ai2d3dtrainingfigur(daten.trainingfigur);
-            this.trainingfeld = new Ai2d3dansicht(feld('trainingfigur'), 'ausgabe', this.trainingfigur, Ai2d3dseite.KAMERA);
+            // PSHuman-Jobs haben in Zeile 2 kein Feld dafür (Fotos · PSHuman · SMPL-X); die Figur bleibt für die Mesh-Zeile und Feld 2 (`Ai2d3dzeile1`) — ohne die Prüfung
+            // brach edgartrip seit dem Layout vom 04.11.2026 beim Aufbau ab (Feld ohne Behälter, im Chrome gesehen)
+            const f = feld('trainingfigur');
+            if (f) this.trainingfeld = new Ai2d3dansicht(f, 'ausgabe', this.trainingfigur, Ai2d3dseite.KAMERA);
             this.trainingfigur.bereit.then(() => { this._trainingZeigen(); this._kameras(); });
         }
         this.genesis = daten.genesis ? new Ai2d3dgenesis(daten.genesis) : daten.test?.adresse ? new Ai2d3dtestfigur(daten.test, this) : null;
@@ -66,7 +86,11 @@ export class Ai2d3dseite {
         this.genesisInfo = document.getElementById('ai2d3d-genesisinfo');
         // alle 3D-Felder drehen gemeinsam (24.10.2026, „synchron … so wie bei Mesh3d-AI“), seit 28.10.2026 auch die der Mesh-Zeile ganz oben (`Ai2d3dmeshzeile`)
         this.meshzeile = Ai2d3dmeshzeile.aufbauen(this);
-        Mesh3daiansicht.koppeln([this.netzfeld, this.trainingfeld, this.genesisfeld, ...(this.meshzeile?.felder ?? [])].filter(Boolean));
+        this.smplx = Ai2d3dsmplx.aufbauen(this);             // 03.11.2026: PSHumans SMPL-X in jeder Zeile (nur PSHuman-Jobs), seit 04.11. Feld 3
+        this.pshuman = Ai2d3dsmplx.aufbauen(this, 'pshuman');   // 04.11.2026: Feld 2 jeder Zeile, PSHumans Endnetz (nur PSHuman-Jobs)
+        this.genesiszeile = Ai2d3dgenesiszeile.aufbauen(this);  // 04.11.2026: dritte Zeile, drei Wege vom PSHuman-Netz zum Genesis-Modell (nach `genesis` gebaut, s. dort)
+        Mesh3daiansicht.koppeln([this.netzfeld, this.trainingfeld, this.genesisfeld, ...(this.meshzeile?.felder ?? []), ...(this.smplx?.felder ?? []),
+                                 ...(this.pshuman?.felder ?? []), ...(this.genesiszeile?.felder ?? [])].filter(Boolean));
         // Größe wie die Person im Foto (27.10.2026, `_rand`): ist das neue Foto geladen, die Kameras nachstellen
         this.fotos.gross.addEventListener('load', () => this._kameras());
         // Die Figur wird im Hintergrund gebaut; ist sie da (oder eine feinere Netzstufe), zeigt das Feld sie neu und der Vergleich rechnet nach.
@@ -88,6 +112,9 @@ export class Ai2d3dseite {
         this.fotos.waehlen(this.steuerung.foto);
         for (const m of this.messpunkte) m.zeigen(this.steuerung.foto);
         this._netzZeigen(true);
+        this.smplx?.zeigen(true);
+        this.pshuman?.zeigen(true);
+        this.genesiszeile?.zeigen(true);
         if (this.genesis) this.genesis.bereit.then(() => this._genesisZeigen(true));
         else {
             this.genesisfeld.zeigen({}, Ai2d3dseite.ohneGenesis(daten));
@@ -96,6 +123,7 @@ export class Ai2d3dseite {
     }
 
     static ohneGenesis(daten) {
+        if (daten.genesiszeile) return 'Die Foto-Kette ist für diesen Job nicht gerechnet. Sie rechnet nur mit dem Häkchen „Genesis direkt aus dem Foto“ oben.';
         return daten.test && !daten.test.eigen ? `Noch kein Genesis-Modell für 2d-3d-AI. Messlatte A (Tripo-Netz → Mesh3D-AI) steht auf der Testseite ${daten.test.kennung}.`
             : 'Noch kein Genesis-Modell für diesen Job.';
     }
@@ -105,6 +133,10 @@ export class Ai2d3dseite {
     }
 
     _geaendert(was) {
+        if (was === 'ansicht') {          // Ansicht der Leiste oben (04.11.2026 mit „Normale“ und „Netz farbig“): für die Felder wie bisher eine Änderung der Ansichtsart
+            Ai2d3dansicht.seitenart = this.steuerung.art;
+            was = 'modus';
+        }
         if (was !== 'netz') { this._trainingZeigen(); this.meshzeile?.aktualisieren(); if (was === 'foto') this._genesisZeigen(false); }   // Feld 3 je Foto (`Ai2d3dzeile1`)
         if (was === 'foto') {
             this.fotos.waehlen(this.steuerung.foto);
@@ -119,11 +151,13 @@ export class Ai2d3dseite {
             this._netzZeigen(false);
             this._genesisZeigen(was !== 'modus' && was !== 'rig');
         }
+        if (was !== 'netz') for (const z of [this.smplx, this.pshuman, this.genesiszeile]) z?.zeigen(was === 'foto' || was === 'ausschnitt');
     }
 
     _netzZeigen(neuStellen) {
         const netz = this.daten.netze[this.steuerung.netz] ?? null;
-        this.netzfeld.zeigen({ netz, modus: this.steuerung.modus }, netz ? null : 'Für diesen Job liegt kein Netz aus den Fotos vor.');
+        this.netzfeld.zeilenart = this.netzleiste?.art ?? null;
+        this.netzfeld.zeigen({ netz, modus: (this.netzleiste ?? this.steuerung).modus }, netz ? null : 'Für diesen Job liegt kein Netz aus den Fotos vor.');
         if (neuStellen && this.winkel !== null) Ai2d3dkamera.feldStellen(this.netzfeld, this.winkel, new THREE.Quaternion(), this._rand(this.netzfeld), this.kopf);
     }
 
@@ -148,8 +182,10 @@ export class Ai2d3dseite {
         document.getElementById('ai2d3d-trainingfigurinfo').textContent = this.trainingfigur.fehler ? `Gerechnete Figur nicht geladen: ${this.trainingfigur.fehler}` : '';
     }
 
+    /** Steht das Genesis-Modell in der dritten Zeile, gilt deren Leiste (04.11.2026, `Ai2d3dzeilenleiste`), sonst die oben. */
     _auftrag() {
-        return this.genesis.auftrag(this.steuerung.quelle, this.steuerung.modus, this.steuerung.kleider, this.steuerung.rig);
+        const z = this.genesiszeile?.leiste ?? this.steuerung;
+        return this.genesis.auftrag(this.steuerung.quelle, z.modus, z.kleider, z.rig);
     }
 
     /** Feld 3 neu zeigen; `neuStellen`: die Kamera auf die Perspektive setzen (bei neuer Figur, nicht beim Wechsel der Ansichtsart). */
@@ -159,6 +195,7 @@ export class Ai2d3dseite {
             return;
         }
         const d = this._auftrag();
+        this.genesisfeld.zeilenart = this.genesiszeile?.leiste?.art ?? null;
         this.genesisfeld.zeigen(d);
         const fertig = this.genesis.fertig(d);
         this.genesisInfo.textContent = fertig ? '' : 'Genesis-Figur wird gebaut …';      // die Beschreibung der Figur steht nicht mehr unter dem Feld (Edgar 26.10.2026: „entferne den Text“)
@@ -183,7 +220,7 @@ export class Ai2d3dseite {
         const eins = new THREE.Quaternion();
         Ai2d3dkamera.feldStellen(this.netzfeld, this.winkel, eins, this._rand(this.netzfeld), this.kopf);
         // Ein Feld zeichnet erst, wenn es im Fenster steht (`Mesh3daiansicht`): bis dahin ist seine Hülle leer — nachfassen, bis die Figur darin liegt.
-        let offen = !!this.trainingfigur?.daten && !Ai2d3dkamera.feldStellen(this.trainingfeld, this.winkel, eins, this._rand(this.trainingfeld), this.kopf);
+        let offen = !!this.trainingfeld && !!this.trainingfigur?.daten && !Ai2d3dkamera.feldStellen(this.trainingfeld, this.winkel, eins, this._rand(this.trainingfeld), this.kopf);
         if (this.genesis?.fertig(this._auftrag())) {
             offen = !Ai2d3dkamera.feldStellen(this.genesisfeld, this.winkel, this._rahmen(), this._rand(this.genesisfeld), this.kopf) || offen;
         }

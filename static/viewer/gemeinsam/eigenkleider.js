@@ -1,6 +1,8 @@
 import { Eigenkleid } from './eigenkleid.js';
 import { Eigenkleidwerte } from './eigenkleidwerte.js';
 import { Eigenrock } from './eigenrock.js';
+import { EigenkleidschnittGLSL } from './eigenkleidschnitt.js';
+import { Eigenkleidbacken } from './eigenkleidbacken.js';
 import { Koerperkoordinatenkarte } from './koerperkoordinatenkarte.js';
 import { Protokoll } from './protokoll.js';
 import { Skelettereignis } from './skelettereignis.js';
@@ -48,12 +50,40 @@ export class Eigenkleider {
      * Ohne das stach die Hose am Gesäß durch das Oberteil (im Chrome gesehen an Mann1: Zickzack an der Hüfte, die Kettengrenze Rumpf/Bein entlang).
      */
     static lage(inst) {
-        const oben = Eigenkleider.stueck(inst, 'oberteil');
+        const oben = Eigenkleider.stueck(inst, 'oberteil'), rock = Eigenkleider.stueck(inst, 'rock');
+        Eigenkleider.rockUeberOberteil(oben, rock);
         if (!oben) return;
         const hose = Eigenkleider.stueck(inst, 'hose');
         if (!hose) { oben.u.uKkLage.value.set(0, 0); return; }
         const w = Eigenkleidwerte.shaderwerte('hose', hose.werte);
         oben.u.uKkLage.value.set(Math.max(...w.sitz) + w.bruecke[0] + Eigenkleider.LAGE_LUFT_M, w.saum[0]);
+    }
+
+    /**
+     * Rock über dem Oberteil (02.11.2026 abends, Ostasiatin: der schwarze Rock stach in Flecken durch das weiße Shirt — Rock 3 mm über der Hülle der Haut, Shirt
+     * 6–48 mm über der Haut (Laura am Bund: Median 10, 90 % 35, Fall von der Brust), je nach Stelle lag das eine oder das andere außen): das Oberteil endet waagrecht
+     * unter dem Bundring (`uKkRockBund`, wie beim Kleid: eingesteckt), und die Hülle des Bunds nimmt die verschobene Schale des Oberteils mit (`unterlage`) —
+     * der Rock liegt außen darüber, eng, wo das Oberteil anliegt. Ein fester Mindestsitz von 48 mm hätte den Bund rundum weit gemacht.
+     */
+    static rockUeberOberteil(oben, rock) {
+        const ueber = Boolean(oben && rock) && Eigenrock.reichtBisBund(oben.werte, rock.werte);     // ein kurzes Oberteil über dem Bund bleibt kurz (bauchfrei)
+        if (oben) oben.u.uKkRockBund.value = (ueber && rock.netz?.userData?.bund) ?? EigenkleidschnittGLSL.OHNE_BUND;
+        if (!rock) return;
+        rock.beiBau = ueber ? (y) => { oben.u.uKkRockBund.value = y ?? EigenkleidschnittGLSL.OHNE_BUND; } : null;
+        Eigenkleider.unterlageNachfuehren(rock, ueber ? oben : null, 'oberteil');
+    }
+
+    /** Die Unterlage des Rocks (`Eigenrock.unterlageSetzen`) nach `UNTERLAGE_MS` Ruhe neu rechnen — ein Reglerzug am Oberteil baut den Rock nicht je Schritt neu. */
+    static UNTERLAGE_MS = 300;
+    static unterlageNachfuehren(rock, oben, art) {
+        clearTimeout(rock._unterWarten);
+        if (!oben) { rock.unterlageSetzen(null, ''); return; }
+        const stand = JSON.stringify([oben.inst?.bodyMesh?.geometry?.id, oben.werte]);     // mit der Körpergeometrie: grob → fein lädt ein anderes Netz
+        if (stand === rock.unterStand) return;
+        rock._unterWarten = setTimeout(() => {
+            Eigenkleidbacken.unterlage(oben.inst, art).then((u) => { if (u && !rock.weg) rock.unterlageSetzen(u, stand); })
+                .catch((fehler) => Protokoll.warnung('Eigene Kleider', 'Unterlage des Rocks nicht gerechnet', fehler));
+        }, Eigenkleider.UNTERLAGE_MS);
     }
 
     static stueck(inst, art) {
