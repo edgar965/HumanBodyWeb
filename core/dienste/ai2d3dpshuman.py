@@ -4,7 +4,7 @@
 
 Edgar: „lege danach die Jobs mit dem pshuman an. pshuman als Option bei den jobs. und passe die Genesis
 Generierung an mit pshuman“ — dann „mach beides, selektierbar“. PSHuman macht aus dem Vorderfoto 6 Ansichten
-und daraus ein farbiges Netz (`ProjektTemp/_wegwerf/textur/original/pshuman_job_rechnen.py`,
+und daraus ein farbiges Netz (`pshuman_port14/pshuman_job_rechnen.py`,
 Ablage `<Job>/pshuman/`).
 
 In `3DObjects/ai2d3d/<Name>/job.json` als `pshuman`: {zeile1, drehteller} (zwei Häkchen, frei kombinierbar);
@@ -26,7 +26,7 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
   genesis        Edgar: „pshuman umbauen, dass es statt SMPLX optional ein Genesis Mesh ausgeben kann“ —
                  `pshuman_port14/lauf.py --genesis=<masculine|feminine>` (Geschlecht des Jobs)
   vae_bildweise  eigene Zutat: der VAE-Dekoder rechnet die 14 Bilder einzeln (diffusers
-                 `enable_vae_slicing`) — gemessen 03.11.2026 (`pshuman_port14/vae_zeit.py`): bitgleich,
+                 `enable_vae_slicing`) — gemessen 03.11.2026 (`ProjektTemp/_wegwerf/textur/original/pshuman_port14_proben/vae_zeit.py`): bitgleich,
                  2,1 statt 120 s, +1,9 statt +27,6 GB
   genesis_aus_foto  Edgar 04.11.2026: „mach eine auswahl ob das Genesis modell direkt aus dem foto gerechnet werden soll, default aus“, „mach das auch ganz oben“ — die
                  Foto-Kette (`nurfotos_kette.py`, Feld „Genesis – 2d3dai (aus Fotos)“) rechnet nur mit diesem Häkchen; sonst endet sie gleich
