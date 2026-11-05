@@ -31,10 +31,11 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
   genesis_aus_foto  Edgar 04.11.2026: „mach eine auswahl ob das Genesis modell direkt aus dem foto gerechnet werden soll, default aus“, „mach das auch ganz oben“ — die
                  Foto-Kette (`nurfotos_kette.py`, Feld „Genesis – 2d3dai (aus Fotos)“) rechnet nur mit diesem Häkchen; sonst endet sie gleich
   dichte         Edgar 04.11.2026: „die Auflösung im pshuman mesh ist ja nicht so gut wie im Foto“, „mach beides, einstellbar ganz oben beim Job“: Punkte je Körperhöhe des Netzes
-                 (`pshuman_port14/poissontorch.py`): 480 = so viele wie bisher, 960 = viermal so viele Punkte, geschärft bis zur Grenze der 768er-Ansichten
+                 (`pshuman_port14/poissontorch.py`): 480 = so viele wie bisher, 960 = viermal so viele Punkte; die Glättung hängt seit 05.11.2026 an der Körperhöhe, die Form bleibt
   fototextur     Textur aus den Fotos in voller Auflösung statt Punktfarben (`pshuman_port14/fototextur.py`); erfundene Ansichten bleiben bei 768 Pixeln
+  hand_ersatz    Edgar 05.11.2026 zu Edgar 1: „die Hände sind kaputt“: PSHumans `replace_hand` setzt die Hand des eingepassten SMPL-X ins Netz, wo MediaPipe sie meldet (`pshuman_port14/handersatz.py`, `MediapipeTorch/handpunkte.py`)
 
-    POST /api/2d3dai/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, genesis, genesis_aus_foto, fototextur, anzahl, dichte}   → {ok, pshuman}
+    POST /api/2d3dai/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, genesis, genesis_aus_foto, fototextur, hand_ersatz, anzahl, dichte}   → {ok, pshuman}
 """
 
 import json
@@ -47,12 +48,13 @@ __all__ = ['Ai2d3dpshuman']
 
 class Ai2d3dpshuman:
     FELD = 'pshuman'
-    VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'genesis': False, 'genesis_aus_foto': False, 'fototextur': False}  # noqa: RUF012 — nur gelesen
+    VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'genesis': False, 'genesis_aus_foto': False, 'fototextur': False, 'hand_ersatz': False}  # noqa: RUF012 — nur gelesen
     WEGE = (('zeile1', 'Netz als Zeile 1'), ('drehteller', 'Drehteller'), ('vae_bildweise', 'VAE bildweise'),
-            ('genesis', 'Genesis statt SMPL-X'), ('genesis_aus_foto', 'Genesis direkt aus dem Foto'), ('fototextur', 'Textur aus den Fotos'))
+            ('genesis', 'Genesis statt SMPL-X'), ('genesis_aus_foto', 'Genesis direkt aus dem Foto'), ('fototextur', 'Textur aus den Fotos'), ('hand_ersatz', 'Hände ersetzen'))
     ANZAHL = (1, 2, 3, 4, 5, 6)
     DICHTEN = ((480, 'normal'), (960, 'dicht'))
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
+        'hand_ersatz': 'Im PSHuman-Netz sind die Finger oft verschmolzen. An: Wo MediaPipe eine Hand meldet, setzt PSHuman die Hand des eingepassten SMPL-X ins Netz.',
         'fototextur': 'Das PSHuman-Netz bekommt eine Textur aus den Fotos in voller Auflösung statt Farben je Punkt. Ansichten ohne Foto bleiben so scharf wie PSHuman sie erfindet (768 Pixel).',
         'genesis_aus_foto': 'Die Foto-Kette rechnet das Genesis-Modell direkt aus den Fotos (Feld „Genesis – 2d3dai (aus Fotos)“). '
                             'Aus: sie rechnet für diesen Job nicht; das Genesis-Modell kommt nur aus dem PSHuman-Netz (Mesh3D-AI).',

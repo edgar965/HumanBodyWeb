@@ -43,9 +43,10 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
         <select id="ai2d3d-anzahl" name="anzahl" data-reihenfolge="fest">{% for n in pshuman_anzahlen %}<option value="{{ n }}"{% if n == job.pshuman.anzahl %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
         <label for="ai2d3d-geschlecht" title="Grundfigur, mit der die Genesis-Figur gerechnet wird."><i class="fas fa-user"></i> Genesis</label>
         <select id="ai2d3d-geschlecht" name="geschlecht" data-reihenfolge="fest">{% if not job.geschlecht %}<option value="" selected disabled>wählen</option>{% endif %}{% for w, t in geschlechter %}<option value="{{ w }}"{% if w == job.geschlecht %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
-        <label for="ai2d3d-dichte" title="Punkte des PSHuman-Netzes: normal 480 je Körperhöhe, dicht 960 (viermal so viele Punkte, schärfer bis zur Grenze der 768er-Ansichten)."><i class="fas fa-border-all"></i> Netz</label>
+        <label for="ai2d3d-dichte" title="Punkte des PSHuman-Netzes: normal 480 je Körperhöhe, dicht 960 (viermal so viele Punkte, gleiche Form)."><i class="fas fa-border-all"></i> Netz</label>
         <select id="ai2d3d-dichte" name="dichte" data-reihenfolge="fest">{% for w, t in pshuman_dichten %}<option value="{{ w }}"{% if w == job.pshuman.dichte %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
         <label title="{{ pshuman_wege.5.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.5.text }}</label>
+        <label title="{{ pshuman_wege.6.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.6.text }}</label>
         <label title="{{ pshuman_wege.4.beschreibung }}"><input type="checkbox" name="genesis_aus_foto"{% if job.pshuman.genesis_aus_foto %} checked{% endif %}> {{ pshuman_wege.4.text }}</label>
         <span class="hb-hinweis" data-meldung></span>
     </form>{% endif %}

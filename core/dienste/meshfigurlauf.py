@@ -85,6 +85,8 @@ class Meshfigurlauf:
         self._letzte_db = 0.0
         #: Der python10-Prozess für alle Runner-Schritte dieses Laufs (`Meshfigurdauerprozess`, 12.10.2026) — immer dasselbe Objekt, auch in den Kopien der Nebenläufe.
         self.dauer = Meshfigurdauerprozess()
+        #: Die Runner-Schritte in DIESEM Prozess statt in python10 (`Meshfigurrunnerbahn._im_prozess`): nur die Mesh3D-AI-Kette, die im Skriptdienst von python14 läuft
+        self.im_prozess = False
 
     # --------------------------------------------------------------- Ablauf
 

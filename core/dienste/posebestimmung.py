@@ -34,6 +34,8 @@ class Posebestimmung:
     FASSUNG = 2
     #: Anteil des Fortschritts, den SAM belegt (der Rest gehört dem Aufrufer: Abbildung, Bilder).
     ANTEIL_SAM = 0.6
+    #: Woher der Schätzer kommt: None = jedes Mal neu geladen (Server, Auftragsprozess); der Skriptdienst der Mesh3D-AI-Kette hält ihn im Vorrat (`Vorstufenriglauf`)
+    schaetzer_quelle = None
 
     def __init__(self, ordner, bezeichnung, melden, angehalten=lambda: False, abbrechen=RuntimeError):
         """`ordner`: Pfad (`pathlib.Path`) des Ordners `pose/`; `bezeichnung` für das Log; `abbrechen`: die Ausnahme, die bei `angehalten()` fliegt."""
@@ -84,7 +86,8 @@ class Posebestimmung:
         maske = np.array(rgba)[:, :, 3] > 127
         self._fortschritt(2, 'SAM 3D Body: Modell laden')
         t = time.perf_counter()
-        s = S3dbschaetzer(gewichte=settings.SAM3DBODY_CHECKPOINT, mhr=settings.SAM3DBODY_MHR)
+        quelle = type(self).schaetzer_quelle
+        s = quelle() if quelle else S3dbschaetzer(gewichte=settings.SAM3DBODY_CHECKPOINT, mhr=settings.SAM3DBODY_MHR)
         self._fortschritt(40, 'Modell geladen in %.1f s' % (time.perf_counter() - t))
         logger.info('%s: SAM 3D Body im Prozess geladen in %.1f s', self.bezeichnung, time.perf_counter() - t)
         sam = {'namen': list(s.namen), 'bildgroesse': [rgba.size[0], rgba.size[1]], 'kasten': s.kasten(maske),

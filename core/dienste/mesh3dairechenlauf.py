@@ -45,7 +45,7 @@ class Mesh3dairechenlauf:
         # Zeile 2 baut auf Zeile 1 auf (30.10.2026, Edgar: „du solltest diese Berechnungen aus der 1. Zeile für die 2. Zeile nutzen, was machst du stattdessen?“ — gewählt „Figur aus Zeile 1“):
         # die Mesh-Anpassung ohne KI (`Mesh3daimeshanpassung`, braucht Vorstufe und Zerlegung), dann ihre Regler, ihr Versatz und ihre Haltung als Figur der Kette (`Zeile1figur`). Sie
         # ersetzen „form“ (Regler-KI bzw. Formkopf), „kopf“, „lage“ und „koerper“ (bis 29.10.2026, Module bleiben in `mesh3dai/`); Haut und Kleider rechnen auf dieser Figur.
-        # Hat der Test ein Foto (`<test>/foto/`), liefert SAM 3D Body daran die Gelenke für Start und Prüfung (`Mesh3daifotogelenke`); ohne Foto tut der Schritt nichts. Eigener Prozess: nicht in `Skriptdienstruf.ERLAUBT`
+        # Hat der Test ein Foto (`<test>/foto/`), liefert SAM 3D Body daran die Gelenke für Start und Prüfung (`Mesh3daifotogelenke`); ohne Foto tut der Schritt nichts.
         ('foto', 'Gelenke am Foto (SAM 3D Body), wenn der Test ein Foto hat', ['-u', 'mesh3dai_fotogelenke.py', '{k}']),
         ('meshanpassung', 'Genesis ins Mesh einpassen — ohne KI (Zeile 1)', ['-u', 'mesh3dai_meshanpassung.py', '--nur', '{k}']),
         ('zeile1', 'Figur aus Zeile 1 (Regler, Versatz und Haltung der Einpassung)', ['-u', 'mesh3dai_zeile1figur.py', '--nur', '{k}', '--geschlecht', '{g}']),

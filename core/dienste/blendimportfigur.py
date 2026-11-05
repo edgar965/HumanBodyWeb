@@ -100,10 +100,11 @@ class Blendimportfigur:
         return job
 
     @staticmethod
-    def rechnen(job, zusatz=None, sapiens=None):
+    def rechnen(job, zusatz=None, sapiens=None, im_prozess=False):
         """Den Auftrag in DIESEM Prozess rechnen; danach muss er „fertig“ sein, sonst ein Fehler mit seinem Grund.
         `zusatz`: weitere Felder für `auftrag.json` des Runners (`Meshfigurlauf.zusatz`) — die Pose des Schritts „pose“ (`landmarken_hand`, `Blendimportpose.zusatz`).
-        `sapiens`: die Einstellungen der Segmentierung des Wegs „netz“ (`Blendimportsegmentierung.fuer_figur`) — dann nehmen Kleidungsmaske, Haarmaske und Hautton die Etiketten von Sapiens."""
+        `sapiens`: die Einstellungen der Segmentierung des Wegs „netz“ (`Blendimportsegmentierung.fuer_figur`) — dann nehmen Kleidungsmaske, Haarmaske und Hautton die Etiketten von Sapiens.
+        `im_prozess`: auch die Runner-Schritte in diesem Prozess (`Meshfigurrunnerbahn._im_prozess`)."""
         from ..models import Meshfigurauftrag
         from .meshfigurlauf import Meshfigurlauf
 
@@ -111,6 +112,7 @@ class Blendimportfigur:
         job.started_at = timezone.now()
         job.save(update_fields=['status', 'started_at', 'updated_at'])
         lauf = Meshfigurlauf(job.id)
+        lauf.im_prozess = im_prozess
         # Das Körper-Tor (`Meshfigurrumpfpruefung`, 01.10.2026) fängt Scans mit Stoff ab, deren Rumpf nicht stimmt. Hier ist
         # der Körper nackt und sauber: im ersten Lauf (2026.10.08.11.28.34) Rumpftiefe 95,5–101 % des Netzes, Abstand
         # Figur↔Netz 2,67 mm RMS, aber 11 Brust-/Schulterregler am Anschlag (Soll ≤ 8) — die Brust ist größer, als die Regler

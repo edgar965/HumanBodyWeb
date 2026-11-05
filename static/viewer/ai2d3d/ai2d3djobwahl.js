@@ -1,7 +1,7 @@
 /**
  * Ai2d3djobwahl — Fotoanzahl und Genesis-Grundfigur oben auf der Testseite von 2d-3d-AI (04.11.2026, Edgar: „Auswahl anzahl der fotos (1-6), wenn mehrere fotos dann Hochladen funktion bei den Ansichten“,
  * „Auswahl ob Genesis Männlich, weiblich oder Kind“; zu „Kind“ siehe `Ai2d3dgeschlecht`). Beide speichern sofort: ein vergessenes „Übernehmen“ ließe hochgeladene Fotos im nächsten Lauf still aus.
- * Die Bildplätze hören selbst auf die Anzahl (`ai2d3dpshumaneingabe.js`). Schreibt `POST /api/2d3dai/<job>/pshuman/` {anzahl | dichte | fototextur | genesis_aus_foto} und `POST /api/2d3dai/<job>/geschlecht/` {geschlecht}.
+ * Die Bildplätze hören selbst auf die Anzahl (`ai2d3dpshumaneingabe.js`). Schreibt `POST /api/2d3dai/<job>/pshuman/` {anzahl | dichte | fototextur | hand_ersatz | genesis_aus_foto} und `POST /api/2d3dai/<job>/geschlecht/` {geschlecht}.
  * „mach beides, einstellbar ganz oben beim Job“: Netzdichte und Textur aus den Fotos; „mach das auch ganz oben“: das Häkchen der Foto-Kette.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
