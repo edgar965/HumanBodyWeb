@@ -19,7 +19,7 @@ if ($existing) {
 
 # Start server in hidden window
 Start-Process $pythonPath `
-    -ArgumentList $managePy, 'runserver', '8081' `
+    -ArgumentList $managePy, 'runserver', '8081', '--nostatic' `
     -WorkingDirectory $workDir `
     -WindowStyle Hidden
 

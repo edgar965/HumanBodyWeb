@@ -62,10 +62,15 @@ export class Ai2d3dansicht extends Mesh3daiansicht {
         return this.zeilenart ?? Ai2d3dansicht.seitenart;
     }
 
-    /** „Normale“ und „Netz farbig“: Materialien nur für diesen Durchgang getauscht (`Ai2d3dansichtsart.malen`). */
+    /** „Normale“ und „Netz farbig“: Materialien nur für diesen Durchgang getauscht (`Ai2d3dansichtsart.malen`); ebenso die Hautbilder von „Haut angleichen“ (`hauttausch`, `Ai2d3dhautangleich._tauschen`). */
     _malen(renderer) {
-        if (Ai2d3dansichtsart.getauscht(this.ansichtsart)) Ai2d3dansichtsart.malen(this, renderer, this.ansichtsart);
-        else super._malen(renderer);
+        const zurueck = this.hauttausch?.();
+        try {
+            if (Ai2d3dansichtsart.getauscht(this.ansichtsart)) Ai2d3dansichtsart.malen(this, renderer, this.ansichtsart);
+            else super._malen(renderer);
+        } finally {
+            zurueck?.();
+        }
     }
 
     _uebernehmen(von) {

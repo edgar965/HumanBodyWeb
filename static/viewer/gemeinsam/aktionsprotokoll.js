@@ -109,7 +109,8 @@ export class Aktionsprotokoll {
     // ------------------------------------------------------------------ Anmelden
 
     anmelden() {
-        const kenn = navigator.userAgent.match(/(OPR|Edg|Firefox|Chrome)\/[\d.]+/);
+        // Opera und Edge tragen auch „Chrome/…“, und zwar weiter vorn: erst der eigene Name, sonst stand Opera 137 als „Chrome/153“ im Protokoll (05.11.2026).
+        const kenn = navigator.userAgent.match(/(OPR|Edg|Firefox)\/[\d.]+/) ?? navigator.userAgent.match(/Chrome\/[\d.]+/);
         this.melden('seite_offen', `${location.pathname}${location.search}${location.hash} · ${kenn ? kenn[0] : 'Browser unbekannt'} · ${document.visibilityState}`);
         // Erfassungsphase: Die Bedienung wird gemeldet, auch wenn ein Zuhörer weiter unten sie schluckt oder wirft.
         document.addEventListener('click', e => this._klick(e), true);

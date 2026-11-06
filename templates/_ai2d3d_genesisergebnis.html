@@ -5,6 +5,7 @@ gezeichnet von `Ai2d3dgenesiszeile`, folgt der Leiste oben.{% endcomment %}
     <h2><span class="ai2d3d-nummer">3</span> Genesis-Ergebnis (Mesh3D-AI)</h2>
     <div class="ai2d3d-leinwand" data-feld="genesis-ergebnis"></div>
     <p class="hb-hinweis">Ergebnis des Mesh3D-AI-Tests: Figur aus der Einpassung, Haut und Kleider</p>
+    {% if g.ergebnis %}{% include "_ai2d3d_hautangleich.html" %}{% endif %}
     {# Abspielleiste und Export wie auf der Mesh3D-AI-Testseite (Bereich mesh3daitest, dieselbe Figur wie dort) #}
     {% if g.ergebnis %}{% include "_mesh3dai_figurbewegung.html" with adresse=bewegung_adresse %}
     {% include "_exportleiste.html" with bereich="mesh3daitest" kennung=g.test speichern_hinweis="Als Modell speichern: auf der Mesh3D-AI-Testseite („Übernehmen und als Modell speichern“)." %}{% endif %}

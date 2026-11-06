@@ -214,7 +214,9 @@ import { Ai2d3djobwahl } from "{% fassungspfad 'viewer/ai2d3d/ai2d3djobwahl.js' 
 Ai2d3djobwahl.binden(document.getElementById('ai2d3d-jobwahl'));
 Auftragname.binden();
 {% endif %}const seite = Ai2d3dseite.aufbauen();
-{% if daten.test.eigen %}import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
+{% if daten.genesiszeile.ergebnis %}import { Ai2d3dhautangleich } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dhautangleich.js' %}";
+Ai2d3dhautangleich.binden(document.getElementById('ai2d3d-hautangleich'), seite);
+{% endif %}{% if daten.test.eigen %}import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
 import { Ai2d3dbewegung } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dbewegung.js' %}";
 import { Ai2d3dexportfigur } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dexportfigur.js' %}";
 import { Ai2d3dmodellspeichern } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dmodellspeichern.js' %}";

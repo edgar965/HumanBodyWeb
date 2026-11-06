@@ -8,6 +8,7 @@ from .api.ai2d3dabnahme import Ai2d3dabnahmeendpunkte
 from .api.ai2d3daktionen import Ai2d3daktionsendpunkte
 from .api.ai2d3ddaten import Ai2d3ddatenendpunkte
 from .api.ai2d3dfigur import Ai2d3dfigurendpunkte
+from .api.ai2d3dhautangleich import Ai2d3dhautangleichendpunkte
 from .api.ai2d3dpshumanendpunkte import Ai2d3dpshumanendpunkte
 from .api.ai2d3dstandardanimation import Ai2d3dstandardanimationendpunkte
 from .api.seite_ai2d3d_einstellungen import ai2d3d_settings_page
@@ -32,6 +33,14 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/form/', Ai2d3daktionsendpunkte.form, name='ai2d3d_form'),
     # PSHuman-Weg eines Tests (03.11.2026, „pshuman als Option bei den jobs“) — `Ai2d3dpshuman`.
     path('api/2d3dai/<slug:job>/pshuman/', Ai2d3daktionsendpunkte.pshuman, name='ai2d3d_pshuman'),
+    # Haut angleichen (05.11.2026, Edgar: „Ein paar slider wo man die Haut anpasst“) — `Ai2d3dhautangleich`, ein Schritt nach dem Job.
+    path('api/2d3dai/<slug:job>/hautangleich/', Ai2d3dhautangleichendpunkte.stand, name='ai2d3d_hautangleich'),
+    path('api/2d3dai/<slug:job>/hautangleich/vorbereiten/', Ai2d3dhautangleichendpunkte.vorbereiten, name='ai2d3d_hautangleich_vorbereiten'),
+    path('api/2d3dai/<slug:job>/hautangleich/daten/<slug:name>/', Ai2d3dhautangleichendpunkte.daten, name='ai2d3d_hautangleich_daten'),
+    path('api/2d3dai/<slug:job>/hautangleich/original/<int:kachel>/', Ai2d3dhautangleichendpunkte.original, name='ai2d3d_hautangleich_original'),
+    path('api/2d3dai/<slug:job>/hautangleich/zeichnung/<int:kachel>/', Ai2d3dhautangleichendpunkte.zeichnung, name='ai2d3d_hautangleich_zeichnung'),
+    path('api/2d3dai/<slug:job>/hautangleich/speichern/', Ai2d3dhautangleichendpunkte.speichern, name='ai2d3d_hautangleich_speichern'),
+    path('api/2d3dai/<slug:job>/hautangleich/zuruecksetzen/', Ai2d3dhautangleichendpunkte.zuruecksetzen, name='ai2d3d_hautangleich_zuruecksetzen'),
     # Genesis-Grundfigur eines Tests (04.11.2026, „Auswahl ob Genesis Männlich, weiblich“) — `Ai2d3dgeschlecht`.
     path('api/2d3dai/<slug:job>/geschlecht/', Ai2d3daktionsendpunkte.geschlecht, name='ai2d3d_geschlecht'),
     # Bildplätze der PSHuman-Eingabe (03.11.2026, `Ai2d3dpshumaneingabe`): ein oder mehrere Fotos,
