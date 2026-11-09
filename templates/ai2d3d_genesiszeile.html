@@ -6,6 +6,13 @@ Seit 04.11.2026 abends (Edgar: „smpl-x ergebnis in die dritte zeile verschiebe
 <div class="ai2d3d-zeile ai2d3d-genesiszeile" id="ai2d3d-genesiszeile">
     {# eigene Leiste der Zeile (04.11.2026, Edgar: „in jeder Zeile ab Zeile 3 diese ansichten plus die Rig, Kleider Toggle buttons“) — `Ai2d3dzeilenleiste` #}
     <div class="card ai2d3d-steuerung ai2d3d-zeilenleiste" data-zeilenleiste="genesis"></div>
+    {# vom PSHuman-Netz zur Mesh3D-AI-Kette, mit dem Foto des Jobs (`Ai2d3dgenesisstart`) #}
+    {% if g.rechnen %}<button type="button" class="btn btn-primary" data-aktion="genesis-rechnen" data-adresse="{% url 'ai2d3d_genesis_rechnen' job.id %}"
+        title="Rechnet aus dem PSHuman-Netz einen neuen Mesh3D-AI-Test, der alte bleibt liegen."><i class="fas fa-play"></i> Genesis rechnen</button>{% endif %}
+    {# der ganze Job in einem Lauf (`Ai2d3djoblauf`): PSHuman, mit Häkchen die Foto-Kette, dann der Mesh3D-AI-Test #}
+    <button type="button" class="btn btn-primary" data-aktion="job-rechnen" data-adresse="{% url 'ai2d3d_job_rechnen' job.id %}" data-stand="{% url 'ai2d3d_job_stand' job.id %}"
+        title="Rechnet PSHuman, mit Häkchen die Foto-Kette, und legt den Mesh3D-AI-Test an. Ein schon gerechnetes PSHuman-Netz bleibt."><i class="fas fa-play"></i> Job rechnen</button>
+    <span class="hb-hinweis" data-jobstand></span>
     <div class="ai2d3d-bereiche">
         <section class="card ai2d3d-bereich">
             <h2><span class="ai2d3d-nummer">1</span> Genesis – Mesh3D-AI</h2>
@@ -20,4 +27,9 @@ Seit 04.11.2026 abends (Edgar: „smpl-x ergebnis in die dritte zeile verschiebe
         {% include "_ai2d3d_genesisfeld.html" with nummer=3 titel="Genesis – 2d3dai (aus Fotos)" %}
     </div>
 </div>
+{# Testfälle wie auf der Testseite (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“), `Mesh3daitestfaelle` in `Ai2d3dgenesiszeile` #}
+{% if g.testfaelle %}<section class="card mesh3dai-testfaelle" id="mesh3dai-testfaelle" data-adresse="{{ g.testfaelle }}">
+    <h2>Testfälle der KI</h2>
+    <div data-testfaelle="inhalt"><span class="hb-hinweis">Wird geladen …</span></div>
+</section>{% endif %}
 {% endwith %}

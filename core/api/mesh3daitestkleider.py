@@ -66,7 +66,7 @@ class Mesh3daitestkleiderendpunkte:
     @staticmethod
     @require_GET
     def netz(request, kennung, geschlecht, weg, stueck):
-        paket = Mesh3daitestkleider.paket(kennung, geschlecht, weg, stueck)
+        paket = Mesh3daitestkleider.paket(kennung, geschlecht, weg, stueck, stufe=1 if request.GET.get('stufe') == '1' else 0)
         if paket is None:
             raise Http404('Kein Stück %s/%s für Test %s (%s)' % (weg, stueck, kennung, geschlecht))
         return HttpResponse(paket, content_type='application/octet-stream')

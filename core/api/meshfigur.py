@@ -18,7 +18,7 @@ import logging
 import mimetypes
 
 from asgiref.sync import sync_to_async
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -26,12 +26,12 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.meshfigurablage import Meshfigurablage
-from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.meshfigurarbeiter import Meshfigurarbeiter
 from ..dienste.meshfigureingang import Meshfigureingang
 from ..dienste.meshfigurlauf import Meshfigurlauf
 from ..dienste.meshfiguroptionen import Meshfiguroptionen
 from ..models import Meshfigurauftrag
+from .auftragsfamilie import Auftragsfamilie
 
 logger = logging.getLogger('core')
 
@@ -152,14 +152,7 @@ class Meshfigurendpunkte:
 
     @staticmethod
     def _zustand_rechnen(job_id):
-        job = get_object_or_404(Meshfigurauftrag, pk=job_id)
-        if job.laeuft and not Meshfigurarbeiter.lebt(job):
-            job.refresh_from_db()
-            if job.laeuft:
-                job.status = 'gescheitert'
-                job.error_message = job.error_message or 'Arbeitsprozess lebt nicht mehr (auftrag.log)'
-                job.save(update_fields=['status', 'error_message', 'updated_at'])
-        return Meshfigurendpunkte._zustand(job)
+        return Auftragsfamilie.zustand_rechnen(Meshfigurauftrag, Meshfigurarbeiter, Meshfigurendpunkte._zustand, job_id)
 
     # ------------------------------------------------------------------ Lauf
 
@@ -235,12 +228,7 @@ class Meshfigurendpunkte:
     @staticmethod
     @require_POST
     def mehrere_loeschen(request):
-        ids = Meshfigurendpunkte._rumpf(request).get('ids') or []
-        n = 0
-        for job in Meshfigurauftrag.objects.filter(pk__in=ids):
-            Meshfigurendpunkte._entfernen(job)
-            n += 1
-        return JsonResponse({'ok': True, 'geloescht': n})
+        return Auftragsfamilie.mehrere_loeschen(Meshfigurauftrag, Meshfigurendpunkte._rumpf, Meshfigurendpunkte._entfernen, request)
 
     @staticmethod
     def _entfernen(job):
@@ -256,12 +244,4 @@ class Meshfigurendpunkte:
     @staticmethod
     @require_GET
     def datei(request, job_id, ordner, name):
-        job = get_object_or_404(Meshfigurauftrag, pk=job_id)
-        try:
-            pfad = Meshfigurablage(job.kennung).datei(ordner, name)
-        except ValueError:
-            raise Http404('Pfad') from None
-        if not pfad.is_file():
-            raise Http404('Datei %s' % name)
-        return Auftragsdatei.antwort(request, pfad, herunterladen=request.GET.get('laden') == '1',
-                                     kennung=request.GET.get('v'))
+        return Auftragsfamilie.datei(Meshfigurauftrag, Meshfigurablage, request, job_id, ordner, name)

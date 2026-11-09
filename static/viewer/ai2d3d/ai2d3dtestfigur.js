@@ -46,29 +46,38 @@ export class Ai2d3dtestfigur {
             const daten = await antwort.json();
             if (!antwort.ok) throw new Error(daten.error || `HTTP ${antwort.status}`);
             const matrizen = Mesh3daihaeutung.ausDrehungen(daten.dreh, daten.ausgabe, daten.ruhezentren);
-            const netz = await Mesh3daiflaechennetz.holen(daten.job, daten.figur_netz);
             const geschlecht = String(daten.figur_netz).split('/').filter(Boolean).pop();
+            // Körper, Kleiderliste, Augäpfel und Stücke zugleich holen (08.11.2026, Ladezeit): vorher wartete jeder Abruf auf den vorigen
+            const listeAbruf = fetch(`${this.test.adresse}kleider/${geschlecht}/`).then(a => (a.ok ? a.json() : null)).catch(() => null);
+            const augenAbruf = Mesh3daiflaechennetz.holen(null, `${this.test.adresse}kleid/${geschlecht}/k/ki_augen`)
+                .catch(fehler => { console.warn(`Ai2d3dtestfigur: keine Augäpfel (${fehler.message})`); return null; });
+            const kleiderAbruf = Mesh3daikikleiderfeld.laden({ liste: `${this.test.adresse}kleider/${geschlecht}/`, dreh: daten.dreh, rig: daten.ausgabe, ruhezentren: daten.ruhezentren })
+                .catch(fehler => { console.warn(`Ai2d3dtestfigur: Kleider nicht geladen (${fehler.message})`); return null; });
+            // Netzstufe 1 (09.11.2026, Edgar: „das ganze Anzeigenetz in Stufe 1“), mit der Unterteilungsmatrix für die Zeile 1 (`Ai2d3dzeile1`)
+            const netz = await Mesh3daiflaechennetz.holen(daten.job, daten.figur_netz, { stufe: 1, matrix: true });
             this.figur = new THREE.Group();
             // Haut unter den Stücken weglassen wie die Mesh3D-AI-Testseite (`Mesh3daitestkleider.verdeckt` → `Mesh3daitestnetzbau.mesh(…, verdeckt)`). Bis 24.10.2026 20 Uhr fehlte das hier:
             // gemessen im Chrome zeichnete der Körper alle 64.632 Dreiecke, die Haut stach durch Shorts und Socken, das Genital hing unter den Shorts (Abnahme über `Ai2d3dseitenbild`).
-            // Zwei Körper: mit allen Stücken verdeckt, und nur unter dem Haar (Schalter „Kleider“ aus).
-            const liste = await fetch(`${this.test.adresse}kleider/${geschlecht}/`).then(a => (a.ok ? a.json() : null)).catch(() => null);
-            const anzahl = netz.dreiecke.length / 3;
-            // Unter einer Hose kein Genital (24.10.2026 abends, Edgar: „fixe!“): das Anatomie-Stück hing unter den Shorts frei — im Foto trägt Edgar es IN den Shorts. Die
-            // Anatomieverdeckung von Mesh3D-AI nimmt nur weg, was durch den Stoff sticht; ein Stück, das unter dem Saum heraushängt, bleibt. Abnahme `lauf6_messpunkte`: Oberschenkel
-            // innen 33–43 mm zu breit, dort lag das Genital in der Beinlücke.
-            const an = Ai2d3dtestfigur.verdeckt(liste, anzahl, false);
-            if (an && Ai2d3dtestfigur.hose(liste)) for (const t of Ai2d3dtestfigur.anatomie(netz)) an[t] = 1;
-            this.koerper = { an: Mesh3daitestnetzbau.mesh(netz, matrizen, an),
-                             aus: Mesh3daitestnetzbau.mesh(netz, matrizen, Ai2d3dtestfigur.verdeckt(liste, anzahl, true)) };
+            // Zwei Körper: mit allen Stücken verdeckt, und ganz (Schalter „Kleider“ aus). Bis 08.11.2026 blieb ohne Kleider die Haut unter dem Haar weg, obwohl der Schalter seit 30.10.2026
+            // auch das Haar ausblendet (`Mesh3daikikleiderfeld.kleiderZeigen`) — Edgar an n1: „Haar fehlt im Genesis modell, am rücken ist loch“.
+            const liste = await listeAbruf;
+            // In einem tragenden Stück kein Genital (24.10.2026 abends, Edgar: „fixe!“ — es hing unter den Shorts frei): seit 08.11.2026 steht das in der Maske des Stücks selbst, nach
+            // DER Regel des Servers (`Kleideranatomie.getragen`, `Mesh3daitestkikleider.zeilen`); bis dahin verdeckte hier jede gewählte Hose die ganze Anatomie (`hose`, eine zweite Regel).
+            // Die Masken sind auf dem Käfig gerechnet: auf Stufe 1 gelten sie für die Kinder jedes Käfigdreiecks (`dreieckmaske`).
+            const an = netz.dreieckmaske(Ai2d3dtestfigur.verdeckt(liste, netz.kaefigDreiecke));
+            this.koerper = { an: Mesh3daitestnetzbau.mesh(netz, matrizen, an), aus: Mesh3daitestnetzbau.mesh(netz, matrizen, null) };
             this.figur.add(this.koerper.an, this.koerper.aus);
-            this._bau = { netz, an, aus: Ai2d3dtestfigur.verdeckt(liste, anzahl, true), liste: `${this.test.adresse}kleider/${geschlecht}/`, augen: null };
-            this.augen = await Mesh3daiflaechennetz.holen(null, `${this.test.adresse}kleid/${geschlecht}/k/ki_augen`)
-                .then(n => { this._bau.augen = n; return Mesh3daitestnetzbau.mesh(n, matrizen); })
-                .catch(fehler => { console.warn(`Ai2d3dtestfigur: keine Augäpfel (${fehler.message})`); return null; });
+            this._bau = { netz, an, aus: null, liste: `${this.test.adresse}kleider/${geschlecht}/`, augen: null };
+            const augenNetz = await augenAbruf;
+            this._bau.augen = augenNetz;
+            try {
+                this.augen = augenNetz ? Mesh3daitestnetzbau.mesh(augenNetz, matrizen) : null;
+            } catch (fehler) {
+                console.warn(`Ai2d3dtestfigur: keine Augäpfel (${fehler.message})`);
+                this.augen = null;
+            }
             if (this.augen) this.figur.add(this.augen);
-            this.kleider = await Mesh3daikikleiderfeld.laden({ liste: `${this.test.adresse}kleider/${geschlecht}/`, dreh: daten.dreh, rig: daten.ausgabe, ruhezentren: daten.ruhezentren })
-                .catch(fehler => { console.warn(`Ai2d3dtestfigur: Kleider nicht geladen (${fehler.message})`); return null; });
+            this.kleider = await kleiderAbruf;
             if (this.kleider) this.figur.add(this.kleider.gruppe);
             this.figur.traverse(o => { o.layers.set(1); o.frustumCulled = false; });
             this.figur.userData.mesh3daiFremd = true;          // gehört nicht dem Feld (`Mesh3daiansicht._leeren` gibt es dann nicht frei)
@@ -77,7 +86,7 @@ export class Ai2d3dtestfigur {
             const zeile1 = this.seite?.trainingfigur;
             if (daten.zeile1_ursprung && zeile1) {
                 await zeile1.bereit;
-                if (zeile1.daten?.genesis) this.vorlage = new Ai2d3dzeile1(this.figur, [this.koerper.an, this.koerper.aus], Ai2d3dtrainingfigur._feld(daten.zeile1_ursprung, Int32Array));
+                if (zeile1.daten?.genesis) this.vorlage = new Ai2d3dzeile1(this.figur, [this.koerper.an, this.koerper.aus], Ai2d3dtrainingfigur._feld(daten.zeile1_ursprung, Int32Array), netz);
             }
             this.text = (this.test.eigen ? `Genesis-Modell dieses Jobs (<Job>/figur/, ${daten.info?.name ?? ''}) in der Haltung aus den Fotos`
                 : `Ausgabe des Mesh3D-AI-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) in der Haltung aus dem Netz`) + (this.augen ? ', mit Augäpfeln' : '')
@@ -112,30 +121,17 @@ export class Ai2d3dtestfigur {
 
     /**
      * Die Dreiecke des Körpers unter den Stücken der Kleiderliste (Server: `verdeckt` = Bits je Dreieck, base64, little-endian; dieselbe Lesart wie `Mesh3daitestkleider.verdeckt`).
-     * `nurHaar`: nur unter dem Haar. → Uint8Array (1 = weglassen) oder null.
+     * → Uint8Array (1 = weglassen) oder null.
      */
-    static verdeckt(liste, anzahl, nurHaar) {
+    static verdeckt(liste, anzahl) {
         let aus = null;
         for (const st of liste?.stuecke || []) {
-            const bits = st.wahl !== 'aus' && (!nurHaar || st.art === 'haar') ? st[st.wahl]?.verdeckt : null;
+            const bits = st.wahl !== 'aus' ? st[st.wahl]?.verdeckt : null;
             if (!bits) continue;
             aus ??= new Uint8Array(anzahl);
             const bytes = Uint8Array.from(atob(bits), c => c.charCodeAt(0));
             for (let t = 0; t < anzahl; t++) if (bytes[t >> 3] & (1 << (t & 7))) aus[t] = 1;
         }
-        return aus;
-    }
-
-    /** Trägt die Figur eine Hose (ein gewähltes Stück der Art „hose“)? */
-    static hose(liste) {
-        return (liste?.stuecke || []).some(st => st.wahl !== 'aus' && st.art === 'hose');
-    }
-
-    /** Die Dreiecke des Anatomie-Stücks im Anzeigenetz (Material „daz_anatomie_…“). */
-    static anatomie(netz) {
-        const m = (netz.kopf?.materialien || []).findIndex(x => /anatomie/i.test(x.name || ''));
-        const aus = [];
-        if (m >= 0) for (let t = 0; t < netz.material.length; t++) if (netz.material[t] === m) aus.push(t);
         return aus;
     }
 

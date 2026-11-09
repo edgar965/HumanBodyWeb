@@ -27,16 +27,24 @@
  * schreibt das Ergebnis, sobald es da ist. Wenige Punkte (Visemes im Mund) und Seiten ohne Worker
  * rechnen hier selbst — dieselben Zahlen. Nur mit der Einstellung „Normalen der Gelenkkorrekturen
  * im Worker" (Einstellungen → Charakter, Vorgabe aus); ohne sie rechnet jeder Zug je Punkt wie vorher.
+ *
+ * DER INDEX WECHSELT (05.11.2026, Edgar2010, Tarnflecken auf Armen und Hals im Tanz, nur in manchen
+ * Seitenladungen): die Hautverdeckung setzt einen neuen Index (`Figurhaut.indexSetzen`). Die Nachbardreiecke
+ * hier sind Stellen in EINEM Index; kam die Maske nach dem ersten Bild, liefen sie im neuen Index auf
+ * fremde Dreiecke und über sein Ende hinaus. Gemessen im Tab: 150.936 gemerkte gegen 150.402 Einträge,
+ * 366 Normalenwerte NaN, 6.722 von 27.087 Normalen über 60° neben der Ruhe. Darum gilt die Vorbereitung
+ * nur für den Index, aus dem sie gebaut ist; die Ruhenormalen bleiben.
  */
 import { Normalenarbeit } from './normalenarbeit.js';
 import { Normalenrechnung } from './normalenrechnung.js';
 
 export class Genesis9normalen {
 
-    /** Vorbereitung je Geometrie: Nachbardreiecke (CSR) und Kopiengruppen. */
+    /** Vorbereitung je Geometrie und Index: Nachbardreiecke (CSR) und Kopiengruppen. */
     static vorbereiten(geo, ruhePos) {
         const daten = geo.userData;
-        if (daten.normalen) return daten.normalen;
+        const alt = daten.normalen;
+        if (alt && alt.indexFeld === geo.index?.array) return alt;
         const lage = geo.getAttribute('position');
         const normal = geo.getAttribute('normal');
         if (!lage || !normal || !geo.index || !ruhePos) return null;
@@ -61,8 +69,8 @@ export class Genesis9normalen {
         for (let p = 0; p < n; p++) mitglied[fm[gruppe[p]]++] = p;
         for (let i = 0; i < index.length; i++) dreieck[fd[gruppe[index[i]]]++] = (i - i % 3);
         daten.normalen = {
-            gruppe, mitgliedZahl, mitglied, dreieckZahl, dreieck,
-            ruhe: Float32Array.from(normal.array),
+            gruppe, mitgliedZahl, mitglied, dreieckZahl, dreieck, indexFeld: index,
+            ruhe: alt?.ruhe ?? Float32Array.from(normal.array),   // beim zweiten Mal steht im Attribut schon ein Bild, nicht die Ruhe
             ruheDreiecke: new Float32Array(n * 3),      // je Gruppe einmal gerechnet …
             gerechnet: new Uint8Array(anzahl),           // … sobald sie berührt wird
             arbeit: [0, 0, 0],

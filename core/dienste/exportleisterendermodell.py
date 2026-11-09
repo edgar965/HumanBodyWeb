@@ -9,6 +9,9 @@ Darum entsteht die Figur hier wie der Stand von 2D3D Kleider aus denselben Regle
 Wimpern, Brauen; die Kacheln der Quelle, sonst die Daz-Haut der Grundfigur). Aus der Browser-GLB kommen nur die Stücke der Seite (KI-Kleider, Fotostücke, Anatomie-Stück) samt Bindung an
 das Skelett, per Knochenname auf die Knochen des Stands umgehängt. Das trägt nur, wenn beide Skelette gleich stehen: Die größte Abweichung der Gelenke steht im Bericht, über
 `ABWEICHUNG_M` bricht der Bau ab, statt Stücke neben die Figur zu legen. Die Haut unter den Stücken fällt aus dem Körper wie im Browser (`Exportleistehautmaske`).
+
+Eine Figur mit eigenen Hautkacheln bekommt keine Daz-Brauen und -Wimpern (05.11.2026, Edgar zu Edgar_1: „die augenbrauen im render sind noch zu dunkel“): Die Kacheln tragen beide schon aus dem
+Foto, die Seite zeichnet nur die Kacheln (im Chrome gelesen: 22 Netze, keins durchsichtig). Die Vorgaben des Stands legten `G9Eyebrows_CS06` (sRGB ~47/35/30, Deckkraft bis 0,9) und schwarze Wimpern darüber.
 """
 
 import hashlib
@@ -23,6 +26,8 @@ __all__ = ['Exportleisterendermodell']
 class Exportleisterendermodell:
     #: Netze der Browser-GLB, die der Stand selbst baut (Körper und Anhänge von `G9koerpernetz`) — alles andere ist ein Stück der Seite.
     EIGEN = re.compile(r'^genesis9_(koerper|augen|mund|wimpern|brauen|traene)_')
+    #: Anhänge von `G9koerpernetz`, die eine Figur mit eigenen Hautkacheln nicht bekommt: Beides trägt schon die Kachel.
+    IN_DER_KACHEL = frozenset({'brauen', 'wimpern'})
     #: Größte erlaubte Abweichung eines Gelenks zwischen Browser und Server (m).
     ABWEICHUNG_M = 0.005
     TYPEN = {5126: '<f4', 5125: '<u4', 5123: '<u2', 5122: '<i2', 5121: 'u1', 5120: 'i1'}
@@ -37,6 +42,7 @@ class Exportleisterendermodell:
         from Genesis9.glbanimation import G9glbanimation
 
         from .exportleistehautmaske import Exportleistehautmaske
+        from .exportleistekragen import Exportleistekragen
         from .standhaut import Standhaut
         from .standmodellglb import Standmodellglb
         figur = str(stellung.get('figur') or 'basis')
@@ -47,17 +53,24 @@ class Exportleisterendermodell:
         if abweichung > self.ABWEICHUNG_M:
             raise ValueError('Skelett der Seite und des Servers weichen um %.1f mm ab (über %d Gelenke) — die Stücke passten nicht auf die Figur' % (abweichung * 1000, gemeinsam))
         stuecke = self.stuecke(quelle, stellung.get('haut_deckt'))
+        kragen = Exportleistekragen.anlegen(stuecke, netz)
         # Die Haut unter den Stücken fällt weg wie im Browser (`Hautverdeckung`) — sonst sticht sie in der Bewegung durch den Stoff
         koerper, verdeckung = Exportleistehautmaske.koerper(netz, [(s['punkte'], s['dreiecke']) for s in stuecke if s['deckt']])
         glb.koerper(koerper, self.kacheln)
-        glb.anhaenge(netz)
+        glb.anhaenge(self._anhaenge(netz))
         for s in stuecke:
             glb._netz(s['name'], s['punkte'], s['dreiecke'], s['normalen'], s['uv'], glb._haut(s['haut'], len(s['punkte'])), self._bild(quelle, glb, s['material']),
                       self._srgb(s['faktor']), maske=s['maske'])
             self._farben(glb, s)
         glb.schreiben(ziel)
-        return dict(glb.zahl, stuecke=[s['name'] for s in stuecke], hautverdeckung=verdeckung, kacheln=sorted(self.kacheln), abweichung_mm=round(abweichung * 1000, 2),
+        return dict(glb.zahl, stuecke=[s['name'] for s in stuecke], hautverdeckung=verdeckung, kragen=kragen, kacheln=sorted(self.kacheln), abweichung_mm=round(abweichung * 1000, 2),
                     gelenke_verglichen=gemeinsam, knochen_ohne_gelenk=sorted(glb.fehlend))
+
+    def _anhaenge(self, netz):
+        """`netz` für `Standmodellglb.anhaenge`: mit eigenen Kacheln ohne `IN_DER_KACHEL`, sonst unverändert."""
+        if not self.kacheln:
+            return netz
+        return dict(netz, anhaenge=[a for a in netz.get('anhaenge') or [] if a.get('schluessel') not in self.IN_DER_KACHEL])
 
     @staticmethod
     def _figur(figur, regler, hautpreset):

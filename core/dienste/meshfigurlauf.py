@@ -36,6 +36,7 @@ from .meshfigurdauerprozess import Meshfigurdauerprozess
 from .meshfigurnebenlauf import Meshfigurnebenlauf
 from .meshfiguroptionen import Meshfiguroptionen
 from .meshfigurrunnerbahn import Meshfigurrunnerbahn
+from .blendermodelllauf import Blendermodelllauf
 
 logger = logging.getLogger('core')
 
@@ -187,16 +188,7 @@ class Meshfigurlauf:
     def sichern(self, *felder):
         self.job.save(update_fields=list(felder) + ['updated_at'])
 
-    def melden(self, anteil, text):
-        """Fortschritt im Band des Schritts — höchstens zweimal je Sekunde in die Datenbank."""
-        jetzt = time.monotonic()
-        if jetzt - self._letzte_db < 0.5 and anteil < 1.0:
-            return
-        self._letzte_db = jetzt
-        von, bis = self._band
-        self.job.progress = max(self.job.progress or 0, int(von + (bis - von) * max(0.0, min(1.0, anteil))))
-        self.job.progress_detail = str(text)[:200]
-        self.sichern('progress', 'progress_detail')
+    melden = Blendermodelllauf.melden          # dieselbe Rechnung wie `Blendermodelllauf.melden` (bis 08.11.2026 eine Kopie hier)
 
     # --------------------------------------------------------------- Runner
 
@@ -281,12 +273,4 @@ class Meshfigurlauf:
         tabelle.speichern()
         self.job.ergebnis['kalibrierung'] = {'vorhanden': False, **tabelle.steckbrief()}
 
-    def _scheitern(self, text):
-        job = self.job
-        job.refresh_from_db()
-        if job.status == 'angehalten':
-            return
-        job.status = 'gescheitert'
-        job.error_message = text[:4000]
-        job.finished_at = timezone.now()
-        job.save(update_fields=['status', 'error_message', 'finished_at', 'updated_at'])
+    _scheitern = Blendermodelllauf._scheitern          # dieselbe Rechnung wie `Blendermodelllauf._scheitern` (bis 08.11.2026 eine Kopie hier)

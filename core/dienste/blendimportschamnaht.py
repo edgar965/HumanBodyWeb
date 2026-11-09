@@ -21,6 +21,8 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse import csgraph
 
+from .blendimportschamring import Blendimportschamring
+
 __all__ = ['Blendimportschamnaht']
 
 
@@ -264,8 +266,8 @@ class Blendimportschamnaht:
 
     @staticmethod
     def flaechennormalen(punkte, dreiecke):
-        """Nicht normierte Flächennormale je Dreieck."""
-        return np.cross(punkte[dreiecke[:, 1]] - punkte[dreiecke[:, 0]], punkte[dreiecke[:, 2]] - punkte[dreiecke[:, 0]])
+        """Nicht normierte Flächennormale je Dreieck (`Blendimportschamring.flaechennormalen`)."""
+        return Blendimportschamring.flaechennormalen(punkte, dreiecke)
 
     @classmethod
     def _umgeklappt(cls, vorher, nachher, dreiecke):

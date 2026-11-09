@@ -17,8 +17,8 @@ import json
 import logging
 from pathlib import Path
 
-from ..atomic_write import AtomarSchreiber
 from ..daten.blendermodellablage import Blendermodellablage
+from .iterationsloeschung import Iterationsloeschung
 
 logger = logging.getLogger('core')
 
@@ -43,26 +43,9 @@ class Kostuemloeschung:
         except OSError, ValueError, TypeError:
             return []
 
-    def vormerken(self, runden):
-        """→ alle vorgemerkten Runden (die neuen zu den schon wartenden)."""
-        alle = sorted(set(self.vorgemerkt()) | {int(n) for n in runden})
-        self.ablage.arbeit().mkdir(parents=True, exist_ok=True)
-        AtomarSchreiber.json_schreiben(self._pfad(), alle)
-        return alle
+    vormerken = Iterationsloeschung.vormerken          # dieselbe Rechnung wie `Iterationsloeschung.vormerken` (bis 08.11.2026 eine Kopie hier)
 
-    def abarbeiten(self):
-        """Die vorgemerkten Runden löschen: Einträge aus `job.ergebnis` (im Speicher — Speichern ist Sache des
-        Aufrufers) und ihre Dateien. → die gelöschten Rundennummern."""
-        vorgemerkt = set(self.vorgemerkt())
-        if not vorgemerkt:
-            return []
-        eintraege = (self.job.ergebnis or {}).get('iterationen') or []
-        weg = [e for e in eintraege if e.get('runde') in vorgemerkt]
-        for eintrag in weg:
-            self._dateien_loeschen(eintrag)
-        self.job.ergebnis['iterationen'] = [e for e in eintraege if e.get('runde') not in vorgemerkt]
-        self._pfad().unlink(missing_ok=True)
-        return sorted(e['runde'] for e in weg)
+    abarbeiten = Iterationsloeschung.abarbeiten          # dieselbe Rechnung wie `Iterationsloeschung.abarbeiten` (bis 08.11.2026 eine Kopie hier)
 
     def _dateien_loeschen(self, eintrag):
         namen = {str(v) for v in (eintrag.get('dateien') or {}).values()}

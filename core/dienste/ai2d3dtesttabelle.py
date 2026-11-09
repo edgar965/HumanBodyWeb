@@ -12,6 +12,7 @@ from pathlib import Path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from .ai2d3dadresse import Ai2d3dadresse
 from .ai2d3dlaeufe import Ai2d3dlaeufe
 from .mesh3dairechendatum import Mesh3dairechendatum
 from .mesh3daitabelle import Mesh3daitabelle
@@ -40,7 +41,7 @@ class Ai2d3dtesttabelle:
 
     @staticmethod
     def adresse(job):
-        return '/2d-3d-AI/test/%s/' % job['id']
+        return Ai2d3dadresse.seite(job)
 
     @classmethod
     def zeilen(cls, jobs):

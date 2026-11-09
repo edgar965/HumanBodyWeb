@@ -5,7 +5,9 @@ Käfig: Streifen links Bein, Mitte Becken, rechts Bein; zwei Reihen. Die obere R
     3  Stück deckt das Becken nicht: keine Lücke (`DECKT_MIN`)
     4  `_vierteln`: viermal so viele Flächen, Fläche gleich
     5  Attrappe der Maske hat die Parameter des Originals
-Sabotage (von Hand): `~bein[f].all(1)` weglassen → Fall 1 rot; `DECKT_MIN` 0 → Fall 3 rot.
+    6  `_zwei_seiten`: zwei Inseln, Fläche gleich, Punkte an der Naht doppelt
+    7  `_quelle`: jede Seite nimmt den Ton neben ihr, nicht die nächste Fläche im anderen Ton
+Sabotage (von Hand): `~bein[f].all(1)` weglassen → Fall 1 rot; `DECKT_MIN` 0 → Fall 3 rot; in `_quelle` `nah_farbe[s]` durch `nah_farbe` ersetzen → Fall 7 rot.
 """
 import inspect
 import sys
@@ -92,6 +94,31 @@ class Fall(unittest.TestCase):
             return float((0.5 * t.cross(q[g[:, 1]] - q[g[:, 0]], q[g[:, 2]] - q[g[:, 0]], dim=1).norm(dim=1)).sum())
 
         self.assertAlmostEqual(inhalt(x, df), inhalt(x2, df2), places=9)
+
+    def test_zwei_seiten(self):
+        k, t = self.k, self.k.t
+        boden = self.p[:, [0, 2, 1]]                                                          # Streifen in der Ebene y = 0, Spalten quer, Zeilen von hinten nach vorn
+        boden[:, 2] -= 0.01
+        x, df, hinten = self.o._zwei_seiten(k.feld(boden, t.float64), k.feld(self.f, t.int64))
+        self.assertEqual(len(df), len(self.f))
+        self.assertEqual(len(x), len(boden) + SP)                                             # die Mittelreihe doppelt
+        inseln = k.komponenten(len(x), t.cat([df[:, 0], df[:, 1]]), t.cat([df[:, 1], df[:, 2]]))
+        self.assertEqual(len(t.unique(inseln)), 2)
+        self.assertLessEqual(float(x[hinten][:, 2].max()), 0.0)
+        self.assertGreaterEqual(float(x[~hinten][:, 2].min()), 0.0)
+
+    def test_quelle_nimmt_den_ton_neben_der_seite(self):
+        k, t = self.k, self.k.t
+        z = (np.arange(10) - 4.5) * 0.1
+        punkte = np.stack([np.zeros(10), np.zeros(10), z], 1)                                  # je Eingangsfläche ein Punkt, die Fläche ist entartet, `_quelle` braucht nur Farbe und Mitte
+        dreiecke = k.feld(np.stack([np.arange(10)] * 3, 1), t.int64)
+        farbe = k.feld(np.repeat([[0.2] * 3, [0.8] * 3], 5, axis=0), t.float32)                # hinten dunkel, vorn hell
+        eingang = SimpleNamespace(farbe_je_punkt=farbe, dreiecke=dreiecke, mitten=k.feld(punkte, t.float32))
+        x = k.feld([[0.0, 0.0, 0.04], [0.0, 0.0, 0.04]], t.float64)                            # beide Punkte liegen näher am hellen Stoff
+        hinten = k.feld([True, False], t.bool)
+        neben = k.feld([[0.2] * 3, [0.8] * 3], t.float32)
+        q = self.o._quelle(x, hinten, neben, k.feld(np.arange(10), t.int64), eingang).tolist()
+        self.assertEqual(q, [4, 5])
 
     def test_attrappe_passt(self):
         from mesh3dai_kleider_verdeckung import Kleiderverdeckung

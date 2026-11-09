@@ -70,7 +70,8 @@ export class Normalenarbeit {
 
     static _eintrag(geo, v, stand) {
         let eintrag = Normalenarbeit._eintraege.get(geo);
-        if (eintrag) return eintrag;
+        if (eintrag?.v === v) return eintrag;
+        if (eintrag) Normalenarbeit._frei(eintrag);     // neuer Index (`Genesis9normalen.vorbereiten`): der Worker rechnete sonst mit dem alten
         const arbeiter = Normalenarbeit._starten();
         if (!arbeiter) return null;
         eintrag = { netz: ++Normalenarbeit._zaehler, geo, v, stand, laeuft: false, neu: false, folge: 0, stempel: 0 };

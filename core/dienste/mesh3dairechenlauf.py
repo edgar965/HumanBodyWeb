@@ -13,7 +13,7 @@ GPU: jeder Schritt nimmt die Sperre selbst (`mesh3dai_stimmen_lauf.py`, `Gpusper
 """
 import json
 import logging
-import subprocess
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,6 +23,8 @@ from django.conf import settings
 from core.atomic_write import AtomarSchreiber
 
 from .mesh3daikifassungen import Mesh3daikifassungen
+from .mesh3dairechenmessung import Mesh3dairechenmessung
+from .mesh3dairechenschritt import Mesh3dairechenschritt
 
 logger = logging.getLogger('core')
 
@@ -52,7 +54,11 @@ class Mesh3dairechenlauf:
         # `--hautki` (24.10.2026 abends): steht in den KI-Fassungen ein Lauf der Haut-KI im Bildraum, schreibt sie die Hautkacheln (`Hautkieinsatz`), sonst das Netz `haut` von Stufe 2
         ('haut', 'Haut aus der KI (Stufe 2: Farbe je Texel)', ['-u', 'mesh3dai_stufe2_lauf.py', '--nur-einsatz', '{stufe2}', '--fassung', '{stufe2_fassung}', '--test', '{k}', '--job', '',
                                                                 '--geschlecht', '{g}', '--hautki', '{hautki}']),
-        ('kleider', 'Kleider und Haar aus dem Mesh ausschneiden und auflegen, Hautmasken, Prüfung', ['-u', 'mesh3dai_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}']),
+        # Echte Haut von Rücken und Seiten aus den weiteren Fotos des Jobs (07.11.2026, Edgar: „mach den Code generisch“, `Mesh3daifotohaut`); ohne solche Fotos tut der Schritt nichts
+        ('fotohaut', 'Haut von Rücken und Seiten aus den weiteren Fotos des Jobs', ['-u', 'mesh3dai_fotohaut.py', '{k}', '--geschlecht', '{g}']),
+        ('kleider', 'Kleider und Haar aus dem Mesh ausschneiden und auflegen, Hautmasken', ['-u', 'mesh3dai_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--ohne-pruefung']),
+        # Die Prüfung als eigener Schritt (06.11.2026): sie misst die Stücke auf der Platte, also das, was die Seite lädt; `--ab pruefung` prüft neu, ohne neu zu bauen. Bau 41 s, Prüfung 1:48–1:57 min (polstertaenzer).
+        ('pruefung', 'Prüfung der Kleider: Testfälle und Tanz', ['-u', 'mesh3dai_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--nur-pruefen']),
     )
     #: Schritt „form“ aus der Regler-KI statt aus dem Formkopf — nur für einen Test, dessen `einstellung.json` es nennt (`form_ki`: {"art": "reglerki", "lauf": <Lauf unter
     #: `_reglerki/laeufe`>}), nie als Vorgabe (27.10.2026, Edgar: „ich will bei einem Trainings oder Testjob mal ergebnisse sehen“)
@@ -63,6 +69,11 @@ class Mesh3dairechenlauf:
     #: Was ein Schritt im Log schreibt, wenn er scheitert, ohne mit einem Fehlercode zu enden (die Kostüm-Kette fängt Fehler je Test ab)
     FEHLERZEILEN = ('GESCHEITERT', 'Traceback (most recent call last)')
     HAUT = 'Haut: aus der KI (Stufe 2, Lauf in den KI-Fassungen) für das eingestellte Geschlecht; das andere Geschlecht trägt die Grundhaut.'
+    #: Erster Schritt, der das eingestellte Geschlecht kennt (06.11.2026, Edgar: „bau start ab "meshanpassung"“). Davor entsteht alles unabhängig davon: Rig, Erkennung, Zerlegung, Foto-Gelenke, und
+    #: `figur`, `anpassen`, `haltung2` bauen beide Figuren. Ab hier rechnet die Kette nur das eingestellte Geschlecht, darum genügt nach dem Umstellen der Start hier.
+    AB_GESCHLECHT = 'meshanpassung'
+    #: Was dieser Start aus einem früheren Lauf braucht, relativ zum Testordner; {g} = eingestelltes Geschlecht
+    VORLAUF = ('test.json', 'form.npz', 'vorstufe/*/apose.npz', 'form_{g}/modell.json', 'ergebnis_Form_{g}.npz')
 
     def __init__(self, kennung):
         from .mesh3daitest import Mesh3daitest
@@ -74,6 +85,17 @@ class Mesh3dairechenlauf:
     def kette():
         """Ordner des Rechencodes (Arbeitsverzeichnis jedes Schritts)."""
         return Path(settings.TOOLS_ROOT) / 'mesh3dai'
+
+    @classmethod
+    def modul(cls, name):
+        """Ein leichtes Modul des Rechencodes (`mesh3dai/<name>.py`, nur Standardbibliothek oder numpy beim Import) im Serverprozess — der Server ruft dieselbe Rechnung wie die Kette,
+        statt sie nachzubauen (09.11.2026: `Probenziel.stempel`, `Kostuemweitschritt.stempel_von`)."""
+        import importlib
+        import sys
+        pfad = str(cls.kette())
+        if pfad not in sys.path:
+            sys.path.insert(0, pfad)
+        return importlib.import_module(name)
 
     def form_ki(self):
         """`{'art': 'reglerki', 'lauf': …}` aus `einstellung.json` des Tests oder None (dann der Formkopf der KI-Fassungen)."""
@@ -116,13 +138,21 @@ class Mesh3dairechenlauf:
         self.ordner.mkdir(parents=True, exist_ok=True)
         AtomarSchreiber.json_schreiben(self.ordner / 'stand.json', stand)
 
+    def vorlauf_fehlt(self):
+        """Was einem Start ab `AB_GESCHLECHT` im Testordner fehlt (Liste aus `VORLAUF`), leer = er geht."""
+        g = self._geschlecht()
+        return [m for m in (v.format(g=g) for v in self.VORLAUF) if not any(self.test.glob(m))]
+
     def vorbereiten(self, status='wartet', ab=None):
         """Stand „wartet“ mit allen Schritten — vor dem Start, damit die Seite sofort die Liste zeigt. `ab` (Schlüssel eines Schritts): die Schritte davor rechnet der Lauf nicht neu, ihr Ergebnis
-        liegt schon im Testordner (23.10.2026 nachts: ein neuer Haut-Schritt soll nicht das Rig von 4 min wiederholen)."""
+        liegt schon im Testordner (23.10.2026 nachts: ein neuer Haut-Schritt soll nicht das Rig von 4 min wiederholen). `ValueError`, wenn es den Schritt nicht gibt oder der Vorlauf fehlt."""
         schluessel = [s for s, _t, _a in self.schritte()]
         if ab is not None and ab not in schluessel:
             raise ValueError('Schritt „%s“ gibt es nicht (%s)' % (ab, ', '.join(schluessel)))
-        alt = {s.get('schluessel'): s for s in (self.stand() or {}).get('schritte', [])} if ab else {}
+        fehlt = self.vorlauf_fehlt() if ab == self.AB_GESCHLECHT else []
+        if fehlt:
+            raise ValueError('Ab der Einpassung geht hier nicht, aus einem früheren Lauf fehlt %s. Den Test ganz rechnen.' % ', '.join(fehlt))
+        alt ={s.get('schluessel'): s for s in (self.stand() or {}).get('schritte', [])} if ab else {}
         vor = set(schluessel[:schluessel.index(ab)]) if ab else set()
         stand = {'kennung': self.kennung, 'status': status, 'angefragt': time.strftime('%Y-%m-%dT%H:%M:%S'), 'fassungen': Mesh3daikifassungen.lesen(), 'haut': self.HAUT, 'ab': ab,
                  'schritte': [dict(alt.get(s) or {}, schluessel=s, text=t, status='fertig', uebernommen=True) if s in vor else {'schluessel': s, 'text': t, 'status': 'offen'}
@@ -192,8 +222,10 @@ class Mesh3dairechenlauf:
                 aus.write('== %d %s %s\n%s\n' % (nr + 1, text, time.strftime('%H:%M:%S'), ' '.join(befehl)))
                 aus.flush()
                 t0 = time.perf_counter()
-                zeilen, rc = self._schritt(befehl, aus)
+                with Mesh3dairechenmessung() as messung:
+                    zeilen, rc = self._schritt(befehl, aus, messung)
                 eintrag['dauer_s'] = round(time.perf_counter() - t0, 1)
+                eintrag.update(messung.bericht(eintrag['dauer_s']))
                 if rc != 0:
                     fehler = 'Fehlercode %d — %s' % (rc, ' / '.join(zeilen[-5:]))
                 else:
@@ -213,45 +245,8 @@ class Mesh3dairechenlauf:
         logger.info('Mesh3D-AI Rechenlauf %s fertig in %.0f s', self.kennung, stand['dauer_s'])
         return stand
 
-    @classmethod
-    def _skriptdienst(cls):
-        """`Skriptdienstruf` aus dem Rechencode (24.10.2026: ein Dauerprozess je Umgebung, Importe einmal geladen) — geladen über den Dateipfad, ohne `sys.path` des Arbeitsprozesses zu ändern."""
-        import importlib.util
-        name = 'mesh3dai_skriptdienstruf'
-        if name not in sys.modules:
-            spec = importlib.util.spec_from_file_location(name, cls.kette() / (name + '.py'))
-            modul = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(modul)
-            sys.modules[name] = modul
-        return sys.modules[name].Skriptdienstruf
-
-    def _schritt(self, befehl, aus):
-        """Einen Schritt rechnen, Ausgabe ins Log. → (letzte Zeilen, Rückgabewert). Ein Skript aus `Skriptdienstruf.ERLAUBT` rechnet der Skriptdienst von python14; ohne ihn ein eigener Prozess."""
-        import os
-        # reproduzierbar (26.10.2026, Edgar: „kette muss Reproduzierbar sein“): `mesh3dai/mesh3dai_determinismus.py` schaltet damit in jedem Prozess der Kette ein, Kindprozesse erben es
+    def _schritt(self, befehl, aus, messung):
+        """Einen Schritt rechnen (`Mesh3dairechenschritt`). → (letzte Zeilen, Rückgabewert)."""
+        # reproduzierbar (26.10.2026, Edgar: „kette muss Reproduzierbar sein“): `mesh3dai/mesh3dai_determinismus.py` schaltet damit in jedem Prozess der Kette ein, Kindprozesse erben die Variable
         env = dict(os.environ, PYTHONIOENCODING='utf-8', MESH3DAI_DETERMINISTISCH='1', CUBLAS_WORKSPACE_CONFIG=':4096:8', PYTHONHASHSEED='0')
-        roh = [a for a in befehl[1:] if a != '-u']
-        if roh and roh[0].endswith('.py'):
-            letzte = []
-
-            def zeile(z):
-                aus.write(z + '\n')
-                aus.flush()
-                letzte.append(z)
-                del letzte[:-200]
-            try:
-                erg = self._skriptdienst().ausfuehren('python14', roh[0], roh[1:], cwd=self.kette(), ausgabe=zeile, env=env)
-            except Exception as fehler:      # noqa: BLE001 — der Dienst ist eine Beschleunigung, kein Weg: ohne ihn rechnet der Schritt wie bisher
-                logger.warning('Mesh3D-AI Rechenlauf %s: Skriptdienst nicht nutzbar (%s) — eigener Prozess', self.kennung, fehler)
-                erg = None
-            if erg is not None:
-                return letzte, erg[0]
-        p = subprocess.Popen(befehl, cwd=str(self.kette()), env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             text=True, encoding='utf-8', errors='replace')
-        letzte = []
-        for zeile in p.stdout:
-            aus.write(zeile)
-            aus.flush()
-            letzte.append(zeile.rstrip())
-            letzte = letzte[-200:]
-        return letzte, p.wait()
+        return Mesh3dairechenschritt.rechnen(befehl, aus, messung, self.kette(), env, 'Mesh3D-AI Rechenlauf %s' % self.kennung)

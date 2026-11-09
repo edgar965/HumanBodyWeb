@@ -132,11 +132,9 @@ class Mhklonuebertragung:
         return self._putz
 
     def nachbarn(self):
-        if self._nachbar is None:
-            punkte = G9basisnetz.holen().punkte
-            _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=self.GLAETTUNG)
-            self._nachbar = np.asarray(nachbar, dtype=np.int64)
-        return self._nachbar
+        u"""Wie `Hbmorphuebertragung.nachbarn` (dieselbe Rechnung, eigenes `_nachbar`, `GLAETTUNG`)."""
+        from .hbmorphuebertragung import Hbmorphuebertragung
+        return Hbmorphuebertragung.nachbarn(self)
 
     def uebertragen(self, delta_m):
         u"""(25182, 3) Kaefigfeld aus einem hm08-Delta (M, 3) in Metern."""

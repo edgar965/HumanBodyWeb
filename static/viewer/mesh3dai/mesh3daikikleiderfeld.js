@@ -24,10 +24,15 @@ export class Mesh3daikikleiderfeld {
         const matrizen = Mesh3daihaeutung.ausDrehungen(ki.dreh, ki.rig, ki.ruhezentren);
         const gruppe = new THREE.Group();
         const namen = [], stuecke = [];
-        for (const st of daten.stuecke || []) {
-            if (st.quelle !== 'ki' || !Mesh3daikikleiderfeld.WEGE.has(st.wahl) || !st[st.wahl]?.netz) continue;
+        // Alle Stücke zugleich holen (08.11.2026, Edgar: „alle modelle sollen innerhalb von max. 5 s angezeigt werden“): vorher wartete jedes Stück auf das vorige — im Log der Seite
+        // „Zauberer Alle Textur“ lagen zwischen zwei Stücken 35–75 s, weil nach jeder Textur die Seite neu rechnete (`Ai2d3dseite.nachgeladen`). Gebaut wird weiter in der Reihenfolge der Liste.
+        const wahl = (daten.stuecke || []).filter(st => st.quelle === 'ki' && Mesh3daikikleiderfeld.WEGE.has(st.wahl) && st[st.wahl]?.netz);
+        const netze = await Promise.all(wahl.map(st => Mesh3daiflaechennetz.holen(null, st[st.wahl].netz)
+            .catch(fehler => { console.warn('Mesh3daikikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message); return null; })));
+        for (const [i, st] of wahl.entries()) {
+            const netz = netze[i];
+            if (!netz) continue;
             try {
-                const netz = await Mesh3daiflaechennetz.holen(null, st[st.wahl].netz);
                 const mesh = Mesh3daitestnetzbau.mesh(netz, matrizen);
                 mesh.userData.art = st.art;
                 gruppe.add(mesh);

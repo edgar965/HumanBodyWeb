@@ -14,6 +14,7 @@ hellgraue Bart darüber). Render: der Alphakanal (`film_transparent`).
 
 import numpy as np
 from PIL import Image
+from .iterationsbild import Iterationsbild
 
 __all__ = ['Kostuembild']
 
@@ -32,19 +33,9 @@ class Kostuembild:
         self.farbe = farbe
         self.maske = maske
 
-    @classmethod
-    def aus_vorlage(cls, pfad, groesse=None):
-        """`groesse`: (Breite, Höhe) der Fläche — ohne die Vorgabe 128 × 192 der Note."""
-        with Image.open(pfad) as bild:
-            rgb = np.asarray(bild.convert('RGB'), dtype=np.float32)
-        maske = (765.0 - rgb.sum(axis=2)) > cls.WEISS_SCHWELLE
-        return cls._normieren(rgb / 255.0, maske, groesse)
+    aus_vorlage = classmethod(Iterationsbild.aus_vorlage.__func__)          # dieselbe Rechnung wie `Iterationsbild.aus_vorlage` (bis 08.11.2026 eine Kopie hier)
 
-    @classmethod
-    def aus_render(cls, pfad, groesse=None):
-        with Image.open(pfad) as bild:
-            rgba = np.asarray(bild.convert('RGBA'), dtype=np.float32) / 255.0
-        return cls._normieren(rgba[..., :3], rgba[..., 3] > 0.5, groesse)
+    aus_render = classmethod(Iterationsbild.aus_render.__func__)          # dieselbe Rechnung wie `Iterationsbild.aus_render` (bis 08.11.2026 eine Kopie hier)
 
     @classmethod
     def _normieren(cls, rgb, maske, groesse=None):
@@ -107,9 +98,4 @@ class Kostuembild:
             gefuellt |= neu
         return np.where(gefuellt[..., None], farbe, self.farbe)
 
-    def als_bild(self, hintergrund=(255, 255, 255)):
-        """Farbe auf Hintergrund — für die Vergleichstafel."""
-        grund = np.empty_like(self.farbe)
-        grund[:] = np.asarray(hintergrund, np.float32) / 255.0
-        bild = np.where(self.maske[..., None], self.farbe, grund)
-        return Image.fromarray((bild * 255).astype(np.uint8))
+    als_bild = Iterationsbild.als_bild          # dieselbe Rechnung wie `Iterationsbild.als_bild` (bis 08.11.2026 eine Kopie hier)

@@ -2,7 +2,6 @@ import { Mesh3daianatomiehuelle } from '../mesh3dai/mesh3daianatomiehuelle.js';
 import { Mesh3daiexportquelle } from '../mesh3dai/mesh3daiexportquelle.js';
 import { Mesh3daifigurbewegung } from '../mesh3dai/mesh3daifigurbewegung.js';
 import { Mesh3daiflaechennetz } from '../mesh3dai/mesh3daiflaechennetz.js';
-import { Ai2d3dtestfigur } from './ai2d3dtestfigur.js';
 
 /**
  * Ai2d3dexportfigur — die Figur eines 2d-3d-AI-Tests für die Exportleiste (31.10.2026, Server `Ai2d3dexportquelle`).
@@ -29,15 +28,9 @@ export class Ai2d3dexportfigur {
         return null;
     }
 
-    /**
-     * Unter einer Hose kein Anatomie-Stück — dieselbe Regel wie Feld 3 (`Ai2d3dtestfigur.hose`). Die Regel der Mesh3D-AI-Seite (`Mesh3daianatomiehuelle`: Strahlen vom Ansatz) greift hier
-     * nicht: gemessen 31.10.2026 an EdgarTrip trifft keiner der 8 Strahlen die Hose aus den Fotos — ihre Punkte liegen zu 2.732 von 3.411 bei 0,9–1,1 m, kein Dreieck überspannt den Ansatz
-     * bei 0,837 m —, und das Stück stand in der GLB, das Feld zeigt es nicht.
-     */
+    /** Die Figur für den Export ist die bewegte (`Mesh3daiexportquelle`); ob das Anatomie-Stück darin fehlt, entscheidet dort `Mesh3daianatomiehuelle` nach der Regel des Servers. */
     async modell(angaben) {
-        const m = await this.export.modell(angaben);
-        if (Ai2d3dtestfigur.hose(this._liste)) for (const netz of Mesh3daianatomiehuelle.stuecke(m.inst)) netz.visible = false;
-        return m;
+        return this.export.modell(angaben);
     }
 
     /** Dieselbe Figur mit Kleidern und Haar für die Abspielleiste der Zeile 1 (`Ai2d3dbewegung`); `zeile1` = Form der Zeile 1 (`Ai2d3dzeile1bewegung`). */
@@ -66,6 +59,6 @@ export class Ai2d3dexportfigur {
             if (netz) stuecke.push({ id: st.id, art: st.art, netz });
         }
         return { schluessel: `${this.adresse}|${g}`, figur: d.figur_genesis, stuecke, knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren, ohneKnochen: [],
-                 ohneAnatomie: Ai2d3dtestfigur.hose(liste), zeile1: d.zeile1_form || null };
+                 anatomieGetragen: Mesh3daianatomiehuelle.getragen(liste), zeile1: d.zeile1_form || null };
     }
 }

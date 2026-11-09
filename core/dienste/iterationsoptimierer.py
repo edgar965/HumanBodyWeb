@@ -24,6 +24,7 @@ __all__ = ['Iterationsoptimierer']
 
 
 class Iterationsoptimierer:
+    PARAMETER = Haarparameter              # Parameterklasse der Familie (Kostuemoptimierer: Kostuemparameter)
     SCHRITT_START = 0.08
     SCHRITT_MIN, SCHRITT_MAX = 0.01, 0.3
     WACHSEN, SCHRUMPFEN = 1.25, 0.9
@@ -47,7 +48,7 @@ class Iterationsoptimierer:
     @classmethod
     def veraenderlich(cls, werte):
         """Die stetigen Werte, die zu einem sichtbaren Teil gehören."""
-        schema = Haarparameter.schema()
+        schema = cls.PARAMETER.schema()
 
         def an(teil):
             schalter = '%s.an' % teil
@@ -65,7 +66,7 @@ class Iterationsoptimierer:
         return aus
 
     def kandidaten(self, bester, anzahl, runde):
-        schema = Haarparameter.schema()
+        schema = self.PARAMETER.schema()
         stetig = self.veraenderlich(bester)
         zufall = self._zufall(runde)
         aus = []
@@ -80,7 +81,7 @@ class Iterationsoptimierer:
             for k in zufall.choice(stetig, size=min(n, len(stetig)), replace=False):
                 e = schema[k]
                 neu[k] = float(neu[k]) + float(zufall.normal(0.0, breite * (e['max'] - e['min'])))
-            aus.append(Haarparameter.pruefen(neu))
+            aus.append(self.PARAMETER.pruefen(neu))
         return aus
 
     def anpassen(self, verbessert):

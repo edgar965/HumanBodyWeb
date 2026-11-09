@@ -88,6 +88,10 @@ class Modulbuendel:
         'studio': 'viewer/studio/index.js',
         # Jobseite „Mesh-3D“ (12.10.2026): 232 Einzelmodule kosteten kalt 6,5 s (`viewer/mesh3d/main.js`).
         'mesh3d': 'viewer/mesh3d/main.js',
+        # Jobseite „2d-3d-AI“ (08.11.2026, Edgar: „alle modelle sollen innerhalb von max. 5 s angezeigt werden“): 235 Einzelmodule im Resource-Timing (`viewer/ai2d3d/main.js`).
+        'ai2d3d': 'viewer/ai2d3d/main.js',
+        # Testseite „Mesh3D-AI“ (08.11.2026, gleicher Anlass): der Einstieg stand als Inline-Skript in der Vorlage (`viewer/mesh3dai/main.js`).
+        'mesh3dai': 'viewer/mesh3dai/main.js',
     }
 
     #: Wohin die fertigen Bündel kommen.

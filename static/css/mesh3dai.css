@@ -1,4 +1,5 @@
 /* Seite „Mesh3D-AI“ (14.10.2026): Job, Proben, drei Bereiche (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes) und Kennzahlen. Zunächst mit Dummies für Ursula1. */
+@import url("mesh3daitestfaelle.css");
 
 /* Fester Block oben (Edgar, 14.10.2026: „mach diesen Bereich oben fest, wenn ich blättere, möchte ich den Bereich noch sehen“): bleibt unter der Kopfleiste der Seite (`.topbar`, sticky, 50 px) stehen. Der Grund muss deckend sein, sonst
    scheinen die Zeilen darunter durch. Die Höhe der Leiste und des Blocks setzt `Mesh3daiseite` (`--mesh3dai-leiste`, `--mesh3dai-oben`), 50 px ist nur der Wert vor dem ersten Messen. */
@@ -141,21 +142,8 @@
 /* Kleider und Bestandteile eines Tests (17.10.2026 nachts, `Mesh3daitestkleider`). */
 .mesh3dai-kleider { margin-top: 12px; }
 .mesh3dai-kleider-titel { align-self: center; margin-right: 4px; font-weight: 600; }
-.mesh3dai-kleider-tabelle { width: 100%; margin: 6px 0 10px; }
-/* Durchsichtig mit geerbter Farbe: die Seitenstile legen jeder Tabelle einen dunklen Grund unter (dunkel auf dunkel, gesehen 17.10.2026 — wie die Statuskarte am 15.10.). */
-.mesh3dai-kleider-tabelle, .mesh3dai-kleider-tabelle thead, .mesh3dai-kleider-tabelle tbody, .mesh3dai-kleider-tabelle tr,
-.mesh3dai-kleider-tabelle th, .mesh3dai-kleider-tabelle td { background: transparent; color: inherit; }
-.mesh3dai-kleider-tabelle th, .mesh3dai-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }
 .mesh3dai-kleider-wahl { flex-wrap: nowrap; }
 
-/* Testfälle der Kleider-KI (22.10.2026, `mesh3daitestfaelle.js`): Tabellen wie die Kleiderkarte, FEHLER rot, keine grün — in den Farben des Themes. */
-.mesh3dai-testfaelle { margin-top: 12px; }
-.mesh3dai-testfaelle h3 { font-size: 1rem; margin: 10px 0 4px; }
-.mesh3dai-testfaelle-messung + .mesh3dai-testfaelle-messung { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border, #3a4254); }
-.mesh3dai-testfaelle .mesh3dai-rot, .mesh3dai-testfaelle-tabelle td.mesh3dai-rot { color: var(--danger, #e74c3c); font-weight: 600; }
-.mesh3dai-testfaelle .mesh3dai-gruen, .mesh3dai-testfaelle-tabelle td.mesh3dai-gruen { color: var(--success, #27ae60); }
-.mesh3dai-testfaelle-tabelle td.mesh3dai-testfaelle-fehler { font-size: 0.85rem; }
-.mesh3dai-testfaelle-tabelle tr.mesh3dai-testfaelle-gewaehlt td { font-weight: 600; }
 /* Standardanimation der Ergebnisfigur (`_mesh3dai_figurbewegung.html`): die Regeln der Leiste stehen seit 31.10.2026 in figurbewegung.css (auch auf der Jobseite von 2d-3d-AI). */
 /* Name und Kategorie je Stück in der Kleiderkarte der Testseite (22.10.2026, `Mesh3daitestkleidname`). */
 .mesh3dai-kleider-stueckname { width: 100%; min-width: 14em; }

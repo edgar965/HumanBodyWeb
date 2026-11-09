@@ -8,6 +8,7 @@ mit Skelett und Hautbindung — `Genesis9.figurrigglb.G9figurrigglb` schreibt es
 """
 
 import time
+from .blendermodellexport import Blendermodellexport
 
 __all__ = ['Engine2d3dKleiderexport']
 
@@ -20,13 +21,7 @@ class Engine2d3dKleiderexport:
         self.job = lauf.job
         self.ablage = lauf.ablage
 
-    def kacheln(self):
-        """`{1001: Pfad, …}` der gebackenen Kacheln, soweit sie auf der Platte liegen."""
-        aus = {}
-        for k, name in ((self.job.ergebnis.get('fototextur') or {}).get('kacheln') or {}).items():
-            if str(k).isdigit() and self.ablage.ergebnis(name).is_file():
-                aus[int(k)] = str(self.ablage.ergebnis(name))
-        return aus
+    kacheln = Blendermodellexport.kacheln          # dieselbe Rechnung wie `Blendermodellexport.kacheln` (bis 08.11.2026 eine Kopie hier)
 
     def stellung(self):
         """Die Stellung des Auftrags samt den Körper- und Gesichtsreglern der Iterationen (`kreislauf.modell.koerper`:

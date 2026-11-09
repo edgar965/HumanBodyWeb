@@ -225,7 +225,7 @@ export class Mesh3daitestkleider {
         const st = this.liste?.stuecke.find(s => s.art === 'haut');
         const adresse = st?.wahl === 'b' ? st.b?.netz : null;
         if (!adresse) return null;
-        if (!this.netze.has('b/haut')) this.netze.set('b/haut', Mesh3daiflaechennetz.holen(null, adresse));
+        if (!this.netze.has('b/haut')) this.netze.set('b/haut', Mesh3daiflaechennetz.holen(null, adresse, { stufe: 1 }));       // wie die Figur auf Netzstufe 1
         try {
             return await this.netze.get('b/haut');
         } catch (fehler) {

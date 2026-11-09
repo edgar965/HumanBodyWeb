@@ -11,6 +11,7 @@ from pathlib import Path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from .mesh3daijobtest import Mesh3daijobtest
 from .mesh3dailaufzeit import Mesh3dailaufzeit
 from .mesh3dairechendatum import Mesh3dairechendatum
 from .mesh3daitabelle import Mesh3daitabelle
@@ -40,7 +41,9 @@ class Mesh3daitesttabelle:
     )
 
     def tabelle(self):
-        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(t) for t in Mesh3daitest.alle(mit_tripo=True)],
+        # Tests der 2d-3d-AI-Jobs gehören zur Jobseite, nicht in diese Liste (06.11.2026, `Mesh3daijobtest`).
+        job = Mesh3daijobtest.kennungen()
+        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(t) for t in Mesh3daitest.alle(mit_tripo=True) if t['kennung'] not in job],
                 'klasse': 'auftragstabelle mesh3daitabelle', 'leer': 'Noch kein Test gerechnet.'}
 
     @staticmethod

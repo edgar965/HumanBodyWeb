@@ -79,6 +79,11 @@ class G9aufwaermen:
         aus += [('gelenkgraph', G9gelenkkorrekturen.graph),
                 ('garderobe', G9garderobe.liste),
                 ('duenne', G9basisnetz.duenne)]
+        # Testfiguren von Mesh3D-AI und 2d-3d-AI auf Netzstufe 1 (09.11.2026, `Mesh3daiflaechennetzfein`): was einmal je Prozess anfällt — erste Figur sonst ~8 s statt ~3 s
+        from Genesis9.stueckfolge import G9stueckfolge
+        from Genesis9.stufeneltern import G9stufeneltern
+        aus += [('stufeneltern', G9stufeneltern.fuer),
+                ('grundhaut s1', lambda: G9stueckfolge.grundhaut(False))]
         return aus
 
     @classmethod

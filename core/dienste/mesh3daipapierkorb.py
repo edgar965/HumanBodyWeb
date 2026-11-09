@@ -6,6 +6,8 @@ der Ordner wird VERSCHOBEN, nicht gelöscht — nach `3DObjects/mesh3dai/_beisei
 Danach fehlt der Job in Tabelle und Menü (`Mesh3daiattrappe.stammdaten` nimmt einen festen Job nur, wenn sein Ordner da ist; ein Tripo-Job ist nur sein Ordner mit `paar.json`),
 der Test in der Liste (`Mesh3daitest.alle` liest die Ordner unter `_test/`).
 
+Der Test eines 2d-3d-AI-Jobs bleibt (06.11.2026, Edgar: „die jobs sollten immer unabhängig voneinander sein“): Er trägt das Ergebnis des Jobs (`Mesh3daijobtest`), löschen geht nur am Job (`Ai2d3dpapierkorb`).
+
 Gelöscht werden nur Kennungen, die die Liste kennt — kein Pfad aus der Anfrage. Ein Ordner, den ein laufender Prozess offen hält, lässt Windows nicht verschieben: der Fehler steht im Ergebnis.
 """
 import logging
@@ -52,7 +54,9 @@ class Mesh3daipapierkorb:
         """→ {'ziel': Ordner, 'ergebnis': [{kennung, ok, fehler?}]}; `art` 'jobs' oder 'tests'."""
         if art not in cls.ARTEN:
             raise ValueError('Unbekannte Art „%s“' % art)
+        from .mesh3daijobtest import Mesh3daijobtest
         bekannt = cls.ordner_der_jobs() if art == 'jobs' else cls.ordner_der_tests()
+        zum_job = Mesh3daijobtest.kennungen() if art == 'tests' else set()
         stempel = time.strftime('%Y.%m.%d.%H.%M.%S')
         ziel = cls.ziel(stempel, art)
         ergebnis = []
@@ -61,6 +65,9 @@ class Mesh3daipapierkorb:
             quelle = bekannt.get(k)
             if quelle is None or not quelle.is_dir():
                 ergebnis.append({'kennung': k, 'ok': False, 'fehler': 'nicht in der Liste'})
+                continue
+            if k in zum_job:
+                ergebnis.append({'kennung': k, 'ok': False, 'fehler': 'gehört zu einem Job von 2d-3d-AI, dort löschen'})
                 continue
             try:
                 ziel.mkdir(parents=True, exist_ok=True)

@@ -24,6 +24,7 @@ from .kostuemmodell import Kostuemmodell
 from .kostuemmodellablage import Kostuemmodellablage
 from .kostuemnote import Kostuemnote
 from .kostuemtafel import Kostuemtafel
+from .iterationsrunde import Iterationsrunde
 
 logger = logging.getLogger('core')
 
@@ -226,22 +227,7 @@ class Kostuemrunde:
 
     RAND = 0.04
 
-    @classmethod
-    def zuschneiden(cls, quelle, ziel):
-        """Render auf die Figur zuschneiden (Alpha > 0, dazu `RAND` der Höhe): Die Kamera fasst 1,5
-        Figurhöhen, die Figur füllte im Bild nur zwei Drittel — neben dem Foto der Vorlage zu klein zum
-        Vergleichen."""
-        from PIL import Image
-
-        with Image.open(quelle) as bild:
-            rahmen = bild.getchannel('A').getbbox() if 'A' in bild.getbands() else None
-            if rahmen is None:
-                bild.save(ziel)
-                return
-            r = int(round((rahmen[3] - rahmen[1]) * cls.RAND))
-            links, oben = max(0, rahmen[0] - r), max(0, rahmen[1] - r)
-            rechts, unten = min(bild.width, rahmen[2] + r), min(bild.height, rahmen[3] + r)
-            bild.crop((links, oben, rechts, unten)).save(ziel)
+    zuschneiden = classmethod(Iterationsrunde.zuschneiden.__func__)          # dieselbe Rechnung wie `Iterationsrunde.zuschneiden` (bis 08.11.2026 eine Kopie hier)
 
     KRITIK_GROESSE = (256, 384)
 

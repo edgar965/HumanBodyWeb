@@ -83,11 +83,13 @@ class Mesh3daitestanpassung:
         return farbe
 
     @classmethod
-    def paket(cls, test):
+    def paket(cls, test, ohne_netz=False):
+        """`ohne_netz` (08.11.2026, Ladezeit der Jobseite „2d-3d-AI“): ohne die Blöcke `netz_*` — dort zeigt das Feld nur die Figur und brauchte vom Netz (beim Zauberer 9 der 11 MB) nur den
+        tiefsten Punkt; der steht immer im Kopf (`netz_boden`)."""
         ordner = Path(test) / cls.ORDNER
         npz, bericht = ordner / 'meshanpassung.npz', ordner / 'meshanpassung.json'
         try:
-            schluessel = (str(npz), npz.stat().st_mtime_ns, bericht.stat().st_mtime_ns)
+            schluessel = (str(npz), npz.stat().st_mtime_ns, bericht.stat().st_mtime_ns, bool(ohne_netz))
         except OSError:
             return None
         if schluessel in cls._ablage:
@@ -105,7 +107,8 @@ class Mesh3daitestanpassung:
         kopf = {k: b.get(k) for k in cls.KOPF}
         kopf.update(stufe1=(b.get('stufe1') or {}).get('masse'), regler=len(b.get('regler') or {}), mesh_regler=len(b.get('mesh_regler') or {}), test=Path(test).name,
                     veraltet=bool(ketten) and ketten[-1] != kette, juengste_kette=ketten[-1].name if ketten else None)
-        bloecke = list(cls.BLOECKE) + [blk for blk in cls.ANATOMIE_BLOECKE if blk[0] in felder]
+        kopf['netz_boden'] = float(felder['netz_punkte'][:, 1].min()) if len(felder.get('netz_punkte', ())) else None
+        bloecke = [blk for blk in cls.BLOECKE if not (ohne_netz and blk[0].startswith('netz_'))] + [blk for blk in cls.ANATOMIE_BLOECKE if blk[0] in felder]
         haut, kopf['textur'] = cls.textur(b.get('start'))
         if haut is not None:
             felder.update(haut)
@@ -121,6 +124,7 @@ class Mesh3daitestanpassung:
         roh += b' ' * (-len(roh) % 4)
         paket = struct.pack('<I', len(roh)) + roh + b''.join(Mesh3dailinienflaeche._block(np.asarray(felder[name]).astype('<' + typ if typ != 'u1' else np.uint8))
                                                             for name, typ in bloecke)
-        cls._ablage.clear()
+        while len(cls._ablage) >= 2:          # je Test beide Fassungen (mit und ohne Netz), ältere Tests fallen heraus
+            cls._ablage.pop(next(iter(cls._ablage)))
         cls._ablage[schluessel] = paket
         return paket

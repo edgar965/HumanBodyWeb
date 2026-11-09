@@ -147,6 +147,8 @@ export class Auftragname {
             document.title = document.title.replace(alt, antwort.name || name);
             // Weitere Stellen derselben Seite, die den Namen zeigen (Mesh3D-AI: Karte „Job“, 19.10.2026), tragen `data-auftragname-kopie`.
             document.querySelectorAll('[data-auftragname-kopie]').forEach((el) => { el.textContent = antwort.name || name; });
+            // Folgt die Adresse dem Namen (2d-3d-AI, `Ai2d3dadresse`), nennt die Antwort sie; die Seite bleibt offen.
+            if (antwort.adresse && antwort.adresse !== location.pathname) history.replaceState(history.state, '', antwort.adresse + location.search + location.hash);
         } catch (fehler) {
             Aktionsprotokoll.melden('name_fehler', `${fehler.status || '?'} ${fehler.daten?.error || fehler.message}`, 'error');
             this.beenden(alt);

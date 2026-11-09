@@ -30,12 +30,12 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.meshablage import Meshablage
-from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.mesharbeiter import Mesharbeiter
 from ..dienste.meshicon import Meshicon
 from ..dienste.meshoptionen import Meshoptionen
 from ..dienste.meshpfade import Meshpfade
 from ..models import Meshauftrag
+from .auftragsfamilie import Auftragsfamilie
 
 logger = logging.getLogger('core')
 
@@ -123,14 +123,7 @@ class Meshendpunkte:
 
     @staticmethod
     def _zustand_rechnen(job_id):
-        job = get_object_or_404(Meshauftrag, pk=job_id)
-        if job.laeuft and not Mesharbeiter.lebt(job):
-            job.refresh_from_db()
-            if job.laeuft:
-                job.status = 'gescheitert'
-                job.error_message = job.error_message or 'Arbeitsprozess lebt nicht mehr (auftrag.log)'
-                job.save(update_fields=['status', 'error_message', 'updated_at'])
-        return Meshendpunkte._zustand(job)
+        return Auftragsfamilie.zustand_rechnen(Meshauftrag, Mesharbeiter, Meshendpunkte._zustand, job_id)
 
     # ---------------------------------------------------------------- Lauf
 
@@ -322,12 +315,7 @@ class Meshendpunkte:
     @staticmethod
     @require_POST
     def mehrere_loeschen(request):
-        ids = Meshendpunkte._rumpf(request).get('ids') or []
-        n = 0
-        for job in Meshauftrag.objects.filter(pk__in=ids):
-            Meshendpunkte._entfernen(job)
-            n += 1
-        return JsonResponse({'ok': True, 'geloescht': n})
+        return Auftragsfamilie.mehrere_loeschen(Meshauftrag, Meshendpunkte._rumpf, Meshendpunkte._entfernen, request)
 
     @staticmethod
     def _entfernen(job):
@@ -341,12 +329,4 @@ class Meshendpunkte:
     @staticmethod
     @require_GET
     def datei(request, job_id, ordner, name):
-        job = get_object_or_404(Meshauftrag, pk=job_id)
-        try:
-            pfad = Meshablage(job.kennung).datei(ordner, name)
-        except ValueError:
-            raise Http404('Pfad') from None
-        if not pfad.is_file():
-            raise Http404('Datei %s' % name)
-        return Auftragsdatei.antwort(request, pfad, herunterladen=request.GET.get('laden') == '1',
-                                     kennung=request.GET.get('v'))
+        return Auftragsfamilie.datei(Meshauftrag, Meshablage, request, job_id, ordner, name)

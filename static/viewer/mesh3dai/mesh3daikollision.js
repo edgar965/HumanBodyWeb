@@ -15,6 +15,8 @@
  * eines Lochs; höchstens `DECKEL_NORMALE_M`. Dieselbe Regel wie `Koerperkollision._schub_normale` (die Tanz-Prüfungen geben die Normalen mit).
  * VERWORFEN (01.11.2026, gemessen auf dem Server): die Stücke reißen („Stück gedehnt“ ballerina Oberteil 0 → 87.237 Kanten, venus Haar 0 → 35.710) — `SCHUB_FASSUNG` bleibt 2 wie
  * `Koerperkollision.SCHUB_FASSUNG`; der Zweig `kollisionNormale` rechnet nur mit `kapseln.regel.schub_fassung` 3.
+ * Fassung 3 (05.11.2026, Edgar: „fixe die offenen punkte im Tanz“): erlaubt ist die Tiefe, die ein Punkt in der Ruhe UND in der Haltung der KI hat, wenn die Kapseln sie tragen (`kapseln.haltung`, `dreh`,
+ * `versch` je Knochen in der Reihenfolge der Kinematik): der Punkt in der Haltung steht im Attribut `kollisionStand`, die Enden der Kapsel in `kollisionAH`/`kollisionBH`. Ohne `haltung` (Fassung 2) nur die Ruhe.
  */
 import * as THREE from 'three';
 
@@ -35,6 +37,11 @@ uniform vec3 kollisionA0[KOLLISION_ZAHL];
 uniform vec3 kollisionB0[KOLLISION_ZAHL];
 uniform vec2 kollisionR[KOLLISION_ZAHL];
 uniform float kollisionKnochen[KOLLISION_ZAHL];
+#ifdef KOLLISION_HALTUNG
+attribute vec3 kollisionStand;
+uniform vec3 kollisionAH[KOLLISION_ZAHL];
+uniform vec3 kollisionBH[KOLLISION_ZAHL];
+#endif
 `;
 
     static RUMPF = `
@@ -68,6 +75,11 @@ for (int i = 0; i < KOLLISION_ZAHL; i++) {
         continue;
     }
     float tief0 = max(rad0 - length(position - c0), 0.0);
+#ifdef KOLLISION_HALTUNG
+    vec3 abH = kollisionBH[i] - kollisionAH[i];
+    float tH = clamp(dot(kollisionStand - kollisionAH[i], abH) / max(dot(abH, abH), 1e-12), 0.0, 1.0);
+    tief0 = min(tief0, max(mix(kollisionR[i].x, kollisionR[i].y, tH) - length(kollisionStand - (kollisionAH[i] + tH * abH)), 0.0));
+#endif
     vec3 v = transformed - c;
     float d = length(v);
     float schub = (rad - d - tief0) * fremd;
@@ -79,25 +91,70 @@ transformed = kollisionStart + kollisionSchub * (kollisionDeckel / max(length(ko
 #endif
 `;
 
-    /** Kapseln an ein gebundenes Stück hängen (Materialien geklont — die des Standbilds bleiben, wie sie sind). @param abbildung Rahmen der Kinematik → Rahmen der Figur oder null */
-    static anbringen(mesh, kapseln, skelett, abbildung) {
+    /** Haltung der KI je Knochen im Rahmen der Figur: Map Nummer im Skelett → M = A · H · A⁻¹ (H aus `kapseln.haltung`, A = `abbildung`), oder null ohne `haltung`. @param namen Knochen wie die Kinematik */
+    static haltung(kapseln, namen, nummer, abbildung) {
+        const h = kapseln?.haltung;
+        if (!h?.dreh || !h?.versch || !namen) return null;
+        const a = abbildung ? new THREE.Matrix4().compose(abbildung.verschiebung, abbildung.quaternion, new THREE.Vector3(1, 1, 1)) : new THREE.Matrix4();
+        const ai = a.clone().invert();
+        const aus = new Map();
+        namen.forEach((name, j) => {
+            const i = nummer.get(name), d = h.dreh[j], v = h.versch[j];
+            if (i === undefined || !d || !v) return;
+            const m = new THREE.Matrix4().set(d[0][0], d[0][1], d[0][2], v[0], d[1][0], d[1][1], d[1][2], v[1], d[2][0], d[2][1], d[2][2], v[2], 0, 0, 0, 1);
+            aus.set(i, a.clone().multiply(m).multiply(ai));
+        });
+        return aus;
+    }
+
+    /** Die Punkte des Stücks in der Haltung der KI (Float32Array 3 × N): dieselbe Häutung wie der Shader, mit den Matrizen aus `haltung`. */
+    static stand(geo, matrizen) {
+        const p = geo.getAttribute('position').array, si = geo.getAttribute('skinIndex').array, sw = geo.getAttribute('skinWeight').array;
+        const aus = new Float32Array(p.length);
+        for (let n = 0, n3 = 0, n4 = 0; n3 < p.length; n++, n3 += 3, n4 += 4) {
+            const x = p[n3], y = p[n3 + 1], z = p[n3 + 2];
+            let ax = 0, ay = 0, az = 0;
+            for (let k = 0; k < 4; k++) {
+                const w = sw[n4 + k];
+                if (w <= 0) continue;
+                const m = matrizen.get(si[n4 + k]);
+                if (!m) {
+                    ax += w * x; ay += w * y; az += w * z;
+                    continue;
+                }
+                const e = m.elements;
+                ax += w * (e[0] * x + e[4] * y + e[8] * z + e[12]);
+                ay += w * (e[1] * x + e[5] * y + e[9] * z + e[13]);
+                az += w * (e[2] * x + e[6] * y + e[10] * z + e[14]);
+            }
+            aus[n3] = ax; aus[n3 + 1] = ay; aus[n3 + 2] = az;
+        }
+        return aus;
+    }
+
+    /** Kapseln an ein gebundenes Stück hängen (Materialien geklont — die des Standbilds bleiben, wie sie sind). @param abbildung Rahmen der Kinematik → Rahmen der Figur oder null @param namen Knochen in der Reihenfolge der Kinematik (für `kapseln.haltung`) */
+    static anbringen(mesh, kapseln, skelett, abbildung, namen = null) {
         const liste = (kapseln?.kapseln || []).slice(0, Mesh3daikollision.MAX);
         if (!liste.length || !mesh?.isSkinnedMesh || !skelett?.bones) return 0;
         const nummer = new Map(skelett.bones.map((k, i) => [k.name, i]));
+        const haltung = Mesh3daikollision.haltung(kapseln, namen, nummer, abbildung);
         const ruhe = [];
         for (const k of liste) {
             const i = nummer.get(k.knochen);
             if (i === undefined) continue;
             const a = new THREE.Vector3().fromArray(k.a), b = new THREE.Vector3().fromArray(k.b);
             if (abbildung) for (const v of [a, b]) v.applyQuaternion(abbildung.quaternion).add(abbildung.verschiebung);
-            ruhe.push({ knochen: i, a, b, r: new THREE.Vector2(k.ra, k.rb) });
+            const m = haltung?.get(i);
+            ruhe.push({ knochen: i, a, b, ah: m ? a.clone().applyMatrix4(m) : a, bh: m ? b.clone().applyMatrix4(m) : b, r: new THREE.Vector2(k.ra, k.rb) });
         }
         if (!ruhe.length) return 0;
+        if (haltung) mesh.geometry.setAttribute('kollisionStand', new THREE.BufferAttribute(Mesh3daikollision.stand(mesh.geometry, haltung), 3));
         const u = {
             kollisionA: { value: ruhe.map(k => k.a.clone()) }, kollisionB: { value: ruhe.map(k => k.b.clone()) },
             kollisionA0: { value: ruhe.map(k => k.a) }, kollisionB0: { value: ruhe.map(k => k.b) },
             kollisionR: { value: ruhe.map(k => k.r) }, kollisionKnochen: { value: ruhe.map(k => k.knochen) },
         };
+        if (haltung) Object.assign(u, { kollisionAH: { value: ruhe.map(k => k.ah) }, kollisionBH: { value: ruhe.map(k => k.bh) } });
         mesh.userData.kollision = { ruhe, u };
         const zahl = ruhe.length;
         const fremd = (kapseln.regel?.fremd_max ?? Mesh3daikollision.FREMD_MAX).toFixed(4);
@@ -111,10 +168,10 @@ transformed = kollisionStart + kollisionSchub * (kollisionDeckel / max(length(ko
                 Object.assign(shader.uniforms, u);
                 shader.vertexShader = shader.vertexShader
                     .replace('#include <common>', `#include <common>\n#define KOLLISION_ZAHL ${zahl}\n#define KOLLISION_FREMD ${fremd}\n#define KOLLISION_DECKEL ${deckel}\n`
-                        + `#define KOLLISION_REGEL ${regel}\n#define KOLLISION_WEICH ${weich}\n#define KOLLISION_DECKEL_NORMALE ${deckelNormale}\n${Mesh3daikollision.KOPF}`)
+                        + `#define KOLLISION_REGEL ${regel}\n#define KOLLISION_WEICH ${weich}\n#define KOLLISION_DECKEL_NORMALE ${deckelNormale}\n${haltung ? '#define KOLLISION_HALTUNG\n' : ''}${Mesh3daikollision.KOPF}`)
                     .replace('#include <skinning_vertex>', `#include <skinning_vertex>\n${Mesh3daikollision.RUMPF}`);
             };
-            neu.customProgramCacheKey = () => `mesh3daikollision3_${zahl}_${fremd}_${deckel}_${regel}_${weich}_${deckelNormale}`;
+            neu.customProgramCacheKey = () => `mesh3daikollision4_${zahl}_${fremd}_${deckel}_${regel}_${weich}_${deckelNormale}_${haltung ? 1 : 0}`;
             return neu;
         };
         mesh.material = Array.isArray(mesh.material) ? mesh.material.map(klonen) : klonen(mesh.material);

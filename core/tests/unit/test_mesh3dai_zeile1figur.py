@@ -84,6 +84,7 @@ class Zeile1rahmenTest(unittest.TestCase):
         from mesh3dai_zeile1figur import Zeile1figur
         z = object.__new__(Zeile1figur)
         z.test, z.g, z.log = self.test, 'maennlich', lambda s: None
+        z.ma = {}               # Mesh-Anpassung vor Fassung 5, ohne `gelenke` (`Zeile1figur.gelenke` → None); fehlte seit 30.10.2026, der Test brach mit AttributeError ab
         z.fig = self.test / 'form_maennlich'
         (z.fig / 'anzeige').mkdir(parents=True)
         np.savez(z.fig / 'anzeige' / 'netz.npz', ruhe=np.array([[0.0, 0.0, 0.0], [0.0, 1.81, 0.0]], dtype=np.float32))

@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 
 from django.conf import settings
+from .meshablage import Meshablage
 
 __all__ = ['Meshfigurablage']
 
@@ -124,17 +125,7 @@ class Meshfigurablage:
                 return p
         return None
 
-    def datei(self, unterordner, name):
-        """Pfad einer Datei im Auftrag — nur in `LESBAR`, nur ein Name ohne Pfad."""
-        if unterordner not in self.LESBAR:
-            raise ValueError('Unterordner %s' % unterordner)
-        rein = os.path.basename(str(name or ''))
-        if not rein or rein != name or rein in ('.', '..'):
-            raise ValueError('Name %s' % name)
-        pfad = (self.unter(unterordner) / rein).resolve()
-        if not pfad.is_relative_to(self.unter(unterordner).resolve()):
-            raise ValueError('Pfad außerhalb: %s' % name)
-        return pfad
+    datei = Meshablage.datei          # dieselbe Rechnung wie `Meshablage.datei` (bis 08.11.2026 eine Kopie hier)
 
     def loeschen(self):
         """Den Auftragsordner entfernen — mit Nachversuch (Windows sperrt eben ausgelieferte Dateien)."""

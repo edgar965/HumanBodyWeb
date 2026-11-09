@@ -70,9 +70,10 @@ class G9stueckteile:
         # Ein Stück mit Hauttiefe (Scham aus einer .blend, `Blendimportscham`) liegt bis 25 mm HINTER der Figurfläche und hängt
         # starr am Becken: Folgen (drei nächste Hautpunkte) und Heben über die Haut schöben einzelne Punkte im Schritt bis 46 mm
         # weg (gemessen 08.10.2026, Kantenmaximum im Browser) — seine Lage ist die gespeicherte Ruhelage der Figur des Imports.
+        # Seit 08.11.2026 folgt es der Haut wie ein Geograft dem Morph (`G9stueckfolge`); Ringecken und Verschiebung im `hautLoch` gleich mit (`G9stueckstarr.loch_gezeigt`).
         starr = G9stueckstarr.ist(eintrag)
         if starr:
-            kaefige = G9stueckstarr.punkte(teile, formung)
+            kaefige = G9stueckstarr.gezeigt(teile, formung)
         else:
             kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
                        for folger, lage in teile]

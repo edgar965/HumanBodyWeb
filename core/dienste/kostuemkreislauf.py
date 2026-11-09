@@ -45,6 +45,7 @@ from .kostuemoptionen import Kostuemoptionen
 from .kostuemparameter import Kostuemparameter
 from .kostuemreferenz import Kostuemreferenz
 from .kostuemrunde import Kostuemrunde
+from .iterationswahl import Iterationswahl
 
 logger = logging.getLogger('core')
 
@@ -52,6 +53,7 @@ __all__ = ['Kostuemkreislauf']
 
 
 class Kostuemkreislauf:
+    PARAMETER, OPTIONEN = Kostuemparameter, Kostuemoptionen      # Klassen der Familie (`Iterationswahl.mischen`, `kritik_faellig`)
     VERLAUF_HOECHSTENS = 5000
 
     def __init__(self, lauf):
@@ -253,35 +255,9 @@ class Kostuemkreislauf:
 
     MISCHEN_HOECHSTENS = 3
 
-    @classmethod
-    def _mischen(cls, alt, wahl, ergebnisse, jetzt):
-        """Bessern sich mehrere Kandidaten einer Runde, geht nur der beste in den neuen Stand — die Änderungen der
-        anderen (an anderen Maßen) gingen verloren, obwohl sie einzeln etwas brachten. Sie werden dem neuen Stand
-        aufgesetzt und als weiterer Kandidat (`mix`) in die nächste Runde gegeben. → Wertesatz oder None."""
-        besser = sorted(
-            (
-                e
-                for e in ergebnisse
-                if e is not wahl and e['name'] != 'ki' and e['note']['abweichung'] < jetzt
-            ),
-            key=lambda e: e['note']['abweichung'],
-        )
-        if not besser:
-            return None
-        mix = dict(wahl['werte'])
-        for e in besser[: cls.MISCHEN_HOECHSTENS]:
-            for k, v in e['werte'].items():
-                if v != alt.get(k):
-                    mix[k] = v
-        mix = Kostuemparameter.pruefen(mix)
-        return None if mix == wahl['werte'] else mix
+    _mischen = classmethod(Iterationswahl.mischen.__func__)          # dieselbe Rechnung wie `Iterationswahl.mischen` (bis 08.11.2026 eine Kopie hier)
 
-    def _kritik_faellig(self, i, ohne, seit_kritik):
-        if self.o['pruefki'] == Kostuemoptionen.AUS:
-            return False
-        alle = int(self.o['pruefki_alle'])
-        flaute = int(self.o['pruefki_stillstand'])
-        return (i + 1) % alle == 0 or (ohne >= flaute and seit_kritik >= flaute)
+    _kritik_faellig = Iterationswahl.kritik_faellig          # dieselbe Rechnung wie `Iterationswahl.kritik_faellig` (bis 08.11.2026 eine Kopie hier)
 
     def _kritik(self, bester, tafel, detail=None):
         """→ (kritik-Bericht, Wertesatz oder None). Ein Fehler der KI hält den Lauf nicht an — er steht im
@@ -295,34 +271,9 @@ class Kostuemkreislauf:
             return dict(bericht, fehler='Kein verwertbarer Vorschlag'), None
         return bericht, vorschlag
 
-    def _auswaehlen(self, ergebnisse, jetzt, beste=None):
-        """`jetzt`: Abweichung des Arbeitsstands (ein Optimierer-Kandidat muss besser sein), `beste`: die des
-        besten Modells aller Runden — an ihr misst sich die Toleranz der Prüf-KI, damit der Arbeitsstand nie
-        weiter als `toleranz` % vom Besten wegdriftet (ohne `beste`: an `jetzt`)."""
-        ki = next((e for e in ergebnisse if e['name'] == 'ki'), None)
-        massstab = jetzt if beste is None else min(jetzt, beste)
-        if ki is not None and ki['note']['abweichung'] <= massstab * (1 + self.o['toleranz'] / 100.0):
-            return ki, 'ki'
-        opt = min((e for e in ergebnisse if e['name'] != 'ki'), key=lambda e: e['note']['abweichung'])
-        if opt['note']['abweichung'] < jetzt:
-            return opt, 'optimierer'
-        return None, None
+    _auswaehlen = Iterationswahl.auswaehlen          # dieselbe Rechnung wie `Iterationswahl.auswaehlen` (bis 08.11.2026 eine Kopie hier)
 
-    def _notiz(self, art, note, erg, kritik):
-        vorher, nachher = note['abweichung'], erg['note']['abweichung']
-        prozent = (nachher - vorher) / vorher * 100 if vorher else 0.0
-        zahlen = 'Abweichung %.4f → %.4f (%+.1f %%)' % (vorher, nachher, prozent)
-        if art == 'optimierer':
-            return 'Optimierer: %s' % zahlen
-        grund = (kritik or {}).get('begruendung') or ''
-        if art == 'ki':
-            return 'Prüf-KI %s übernommen: %s. %s' % (self.o['pruefki'], zahlen, grund)
-        return 'Prüf-KI %s verworfen (Toleranz %s %%): %s. %s' % (
-            self.o['pruefki'],
-            self.o['toleranz'],
-            zahlen,
-            grund,
-        )
+    _notiz = Iterationswahl.notiz          # dieselbe Rechnung wie `Iterationswahl.notiz` (bis 08.11.2026 eine Kopie hier)
 
     def _sichern(self, z):
         self.job.ergebnis['kostuem'] = z

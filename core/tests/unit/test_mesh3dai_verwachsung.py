@@ -82,18 +82,27 @@ class TrennenTest(unittest.TestCase):
         alt = np.linalg.norm(np.cross(self.x[self.f[:, 1]] - self.x[self.f[:, 0]], self.x[self.f[:, 2]] - self.x[self.f[:, 0]]), axis=1).sum()
         self.assertAlmostEqual(flaeche, alt, places=9)                         # im Stand dieselbe Fläche
 
+    def _ganz(self, ergebnis):
+        """Fassung 2: kein Riss heißt Stück unverändert, die Seiten bleiben für das Binden."""
+        st, x, _p, trenn, befund = ergebnis
+        self.assertEqual(befund['kopien'], 0)
+        self.assertEqual(len(x), len(self.x))
+        np.testing.assert_array_equal(st['dreiecke'], self.f)
+        self.assertEqual(len(trenn), len(self.x))
+        return trenn.cpu().numpy()
+
     def test_schulter_bleibt_ganz(self):
-        self.assertIsNone(self._trennen(abstand_ruhe=0.0)[3])
+        self.assertTrue((self._ganz(self._trennen(abstand_ruhe=0.0)) > 0).any())
 
     def test_haut_zeigt_gegen_den_stoff(self):
-        self.assertIsNone(self._trennen(arm_normale=-1.0)[3])
+        self.assertFalse(self._ganz(self._trennen(arm_normale=-1.0)).any())     # die Flanke neben dem Arm: alles Rest, auch ohne Riss
 
     def test_arm_traegt_nicht(self):
         self.assertIsNone(self._trennen(ohne=(0, 1))[3])
 
     def test_flicken_bleiben_beim_rest(self):
         self.st['flicken'] = self.x[:, 0] < 0                                  # alles über dem Arm ist Flicken: nichts geht mit dem Arm, also kein Riss
-        self.assertIsNone(self._trennen()[3])
+        self.assertFalse(self._ganz(self._trennen()).any())
 
     def test_kleine_insel_geht_an_die_umgebung(self):
         from mesh3dai_kostuem_verwachsung import Kostuemverwachsung as V

@@ -19,6 +19,9 @@ weil `Mesh3daianatomie` aus ihnen das Stück backt. Im Kopf die Zahl, am Ende (n
 `normalen` (19.10.2026, Trainingspaare: die Normalen des Genesis-Exports, sonst knickt die Naht Haut ↔ Anatomie-Stück): im Kopf `normalen: true`, danach int8 (V·3, × 127, auf 4 aufgefüllt);
 `anatomie_fertig` im Kopf: das Stück trägt schon die Karte der Charakter-Seite, die Seite backt nicht neu.
 `punktfarbe` (21.10.2026 abends, Weg g Fassung 3 von Mesh3D-AI: Farbe je Punkt aus dem Eingang): im Kopf `punktfarbe: true`, danach uint8 sRGB (V·3, auf 4 aufgefüllt); die Dreiecke tragen Material −1.
+`stufe` 1 (09.11.2026, `paket(…, stufe=1)`, `Mesh3daiflaechennetzfein`): der Körper auf Netzstufe 1; im Kopf `stufe`, `kaefig_dreiecke` (Dreiecke des Netzes auf dem Käfig) und `eltern: true`, danach
+uint32 eltern (F, Käfigdreieck je Dreieck — Masken des Käfigs gelten so für die Kinder); mit `matrix` = [Zeilen, nnz] im Kopf die Unterteilungsmatrix der Körperpunkte: uint32 Zeilenanfänge
+(Zeilen + 1), uint16 Käfigpunkte (nnz, auf 4 aufgefüllt), float32 Gewichte (nnz).
 """
 
 import json
@@ -94,10 +97,16 @@ class Mesh3daiflaechennetz:
         return daten + b'\0' * (-len(daten) % 4)
 
     @classmethod
-    def paket(cls, modell):
+    def paket(cls, modell, stufe=0, matrix=False):
+        """`stufe` 1 (09.11.2026, Testseiten, `Mesh3daiflaechennetzfein`): der Körper auf Netzstufe 1, dazu `eltern` (Käfigdreieck je Dreieck, uint32) und mit `matrix` die Unterteilungsmatrix
+        der Körperpunkte (CSR: uint32 Zeilenanfänge, uint16 Käfigpunkte, float32 Gewichte). Ist der Körper nicht der Genesis-Käfig, bleibt es Stufe 0 (`stufe` im Kopf sagt, was kam)."""
         d = cls.laden(modell)
         if d is None:
             return None
+        if int(stufe) == 1:
+            from .mesh3daiflaechennetzfein import Mesh3daiflaechennetzfein
+            fein = Mesh3daiflaechennetzfein.netz(modell, d, Mesh3daidatensatz.ordner(modell), (cls._ablage.get(modell) or {}).get('stand'))
+            d = fein if fein is not None else d
         haut = int(d['knochen'].shape[1])
         kopf = {'fassung': d['fassung'], 'punkte': int(len(d['uv'])), 'dreiecke': int(len(d['dreiecke'])), 'haut': haut, 'teile': list(cls.TEILE),
                 'teilfarben': d['teilfarben'].astype(int).tolist(),
@@ -105,7 +114,9 @@ class Mesh3daiflaechennetz:
                 'materialien': [dict({'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')}, **{k: m[k] for k in cls.MATERIALWERTE if isinstance(m.get(k), (int, float))},
                                      **{k: m[k] for k in ('bild_material', 'bild_normal') if isinstance(m.get(k), str)})
                                 for m in d['materialien']], 'ruhe': 'ruhe' in d,
-                'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d, 'punktfarbe': 'punktfarbe' in d}
+                'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d, 'punktfarbe': 'punktfarbe' in d,
+                'stufe': 1 if 'eltern' in d else 0, 'kaefig_dreiecke': int(d.get('kaefig_dreiecke', len(d['dreiecke']))), 'eltern': 'eltern' in d,
+                'matrix': [int(d['matrix'].shape[0]), int(d['matrix'].nnz)] if matrix and 'matrix' in d else None}
         text = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         a = cls._auffuellen
@@ -120,6 +131,11 @@ class Mesh3daiflaechennetz:
             teile.append(a(d['normalen'].tobytes()))
         if 'punktfarbe' in d:
             teile.append(a(d['punktfarbe'].tobytes()))
+        if 'eltern' in d:
+            teile.append(d['eltern'].astype('<u4').tobytes())
+        if kopf['matrix']:
+            w = d['matrix']
+            teile += [w.indptr.astype('<u4').tobytes(), a(w.indices.astype('<u2').tobytes()), w.data.astype('<f4').tobytes()]
         return b''.join(teile)
 
     @classmethod

@@ -50,11 +50,12 @@ export class Ai2d3dansicht extends Mesh3daiansicht {
         this.jetztFuellen();
     }
 
-    zeichnen() {
+    /** Beim tatsächlichen Rendern (seit 08.11.2026 gebündelt, `Mesh3daiansicht.zeichnen`) Grund und Licht setzen. */
+    zeichnenJetzt() {
         this.grund = Ai2d3dansicht.grund;
         // „Netz farbig“ mit dem Licht von Mesh3D-AI, damit die Form zu sehen ist (PSHuman beleuchtet es auch); Fotolicht nur für „Textur“
         this.licht(!this.inhalt.userData.genesisErsatz && !Ai2d3dansichtsart.getauscht(this.ansichtsart));
-        super.zeichnen();
+        super.zeichnenJetzt();
     }
 
     /** Die Ansicht dieses Feldes: die seiner Zeilenleiste, ohne sie die der Leiste oben (nicht `art`: das ist bei `Mesh3daiansicht` 'eingabe' | 'ausgabe'). */
@@ -64,13 +65,8 @@ export class Ai2d3dansicht extends Mesh3daiansicht {
 
     /** „Normale“ und „Netz farbig“: Materialien nur für diesen Durchgang getauscht (`Ai2d3dansichtsart.malen`); ebenso die Hautbilder von „Haut angleichen“ (`hauttausch`, `Ai2d3dhautangleich._tauschen`). */
     _malen(renderer) {
-        const zurueck = this.hauttausch?.();
-        try {
-            if (Ai2d3dansichtsart.getauscht(this.ansichtsart)) Ai2d3dansichtsart.malen(this, renderer, this.ansichtsart);
-            else super._malen(renderer);
-        } finally {
-            zurueck?.();
-        }
+        if (Ai2d3dansichtsart.getauscht(this.ansichtsart)) Ai2d3dansichtsart.malen(this, renderer, this.ansichtsart);
+        else super._malen(renderer);
     }
 
     _uebernehmen(von) {

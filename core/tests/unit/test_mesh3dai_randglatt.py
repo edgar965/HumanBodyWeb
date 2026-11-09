@@ -3,7 +3,9 @@
     2  die Glättung senkt das Maß unter die Grenze, Mitte der Platte bleibt
     3  Punkte an einem anderen Stück bleiben (Naht)
     4  die UV bleibt
-Sabotage (von Hand): `naht` immer falsch → Fall 3 rot; `GLAETT_RUNDEN` 0 → Fall 2 rot.
+    5  das Maß ist das von `Saummass`
+    6  zur Naht hin läuft der Versatz am Rand aus
+Sabotage (von Hand): `naht` immer falsch → Fall 3 rot; `v` nie anwenden → Fall 2 rot; Auslauf weglassen → Fall 6 rot.
 """
 import sys
 import unittest
@@ -63,6 +65,27 @@ class Fall(unittest.TestCase):
         st = self.stueck(p, f)
         self.o.stueck(st, self.k.feld(p[:nx], self.t.float64), 1.0)
         self.assertLess(float(np.abs(st['punkte'] - p)[:nx].max()), 1e-9)
+
+    def test_mass_ist_das_der_foto_kette(self):
+        from KoerperKI_Fotos.saummass import Saummass
+        p, f, _n = rohr(0.003)
+        q, fs, _rand = self.o._netz(self.k.feld(p, self.t.float64), self.k.feld(f, self.t.int64))
+        soll = max(s['zacken_mm'] for s in Saummass.messen(q, fs)['saeume'])
+        self.assertAlmostEqual(self.zacke(p, f), soll / 1e3, places=6)
+
+    def test_versatz_laeuft_zur_naht_aus(self):
+        p, f, nx = rohr(0.003)
+        st = self.stueck(p, f)
+        self.o.stueck(st, self.k.feld(p[:nx // 2], self.t.float64), 1.0)
+        weg = np.linalg.norm(st['punkte'] - p, axis=1)[:nx]
+        self.assertLess(float(weg[: nx // 2].max()), 1e-9)
+        self.assertLess(float(weg[nx // 2]), float(weg[nx // 2 + 10:nx - 10].max()))
+
+    def test_kurze_schleife_wird_nicht_eng(self):
+        from KoerperKI_Fotos.saumkurve import Saumkurve
+        self.assertAlmostEqual(Saumkurve._breite(0.155, 0.02), 0.00496, places=4)
+        self.assertEqual(Saumkurve._breite(1.0, 0.02), Saumkurve.GLAETTE_M)
+        self.assertEqual(Saumkurve._breite(0.155, None), Saumkurve.GLAETTE_M)
 
     def test_uv_bleibt(self):
         p, f, _n = rohr(0.003)

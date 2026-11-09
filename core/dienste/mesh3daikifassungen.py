@@ -37,8 +37,9 @@ class Mesh3daikifassungen:
         'kopfnetz': '2026.10.21.17.51_kopf1',
         # 24.10.2026 abends: Haut-KI im Bildraum (`KoerperKI_alle.hautki`, Lauf unter `_hautki/laeufe/`) — leer = die Haut kommt weiter aus dem Netz `haut` von Stufe 2;
         # ein Lauf kommt erst nach Edgars Wort und einer Nachricht an 2d-3d-AI hierher — 24.10.2026 spätabends freigegeben (Edgar: „haut ist einigermaßen OK, also gib sie frei“):
-        # Lauf mit Rand-Lernen (`Hautkitraining.RAND_LERNEN`), Naht in der Haut an edgar_knopf grün
-        'hautki': '2026.10.24.15.19_hautki_rand',
+        # Lauf mit Rand-Lernen (`Hautkitraining.RAND_LERNEN`), Naht in der Haut an edgar_knopf grün. 05.11.2026 (Edgar: „mach rand für alle jobs“): derselbe Lauf neu mit `--abholen 10`,
+        # Zeichnung an Edgar_1 0,73–0,89 statt 0,52–0,64 (`ProjektTemp/_wegwerf/edgar1_textur/hautprobe.py`)
+        'hautki': '2026.11.05.14.55_hautki_rand_abholen10',
         # 25.10.2026: Ton-KI (`KoerperKI_alle.hautton`, Lauf unter `_hautki/ton/`) — legt den Ton je Körperteil auf die Kacheln der Haut-KI; leer = ohne. Ein Lauf kommt erst nach Edgars Wort
         # und einer Nachricht an 2d-3d-AI hierher
         'hautton': '',

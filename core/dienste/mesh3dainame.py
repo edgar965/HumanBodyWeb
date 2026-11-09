@@ -4,7 +4,7 @@
 Edgar: „ich möchte diese Jobs umbenennen können, so wie … der Stift auf /mesh-3D/<auftrag>/“ und „auch die testjobs /mesh-3D-AI/test/edgar/“. Vorne ist es derselbe Stift wie bei Mesh-3D und den
 Aufträgen (`gemeinsam/auftragname.js`: Klick auf Namen oder Stift, Enter speichert, Escape nimmt zurück); die Endpunkte stehen in `core/api/mesh3dainame.py`.
 
-**Der Name ist Beschriftung, kein Schlüssel.** Kennung (Adresse `/mesh-3D-AI/<job>/`), Ordner des Datensatzes und Modell (`modell`: Rig und Häutung) bleiben; was ein Job sonst an Namen trägt, kommt
+**Der Name ist Beschriftung, kein Schlüssel.** Kennung (Adresse `/mesh-3D-AI/<job>/`; auf 2d-3d-AI folgt die Adresse dem Namen, `Ai2d3dadresse`), Ordner des Datensatzes und Modell (`modell`: Rig und Häutung) bleiben; was ein Job sonst an Namen trägt, kommt
 aus dem Code (`Mesh3daiattrappe.STAMMDATEN`), aus `paar.json` (`ProjektTemp/_wegwerf/mesh3dai_paar_job.py`) oder aus `test.json` (`mesh3dai_test_rechnen.py`). Alle drei schreibt ein Bau neu —
 deshalb steht der eigene Name in einer eigenen Datei `name.json` im Ordner des Jobs bzw. Tests, die kein Lauf schreibt (wie `Mesh3dname` bei Mesh-3D), und wird beim Lesen darübergelegt.
 Wer den Namen auf den ursprünglichen zurückstellt, löscht die Datei.

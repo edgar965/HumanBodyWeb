@@ -56,7 +56,7 @@ class G9anatomiedrapierung:
             if haut is None and formung is not None:
                 from Genesis9.koerpernetz import G9koerpernetz
                 haut = G9koerpernetz(formung, stufen=1).koerperflaeche()[0]
-            punkte = G9stueckstarr.nachgezogen(eintrag, G9stueckstarr.punkte(teile, formung), haut, formung)
+            punkte = G9stueckstarr.nachgezogen(eintrag, teile, haut, formung)
             stuecke += list(zip(punkte, (folger.polys for folger, _lage in teile), strict=True))
         if not stuecke:
             return None

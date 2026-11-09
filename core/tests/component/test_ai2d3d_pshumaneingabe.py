@@ -93,6 +93,7 @@ class Ai2d3dPshumanEingabe(Ai2d3dAblageMixin, SimpleTestCase):
         self.assertEqual(Ai2d3dpshuman.lesen({})['dichte'], 480)
         self.assertFalse(Ai2d3dpshuman.lesen({})['fototextur'])
         self.assertFalse(Ai2d3dpshuman.lesen({})['genesis_aus_foto'])
+        self.assertFalse(Ai2d3dpshuman.lesen({})['haut_ki'])              # seit 06.11.2026 aus: Foto-Netze behalten die gesehene Haut (`Hautohneki`)
         for rumpf in ({'dichte': 960}, {'fototextur': True}):
             self.assertEqual(self.client.post(self.BASIS + '/', json.dumps(rumpf), content_type='application/json').status_code, 200)
         p = self._info()['pshuman']

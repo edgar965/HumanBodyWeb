@@ -26,7 +26,8 @@ export class Mesh3daitestnetzbau {
         const letzter = materialien.length - 1;
         const je = Array.from({ length: materialien.length }, () => []);
         for (let t = 0; t < netz.material.length; t++) {
-            if (verdeckt && verdeckt[t]) continue;
+            // `verborgen` (Paket `Mesh3daiflaechennetz`): die Haut unter dem Anatomie-Stück, seit 08.11.2026 auch an den Testfiguren (`Mesh3daimeshanatomie.anzeigenetz`, Edgar zu n1: „Scham fehlt“)
+            if ((verdeckt && verdeckt[t]) || netz.verborgen?.[t]) continue;
             const m = netz.material[t] < 0 ? letzter : netz.material[t];
             je[m].push(netz.dreiecke[t * 3], netz.dreiecke[t * 3 + 1], netz.dreiecke[t * 3 + 2]);
         }

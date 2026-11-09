@@ -91,7 +91,7 @@ class KostuemoptionenNachtragTest(SimpleTestCase):
         )
 
     def test_der_katalog_fuehrt_die_neuen_optionen_mit_werten(self):
-        with mock.patch('core.dienste.kostuemoptionen.Ollamamodelle.mit_bildern', return_value=[]):
+        with mock.patch('core.dienste.ollamamodelle.Ollamamodelle.mit_bildern', return_value=[]):
             katalog = {e['schluessel']: e for e in Kostuemoptionen.katalog()['optionen']}
         self.assertEqual([w['wert'] for w in katalog['huelle']['werte']], ['an', 'aus'])
         self.assertEqual([w['wert'] for w in katalog['textur']['werte']], ['an', 'aus'])

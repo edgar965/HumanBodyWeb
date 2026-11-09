@@ -2,7 +2,7 @@
 """Architekturmesh3daiablaufbild — die übergeordnete Grafik „Wie die KIs aufgerufen werden“ für Hilfe → Architektur → Mesh3DAI (24.10.2026 abends, Edgar: „eine übergeordnete Grafik mit Kästchen und
 Ablauf, wie die KIs aufgerufen werden“).
 
-Links die elf Schritte des Rechenlaufs in ihrer Reihenfolge (aus `Mesh3dairechenlauf.SCHRITTE`), rechts je Schritt, wer rechnet: unsere KIs grün (mit dem Lauf aus ki_fassungen.json), fertige
+Links die Schritte des Rechenlaufs in ihrer Reihenfolge (aus `Mesh3dairechenlauf.SCHRITTE`), rechts je Schritt, wer rechnet: unsere KIs grün (mit dem Lauf aus ki_fassungen.json), fertige
 Modelle anderer grau, eigene Rechnung ohne Gewichte blau. Was zu wem gehört, steht in `Architekturmesh3daikis.BETEILIGT`.
 
     svg = Architekturmesh3daiablaufbild.svg(schritte)

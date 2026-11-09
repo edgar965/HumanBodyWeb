@@ -33,7 +33,7 @@ Daten: `Architekturmesh3dairechenlauf` (Schritte aus `Mesh3dairechenlauf.SCHRITT
 </table>
 
 <h3>Die Prüfung: Testfälle der Kostüm-Prüfung (Fassung {{ r.pruefung.fassung }})</h3>
-<p>Am Ende des Schritts „kleider“ prüft <code>Kostuempruefung</code> (<code>{{ r.pruefung.datei }}</code>) Eingang und Ergebnis nebeneinander im Raum der Figur, in ihrer Haltung. Erst die Prüfung, dann der Fix:
+<p>Im Schritt „pruefung“ prüft <code>Kostuempruefung</code> (<code>{{ r.pruefung.datei }}</code>) Eingang und Ergebnis nebeneinander im Raum der Figur, in ihrer Haltung. Erst die Prüfung, dann der Fix:
   jeder gemeldete Fehler wurde zuerst ein Testfall, am Ziel geeicht und am damaligen Ergebnis rot.</p>
 <table class="doku">
   <thead><tr><th>Prio</th><th>Testfall</th><th>Regel (aus dem Code)</th>{% if r.lauf.tests %}<th>{{ r.lauf.kennung }}: rot</th><th>Befund</th>{% endif %}</tr></thead>

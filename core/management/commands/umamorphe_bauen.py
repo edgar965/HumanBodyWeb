@@ -12,6 +12,7 @@ from django.core.management.base import BaseCommand
 from Genesis9.umamorphe import G9umamorphe
 
 from core.dienste.umamorpheaufgenesis import Umamorpheaufgenesis
+from .sxmorphe_bauen import Command as SxmorphebauenCommand
 
 
 class Command(BaseCommand):
@@ -27,8 +28,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             '%d UMA-Morphs in %.1f s nach %s geschrieben' % (len(ergebnis), time.perf_counter() - beginn, G9umamorphe.ordner())))
 
-    def _fortschritt(self, nummer, gesamt, name, brief):
-        if brief is None:
-            self.stdout.write('  %3d/%d  %-34s uebergangen (kein Kaefigpunkt)' % (nummer, gesamt, name))
-            return
-        self.stdout.write('  %3d/%d  %-34s %6d Punkte  +%.1f / -%.1f mm' % (nummer, gesamt, name, brief['punkte'], brief['plus_mm'], brief['minus_mm']))
+    _fortschritt = SxmorphebauenCommand._fortschritt          # dieselbe Rechnung wie `Command._fortschritt` (bis 08.11.2026 eine Kopie hier)

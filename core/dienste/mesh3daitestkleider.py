@@ -193,9 +193,10 @@ class Mesh3daitestkleider:
         return '_test/%s/kleider_%s/%s/%s' % (kennung, geschlecht, weg, stueck)
 
     @classmethod
-    def paket(cls, kennung, geschlecht, weg, stueck):
+    def paket(cls, kennung, geschlecht, weg, stueck, stufe=0):
+        """`stufe` 1: die Haut aus dem Netz (Zeile „Haut“ b, Körper auf dem Käfig) wie die Figur auf Netzstufe 1 (`Mesh3daiflaechennetzfein`); Stücke bleiben, wie sie sind."""
         modell = cls.stueck_ordner(kennung, geschlecht, weg, stueck)
-        return Mesh3daiflaechennetz.paket(modell) if modell else None
+        return Mesh3daiflaechennetz.paket(modell, stufe=stufe) if modell else None
 
     @classmethod
     def bild(cls, kennung, geschlecht, weg, stueck, name):

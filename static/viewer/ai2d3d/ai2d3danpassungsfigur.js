@@ -25,14 +25,17 @@ export class Ai2d3danpassungsfigur {
 
     async _laden() {
         try {
-            const a = await fetch(this.adresse);
+            // ohne das Netz (08.11.2026, Ladezeit): das Feld zeigt nur die Figur, vom Netz braucht es nur den tiefsten Punkt (`kopf.netz_boden`) — beim Zauberer 2 statt 11 MB
+            const adresse = new URL(this.adresse, location.href);
+            adresse.searchParams.set('netz', '0');
+            const a = await fetch(adresse);
             if (!a.ok) throw new Error(a.status === 404 ? 'Noch nicht gerechnet.' : `HTTP ${a.status}`);
             const { kopf, daten } = LZ.paket(await a.arrayBuffer());
             const z = Mesh3daimeshanpassung.prototype;
             this.figur = Mesh3daimeshanpassung._geometrie(daten.figur, daten.figur_dreiecke);
             this.figurHaut = daten.uv && kopf.textur ? z._haut.call(this, daten, kopf.textur) : null;
-            let boden = Infinity;
-            for (let i = 1; i < daten.netz_punkte.length; i += 3) boden = Math.min(boden, daten.netz_punkte[i]);
+            let boden = Number.isFinite(kopf.netz_boden) ? kopf.netz_boden : Infinity;
+            if (!Number.isFinite(boden) && daten.netz_punkte) for (let i = 1; i < daten.netz_punkte.length; i += 3) boden = Math.min(boden, daten.netz_punkte[i]);
             for (const g of [this.figur, this.figurHaut]) g?.translate(0, -boden, 0);
         } catch (fehler) {
             this.fehler = fehler.message;

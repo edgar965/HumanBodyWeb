@@ -19,12 +19,13 @@ __all__ = ['Blendermodellvorlage']
 
 
 class Blendermodellvorlage:
+    ABLAGE = Blendermodellablage            # Ablage der Familie (Engine2d3dKleidervorlage: Engine2d3dKleiderablage)
     SCHLUESSEL = 'vorlage_foto'
 
     @classmethod
     def erneuern(cls, job):
         """Das Vorlagenbild neu schreiben und im Auftrag vermerken → sein Dateiname oder ''."""
-        ablage = Blendermodellablage(job.kennung)
+        ablage = cls.ABLAGE(job.kennung)
         name = cls._schreiben(job, ablage)
         ergebnis = dict(job.ergebnis or {})
         if name:

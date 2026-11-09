@@ -1,5 +1,5 @@
-{% comment %}Regler „Haut angleichen“ unter dem Feld Genesis-Ergebnis (05.11.2026), `Ai2d3dhautangleich`. Ein Schritt nach dem Job: ändert nur den Ton, Haare und Flecken bleiben. Parameter: job.{% endcomment %}
-<details class="ai2d3d-hautangleich" id="ai2d3d-hautangleich" data-adresse="/api/2d3dai/{{ job.id }}/hautangleich/" open>
+{% comment %}Regler „Haut angleichen“ unter der fertigen Figur (05.11.2026, Jobseite und Testseite), `Ai2d3dhautangleich`. Ein Schritt nach dem Job: ändert nur den Ton, Haare und Flecken bleiben. Parameter: adresse (der Endpunkt).{% endcomment %}
+<details class="ai2d3d-hautangleich" id="ai2d3d-hautangleich" data-adresse="{{ adresse }}" open>
     <summary>Haut angleichen</summary>
     <p class="hb-hinweis" data-meldung></p>
     <button type="button" class="schaltknopf" data-vorbereiten hidden>Vorbereiten</button>

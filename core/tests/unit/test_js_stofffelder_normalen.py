@@ -15,10 +15,13 @@ NAHTKOPIE von Punkt 2 (Punkt 6 mit derselben Ruhelage, eigenes Dreieck).
    (die Kopie sieht alle Dreiecke der Gruppe) — und die Normale eines
    unberuehrten Punkts bleibt die Ruhe.
 6. Nach dem Zuruecksetzen (vorher-Liste) steht die Ruhenormale wieder.
+7. Ein neuer Index (Hautverdeckung) baut die Vorbereitung neu, die Ruhenormalen
+   bleiben, keine NaN (05.11.2026, Edgar2010: Tarnflecken auf den Armen).
 
 Sabotage: in `_summe` die Schleife nur ueber die eigenen Dreiecke des Punkts
 (statt der Gruppe) → Fall 5 rot (Kopie kippt anders); in `anwenden` `aus.set`
-weglassen → Fall 2 rot (zweiter Aufruf summiert auf).
+weglassen → Fall 2 rot (zweiter Aufruf summiert auf); in `vorbereiten` wieder
+`if (alt) return alt` → Fall 7 rot.
 """
 from django.test import SimpleTestCase
 
@@ -88,6 +91,16 @@ if (Math.abs(nrm.array[3 * 0 + 1] - 1) > 1e-6) throw new Error('unberuehrter Pun
 pos.array[3 * 2 + 1] = 0; pos.array[3 * 6 + 1] = 0;
 N.nachziehen(geo, ber, 0, ber, 2, ruhe2);
 if (Math.abs(nrm.array[7] - 1) > 1e-6 || Math.abs(nrm.array[19] - 1) > 1e-6) throw new Error('nicht zurueckgesetzt');
+// 7. Neuer Index (Hautverdeckung, `Figurhaut.indexSetzen`), kuerzer als der alte: neu vorbereiten, Ruhenormalen bleiben, keine NaN
+nrm.array[1] = 0.25;                                       // im Attribut steht ein Bild, nicht die Ruhe
+geo.index = { array: Uint32Array.from([0,1,4, 0,4,3]) };
+const v2 = N.vorbereiten(geo, ruhe2);
+if (v2 === v) throw new Error('alter Index weiter benutzt');
+if (v2.dreieck.length !== 6) throw new Error('Dreiecke des alten Index: ' + v2.dreieck.length);
+if (v2.ruhe !== v.ruhe) throw new Error('Ruhenormalen neu gelesen');
+if (N.vorbereiten(geo, ruhe2) !== v2) throw new Error('bei gleichem Index neu gebaut');
+N.nachziehen(geo, alle, 8, alle, 0, ruhe2);
+if (nrm.array.some((x) => !Number.isFinite(x))) throw new Error('NaN nach dem Indexwechsel');
 console.log(JSON.stringify({ ok: true, kipp_y: +n2[1].toFixed(3), gruppen: v.mitgliedZahl.length - 1 }));
 """
 

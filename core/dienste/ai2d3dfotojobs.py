@@ -38,9 +38,9 @@ class Ai2d3dfotojobs:
     #: PSHumans eigene Rekonstruktion aus EINEM Foto, nur zum Ansehen
     #: 'pshuman_smplx' (03.11.2026, Edgar: „im Job mach als zusätzliche 4. View in jeder Zeile das SMPLX
     #: modell bei pshuman jobs, zum testen“): PSHumans eingepasstes SMPL-X (Start der freien Netzformung) —
-    #: nicht im Feld „Netz“, sondern Feld 4 jeder Zeile (`Ai2d3dseitendaten.SMPLX`)
+    #: nicht im Feld „Netz“, sondern eigenes Feld jeder Zeile (`Ai2d3dseitendaten.STARTKOERPER`). Seit 07.11.2026 'pshuman_start': Genesis statt SMPL-X, alte Jobs und UP2You behalten `pshuman_smplx`
     NETZNAMEN = {'hunyuan3d': 'Hunyuan3D-2mv', 'pshuman': 'PSHuman (1 Foto)',
-                 'pshuman_smplx': 'SMPL-X (PSHuman)'}
+                 'pshuman_smplx': 'SMPL-X (PSHuman)', 'pshuman_start': 'Startkörper (Genesis)'}
     BILDENDUNGEN = ('.jpg', '.jpeg', '.png', '.webp')
 
     @staticmethod

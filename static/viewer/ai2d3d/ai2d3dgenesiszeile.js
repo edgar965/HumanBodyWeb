@@ -9,11 +9,14 @@
  */
 import * as THREE from 'three';
 import { Exportleiste } from '../exportleiste/exportleiste.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Mesh3daifigurbewegungsleiste } from '../mesh3dai/mesh3daifigurbewegungsleiste.js';
 import { Mesh3daiflaechennetz } from '../mesh3dai/mesh3daiflaechennetz.js';
+import { Mesh3daitestfaelle } from '../mesh3dai/mesh3daitestfaelle.js';
 import { Ai2d3danpassungsfigur } from './ai2d3danpassungsfigur.js';
 import { Ai2d3dansicht } from './ai2d3dansicht.js';
 import { Ai2d3dexportfigur } from './ai2d3dexportfigur.js';
+import { Ai2d3djoblauf } from './ai2d3djoblauf.js';
 import { Ai2d3dkamera } from './ai2d3dkamera.js';
 import { Ai2d3dtestfigur } from './ai2d3dtestfigur.js';
 import { Ai2d3dzeilenleiste } from './ai2d3dzeilenleiste.js';
@@ -28,8 +31,23 @@ export class Ai2d3dgenesiszeile {
         return new Ai2d3dgenesiszeile(seite, zeile);
     }
 
+    /** Knopf „Genesis rechnen“: neuer Test aus dem PSHuman-Netz (`Ai2d3dgenesisstart`), danach dessen Seite mit dem Fortschritt. */
+    static async _rechnen(knopf) {
+        if (!confirm('Genesis aus dem PSHuman-Netz rechnen? Die Karte ist rund 20 Minuten belegt.')) return;
+        knopf.disabled = true;
+        try {
+            const { adresse } = await Serverabruf.senden(knopf.dataset.adresse, {});
+            location.href = adresse;
+        } catch (fehler) {
+            alert(`Nicht gestartet: ${fehler.message}`);
+            knopf.disabled = false;
+        }
+    }
+
     constructor(seite, zeile) {
         this.seite = seite;
+        zeile.querySelector('[data-aktion="genesis-rechnen"]')?.addEventListener('click', ereignis => Ai2d3dgenesiszeile._rechnen(ereignis.currentTarget));
+        Ai2d3djoblauf.aufbauen(zeile);
         const g = seite.daten.genesiszeile, feld = name => document.querySelector(`[data-feld="${name}"]`);
         // eigene Leiste (04.11.2026, Edgar: „in jeder Zeile ab Zeile 3 diese ansichten plus die Rig, Kleider Toggle buttons“) — gilt für alle drei Felder der Zeile (`Ai2d3dseite._auftrag`, `Ai2d3dsmplx.zeigen`)
         this.leiste = Ai2d3dzeilenleiste.aufbauen(zeile.querySelector('[data-zeilenleiste]'), () => { this.zeigen(false); seite.smplx?.zeigen(false); seite._genesisZeigen(false); });
@@ -51,6 +69,15 @@ export class Ai2d3dgenesiszeile {
                               Ai2d3dgenesiszeile._leisten(feld('genesis-ergebnis'), this.eintraege[1].ansicht, g.ergebnis, false)];
         seite.fotos.gross.addEventListener('load', () => this.kameras());
         for (const e of this.eintraege) e.figur?.bereit.then(() => this.zeigen(true));
+        // Testfälle des Tests wie auf der Mesh3D-AI-Testseite (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“)
+        const testfaelle = document.getElementById('mesh3dai-testfaelle');
+        if (testfaelle) new Mesh3daitestfaelle(testfaelle).laden(`${testfaelle.dataset.adresse}?t=${Date.now()}`);
+    }
+
+    /** Das Feld Genesis-Ergebnis für „Haut angleichen“ (`Ai2d3dhautangleich`). */
+    get hautort() {
+        const { ansicht, figur } = this.eintraege[1];
+        return { ansicht, bereit: figur?.bereit, materialien: () => (figur?.koerper ? [figur.koerper.an.material].flat() : []) };
     }
 
     /** Leiste und Export der Karte um `feld` an die Figur unter `adresse` (`/api/mesh3dai/test/<k>/`) — null ohne Adresse oder ohne Leiste im Template. */

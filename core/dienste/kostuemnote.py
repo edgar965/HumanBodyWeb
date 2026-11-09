@@ -13,6 +13,7 @@ Bildauswahl gemittelt (Regler „Gewicht" auf der Seite).
 """
 
 import numpy as np
+from .iterationsnote import Iterationsnote
 
 __all__ = ['Kostuemnote']
 
@@ -24,17 +25,7 @@ class Kostuemnote:
     #: Ein Feld zählt, wenn in beiden Bildern mindestens so viel davon Figur ist.
     DECKUNG = 0.4
 
-    @classmethod
-    def vergleichen(cls, vorlage, render):
-        a, b = vorlage.maske, render.maske
-        vereint = np.count_nonzero(a | b)
-        iou = np.count_nonzero(a & b) / vereint if vereint else 0.0
-        farbe = cls._farbe(vorlage, render)
-        return {
-            'iou': round(float(iou), 4),
-            'farbe': round(float(farbe), 4),
-            'abweichung': round(float((1.0 - iou) + cls.FARBGEWICHT * farbe), 4),
-        }
+    vergleichen = classmethod(Iterationsnote.vergleichen.__func__)          # dieselbe Rechnung wie `Iterationsnote.vergleichen` (bis 08.11.2026 eine Kopie hier)
 
     @classmethod
     def _farbe(cls, vorlage, render):
@@ -54,11 +45,4 @@ class Kostuemnote:
         # Ohne ein einziges gemeinsames Feld ist die Farbe unbekannt — dann zählt sie wie „ganz daneben".
         return float(np.mean(diffs)) if diffs else 1.0
 
-    @classmethod
-    def gesamt(cls, ansichten):
-        """`ansichten`: [(gewicht, note)] → gewichteter Mittelwert je Teil samt Einzelwerten."""
-        summe = sum(g for g, _ in ansichten) or 1.0
-        aus = {
-            k: round(sum(g * n[k] for g, n in ansichten) / summe, 4) for k in ('abweichung', 'iou', 'farbe')
-        }
-        return aus
+    gesamt = classmethod(Iterationsnote.gesamt.__func__)          # dieselbe Rechnung wie `Iterationsnote.gesamt` (bis 08.11.2026 eine Kopie hier)

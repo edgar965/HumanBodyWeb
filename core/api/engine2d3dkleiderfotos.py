@@ -27,9 +27,9 @@ from django.views.decorators.http import require_POST
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from ..dienste.engine2d3dkleiderrollen import Engine2d3dKleiderrollen
 from ..dienste.engine2d3dkleidervorlage import Engine2d3dKleidervorlage
-from ..dienste.meshoptionen import Meshoptionen
 from ..models import Engine2d3dKleiderauftrag
 from .engine2d3dkleider import Engine2d3dKleiderendpunkte
+from .auftragsfamilie import Auftragsfamilie
 
 logger = logging.getLogger('core')
 
@@ -154,13 +154,7 @@ class Engine2d3dKleiderfotoendpunkte:
     def gewicht(request, job_id, datei):
         """Fotogewicht (0..100) und optionaler Bereichsausschnitt — wirkt beim nächsten Lauf von „netz"."""
         job = Engine2d3dKleiderfotoendpunkte._job(job_id)
-        eintrag = Engine2d3dKleiderfotoendpunkte._bild_oder_404(job, datei)
-        rumpf = Engine2d3dKleiderendpunkte.rumpf(request)
-        eintrag['gewicht'] = Meshoptionen.gewicht_pruefen(rumpf.get('gewicht'))
-        if 'bereich' in rumpf:
-            eintrag['bereich'] = Meshoptionen.bereich_pruefen(rumpf.get('bereich'))
-        job.save(update_fields=['bilder', 'updated_at'])
-        return JsonResponse({'ok': True, 'bild': eintrag})
+        return Auftragsfamilie.foto_gewicht(job, Engine2d3dKleiderfotoendpunkte._bild_oder_404(job, datei), Engine2d3dKleiderendpunkte.rumpf(request))
 
     @staticmethod
     @require_POST
@@ -172,22 +166,4 @@ class Engine2d3dKleiderfotoendpunkte:
         Lauf, der seine alte Ordnung zurückschreibt) und hätte genau die Änderung verworfen, die der
         Aufruf bewirken soll (erst im Browser aufgefallen: 200 und keine Wirkung, `auftragsseiten.md`).
         """
-        job = Engine2d3dKleiderfotoendpunkte._job(job_id)
-        rumpf = Engine2d3dKleiderendpunkte.rumpf(request)
-        datei = str(rumpf.get('datei') or '')
-        bilder = list(job.bilder or [])
-        stelle = next((i for i, b in enumerate(bilder) if b.get('datei') == datei), None)
-        if stelle is None:
-            raise Http404('Kein Bild %s' % datei)
-        try:
-            ziel = int(rumpf.get('index'))
-        except TypeError, ValueError:
-            return JsonResponse({'error': 'index fehlt oder ist keine Zahl'}, status=400)
-        ziel = max(0, min(len(bilder) - 1, ziel - 1))
-        vorher = bilder[0].get('datei')
-        bilder.insert(ziel, bilder.pop(stelle))
-        job.bilder = bilder
-        job.save(update_fields=['bilder', 'updated_at'])
-        if bilder[0].get('datei') != vorher:
-            Engine2d3dKleidervorlage.erneuern(job)
-        return Engine2d3dKleiderfotoendpunkte._antwort(job)
+        return Auftragsfamilie.foto_reihenfolge(Engine2d3dKleiderfotoendpunkte._job(job_id), Engine2d3dKleiderendpunkte.rumpf(request), Engine2d3dKleidervorlage.erneuern, Engine2d3dKleiderfotoendpunkte._antwort)

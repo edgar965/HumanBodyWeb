@@ -1,3 +1,4 @@
+from .haarparameter import Haarparameter
 # -*- coding: utf-8 -*-
 """Kostuemparameter — das Kostüm als DATEN: jedes Maß, jede Farbe, jeder Teile-Schalter mit Startwert und
 Grenzen.
@@ -151,33 +152,6 @@ class Kostuemparameter:
     def start(cls):
         return {k: e['start'] for k, e in cls.schema().items()}
 
-    @classmethod
-    def pruefen(cls, roh):
-        """Vollständiger Wertesatz: bekannte Schlüssel auf ihre Grenzen gezogen, Schalter 0/1, der Rest
-        Startwert."""
-        roh = roh if isinstance(roh, dict) else {}
-        aus = {}
-        for k, e in cls.schema().items():
-            try:
-                wert = float(roh.get(k, e['start']))
-            except TypeError, ValueError:
-                wert = float(e['start'])
-            if wert != wert:  # NaN
-                wert = float(e['start'])
-            wert = min(e['max'], max(e['min'], wert))
-            aus[k] = int(wert >= 0.5) if e['art'] == 'schalter' else round(wert, 5)
-        return aus
+    pruefen = classmethod(Haarparameter.pruefen.__func__)          # dieselbe Rechnung wie `Haarparameter.pruefen` (bis 08.11.2026 eine Kopie hier)
 
-    @classmethod
-    def unterschiede(cls, alt, neu, genauigkeit=1e-4):
-        """`{schluessel: [alt, neu]}` — nur, was sich merklich geändert hat (für die Anzeige einer Runde)."""
-        schema = cls.schema()
-        aus = {}
-        for k in schema:
-            a, b = alt.get(k), neu.get(k)
-            if a is None or b is None:
-                continue
-            spanne = schema[k]['max'] - schema[k]['min'] or 1.0
-            if abs(float(a) - float(b)) > genauigkeit * spanne:
-                aus[k] = [a, b]
-        return aus
+    unterschiede = classmethod(Haarparameter.unterschiede.__func__)          # dieselbe Rechnung wie `Haarparameter.unterschiede` (bis 08.11.2026 eine Kopie hier)

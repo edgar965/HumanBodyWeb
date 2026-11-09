@@ -1,6 +1,7 @@
 /**
  * Mesh3dairechnen — Knopf „Rechnen“ und Fortschritt auf der Testseite von Mesh3D-AI (23.10.2026, Server `Mesh3dairechenlauf`).
  * Fragt `GET /api/mesh3dai/test/<k>/rechnen/stand/` alle `TAKT_MS`, solange der Lauf wartet oder rechnet (und einmal beim Öffnen); „Rechnen“ = `POST …/rechnen/`.
+ * „Ab Einpassung rechnen“ (06.11.2026) schickt `{ab}` aus `data-ab`: Die Kette beginnt beim ersten Schritt, der das Geschlecht kennt (`Mesh3dairechenlauf.AB_GESCHLECHT`).
  * Ist der Lauf fertig, lädt die Seite einmal neu — erst dann zeigt sie die neuen Ergebnisse.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -14,22 +15,31 @@ export class Mesh3dairechnen {
         this.feld = feld;
         this.kennung = feld.dataset.kennung;
         this.knopf = feld.querySelector('[data-aktion="rechnen"]');
+        this.knopfAb = feld.querySelector('[data-aktion="rechnen-ab"]');
         this.status = feld.querySelector('[data-status]');
         this.balken = feld.querySelector('[data-balken]');
         this.liste = feld.querySelector('[data-schritte]');
         this.vorher = null;
         this.knopf.addEventListener('click', () => this.rechnen());
+        this.knopfAb.addEventListener('click', () => this.rechnen(this.knopfAb.dataset.ab));
         this.holen();
     }
 
-    async rechnen() {
-        if (!window.confirm('Den Test jetzt neu rechnen? Die Ergebnisse auf dieser Seite werden durch den neuen Lauf ersetzt.')) return;
-        this.knopf.disabled = true;
+    _sperren(an) {
+        this.knopf.disabled = an;
+        this.knopfAb.disabled = an;
+    }
+
+    async rechnen(ab = null) {
+        const frage = ab ? 'Ab der Einpassung für das eingestellte Geschlecht neu rechnen? Rig, Erkennung und Zerlegung bleiben, Einpassung, Figur, Haut und Kleider werden ersetzt.'
+            : 'Den Test jetzt neu rechnen? Die Ergebnisse auf dieser Seite werden durch den neuen Lauf ersetzt.';
+        if (!window.confirm(frage)) return;
+        this._sperren(true);
         try {
-            await Serverabruf.senden(`/api/mesh3dai/test/${this.kennung}/rechnen/`, {});
+            await Serverabruf.senden(`/api/mesh3dai/test/${this.kennung}/rechnen/`, ab ? { ab } : {});
         } catch (fehler) {
-            this.status.textContent = `Start fehlgeschlagen: ${fehler.message}`;
-            this.knopf.disabled = false;
+            this.status.textContent = `Start fehlgeschlagen: ${fehler.daten?.error || fehler.message}`;
+            this._sperren(false);
             return;
         }
         this.holen();
@@ -56,7 +66,7 @@ export class Mesh3dairechnen {
     zeigen(d) {
         const st = d.stand;
         const s = st?.status;
-        this.knopf.disabled = s === 'wartet' || s === 'laeuft';
+        this._sperren(s === 'wartet' || s === 'laeuft');
         if (!st) {
             this.status.textContent = 'Noch nie über den Knopf gerechnet.';
             this.liste.replaceChildren();

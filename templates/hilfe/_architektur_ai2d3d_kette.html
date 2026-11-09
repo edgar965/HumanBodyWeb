@@ -1,5 +1,6 @@
 {% comment %}Die Kette heute (24.10.2026, Edgar: „eine übergeordnete Grafik mit Kästchen und Ablauf, wie die KIs aufgerufen werden“, „Mach die KopfKI … rein“): `Architekturai2d3dkette`.{% endcomment %}
-<h2 id="kette">Die Kette heute: Fotos → Genesis-Modell, wie die KIs aufgerufen werden</h2>
+<h2 id="kette">Die Foto-Kette: Fotos → Genesis-Modell, wie die KIs aufgerufen werden</h2>
+<p>Dieser Weg rechnet die Figur direkt aus den Fotos, ohne PSHuman. Er läuft nur noch mit dem Häkchen „Genesis direkt aus dem Foto“; den Hauptweg beschreibt <a href="#heute">„Was wir heute tun“</a>.</p>
 <p>Gebaut und an EdgarTrip gerechnet — ohne eigenes trainiertes Netz: vier vortrainierte KIs erkennen, was in den Fotos ist (Sapiens2, SAM 3, ViTPose, MediaPipe), die Haut-KI von Mesh3D-AI malt
   die Haut, und die Genesis-Figur wird in Runden an die Fotos angepasst. Kein Wert aus dem Tripo-Netz fließt ein (Edgar: „die sollen gar nicht in die Berechnung einfliessen!!!“). Die Schritte laufen
   heute als Skripte nacheinander (<code>ProjektTemp/_wegwerf/ai2d3d/</code>), nicht per Knopf; alle im selben Python (python14) auf der Grafikkarte, jeder unter der Gpusperre.</p>

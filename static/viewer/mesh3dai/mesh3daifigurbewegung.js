@@ -29,7 +29,7 @@ export class Mesh3daifigurbewegung {
 
     /**
      * @param ansicht das Feld der Ergebnisfigur (`Mesh3daiansicht`)
-     * @param quelle `async () => ({schluessel, figur, stuecke: [{id, art, netz}], knochen: [Namen], ruhezentren})` oder null (keine Genesis-Figur für diese Probe)
+     * @param quelle `async () => ({schluessel, figur, stuecke: [{id, art, netz}], knochen: [Namen], ruhezentren, anatomieGetragen})` oder null (keine Genesis-Figur für diese Probe)
      */
     constructor(ansicht, quelle) {
         this.ansicht = ansicht;
@@ -112,8 +112,8 @@ export class Mesh3daifigurbewegung {
             stuecke: (q.stuecke || []).map(st => ({ id: st.id, art: st.art, kostuem: st.kostuem, ruhe: Mesh3daibewegungskleid.ruhe(st.netz, this._abbildung), dreiecke: st.netz.dreiecke })),
         });
         this._kleiderAn = true;
-        modell.anatomieUnterHose = () => !!q.ohneAnatomie && this._kleiderAn;          // die Quelle sagt, ob eine Hose das Anatomie-Stück deckt (`Ai2d3dexportfigur`)
-        Mesh3daianatomiehuelle.planen(modell);          // Hautverdeckung; unter der Hose der KI kein Anatomie-Stück (31.10.2026, „das Geschlechtsteil [kommt] aus der hose“)
+        modell.anatomieGetragen = () => !!q.anatomieGetragen && this._kleiderAn;          // die Quelle sagt, ob ein Stück die Anatomie trägt (Regel des Servers, `Mesh3daianatomiehuelle.getragen`)
+        Mesh3daianatomiehuelle.planen(modell);          // Hautverdeckung; in einem tragenden Stück kein Anatomie-Stück (31.10.2026, „das Geschlechtsteil [kommt] aus der hose“)
         this._melden('');
         return true;
     }
@@ -131,7 +131,7 @@ export class Mesh3daifigurbewegung {
             mesh.userData.art = st.art; mesh.name = `ki_${st.id}`;      // Name = Schlüssel in `hautStuecke` (Exportleiste: `Exportleistefigur.hautDeckt`, Knotenname in GLB und .blend)
             mesh.visible = this._kleiderAn;
             Eigenhaut.einhaengen(this.modell.group, mesh, this.modell.skelett);
-            Mesh3daikollision.anbringen(mesh, q.kapseln, this.modell.skelett, this._abbildung);    // Stücke aus fremden Gliedern geschoben (31.10.2026 nachts)
+            Mesh3daikollision.anbringen(mesh, q.kapseln, this.modell.skelett, this._abbildung, q.knochen);    // Stücke aus fremden Gliedern geschoben (31.10.2026 nachts)
             this.kleider.push({ mesh, art: st.art });
         }
         this._kleiderWurzel = this.modell.skelett?.rootBone || null;

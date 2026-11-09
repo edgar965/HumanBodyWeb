@@ -5,6 +5,7 @@ GET /mesh-3D-AI/test/<kennung>/            die Seite eines Tests (Felder Mesh un
 GET /api/mesh3dai/test/<kennung>/          Rig, Drehungen, Ruhezentren, Kennzahlen
 GET /api/mesh3dai/test/<kennung>/netz/     das Netz im Rahmen des Datensatzes (GLB, ~100.000 Dreiecke)
 POST /api/mesh3dai/test/<kennung>/geschlecht/  {"geschlecht": "weiblich" | "maennlich"} — welche Figuren die Ausgabe nehmen darf (16.10.2026 abends)
+POST /api/mesh3dai/test/<kennung>/wahl/    {"name": "haut_ki" | "keine_kleider", "wert": true | false} — Häkchen eines Tests ohne Job (`Mesh3daitestwahl`)
 GET /api/mesh3dai/test/<kennung>/figur/<geschlecht>/netz/        Anzeigenetz der vorhergesagten Figur (Binärpaket wie `/api/mesh3dai/<job>/flaeche/netz/`, `Mesh3daiflaechennetz`)
 GET /api/mesh3dai/test/<kennung>/linien/0/   Messlinien der Regler-KI aus dem Formschritt (Binärpaket `Mesh3dailinien`, 27.10.2026)
 GET /api/mesh3dai/test/<kennung>/linien/flaeche/   das Mesh in der A-Pose im Raum dieser Linien (`Mesh3dailinienflaeche`, 27.10.2026)
@@ -36,8 +37,9 @@ class Mesh3daitestendpunkte:
         # mit den Tripo-Jobs (Ordner mit `ziel/`): sonst fiel ihre Seite auf `anlage` zurück und zeigte die Kennung statt des Namens (27.10.2026)
         info = next((t for t in Mesh3daitest.alle(mit_tripo=True) if t.get('kennung') == kennung), None) or Mesh3daitest.anlage(ordner)
         # Die Animation der Ausgabe baut eine Genesis-Figur (22.10.2026): Bilder wie auf der Jobseite (`Mesh3daitexturwahl`).
+        from ..dienste.mesh3daitestwahl import Mesh3daitestwahl
         from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
-        return render(request, 'mesh3dai_test.html', {'test': info, 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
+        return render(request, 'mesh3dai_test.html', {'test': info, 'wahl': Mesh3daitestwahl.lesen(kennung), 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
 
     @staticmethod
     @require_GET
@@ -57,6 +59,19 @@ class Mesh3daitestendpunkte:
         if not Mesh3daitest.geschlecht_setzen(kennung, wert):
             return JsonResponse({'error': 'Test %s fehlt oder „%s“ ist weder weiblich noch maennlich' % (kennung, wert)}, status=400)
         return JsonResponse({'ok': True, 'geschlecht': wert})
+
+    @staticmethod
+    @require_POST
+    def wahl(request, kennung):
+        from ..dienste.mesh3daitestwahl import Mesh3daitestwahl
+        try:
+            daten = json.loads(request.body or b'{}')
+            name, wert = daten.get('name'), daten.get('wert')
+        except (ValueError, AttributeError):
+            name, wert = None, None
+        if not Mesh3daitestwahl.setzen(kennung, name, wert):
+            return JsonResponse({'error': 'Test %s oder Wahl „%s“ nicht änderbar' % (kennung, name)}, status=400)
+        return JsonResponse({'ok': True, 'wahl': Mesh3daitestwahl.lesen(kennung)})
 
     @staticmethod
     @require_GET
@@ -91,7 +106,8 @@ class Mesh3daitestendpunkte:
     def meshanpassung(request, kennung):
         from ..dienste.mesh3daitestanpassung import Mesh3daitestanpassung
         ordner = Mesh3daitest.pfad(kennung)
-        paket = Mesh3daitestanpassung.paket(ordner) if ordner is not None else None
+        # `?netz=0`: ohne das Netz (Jobseite „2d-3d-AI“, nur die Figur; 08.11.2026)
+        paket = Mesh3daitestanpassung.paket(ordner, ohne_netz=request.GET.get('netz') == '0') if ordner is not None else None
         if paket is None:
             raise Http404('Keine Genesis-Anpassung für Test %s — python14 mesh3dai/mesh3dai_meshanpassung.py --nur %s' % (kennung, kennung))
         return HttpResponse(paket, content_type='application/octet-stream')
@@ -100,7 +116,8 @@ class Mesh3daitestendpunkte:
     @require_GET
     def figurnetz(request, kennung, geschlecht):
         ordner = Mesh3daitest.form_ordner(kennung, geschlecht)
-        paket = Mesh3daiflaechennetz.paket(ordner) if ordner else None
+        # `?stufe=1` (09.11.2026, Edgar: „das ganze Anzeigenetz in Stufe 1“): Körper auf Netzstufe 1, `&matrix=1` mit der Unterteilungsmatrix (`Ai2d3dzeile1`)
+        paket = Mesh3daiflaechennetz.paket(ordner, stufe=1 if request.GET.get('stufe') == '1' else 0, matrix=request.GET.get('matrix') == '1') if ordner else None
         if paket is None:
             raise Http404('Keine vorhergesagte Figur für Test %s (%s)' % (kennung, geschlecht))
         return HttpResponse(paket, content_type='application/octet-stream')

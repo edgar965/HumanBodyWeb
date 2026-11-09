@@ -13,15 +13,19 @@ import { Ai2d3dtrainingfigur } from './ai2d3dtrainingfigur.js';
 
 export class Ai2d3dzeile1 {
 
-    /** @param figur THREE.Group der Testfigur @param koerper [Mesh, …] die Körpernetze (gleiche Punkte) @param ursprung Int32Array (Anzeigenetz → Käfig) */
-    constructor(figur, koerper, ursprung) {
+    /**
+     * @param figur THREE.Group der Testfigur @param koerper [Mesh, …] die Körpernetze (gleiche Punkte) @param ursprung Int32Array (Anzeigenetz auf dem Käfig → Käfigpunkt)
+     * @param netz `Mesh3daiflaechennetz` des Körpers: auf Netzstufe 1 (09.11.2026) mit Unterteilungsmatrix — dann gehen die Käfigpunkte der Zeile 1 durch sie (`ausKaefig`), nicht über `ursprung`
+     */
+    constructor(figur, koerper, ursprung, netz = null) {
         this.figur = figur;
         this.koerper = koerper;
         this.ursprung = ursprung;
+        this.netz = netz?.matrix ? netz : null;
         this.nr = null;
         figur.traverse(o => { if (o.isMesh) o.geometry.userData.lage0 ??= o.geometry.attributes.position.array.slice(); });
         this.lage0 = koerper[0].geometry.userData.lage0;
-        this.n0 = Math.min(ursprung.length, this.lage0.length / 3);
+        this.n0 = Math.min(this.netz ? this.netz.matrix.zeilen : ursprung.length, this.lage0.length / 3);
         this.nachbarn = new Ai2d3dnachbarn(this.lage0, this.n0);      // Körperpunkte mit Käfigpunkt (`Ai2d3dnachbarn.gewichte`)
     }
 
@@ -33,8 +37,12 @@ export class Ai2d3dzeile1 {
         const p = Ai2d3dtrainingfigur._feld(text, Float32Array);
         const versatz = new Float32Array(this.n0 * 3);
         const u = this.ursprung;
-        for (let i = 0; i < this.n0; i++) for (let c = 0; c < 3; c++) versatz[i * 3 + c] = p[u[i] * 3 + c] - this.lage0[i * 3 + c];
-        const normalen = Ai2d3dzeile1._normalen(p, Ai2d3dtrainingfigur._feld(genesis.dreiecke, Uint32Array));
+        const kaefigNormalen = Ai2d3dzeile1._normalen(p, Ai2d3dtrainingfigur._feld(genesis.dreiecke, Uint32Array));
+        // Stufe 1: Punkte und Normalen der Zeile 1 durch die Unterteilungsmatrix, danach je Körperpunkt der eigene (Index i statt u[i])
+        const ziel = this.netz ? this.netz.ausKaefig(p) : p;
+        const normalen = this.netz ? Ai2d3dzeile1._einheit(this.netz.ausKaefig(kaefigNormalen)) : kaefigNormalen;
+        const nr0 = this.netz ? (i => i) : (i => u[i]);
+        for (let i = 0; i < this.n0; i++) for (let c = 0; c < 3; c++) versatz[i * 3 + c] = ziel[nr0(i) * 3 + c] - this.lage0[i * 3 + c];
         this.figur.traverse(o => {
             if (!o.isMesh) return;
             const geo = o.geometry, a = geo.userData.lage0, pos = geo.attributes.position.array;
@@ -45,7 +53,7 @@ export class Ai2d3dzeile1 {
                 let vx = 0, vy = 0, vz = 0;
                 for (const [j, w] of nb[i]) { vx += w * versatz[j * 3]; vy += w * versatz[j * 3 + 1]; vz += w * versatz[j * 3 + 2]; }
                 pos[i * 3] = a[i * 3] + vx; pos[i * 3 + 1] = a[i * 3 + 1] + vy; pos[i * 3 + 2] = a[i * 3 + 2] + vz;
-                if (koerper && i < this.n0 && nrm) for (let c = 0; c < 3; c++) nrm[i * 3 + c] = normalen[u[i] * 3 + c];
+                if (koerper && i < this.n0 && nrm) for (let c = 0; c < 3; c++) nrm[i * 3 + c] = normalen[nr0(i) * 3 + c];
             }
             geo.attributes.position.needsUpdate = true;
             if (nrm) geo.attributes.normal.needsUpdate = true;
@@ -54,6 +62,15 @@ export class Ai2d3dzeile1 {
         });
         this.nr = nr;
         return true;
+    }
+
+    /** Vektoren (V·3) auf Länge 1 — die unterteilten Normalen. */
+    static _einheit(n) {
+        for (let i = 0; i < n.length; i += 3) {
+            const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1;
+            n[i] /= l; n[i + 1] /= l; n[i + 2] /= l;
+        }
+        return n;
     }
 
     /** Flächengewichtete Normalen je Käfigpunkt. */

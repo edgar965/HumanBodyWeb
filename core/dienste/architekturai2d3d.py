@@ -12,6 +12,7 @@ from .ai2d3djobs import Ai2d3djobs
 from .architekturai2d3dandere import Architekturai2d3dandere
 from .architekturai2d3dbild import Architekturai2d3dbild
 from .architekturai2d3dkette import Architekturai2d3dkette
+from .architekturai2d3dpshuman import Architekturai2d3dpshuman
 from .architekturai2d3dkis import Architekturai2d3dkis
 from .architekturai2d3dkopfnetz import Architekturai2d3dkopfnetz
 from .architekturai2d3dmessung import Architekturai2d3dmessung
@@ -50,6 +51,8 @@ class Architekturai2d3d:
         return {
             # 24.10.2026 abends: die gebaute Kette zuerst (Edgar: „eine übergeordnete Grafik mit Kästchen und Ablauf“, „für alle KIs eine einzelne Grafik“, „Mach die KopfKI, Haut KI rein“)
             'kette': teil('Kette', Architekturai2d3dkette.uebersicht), 'kopfki_bild': teil('KopfKI', Architekturai2d3dkette.kopfki),
+            # 07.11.2026 (Edgar: „Passe die seite … an mit dem was wir jetzt tun, und füge die Beschreibung der pshuman ein“)
+            'heute_bild': teil('Heute', Architekturai2d3dpshuman.heute), 'pshuman_bild': teil('PSHuman', Architekturai2d3dpshuman.pshuman), 'master_bild': teil('Mehrere Fotos', Architekturai2d3dpshuman.master),
             'fotokopf': ((edgar or {}).get('kopf') or {}).get('fotokopf'),
             'kis': teil('KIs (architekturai2d3dnetze.json)', Architekturai2d3dkis.kontext),
             # 26.10.2026 (Edgar: „aktualisiere … damit wir das nicht wieder vergessen“): die Kopf-KI, eigenes Netz aus Teilen der KopfKI

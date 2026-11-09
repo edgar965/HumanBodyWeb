@@ -15,26 +15,16 @@ gleichnamiges Bild mit neuem Inhalt käme sonst aus dem Browsercache.
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from .meshicon import Meshicon
+from .blendermodellvorlage import Blendermodellvorlage
 
 __all__ = ['Engine2d3dKleidervorlage']
 
 
 class Engine2d3dKleidervorlage:
+    ABLAGE = Engine2d3dKleiderablage        # Ablage der Familie (`Blendermodellvorlage.erneuern`)
     SCHLUESSEL = 'vorlage_foto'
 
-    @classmethod
-    def erneuern(cls, job):
-        """Das Vorlagenbild neu schreiben und im Auftrag vermerken → sein Dateiname oder ''."""
-        ablage = Engine2d3dKleiderablage(job.kennung)
-        name = cls._schreiben(job, ablage)
-        ergebnis = dict(job.ergebnis or {})
-        if name:
-            ergebnis[cls.SCHLUESSEL] = name
-        else:
-            ergebnis.pop(cls.SCHLUESSEL, None)
-        job.ergebnis = ergebnis
-        job.save(update_fields=['ergebnis', 'updated_at'])
-        return name
+    erneuern = classmethod(Blendermodellvorlage.erneuern.__func__)          # dieselbe Rechnung wie `Blendermodellvorlage.erneuern` (bis 08.11.2026 eine Kopie hier)
 
     @staticmethod
     def _schreiben(job, ablage):

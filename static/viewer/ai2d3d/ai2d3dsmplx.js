@@ -2,7 +2,7 @@
  * Ai2d3dsmplx — Feld „SMPL-X (PSHuman)“ (seit 04.11.2026 abends Feld 2 der Zeile mit den Genesis-Feldern, folgt deren Leiste) in jeder Zeile der Jobseite (03.11.2026, Edgar: „im Job mach als zusätzliche 4. View in jeder Zeile das SMPLX modell bei pshuman jobs,
  * zum testen“).
  *
- * PSHumans eingepasstes SMPL-X (`daten.smplx`, GLB über `/api/2d3dai/<job>/netz/pshuman_smplx/`), gezeichnet wie das Feld „Netz“ (`Ai2d3dnetz`, je Feld ein eigener Zeichner: eine
+ * PSHumans Startkörper (`daten.smplx`: seit 07.11.2026 Genesis, Netzart `pshuman_start`, alte Jobs und UP2You SMPL-X, `pshuman_smplx`; GLB über `/api/2d3dai/<job>/netz/<art>/`), gezeichnet wie das Feld „Netz“ (`Ai2d3dnetz`, je Feld ein eigener Zeichner: eine
  * three.js-Szene hängt nur in einem Feld). Folgt Ansichtsart, Fotowahl und Ausschnitt der Seite, steht so groß wie die Person im Foto (`Ai2d3dseite._rand`) und dreht mit den übrigen
  * Feldern (`Mesh3daiansicht.koppeln` in `Ai2d3dseite`). Template: `_ai2d3d_smplxfeld.html` (nur mit `daten.smplx`).
  *

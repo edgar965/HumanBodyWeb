@@ -47,6 +47,7 @@ from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
 from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stuecklochstufen import G9stuecklochstufen
+from Genesis9.stueckstarr import G9stueckstarr
 
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9haarmischbau import G9haarmischbau
@@ -266,7 +267,9 @@ class G9garderobeapi:
                 # Browser rechnet das Loch selbst, `hautverdeckung.js`). Die weggenommene Haut der MakeHuman-/GarmentCode-Stücke (`G9stueckverdeckung`,
                 # `nurWeg`) ist seit 18.10.2026 abends wieder AUS — Edgar mit Bild (Löcher im Schritt): „nimm den vorletzten Commit".
                 # `weitere`: dasselbe Loch auf der groben und (Anfrage auf Stufe 2) der ultrafeinen Stufe (`G9stuecklochstufen`, 19.10.2026) — der Browser nimmt das, das zur Haut passt.
-                'hautLoch': G9stuecklochstufen.mit_stufen(G9stueckersatz.loch_fuer(eintrag), stufen, min((n['stufen'] for _f, _l, n in netze), default=stufen))}
+                # Ein starres Stück folgt der Haut (`G9stueckstarr.gezeigt`) — Ringecken und Verschiebung der Haut folgen mit (`loch_gezeigt`, 08.11.2026).
+                'hautLoch': G9stueckstarr.loch_gezeigt(eintrag, formung, G9stuecklochstufen.mit_stufen(
+                    G9stueckersatz.loch_fuer(eintrag), stufen, min((n['stufen'] for _f, _l, n in netze), default=stufen)))}
 
     # -------------------------------------------------------------- Texturen
 

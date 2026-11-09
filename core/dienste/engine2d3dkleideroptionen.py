@@ -36,6 +36,7 @@ from .engine2d3dkleidervorbereitungsoptionen import Engine2d3dKleidervorbereitun
 from .iterationsoptionen import Iterationsoptionen
 from .meshfiguroptionen import Meshfiguroptionen
 from .meshoptionen import Meshoptionen
+from .blendermodelloptionen import Blendermodelloptionen
 
 __all__ = ['Engine2d3dKleideroptionen']
 
@@ -130,19 +131,7 @@ class Engine2d3dKleideroptionen:
         aus['netz'] = Engine2d3dKleidernurtrellis.pruefen(aus['netz'])
         return aus
 
-    @classmethod
-    def mischen(cls, alt, neu):
-        """`neu` über `alt` legen, Gruppe für Gruppe (eine Seite schickt nur, was sie kennt) — geprüft."""
-        alt, neu = (alt if isinstance(alt, dict) else {}), (neu if isinstance(neu, dict) else {})
-        return cls.pruefen(
-            {
-                g: {
-                    **(alt.get(g) if isinstance(alt.get(g), dict) else {}),
-                    **(neu.get(g) if isinstance(neu.get(g), dict) else {}),
-                }
-                for g in cls.GRUPPEN
-            }
-        )
+    mischen = classmethod(Blendermodelloptionen.mischen.__func__)          # dieselbe Rechnung wie `Blendermodelloptionen.mischen` (bis 08.11.2026 eine Kopie hier)
 
     @classmethod
     def figur(cls, optionen):

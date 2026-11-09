@@ -92,13 +92,41 @@ export class Mesh3daiansicht {
         this._sperre = false;
     }
 
+    /**
+     * Neu zeichnen — gebündelt auf EIN Bild je Frame (08.11.2026, Edgar: „alle modelle sollen innerhalb von max. 5 s angezeigt werden“): Jedes Kamerastellen (`Ai2d3dkamera.feldStellen` →
+     * `steuerung.update()` → `change`) zeichnete sofort und ließ alle gekoppelten Felder mitzeichnen (`_uebernehmen`); ein Durchgang über alle Felder kostete so rund N² volle Renderings,
+     * und `kameras()` wiederholt sich bis zu 40-mal. Gemessen im Chrome (Zauberer Alle Textur): ein `setTimeout` von `Ai2d3dsmplx.kameras` 7,5 s, ein `IntersectionObserver`-Ruf 10,8 s.
+     * Im verdeckten Tab (kein `requestAnimationFrame`) sofort wie bisher; wer das Bild sofort braucht, ruft `zeichnenJetzt()`.
+     */
     zeichnen() {
         if (!this._imBild) {
             this._offen = true;
             return;
         }
         this._offen = false;
-        Mesh3daizeichenflaeche.zeichnen(this.leinwand, Math.max(this.feld.clientWidth, 2), Math.max(this.feld.clientHeight, 2), this.grund, r => this._malen(r));
+        if (document.hidden) {
+            this.zeichnenJetzt();
+            return;
+        }
+        this._geplant ||= requestAnimationFrame(() => {
+            this._geplant = 0;
+            this.zeichnenJetzt();
+        });
+    }
+
+    zeichnenJetzt() {
+        if (this._geplant) {
+            cancelAnimationFrame(this._geplant);
+            this._geplant = 0;
+        }
+        Mesh3daizeichenflaeche.zeichnen(this.leinwand, Math.max(this.feld.clientWidth, 2), Math.max(this.feld.clientHeight, 2), this.grund, r => {
+            const zurueck = this.hauttausch?.();          // „Haut angleichen“: die Hautbilder nur für diesen Durchgang getauscht (`Ai2d3dhautangleich._tauschen`)
+            try {
+                this._malen(r);
+            } finally {
+                zurueck?.();
+            }
+        });
     }
 
     /**

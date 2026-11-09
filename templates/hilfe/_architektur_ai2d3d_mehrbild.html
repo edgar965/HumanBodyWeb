@@ -1,0 +1,63 @@
+{% comment %}Mehrere Fotos (07.11.2026, Edgar: „/2d-3d-AI/test/edgar_alle/ ist noch sehr schlecht. Überlege an der Anpassung der pipeline so dass mehrere Fotos zu einem besseren Ergebnis führen“, „Wo siehst du eine Möglichkeit …?“,
+„Eine idee wäre auch, ein mesh mit pshuman mit allen Bilder zu erzeugen, das Hauptmesh von vorne als master zu nehmen, und die anderen Meshes am Hauptbild anpassen, und nur die Kleider und textur von den anderen zu übernehmen? Dazu brauch
+man aber vom pshuman die Info, was der erfunden hat“). Zahlen: `ProjektTemp/_wegwerf/n2_drehung/mehrbild_stand.py`. Recherche Stand 07.11.2026. Alles unter „Vorschlag“ ist nicht gebaut.{% endcomment %}
+<h2 id="mehrbild">Mehrere Fotos: wo wir stehen und was der nächste Schritt ist</h2>
+<div class="info-box info-box-red">
+  <strong>Befund:</strong> Mehr Fotos machen das Ergebnis heute schlechter. Edgar_alle (alle 8 Fotos über UP2You) hat 21 rote Prüfungen, Edgar_1 (ein Foto) 14. Im Bild: dunkle statt graue Haare, fremdes, weiches Gesicht, glatte Haut.
+</div>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Weg</th><th>Test</th><th>Fotos im Netz</th><th class="num">rot von 69</th><th>auffällige Prüfungen</th></tr></thead>
+  <tbody>
+    <tr><td>PSHuman, ein Foto</td><td><code>edgar_1_mesh3d_ai</code></td><td>1</td><td class="num">14</td><td></td></tr>
+    <tr><td>PSHuman, ein Foto, dazu <code>fotohaut</code></td><td><code>edgar_fotos_mesh3d_ai</code></td><td>1, Rücken und Seiten der Haut aus weiteren Fotos</td><td class="num">17</td><td>Gelenke wie der Eingang 5, Wolken in der Haut 3; warum, ist nicht geprüft</td></tr>
+    <tr><td>UP2You</td><td><code>edgar_alle_mesh3d_ai</code></td><td>8 von 8</td><td class="num">21</td><td>Haltung wie das Foto 10 (das Netz steht in A-Pose, das Foto nicht), Form des Körpers 7, Körper vor der Kleidung 4</td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Rot = Prüfungen mit <code>nachher</code> über 0 in <code>kostuem/lauf_2026.11.07.07.08.json</code>, <code>.07.59.json</code>, <code>.07.19.json</code>; je 69 Prüfungen. Die zehn roten „Haltung wie das Foto“ folgen aus der A-Pose und sagen wenig über die Qualität.</p>
+
+<h3>Warum die bisherigen Wege nicht tragen</h3>
+<ul>
+  <li><strong>Fotos in die Plätze von PSHuman</strong> (<code>pshuman_port14/mehrbild.py</code>): Die Netzformung erwartet exakte Kameras alle 45° ohne Perspektive und dieselbe Haltung. Echte Fotos passen dazu nur mit IoU 0,72–0,86 (<code>_wegwerf/kettenumbau/mehrbild/registrierung.py</code>). Gelaufen ist das am 04.11.2026 an Edgar_alle mit 6 Fotos (737,8 s, <code>pshuman/_vor_up2you_0511/</code>), danach wurde auf UP2You umgestellt.</li>
+  <li><strong>UP2You:</strong> Es nimmt die Fotos nur als Vorlage und malt sechs Ansichten neu, in 768 Pixeln. Kein echtes Pixel kommt ins Netz, darum gehen Gesicht, Haarfarbe und Hautzeichnung verloren. Die Autoren nennen selbst Texturversatz, weil die Rückseite wenig Führung hat.
+    Ihre Messung zeigt den Gewinn durch mehr Fotos: PSNR 24,2 bei 3 Fotos, 25,8 bei 12.</li>
+  <li><strong>Gemeinsame Ursache:</strong> Beide Wege wollen alle Fotos auf einmal in EIN Verfahren geben. Die Fotos unterscheiden sich aber in Haltung und Kamera, das verträgt keines der beiden.</li>
+</ul>
+
+<h3 id="mehrbild-vorschlag">Vorschlag: ein Master, die anderen Fotos ergänzen nur, was sie gesehen haben</h3>
+<p>Edgars Idee trägt: Das Netz von vorn bleibt Master, die weiteren Fotos liefern nur Korrekturen. Sie braucht zwei Bausteine, und beide sind machbar. <strong>Nichts davon ist gebaut oder gemessen.</strong></p>
+{% if master_bild %}<div class="m3a-bildrahmen">{{ master_bild }}</div>{% endif %}
+<ol class="m3a-kurz">
+  <li><strong>Erfindungskarte statt Auskunft von PSHuman.</strong> PSHuman meldet nicht, was es erfunden hat, wir können es aber ausrechnen, auf zwei Wegen:
+    <em>Sichtbarkeit:</em> Ein Netzpunkt gilt als gesehen, wenn er von der Kamera seines Fotos aus nicht verdeckt ist und zu ihr zeigt. Das rechnet <code>project_color</code> schon, wir müssen es nur je Punkt festhalten.
+    <em>Streuung:</em> Denselben Lauf mit mehreren Saaten rechnen. Was vom Foto bestimmt ist, bleibt gleich; was erfunden ist, ändert sich. Das misst die Unsicherheit, statt sie anzunehmen.</li>
+  <li><strong>Genesis als Registrierung.</strong> Netze direkt aufeinanderzulegen scheitert an Armen und Beinen, die in jedem Foto anders stehen. Wir legen aber ohnehin eine Genesis-Figur in jedes Netz. Dann haben alle Netze dieselben Punkte, und in der Ruhehaltung fällt die Armstellung weg.
+    Aus „Netz an Netz anpassen“ wird ein Vergleich Punkt für Punkt.</li>
+  <li><strong>Form verschmelzen.</strong> Je Figurpunkt zählt der Versatz aus den Fotos, die ihn gesehen haben; vorn bleibt der Master. Erfundene Teile gehen mit Gewicht 0 ein.</li>
+  <li><strong>Textur und Kleider.</strong> Für die Haut gibt es das schon (<code>fotohaut</code>). Fehlt: dasselbe für die Stücke, damit die Hose hinten das Foto von hinten zeigt.</li>
+  <li><strong>Gegenprobe.</strong> Ein Foto zurückhalten, das Ergebnis aus seinem Winkel rendern und vergleichen. Erst das zeigt, ob mehr Fotos wirklich mehr bringen.</li>
+</ol>
+<p><strong>Aufwand, geschätzt:</strong> je weiteres Foto rund 6 Minuten Rechenzeit (PSHuman 214 s an Edgar_1, Einpassung 163 s an zdmit). Bei drei weiteren Fotos also rund 19 Minuten. Für die Rückseite reichen vermutlich die Fotos bei 90°, 180° und 270°; das ist nicht geprüft.</p>
+<p><strong>Risiko:</strong> Die Einpassung muss je Netz gelingen. An ungewöhnlichen Haltungen scheitert sie heute noch (zdmit). Darum beginnt der Bau an Edgar mit vier Fotos in einfacher Haltung.</p>
+
+<h3>Andere Wege</h3>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Weg</th><th>Idee</th><th>Vorteil</th><th>Nachteil</th></tr></thead>
+  <tbody>
+    <tr><td>Gelenkte Diffusion</td><td>Fotos auf die Master-Figur legen und in die sechs Ansichten rendern. Die Diffusion füllt nur noch die Lücken (Ersetzen im Rechenschritt, kein neues Training)</td><td>Rückseite aus echten Pixeln, Rest stimmig dazu</td><td>Eingriff in die Diffusion, bei uns noch nie probiert</td></tr>
+    <tr><td>Umrisse als harte Bedingung</td><td>Der echte Umriss jedes Fotos begrenzt die Figur (Bausteine: <code>Fotodrehteller</code>, <code>form_direkt.py</code>)</td><td>billig, kein Erfinden</td><td>sagt nichts über Details, braucht Kamera je Foto</td></tr>
+    <tr><td>Fremdes Mehrbild-Modell</td><td>siehe Recherche unten</td><td>aus einem Guss</td><td>meist keine Netze oder kein Code; wieder alles erfunden</td></tr>
+  </tbody>
+</table>
+
+<h3 id="mehrbild-recherche">Recherche: Verfahren für mehrere Bilder einer Person (Stand 07.11.2026)</h3>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Verfahren</th><th>Eingang</th><th>Ausgabe</th><th>Code</th><th>Für uns</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://arxiv.org/abs/2509.24817" target="_blank" rel="noopener">UP2You</a> (ICLR 2026)</td><td>beliebig viele Fotos, Haltung und Kamera unbekannt</td><td>6 Ansichten in Zielhaltung, Netz. Das Netz folgt PSHuman</td><td>bei uns eingebaut</td><td>heutiger Weg von Edgar_alle; kein echtes Pixel im Netz. Trainiert auf 6.921 Scans</td></tr>
+    <tr><td><a href="https://xiyichen.github.io/hart" target="_blank" rel="noopener">HART</a> (arXiv 09/2025)</td><td>wenige Bilder ohne Kameras; Beispiele mit 4 bis 8</td><td>geschlossenes Netz, SMPL-X, Gaussians</td><td>„Coming Soon“</td><td>das Passendste, aber noch nicht nutzbar. Ob alle Bilder dieselbe Haltung brauchen, steht nicht auf der Projektseite</td></tr>
+    <tr><td><a href="https://lingtengqiu.github.io/LHM++/" target="_blank" rel="noopener">LHM++</a> (arXiv 06/2025)</td><td>1 bis 16 Bilder, ohne Kamera und Haltung</td><td>Gaussians, animierbar; Netz nicht genannt</td><td>veröffentlicht, Gewichte nicht geprüft</td><td>schnell (16 Bilder 2,13 s) und als Vergleich nützlich; Gaussians passen nicht in die Genesis-Kette</td></tr>
+    <tr><td><a href="https://arxiv.org/abs/2405.14869" target="_blank" rel="noopener">PuzzleAvatar</a> (TOG 2024)</td><td>persönliches Album, ohne Kameraschätzung</td><td>3D-Avatar</td><td>veröffentlicht</td><td>trainiert je Person nach; Dauer nicht geprüft</td></tr>
+    <tr><td><a href="https://www.emergentmind.com/topics/mexecon" target="_blank" rel="noopener">MExECON</a></td><td>wenige Ansichten mit bekannten Kameras</td><td>Netz über gemeinsames SMPL-X</td><td>nicht geprüft</td><td>gleiches Prinzip wie unser Master; wir kennen die Kameras nicht. Nur die Kurzfassung gelesen</td></tr>
+    <tr><td><a href="https://arxiv.org/abs/2503.14198" target="_blank" rel="noopener">MVD-HuGaS</a> (03/2025)</td><td>ein Bild</td><td>Gaussians</td><td>nicht geprüft</td><td>Idee übertragbar: die Kameras erfundener Ansichten mitoptimieren</td></tr>
+  </tbody>
+</table>

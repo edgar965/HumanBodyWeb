@@ -17,10 +17,9 @@ export class Ai2d3dpshuman {
             meldung.textContent = 'Speichert …';
             try {
                 const p = (await Serverabruf.senden(`/api/2d3dai/${encodeURIComponent(form.dataset.job)}/pshuman/`, {
-                    zeile1: haken('zeile1'), drehteller: haken('drehteller'), vae_bildweise: haken('vae_bildweise'), genesis: haken('genesis'),
+                    zeile1: haken('zeile1'), drehteller: haken('drehteller'), vae_bildweise: haken('vae_bildweise'),
                 })).pshuman;
-                const an = [p.zeile1 && 'Netz als Zeile 1', p.drehteller && 'Drehteller', p.vae_bildweise && 'VAE bildweise',
-                            p.genesis && 'Genesis statt SMPL-X'].filter(Boolean);
+                const an = [p.zeile1 && 'Netz als Zeile 1', p.drehteller && 'Drehteller', p.vae_bildweise && 'VAE bildweise'].filter(Boolean);
                 meldung.textContent = `gespeichert${an.length ? ': ' + an.join(', ') : ''} — gilt ab dem nächsten Lauf`;
             } catch (fehler) {
                 meldung.textContent = `Nicht gespeichert: ${fehler.message}`;

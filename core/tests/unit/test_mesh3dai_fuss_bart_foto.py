@@ -133,12 +133,13 @@ class AnliegendTest(unittest.TestCase):
 
     @staticmethod
     def _flaeche(stoff, zeilen=40):
-        """Ebene im 1-cm-Raster: fünf Spalten Haut, daneben `stoff` Spalten Stoff ohne Stufe. → Punkte, Dreiecke, Klasse, Art."""
+        """Waagerechte Ebene (y = 0) im 1-cm-Raster: fünf Spalten Haut, daneben `stoff` Spalten Stoff ohne Stufe. → Punkte, Dreiecke, Klasse, Art.
+        Waagerecht seit 07.11.2026: Die Regel „lang“ (`Mesh3daimeshanliegend.TIEF_HOEHE`) misst die Höhe y im Ziel; eine senkrechte Ebene ohne Figur läge zu 35 % „unter dem Schritt“."""
         from Genesis9.meshziel import G9meshziel
         from mesh3dai_kostuemarten import Kostuemarten
         spalten = 5 + stoff
         x, y = torch.meshgrid(torch.arange(spalten, dtype=torch.float64) * 0.01, torch.arange(zeilen, dtype=torch.float64) * 0.01, indexing='ij')
-        punkte = torch.stack([x.flatten(), y.flatten(), torch.zeros(spalten * zeilen, dtype=torch.float64)], 1)
+        punkte = torch.stack([x.flatten(), torch.zeros(spalten * zeilen, dtype=torch.float64), y.flatten()], 1)
         i = torch.arange(spalten * zeilen).reshape(spalten, zeilen)
         a, b, c, d = i[:-1, :-1].flatten(), i[1:, :-1].flatten(), i[1:, 1:].flatten(), i[:-1, 1:].flatten()
         dreiecke = torch.cat([torch.stack([a, b, c], 1), torch.stack([a, c, d], 1)])

@@ -22,7 +22,7 @@ import logging
 import mimetypes
 
 from asgiref.sync import sync_to_async
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -30,7 +30,6 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
-from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
 from ..dienste.engine2d3dkleidergpu import Engine2d3dKleidergpu
 from ..dienste.engine2d3dkleiderlauf import Engine2d3dKleiderlauf
@@ -40,6 +39,7 @@ from ..dienste.engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
 from ..dienste.engine2d3dkleidervorlage import Engine2d3dKleidervorlage
 from ..dienste.engine2d3dkleiderzustand import Engine2d3dKleiderzustand
 from ..models import Engine2d3dKleiderauftrag
+from .auftragsfamilie import Auftragsfamilie
 
 logger = logging.getLogger('core')
 
@@ -177,14 +177,7 @@ class Engine2d3dKleiderendpunkte:
 
     @staticmethod
     def _zustand_rechnen(job_id):
-        job = get_object_or_404(Engine2d3dKleiderauftrag, pk=job_id)
-        if job.laeuft and not Engine2d3dKleiderarbeiter.lebt(job):
-            job.refresh_from_db()
-            if job.laeuft:
-                job.status = 'gescheitert'
-                job.error_message = job.error_message or 'Arbeitsprozess lebt nicht mehr (auftrag.log)'
-                job.save(update_fields=['status', 'error_message', 'updated_at'])
-        return Engine2d3dKleiderzustand.von(job)
+        return Auftragsfamilie.zustand_rechnen(Engine2d3dKleiderauftrag, Engine2d3dKleiderarbeiter, Engine2d3dKleiderzustand.von, job_id)
 
     # ------------------------------------------------------------------ Lauf
 
@@ -232,16 +225,7 @@ class Engine2d3dKleiderendpunkte:
     def modell(request, job_id):
         """{name} → die Figur als Genesis-Modell (`data/models/<name>.json`, dasselbe Format wie „Modell
         speichern" der Szene) — erscheint unter „Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle"."""
-        job = get_object_or_404(Engine2d3dKleiderauftrag, pk=job_id)
-        if job.laeuft or not job.stellung():
-            return JsonResponse({'error': 'Erst wenn die Figur fertig ist'}, status=409)
-        try:
-            name = Engine2d3dKleiderspeichern.fuer(job).modell_speichern(
-                Engine2d3dKleiderendpunkte.rumpf(request).get('name')
-            )
-        except ValueError as fehler:
-            return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse({'ok': True, 'modell': name})
+        return Auftragsfamilie.modell(Engine2d3dKleiderauftrag, Engine2d3dKleiderspeichern, Engine2d3dKleiderendpunkte.rumpf, request, job_id)
 
     # --------------------------------------------------------------- Löschen
 
@@ -254,12 +238,7 @@ class Engine2d3dKleiderendpunkte:
     @staticmethod
     @require_POST
     def mehrere_loeschen(request):
-        ids = Engine2d3dKleiderendpunkte.rumpf(request).get('ids') or []
-        n = 0
-        for job in Engine2d3dKleiderauftrag.objects.filter(pk__in=ids):
-            Engine2d3dKleiderendpunkte._entfernen(job)
-            n += 1
-        return JsonResponse({'ok': True, 'geloescht': n})
+        return Auftragsfamilie.mehrere_loeschen(Engine2d3dKleiderauftrag, Engine2d3dKleiderendpunkte.rumpf, Engine2d3dKleiderendpunkte._entfernen, request)
 
     @staticmethod
     def _entfernen(job):
@@ -275,13 +254,4 @@ class Engine2d3dKleiderendpunkte:
     @staticmethod
     @require_GET
     def datei(request, job_id, ordner, name):
-        job = get_object_or_404(Engine2d3dKleiderauftrag, pk=job_id)
-        try:
-            pfad = Engine2d3dKleiderablage(job.kennung).datei(ordner, name)
-        except ValueError:
-            raise Http404('Pfad') from None
-        if not pfad.is_file():
-            raise Http404('Datei %s' % name)
-        return Auftragsdatei.antwort(
-            request, pfad, herunterladen=request.GET.get('laden') == '1', kennung=request.GET.get('v')
-        )
+        return Auftragsfamilie.datei(Engine2d3dKleiderauftrag, Engine2d3dKleiderablage, request, job_id, ordner, name)

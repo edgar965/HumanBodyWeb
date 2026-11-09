@@ -2,9 +2,11 @@
 """Mesh3dairechnenendpunkte — Knopf „Rechnen“ von Mesh3D-AI (23.10.2026, `Mesh3dairechenlauf`, `Mesh3dairechenschlange`).
 
     POST /api/mesh3dai/test-neu/                       Formular: datei, name, geschlecht  → {ok, kennung, adresse}   (anlegen und rechnen)
-    POST /api/mesh3dai/test/<kennung>/rechnen/                                            → {ok, stand}             (einreihen und rechnen)
+    POST /api/mesh3dai/test/<kennung>/rechnen/         {ab?}                              → {ok, stand}             (einreihen und rechnen; ab: Schlüssel des ersten Schritts, 400 bei unbekanntem Schritt oder fehlendem Vorlauf)
     GET  /api/mesh3dai/test/<kennung>/rechnen/stand/                                      → {stand, schlange, laeuft}
 """
+import json
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
@@ -40,7 +42,11 @@ class Mesh3dairechnenendpunkte:
             return JsonResponse({'error': 'Kein Test %s' % kennung}, status=404)
         if Mesh3dairechenschlange.laeuft() and Mesh3dairechenschlange.laeuft().get('kennung') == kennung:
             return JsonResponse({'error': 'Der Test rechnet schon'}, status=409)
-        return JsonResponse({'ok': True, 'stand': Mesh3dairechenschlange.starten(kennung)})
+        try:
+            ab = json.loads(request.body or b'{}').get('ab') or None
+            return JsonResponse({'ok': True, 'stand': Mesh3dairechenschlange.starten(kennung, ab=ab)})
+        except (ValueError, AttributeError) as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
 
     @staticmethod
     @require_GET

@@ -32,7 +32,7 @@ class Architekturai2d3dplan:
          'Fotos freigestellt (BiRefNet wie 2D3D Kleider). Seit 24.10.2026 nachmittags: Sapiens2 und SAM 3 als Ports in python14 (`Sapiens2Torch`, `Sam3Torch`, gegen die Originale '
          'gleich), Kopfhaut aus den Fotos mit der Haut-KI von Mesh3D-AI + Falten + Bart, Haar aus den Fotos ausgeschnitten (Haarschale), Ohren mit SAM 3 „ear“ angeglichen '
          '(9,48 → 4,16 mm). Abends der Körper aus den Fotos: Einpassung perspektivisch mit Größe und Gewicht, Haut aus den Fotos, Kleider ausgeschnitten, Messung über das Rendering '
-         '(Abschnitt „Die Kette heute“ und „Stand“)'),
+         '(Abschnitt „Die Foto-Kette“ und „Stand“)'),
     )
     #: Was im Speicher und auf der GPU läuft — und was dafür fehlt.
     GPU = (

@@ -3,6 +3,7 @@
 
 from django.urls import path
 
+from .api.ai2d3dhautangleich import Ai2d3dhautangleichendpunkte
 from .api.mesh3dai import Mesh3daiendpunkte
 from .api.mesh3daiflaechen import Mesh3daiflaechenendpunkte
 from .api.mesh3daiformlauf import Mesh3daiformlaufendpunkte
@@ -32,6 +33,7 @@ MESH3DAI = [
     path('api/mesh3dai/test/<str:kennung>/linien/flaeche/', Mesh3daitestendpunkte.linienflaeche, name='mesh3dai_testlinienflaeche'),
     path('api/mesh3dai/test/<str:kennung>/meshanpassung/', Mesh3daitestendpunkte.meshanpassung, name='mesh3dai_testmeshanpassung'),
     path('api/mesh3dai/test/<str:kennung>/geschlecht/', Mesh3daitestendpunkte.geschlecht, name='mesh3dai_testgeschlecht'),
+    path('api/mesh3dai/test/<str:kennung>/wahl/', Mesh3daitestendpunkte.wahl, name='mesh3dai_testwahl'),
     # Name ändern (19.10.2026, Stift wie bei Mesh-3D, `Mesh3dainame`) — für Tests hier, für Jobs unten.
     path('api/mesh3dai/test/<str:kennung>/name/', Mesh3dainameendpunkte.test, name='mesh3dai_testname'),
     # Die vorhergesagte Figur eines Tests (16.10.2026 abends, Formkopf): Anzeigenetz und Bilder wie beim Job.
@@ -46,6 +48,14 @@ MESH3DAI = [
     path('api/mesh3dai/test/<str:kennung>/modell/<str:geschlecht>/', Mesh3daitestkleiderendpunkte.modell, name='mesh3dai_testmodell'),
     # 22.10.2026: Testfälle der Kleider-KI (FEHLER von Prüfungen je Prio) — Testseite und Jobseite des Trainingsjobs (`Mesh3daitestfaelle`)
     path('api/mesh3dai/test/<str:kennung>/testfaelle/<str:geschlecht>/', Mesh3daitestfaelleendpunkte.test, name='mesh3dai_testfaelle'),
+    # „Haut angleichen“ auf der Testseite (06.11.2026), dieselben Endpunkte wie am Job
+    path('api/mesh3dai/test/<str:job>/hautangleich/', Ai2d3dhautangleichendpunkte.stand, {'aus_test': True}, name='mesh3dai_hautangleich'),
+    path('api/mesh3dai/test/<str:job>/hautangleich/vorbereiten/', Ai2d3dhautangleichendpunkte.vorbereiten, {'aus_test': True}, name='mesh3dai_hautangleich_vorbereiten'),
+    path('api/mesh3dai/test/<str:job>/hautangleich/daten/<slug:name>/', Ai2d3dhautangleichendpunkte.daten, {'aus_test': True}, name='mesh3dai_hautangleich_daten'),
+    path('api/mesh3dai/test/<str:job>/hautangleich/original/<int:kachel>/', Ai2d3dhautangleichendpunkte.original, {'aus_test': True}, name='mesh3dai_hautangleich_original'),
+    path('api/mesh3dai/test/<str:job>/hautangleich/zeichnung/<int:kachel>/', Ai2d3dhautangleichendpunkte.zeichnung, {'aus_test': True}, name='mesh3dai_hautangleich_zeichnung'),
+    path('api/mesh3dai/test/<str:job>/hautangleich/speichern/', Ai2d3dhautangleichendpunkte.speichern, {'aus_test': True}, name='mesh3dai_hautangleich_speichern'),
+    path('api/mesh3dai/test/<str:job>/hautangleich/zuruecksetzen/', Ai2d3dhautangleichendpunkte.zuruecksetzen, {'aus_test': True}, name='mesh3dai_hautangleich_zuruecksetzen'),
     # 24.10.2026 nachts: Zeile „Messpunkte des Körpers“ wie bei 2d-3d-AI (`Kostuemmesspunkte`, `Mesh3daitestmesspunkte`)
     path('api/mesh3dai/test/<str:kennung>/messpunkte/', Mesh3daitestmesspunkteendpunkte.daten, name='mesh3dai_testmesspunkte'),
     path('api/mesh3dai/test/<str:kennung>/messpunkte/bild/<str:art>/<int:nr>/', Mesh3daitestmesspunkteendpunkte.bild, name='mesh3dai_testmesspunktbild'),

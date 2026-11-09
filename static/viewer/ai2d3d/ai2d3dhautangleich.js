@@ -1,5 +1,5 @@
 /**
- * Ai2d3dhautangleich — Regler „Haut angleichen“ unter dem Feld Genesis-Ergebnis (05.11.2026, Edgar: „Ein paar slider wo man die Haut anpasst, z.B. mehr von Vorne auf die anderen flächen, oder
+ * Ai2d3dhautangleich — Regler „Haut angleichen“ unter dem Feld Genesis-Ergebnis, seit 06.11.2026 auch unter dem Feld Ausgabe der Mesh3D-AI-Testseite (05.11.2026, Edgar: „Ein paar slider wo man die Haut anpasst, z.B. mehr von Vorne auf die anderen flächen, oder
  * mehr von seitlich? Der Ton sollte hauptsächlich angepasst werden, die Textur (Haare, Brustwarzen, Hautflecken ) sollten bleiben“).
  *
  * Ein Schritt nach dem Job: „Vorbereiten“ rechnet einmal die Felder (`KoerperKI_Fotos.Hautangleich`, Server `Ai2d3dhautangleich`), danach läuft jeder Regler im Browser ohne Rechenlauf
@@ -20,14 +20,17 @@ export class Ai2d3dhautangleich {
     static PAUSE_MS = 2000;
     static NACHHOLEN_MS = 5000;
 
-    /** @param {HTMLElement|null} element `#ai2d3d-hautangleich` @param seite `Ai2d3dseite` */
-    static binden(element, seite) {
-        return element ? new Ai2d3dhautangleich(element, seite) : null;
+    /**
+     * @param {HTMLElement|null} element `#ai2d3d-hautangleich`
+     * @param {() => ({ansicht, bereit?: Promise, materialien: () => Array}|null|undefined)} ort das Feld der Figur, gefragt, wenn es gebraucht wird: `Ai2d3dgenesiszeile.hautort` an der Jobseite, `Mesh3daitestseite.hautort` an der Testseite
+     */
+    static binden(element, ort) {
+        return element ? new Ai2d3dhautangleich(element, ort) : null;
     }
 
-    constructor(element, seite) {
+    constructor(element, ort) {
         this.element = element;
-        this.seite = seite;
+        this.ort = ort;
         this.adresse = element.dataset.adresse;
         this.gl = null;
         this.stand = null;
@@ -128,10 +131,9 @@ export class Ai2d3dhautangleich {
         return Ai2d3dhautangleich.KACHEL.test(datei) ? datei : null;
     }
 
-    /** Die Körper-Bilder der stillen Figur im Feld Genesis-Ergebnis. */
+    /** Die Körper-Bilder der stillen Figur im Feld. */
     _hautbilder() {
-        const figur = this.seite.genesiszeile?.eintraege?.[1]?.figur;
-        return figur?.koerper ? [figur.koerper.an.material].flat().map(m => m.map).filter(k => this._datei(k)) : [];
+        return (this.ort()?.materialien() ?? []).map(m => m.map).filter(k => this._datei(k));
     }
 
     /** Das Renderziel zu einem Bild der Figur, null ohne Kachel; das Ergebnis bleibt nur für Bilder, die ihre Quelle schon kennen. */
@@ -185,14 +187,13 @@ export class Ai2d3dhautangleich {
     }
 
     async _aufbauen() {
-        const eintrag = this.seite.genesiszeile?.eintraege?.[1];
-        await eintrag?.figur?.bereit;
+        await this.ort()?.bereit;
         const haut = await this._warten();
         if (!haut.length) throw new Error('Figur ohne Hautkacheln');
         const [felder, netz] = await Promise.all([this.stand.felder, this.stand.netz].map(async a => (await Ai2d3dhautangleich._holen(a)).arrayBuffer()));
         const [originale, zeichnung] = await Promise.all([this.stand.original, this.stand.zeichnung].map(a => Ai2d3dhautangleich._bilder(a)));
         this.gl = new Ai2d3dhautangleichgl(Mesh3daizeichenflaeche.renderer(), this.stand.kopf, new Float32Array(felder), netz, originale, zeichnung, haut[0]);
-        this.ansicht = eintrag.ansicht;
+        this.ansicht = this.ort().ansicht;
         this.ansicht.hauttausch = () => this._tauschen();
         if (this.angefasst) this._planen();
         else this._setzen(this.stand.regler ?? Ai2d3dhautangleich.VORGABE);
@@ -232,7 +233,7 @@ export class Ai2d3dhautangleich {
             const faellig = performance.now() - this.gemeldet >= 1000, vorher = faellig ? this._feldbild() : null;
             this.gl.anwenden(this.werte);
             this.eigen = true;
-            this.ansicht.zeichnen();
+            this.ansicht.zeichnenJetzt();          // sofort: `_melden` liest das Feld gleich danach
             if (faellig) this._melden(vorher);
         });
     }

@@ -10,7 +10,6 @@ Ruhezentren) — die Seite legt die Gruppe wie die Figur starr auf das gezeigte 
     Mesh3daiprobenkleider.fuer(job, nr, figur_ergebnis, weg) -> {probe, liste, rig, dreh, ruhezentren} oder None
     Mesh3daiprobenkleider.liste(job, nr) -> {stuecke: [...], ki: {...}} oder None
 """
-import hashlib
 import json
 import logging
 import re
@@ -38,9 +37,9 @@ class Mesh3daiprobenkleider:
 
     @staticmethod
     def stempel(regler):
-        """Wie `Probenziel.stempel` (Kette): Regler auf 4 Stellen, sortiert, SHA-1, 12 Zeichen."""
-        text = json.dumps({k: round(float(v), 4) for k, v in (regler or {}).items()}, sort_keys=True)
-        return hashlib.sha1(text.encode('utf-8')).hexdigest()[:12]
+        """Die Kennung einer Reglerstellung aus der Kette (`Probenziel.stempel`, seit 09.11.2026 keine Kopie mehr)."""
+        from .mesh3dairechenlauf import Mesh3dairechenlauf
+        return Mesh3dairechenlauf.modul('mesh3dai_probenziel').Probenziel.stempel(regler)
 
     @staticmethod
     def _json(pfad):

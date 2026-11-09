@@ -31,6 +31,7 @@ Hinter dem Hemd eines nackten Bauchs liegt die Rückseite des Hemds mehr als `MA
 import logging
 
 import numpy as np
+from .blendimportnachformung import Blendimportnachformung
 
 logger = logging.getLogger('core')
 
@@ -57,13 +58,7 @@ class Blendimportunterkleid:
     #: Der Regler heißt `eigen:<Eigenmorph>_unterkleid` — `Blendimportlauf._unterkleid` erkennt an der Endung den eigenen Regler eines früheren Laufs.
     ENDUNG = '_unterkleid'
 
-    def __init__(self, ablage, job, inventar, rollen, figurname, melden=None):
-        self.ablage = ablage
-        self.job = job
-        self.inventar = {n['name']: n for n in inventar['netze']}
-        self.rollen = rollen
-        self.figurname = figurname
-        self.melden = melden or (lambda anteil, text: None)
+    __init__ = Blendimportnachformung.__init__          # dieselbe Rechnung wie `Blendimportnachformung.__init__` (bis 08.11.2026 eine Kopie hier)
 
     # ------------------------------------------------------------- Bausteine
 

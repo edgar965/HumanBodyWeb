@@ -16,6 +16,7 @@ import json
 import logging
 
 from .mesh3daitest import Mesh3daitest
+from .mesh3daitestkikleider import Mesh3daitestkikleider
 
 logger = logging.getLogger('core')
 
@@ -43,7 +44,15 @@ class Mesh3daitestfaelle:
             return None
         kleider = ordner / ('kleider_%s' % geschlecht)
         # 23.10.2026: der Kostüm-Weg A legt seine Prüfung neben die Stücke von Weg k (`ProjektTemp/_wegwerf/mesh3dai_kostuem_pruefung.py`) — gilt, wenn kein Weg g gemessen ist
-        return cls._lesen(kleider / 'g' / cls.DATEI) or cls._lesen(kleider / 'k' / cls.DATEI)
+        g = cls._lesen(kleider / 'g' / cls.DATEI)
+        if g:
+            return g
+        d = cls._lesen(kleider / 'k' / cls.DATEI)
+        # 06.11.2026: Bau und Prüfung sind getrennte Schritte; bis die Prüfung durch ist, gehört die Tabelle zu älteren Stücken. `stuecke_lauf` sagt das der Seite.
+        lauf = ((Mesh3daitestkikleider.lesen(kleider) or {}).get('kostuem') or {}).get('lauf')
+        if d and lauf and d.get('lauf') != lauf:
+            d['stuecke_lauf'] = lauf
+        return d
 
     @classmethod
     def fuer_job(cls, job):

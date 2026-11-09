@@ -10,6 +10,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Mesh3daiansicht } from './mesh3daiansicht.js';
 import { Mesh3daiansichtart } from './mesh3daiansichtart.js';
 import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
+import { Mesh3daianatomiehuelle } from './mesh3daianatomiehuelle.js';
 import { Mesh3daifigurbewegung } from './mesh3daifigurbewegung.js';
 import { Mesh3daifigurbewegungsleiste } from './mesh3daifigurbewegungsleiste.js';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
@@ -33,12 +34,14 @@ export class Mesh3daitestseite {
         // bis dahin hatte die Testseite einen eigenen Zustand, der beim Öffnen immer „an“ war.
         seite.ansicht.gemerktSetzen(await Mesh3daiansichtgedaechtnis.laden());
         await seite.laden();
+        seite._bereit();
         return seite;
     }
 
     constructor(wurzel) {
         this.wurzel = wurzel;
         this.kennung = wurzel.dataset.kennung;
+        this.bereit = new Promise(fertig => { this._bereit = fertig; });
         this.daten = null;
         this.netz = null;          // das Netz des Tests (GLB-Szene)
         this.figur = null;         // Ursula1 in der vorhergesagten Haltung
@@ -68,6 +71,11 @@ export class Mesh3daitestseite {
         this.matrizen = null;
     }
 
+    /** Das Feld Ausgabe für „Haut angleichen“ (`Ai2d3dhautangleich`). */
+    get hautort() {
+        return { ansicht: this.ansichten.find(a => a.art === 'ausgabe'), bereit: this.bereit, materialien: () => (this.figur ? [this.figur.material].flat() : []) };
+    }
+
     async geschlechtSetzen(wert) {
         const vorher = this.daten?.info?.geschlecht;
         this.wahl.disabled = true;
@@ -79,6 +87,14 @@ export class Mesh3daitestseite {
             if (vorher) this.wahl.value = vorher;
             this.wahl.disabled = false;
         }
+    }
+
+    /** Gerechnet wird nur das eingestellte Geschlecht: Nach dem Umstellen sagt die Seite, dass die Kleider nicht aus dem letzten Lauf stammen (`Mesh3daitestgeschlechtstand`). */
+    _geschlechtstand(text) {
+        const feld = this.wurzel.querySelector('#mesh3dai-test-geschlechtstand');
+        if (!feld) return;
+        feld.hidden = !text;
+        feld.textContent = text || '';
     }
 
     /** Woher die Haltung der vorhergesagten Form kommt (`test.json` → `form.<geschlecht>.haltung`, seit 17.10.2026 spätabends der gewählte Weg; davor die Stimmen des Netzes in der Pose). */
@@ -106,7 +122,7 @@ export class Mesh3daitestseite {
         }
         const ohneKnochen = this._ohneKnochen();
         return { schluessel: `${this.kennung}|${d.info.geschlecht}|${ohneKnochen.join(',')}`, figur: d.figur_genesis, stuecke: stuecke.filter(s => s.netz), knochen: d.rig.knochen.map(k => k.name),
-                 ruhezentren: d.ruhezentren, ohneKnochen, kapseln: d.kapseln };
+                 ruhezentren: d.ruhezentren, ohneKnochen, kapseln: d.kapseln, anatomieGetragen: Mesh3daianatomiehuelle.getragen(this.kleider?.liste) };
     }
 
     /** Knopf „Ohne fehlende Glieder“ an: die Knochen, die der Eingang nicht hat (Kleiderliste, `ohne_eingang`), sonst keine. */
@@ -167,6 +183,7 @@ export class Mesh3daitestseite {
             this.testfaelle?.laden(`/api/mesh3dai/test/${encodeURIComponent(this.kennung)}/testfaelle/${encodeURIComponent(i.geschlecht)}/?t=${Date.now()}`);
             const figurText = this.wurzel.querySelector('#mesh3dai-test-figur');
             if (figurText) figurText.textContent = `Ausgabe: ${form ? 'vorhergesagte Form' : figur}${daten.figur_hinweis ? ' — ' + daten.figur_hinweis : ''}`;
+            this._geschlechtstand(i.geschlecht_stand);
         } catch (fehler) {
             info.textContent = `Test nicht lesbar: ${fehler.message}`;
             return;
@@ -204,7 +221,8 @@ export class Mesh3daitestseite {
     async _figurBauen() {
         try {
             // Vorhergesagte Form (16.10.2026 abends): eigenes Anzeigenetz unter der Adresse des Tests (`figur_netz`), sonst das des Jobs der gewählten Figur.
-            const netz = await Mesh3daiflaechennetz.holen(this.daten.job, this.daten.figur_netz);
+            // Netzstufe 1 (09.11.2026, Edgar: „das ganze Anzeigenetz in Stufe 1“) — wie die Charakter-Seite; der Server gibt den Käfig, wo der Körper keiner ist
+            const netz = await Mesh3daiflaechennetz.holen(this.daten.job, this.daten.figur_netz, { stufe: 1 });
             const d = this.daten;
             // Die Matrizen bleiben gemerkt: die Kleider der Karte werden mit denselben gehäutet (`Mesh3daitestkleider`).
             this.matrizen = Mesh3daihaeutung.ausDrehungen(d.dreh, d.ausgabe, d.ruhezentren);
@@ -224,7 +242,8 @@ export class Mesh3daitestseite {
         const netz = (await this.kleider?.hautNetz()) || this.figurNetz;
         if (netz && this.matrizen) {
             this.figur?.geometry.dispose();          // nur die Geometrie: Materialien und Attribute teilt sie mit dem Anzeigenetz
-            let weg = this.ansicht.kleider ? this.kleider?.verdeckt(netz.material.length) : null;
+            // die Masken der Stücke sind auf dem Käfig gerechnet — auf Stufe 1 gelten sie für die Kinder jedes Käfigdreiecks (`dreieckmaske`)
+            let weg = this.ansicht.kleider ? netz.dreieckmaske(this.kleider?.verdeckt(netz.kaefigDreiecke)) : null;
             const ohne = Mesh3daiohneglieder.dreiecke(netz, this.daten?.rig?.knochen?.map(k => k.name) || [], this._ohneKnochen());
             if (ohne) weg = weg ? weg.map((v, i) => v | ohne[i]) : ohne;
             this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, weg);

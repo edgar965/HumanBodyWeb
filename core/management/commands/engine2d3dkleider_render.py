@@ -88,6 +88,8 @@ class Command(BaseCommand):
                       ausgabe=None, fehler=None, neu_nr=auftrag.get('neu_nr'), wartend=wartend)
         bewegung = programme / 'bewegungen' / ('%s_bewegung.json' % name)
         self._schneiden(render.ablage.ergebnis(film.get('bewegung') or 'film_bewegung.json'), bewegung, n)
+        from Figurfilm.figurbodenstand import Figurbodenstand
+        logger.info('2D3D Kleider %s: Bodenstand %s', job.kennung, Figurbodenstand(glb).datei(bewegung))      # wie die Seite: tiefster Punkt von Körper und Schuhen auf dem Boden
         self._vorbereiten(programme, name, glb)
         regler = self._regler(job, render)
         py = sys.executable

@@ -32,6 +32,8 @@ logger = logging.getLogger('core')
 EINZELN = Modulbuendel.EINSTIEGE['scene']
 EINZELN_STUDIO = Modulbuendel.EINSTIEGE['studio']
 EINZELN_MESH3D = Modulbuendel.EINSTIEGE['mesh3d']
+EINZELN_AI2D3D = Modulbuendel.EINSTIEGE['ai2d3d']
+EINZELN_MESH3DAI = Modulbuendel.EINSTIEGE['mesh3dai']
 
 
 @register.simple_tag
@@ -50,6 +52,18 @@ def studioskript():
 def mesh3dskript():
     """Die fertige Adresse der Jobseite „Mesh-3D“ — mit Fassung im Pfad (12.10.2026, `viewer/mesh3d/main.js`)."""
     return _skript('mesh3d', EINZELN_MESH3D)
+
+
+@register.simple_tag
+def ai2d3dskript():
+    """Die fertige Adresse der Jobseite „2d-3d-AI“ — mit Fassung im Pfad (08.11.2026, `viewer/ai2d3d/main.js`)."""
+    return _skript('ai2d3d', EINZELN_AI2D3D)
+
+
+@register.simple_tag
+def mesh3daiskript():
+    """Die fertige Adresse der Testseite „Mesh3D-AI“ — mit Fassung im Pfad (08.11.2026, `viewer/mesh3dai/main.js`)."""
+    return _skript('mesh3dai', EINZELN_MESH3DAI)
 
 
 def _skript(seite, einzeln):

@@ -151,7 +151,7 @@ class Architekturai2d3dkette:
             {'titel': 'Jobseite', 'skript': '/2d-3d-AI/test/<Job>/', 'kis': [],
              'zeilen': ['Feld 2/3: Genesis-Modell', 'Karte „Foto Vorlage -', 'Ergebnis“: je Foto', 'Vorlage | Ergebnis']},
         ]
-        return cls.svg('a2d-kette', 'Die Kette heute: wie die KIs aufgerufen werden (alles in python14, auf der Grafikkarte, unter der Gpusperre)', kaesten,
+        return cls.svg('a2d-kette', 'Die Foto-Kette: wie die KIs aufgerufen werden (alles in python14, auf der Grafikkarte, unter der Gpusperre)', kaesten,
                        (5, 3, 'Rückkopplung Prüfen → Einpassen/Kleider: beim Kopf gebaut (Kopfbildangleich), beim Körper noch nicht — heute nur gemessen'))
 
     @classmethod

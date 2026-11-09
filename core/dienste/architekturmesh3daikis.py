@@ -52,7 +52,8 @@ class Architekturmesh3daikis:
         'lage': (('fremd', 'ViTPose'), ('rechnung', 'Lageangleich')),
         'koerper': (('fremd', 'MediaPipe'), ('rechnung', 'Koerperangleich')),
         'haut': (('ki', 'hautki'), ('ki', 'stufe2'), ('rechnung', 'Entlichtung')),
-        'kleider': (('rechnung', 'Kostüm-Weg A: erkennen, schneiden, auflegen'), ('fremd', 'ViTPose'), ('fremd', 'MediaPipe'), ('rechnung', 'Kostüm-Prüfung')),
+        'kleider': (('rechnung', 'Kostüm-Weg A: erkennen, schneiden, auflegen'), ('fremd', 'ViTPose'), ('fremd', 'MediaPipe')),
+        'pruefung': (('rechnung', 'Kostüm-Prüfung'),),
     }
 
     @classmethod

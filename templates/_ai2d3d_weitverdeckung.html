@@ -1,0 +1,11 @@
+{% comment %}Knopf „Haut unter weiten Stücken“ unter dem Feld Genesis-Ergebnis (08.11.2026, Edgar: „diese extra regel möchte ich per UI auf der Jobseite laufen lassen können? Unter dem Genesis View?“),
+`Ai2d3dweitverdeckung`. Ein Schritt nach der Kette: blendet Haut unter Robe, weiten Ärmeln und langen Röcken aus, wo sie in der Animation nie frei wird. Parameter: adresse (der Endpunkt).{% endcomment %}
+<details class="ai2d3d-hautangleich ai2d3d-weitverdeckung" id="ai2d3d-weitverdeckung" data-adresse="{{ adresse }}" open>
+    <summary>Haut unter weiten Stücken</summary>
+    <p class="hb-hinweis">Blendet die Haut unter Robe, weiten Ärmeln und langen Röcken aus, wo sie in der Animation nie frei wird. Rechnet einige Minuten auf der Grafikkarte, danach lädt die Seite neu.</p>
+    <p class="hb-hinweis" data-meldung></p>
+    <div class="ai2d3d-hautangleich-knoepfe">
+        <button type="button" class="schaltknopf" data-rechnen title="Haut ausblenden, die unter einem weiten Stück liegt und in keinem Bild der Animation frei wird">Rechnen</button>
+        <button type="button" class="schaltknopf" data-zuruecksetzen title="Die Hautmasken wieder so, wie der Kostümlauf sie gerechnet hat" hidden>Zurücksetzen</button>
+    </div>
+</details>

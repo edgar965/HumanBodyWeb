@@ -31,6 +31,7 @@ import numpy as np
 
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellbildtypen import Bildmodellbildtypen
+from .bildmodellfotomasse import Bildmodellfotomasse
 
 logger = logging.getLogger('core')
 
@@ -47,12 +48,7 @@ class Bildmodellumriss:
         self.job = job
         self.optionen = optionen or {}
 
-    @classmethod
-    def an(cls, optionen, job=None):
-        wert = (optionen or {}).get(cls.OPTION)
-        if wert is None and job is not None:
-            wert = (job.optionen or {}).get(cls.OPTION)
-        return (wert or 'an') != 'aus'
+    an = classmethod(Bildmodellfotomasse.an.__func__)          # dieselbe Rechnung wie `Bildmodellfotomasse.an` (bis 08.11.2026 eine Kopie hier)
 
     # ------------------------------------------------------------- Fotos
 

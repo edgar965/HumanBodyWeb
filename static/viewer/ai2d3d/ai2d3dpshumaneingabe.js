@@ -12,6 +12,7 @@
  * Alle Bilder gleich skaliert (04.11.2026, Edgar: „alle bilder skaliert in der ersten Zeile“): die Person steht in jedem Platz so hoch wie in PSHumans Ansichten (740 von 768 Pixeln), ein Foto
  * mit Rand wird dafür auf die Person zugeschnitten (`_einpassen`). Platz 3:5 statt 1:2: Barbaras breiteste Ansicht reicht 230 von 384 Pixeln neben die Mitte (`_wegwerf/session3dtools/platz_breiten.py`).
  * Upload `POST /api/2d3dai/<job>/pshuman/eingabe/<winkel>/` (Formular, Feld `datei`), entfernen `…/entfernen/`, Bilder `GET …/pshuman/bild/<winkel>/<art>/`.
+ * Mit „Ansichten aus UP2You“ (05.11.2026, Edgar: „wo sind die vielen unterschiedlichen Eingabebilder?“) geht kein Foto in einen Platz ein: Die Reihe `[data-up2youfotos]` zeigt die Eingabe, alle sechs Plätze UP2Yous Ansichten.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Ai2d3dfotomass } from './ai2d3dfotomass.js';
@@ -29,15 +30,20 @@ export class Ai2d3dpshumaneingabe {
         const plaetze = [...block.querySelectorAll('.ai2d3d-pshumanplatz')];
         const knoepfe = [...block.querySelectorAll('[data-ansicht]')];
         const wahl = form.querySelector('select[name="anzahl"]');
+        const up2you = form.querySelector('input[name="up2you"]');
+        const fotoreihe = block.querySelector('[data-up2youfotos]');
         let ansicht = 'textur';
         const zeichnen = () => {
-            const anzahl = Number(wahl.value), eingehend = Ai2d3dpshumaneingabe.eingehend(plaetze, anzahl);
-            const frei = anzahl > 1 && eingehend.size < anzahl;
+            const alle = up2you.checked;
+            const anzahl = Number(wahl.value), eingehend = alle ? new Set() : Ai2d3dpshumaneingabe.eingehend(plaetze, anzahl);
+            const frei = !alle && anzahl > 1 && eingehend.size < anzahl;
             const belegt = plaetze.filter(p => p.dataset.quelle && eingehend.has(Number(p.dataset.winkel))).length;
-            block.querySelector('[data-modushinweis]').textContent = Ai2d3dpshumaneingabe.hinweis(anzahl, belegt);
+            block.querySelector('[data-modushinweis]').textContent = alle ? Ai2d3dpshumaneingabe.hinweisUp2you(Number(fotoreihe.dataset.zahl)) : Ai2d3dpshumaneingabe.hinweis(anzahl, belegt);
+            fotoreihe.hidden = !alle;
             for (const k of knoepfe) k.classList.toggle('active', k.dataset.ansicht === ansicht);
-            for (const p of plaetze) Ai2d3dpshumaneingabe._zeichnen(p, job, ansicht, netzbilder, eingehend, frei);
+            for (const p of plaetze) Ai2d3dpshumaneingabe._zeichnen(p, job, ansicht, netzbilder, eingehend, frei, alle ? 'UP2You' : 'PSHuman');
         };
+        up2you.addEventListener('change', zeichnen);
         for (const k of knoepfe) {
             if (Ai2d3dpshumannetzbilder.ARTEN.includes(k.dataset.ansicht) && !netzbilder) {
                 k.disabled = true;
@@ -64,11 +70,15 @@ export class Ai2d3dpshumaneingabe {
         return `${belegt} von ${anzahl} Fotos belegt. Jedes Foto ersetzt die Ansicht, die PSHuman sonst erfindet. Der Rechenweg mit mehreren Fotos ist geschrieben, aber noch nie gelaufen.`;
     }
 
+    static hinweisUp2you(fotos) {
+        return `UP2You nimmt ${fotos === 1 ? 'das Foto' : `alle ${fotos} Fotos`} des Jobs und erzeugt daraus die sechs Ansichten in A-Pose. Die Auswahl „Fotos“ gilt hier nicht.`;
+    }
+
     static _basis(job) {
         return `/api/2d3dai/${encodeURIComponent(job)}/pshuman`;
     }
 
-    static _zeichnen(p, job, ansicht, netzbilder, eingehend, frei) {
+    static _zeichnen(p, job, ansicht, netzbilder, eingehend, frei, von) {
         const winkel = Number(p.dataset.winkel), name = p.dataset.name, quelle = p.dataset.quelle, drin = eingehend.has(winkel);
         const feld = p.querySelector('.ai2d3d-pshumanplatz-bild');
         // PSHumans Ansichten sind quadratisch (768²), die Person steht in der Mitte: im Platz seitlich beschnitten statt verkleinert. Ein Foto hat beliebig viel Rand: auf die Person zuschneiden
@@ -90,14 +100,14 @@ export class Ai2d3dpshumaneingabe {
         p.querySelector('[data-entfernen]').hidden = quelle !== 'upload';
         if (ansicht === 'textur') {
             if (quelle && drin) feld.append(bild(server('eingabe', p.dataset.stand), `${name}: ${quelle === 'upload' ? 'hochgeladenes Foto' : 'Foto des Jobs'}`));
-            else if (!drin && !frei && p.dataset.erzeugt) feld.append(bild(server('farbe', p.dataset.standErzeugt), `${name}: von PSHuman erfunden (Farbe)`, true));
+            else if (!drin && !frei && p.dataset.erzeugt) feld.append(bild(server('farbe', p.dataset.standErzeugt), `${name}: von ${von} erfunden (Farbe)`, true));
             // ohne Rechnung, aber mit Bild des Jobs (z. B. Weg B: gerenderte Ansichten als Fotos): das Bild zeigen statt des Umrisses
             else if (quelle) feld.append(bild(server('eingabe', p.dataset.stand), `${name}: Bild des Jobs (geht bei dieser Fotoanzahl nicht in PSHuman)`));
-            else if (!drin && !frei) leer('erfindet PSHuman — noch nicht gerechnet');
+            else if (!drin && !frei) leer(`erfindet ${von} — noch nicht gerechnet`);
             else leer(winkel === 0 ? 'Pflicht: Foto von vorn' : 'Foto wie der Umriss hochladen');
         } else if (ansicht === 'normale') {
-            if (p.dataset.erzeugt) feld.append(bild(server('normale', p.dataset.standErzeugt), `${name}: Normale von PSHuman (${winkel === 0 ? 'aus dem Foto geschätzt' : 'erfunden'})`, true));
-            else leer('Normale — PSHuman noch nicht gerechnet');
+            if (p.dataset.erzeugt) feld.append(bild(server('normale', p.dataset.standErzeugt), `${name}: Normale von ${von} (${winkel === 0 && von === 'PSHuman' ? 'aus dem Foto geschätzt' : 'erfunden'})`, true));
+            else leer(`Normale — ${von} noch nicht gerechnet`);
         } else if (!netzbilder) {
             leer('kein PSHuman-Netz');
         } else {

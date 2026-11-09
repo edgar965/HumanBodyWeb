@@ -1,0 +1,45 @@
+{% comment %}Was heute läuft und PSHuman (07.11.2026, Edgar: „Erkläre mir die pshuman pipeline. Passe die seite … an mit dem was wir jetzt tun, und füge die Beschreibung der pshuman ein. pshuman nutzt doch andere Libs,
+und hat die trainiert auf viele Bilder oder?“). Grafiken: `Architekturai2d3dpshuman`. Aus dem Quelltext gelesen: `pshuman_port14/fremd/original/pshuman/`.{% endcomment %}
+<h2 id="heute">Was wir heute tun: Foto → Netz → Mesh3D-AI → Genesis-Modell</h2>
+<p>Der Hauptweg läuft über ein <strong>Netz</strong>: PSHuman oder UP2You machen aus den Fotos ein farbiges 3D-Netz, Mesh3D-AI legt eine Genesis-Figur hinein und schneidet Kleider und Haar aus.
+  Die Foto-Kette weiter unten rechnet die Figur direkt aus den Fotos; sie läuft nur noch mit dem Häkchen „Genesis direkt aus dem Foto“.</p>
+{% if heute_bild %}<div class="m3a-bildrahmen">{{ heute_bild }}</div>{% endif %}
+
+<h2 id="pshuman">PSHuman: wie aus einem Foto ein Netz wird</h2>
+<div class="info-box info-box-blue">
+  <strong>Kurz:</strong> PSHuman (Li et al., CVPR 2025) schaut ein Foto an und <strong>erfindet</strong> die Person aus fünf weiteren Richtungen, als Farbbild und als Normalenbild. Dann formt es ein Netz so,
+  dass es aus diesen sechs Richtungen zu den Bildern passt. Es sieht also nie die echte Rückseite: Alles außer der Vorderseite stammt aus dem, was das Modell im Training über Menschen gelernt hat.
+</div>
+{% if pshuman_bild %}<div class="m3a-bildrahmen">{{ pshuman_bild }}</div>{% endif %}
+
+<h3>Worauf es aufbaut und worauf es trainiert ist</h3>
+<p>PSHuman ist kein eigenständiges Modell, sondern ein Zusammenbau vorhandener Bausteine. Eigen sind vor allem der Gesichts-Zweig in der Diffusion und die Abstimmung auf Menschen.</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Baustein</th><th>Woher</th><th>Aufgabe in PSHuman</th></tr></thead>
+  <tbody>
+    <tr><td>Stable Diffusion 2.1 unCLIP</td><td>Stability AI, auf LAION-5B und Teilmengen trainiert</td><td>Grundmodell; es kennt Bilder allgemein und liefert den Hauptteil des „Wissens“</td></tr>
+    <tr><td>Aufmerksamkeit zwischen Ansichten</td><td>Era3D</td><td>hält die Ansichten untereinander stimmig</td></tr>
+    <tr><td>Gesichts-Zweig</td><td>eigen</td><td>rechnet das Gesicht größer mit und mischt es in die Körperansicht</td></tr>
+    <tr><td>PIXIE, SMPL-X</td><td>ECON- und SIFU-Code</td><td>Startkörper für die Netzformung. Bei uns seit 07.11.2026 eine Genesis-Figur mit der Haltung aus SAM 3D Body (<code>Startgelenke</code>); PIXIE und Mask R-CNN entfallen, UP2You behält sein SMPL-X</td></tr>
+    <tr><td>Continuous Remeshing</td><td>Palfinger 2022</td><td>verschiebt Punkte und baut die Flächen um</td></tr>
+    <tr><td>Farbprojektion</td><td>Unique3D</td><td>Farbe auf die Punkte. Im Code steht „Differing from paper“: Das Paper beschreibt eine andere Texturstufe</td></tr>
+    <tr><td>rembg, Poisson, nvdiffrast</td><td>fremd</td><td>Freistellen, Löcher schließen, Rendern; bei uns <code>poissontorch</code> statt open3d</td></tr>
+  </tbody>
+</table>
+<p><strong>Training:</strong> Die Feinabstimmung sah nur <strong>3.032 gescannte Menschen</strong>: 2.385 aus THuman2.1 und 647 aus CustomHumans, jeder in 8 Ansichten alle 45°, 768 × 768 Pixel (rechnerisch 24.256 Ansichten).
+  Dazu 16 Karten, Stapel 64, 30.000 Schritte. „Viele Bilder“ stimmt also nur für das Grundmodell Stable Diffusion; das Wissen über Menschen stammt aus rund 3.000 Scans. Geprüft haben die Autoren an 60 weiteren THuman2.1-Scans und 150 aus CAPE.</p>
+<p><strong>Laufzeit bei uns</strong> (Edgar_1, <code>pshuman/befund.json</code>, 05.11.2026): 213,6 s gesamt, davon Diffusion mit PIXIE 122,8 s und Netz 80,9 s, Grafikspeicher bis 9,17 GB. Das Paper nennt 54 s. Für die Kette mit Genesis steht eine saubere Messung aus.</p>
+<p class="m3a-klein">Paper und Code weichen ab: SMPL-X-Anpassung im Paper 700 Schritte, im Code 100; das Paper beschreibt SMPL-X-Bilder als Eingang der Diffusion, die veröffentlichte Einstellung schaltet das aus (<code>with_smpl: false</code>, auch bei uns).</p>
+
+<h3 id="pshuman-erfunden">Was ist echt, was erfunden?</h3>
+<p>PSHuman gibt das nicht aus. Es merkt sich nur, welche Punkte in keiner der sechs Ansichten liegen (<code>get_invisible_idx</code>), und die sechs Ansichten sind selbst fast alle erfunden. Aus dem Quelltext (<code>inference.py</code>, <code>run_inference</code>):</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Was</th><th>Herkunft</th></tr></thead>
+  <tbody>
+    <tr><td>Farbe von vorn (Ansicht 0)</td><td><strong>das Foto selbst</strong></td></tr>
+    <tr><td>Umriss von vorn</td><td><strong>aus dem Foto</strong></td></tr>
+    <tr><td>Normale von vorn</td><td>erfunden, aber eng ans Foto gebunden; das Gesicht kommt aus der größeren Ansicht 6</td></tr>
+    <tr><td>Farbe und Normale der Ansichten 1–5</td><td><strong>erfunden</strong>, mit Gewichten 0,4 / 0,8 / 1,0 / 0,8 / 0,4; die Rückseite zählt so viel wie die Vorderseite</td></tr>
+    <tr><td>Form des Netzes</td><td>aus diesen Normalen und Umrissen, ungesehene Löcher aus Poisson</td></tr>
+  </tbody>
+</table>

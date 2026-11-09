@@ -72,8 +72,8 @@ class Hbvorwaerts:
             rang = np.cumsum(gut, axis=1)
             gut &= rang <= self.K                                   # die K naechsten mit gleichsinniger Normale
             w = np.where(gut, 1.0 / np.maximum(abstand, 1e-3), 0.0)
-            anteile = np.einsum('iaj,ij->ia', hb['rahmen'][q], delta[q])         # Delta in den Rahmen des Quellpunkts
-            im_ziel = np.einsum('ia,ikaj->ikj', anteile, paar['g9_rahmen'][ziel]) / paar['massstab']
+            # seit 08.11.2026 im Weltraum wie `Hbmorphuebertragung.uebertragen` (die Zerlegung in Punktrahmen gab Rauschen, Kopf von `hbmorphuebertragung.py`)
+            im_ziel = np.broadcast_to(delta[q][:, None, :], ziel.shape + (3,)) / paar['massstab']
             np.add.at(summe, ziel, w[..., None] * im_ziel)
             np.add.at(gewicht, ziel, w)
         kaefig_s, kaefig_w = np.zeros((self.zahl, 3)), np.zeros(self.zahl)

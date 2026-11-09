@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}{% load jsfassung %}{% load l10n %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load l10n %}{% load szenenskript %}
 {% block title %}{{ job.name }} · 2d-3d-AI{% endblock %}
 
 {% comment %}
@@ -11,6 +11,7 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/ai2d3d.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3daitestfaelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/exportleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/figurbewegung.css' %}">
@@ -45,9 +46,12 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
         <select id="ai2d3d-geschlecht" name="geschlecht" data-reihenfolge="fest">{% if not job.geschlecht %}<option value="" selected disabled>wählen</option>{% endif %}{% for w, t in geschlechter %}<option value="{{ w }}"{% if w == job.geschlecht %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
         <label for="ai2d3d-dichte" title="Punkte des PSHuman-Netzes: normal 480 je Körperhöhe, dicht 960 (viermal so viele Punkte, gleiche Form)."><i class="fas fa-border-all"></i> Netz</label>
         <select id="ai2d3d-dichte" name="dichte" data-reihenfolge="fest">{% for w, t in pshuman_dichten %}<option value="{{ w }}"{% if w == job.pshuman.dichte %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
-        <label title="{{ pshuman_wege.5.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.5.text }}</label>
-        <label title="{{ pshuman_wege.6.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.6.text }}</label>
-        <label title="{{ pshuman_wege.4.beschreibung }}"><input type="checkbox" name="genesis_aus_foto"{% if job.pshuman.genesis_aus_foto %} checked{% endif %}> {{ pshuman_wege.4.text }}</label>
+        <label title="{{ pshuman_wege.fototextur.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.fototextur.text }}</label>
+        <label title="{{ pshuman_wege.hand_ersatz.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.hand_ersatz.text }}</label>
+        <label title="{{ pshuman_wege.up2you.beschreibung }}"><input type="checkbox" name="up2you"{% if job.pshuman.up2you %} checked{% endif %}> {{ pshuman_wege.up2you.text }}</label>
+        <label title="{{ pshuman_wege.genesis_aus_foto.beschreibung }}"><input type="checkbox" name="genesis_aus_foto"{% if job.pshuman.genesis_aus_foto %} checked{% endif %}> {{ pshuman_wege.genesis_aus_foto.text }}</label>
+        <label title="{{ pshuman_wege.haut_ki.beschreibung }}"><input type="checkbox" name="haut_ki"{% if job.pshuman.haut_ki %} checked{% endif %}> {{ pshuman_wege.haut_ki.text }}</label>
+        <label title="{{ pshuman_wege.keine_kleider.beschreibung }}"><input type="checkbox" name="keine_kleider"{% if job.pshuman.keine_kleider %} checked{% endif %}> {{ pshuman_wege.keine_kleider.text }}</label>
         <span class="hb-hinweis" data-meldung></span>
     </form>{% endif %}
     <a href="{% url 'ai2d3d' %}" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
@@ -94,10 +98,9 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh3D-AI-Jobseite — darum di
     {# 03.11.2026, Edgar: „pshuman als Option bei den jobs“, „mach beides, selektierbar“ — `Ai2d3dpshuman`, job.json `pshuman`. #}
     <form class="ai2d3d-groesse ai2d3d-textur" id="ai2d3d-pshuman" data-job="{{ job.id }}" title="Ob und wie PSHuman (Netz aus dem Vorderfoto) die Genesis-Figur mitbestimmt — gilt ab dem nächsten Lauf.">
         <span><i class="fas fa-cube"></i> PSHuman</span>
-        <label title="{{ pshuman_wege.0.beschreibung }}"><input type="checkbox" name="zeile1"{% if job.pshuman.zeile1 %} checked{% endif %}> {{ pshuman_wege.0.text }}</label>
-        <label title="{{ pshuman_wege.1.beschreibung }}"><input type="checkbox" name="drehteller"{% if job.pshuman.drehteller %} checked{% endif %}> {{ pshuman_wege.1.text }}</label>
-        <label title="{{ pshuman_wege.2.beschreibung }}"><input type="checkbox" name="vae_bildweise"{% if job.pshuman.vae_bildweise %} checked{% endif %}> {{ pshuman_wege.2.text }}</label>
-        <label title="{{ pshuman_wege.3.beschreibung }}"><input type="checkbox" name="genesis"{% if job.pshuman.genesis %} checked{% endif %}> {{ pshuman_wege.3.text }}</label>
+        <label title="{{ pshuman_wege.zeile1.beschreibung }}"><input type="checkbox" name="zeile1"{% if job.pshuman.zeile1 %} checked{% endif %}> {{ pshuman_wege.zeile1.text }}</label>
+        <label title="{{ pshuman_wege.drehteller.beschreibung }}"><input type="checkbox" name="drehteller"{% if job.pshuman.drehteller %} checked{% endif %}> {{ pshuman_wege.drehteller.text }}</label>
+        <label title="{{ pshuman_wege.vae_bildweise.beschreibung }}"><input type="checkbox" name="vae_bildweise"{% if job.pshuman.vae_bildweise %} checked{% endif %}> {{ pshuman_wege.vae_bildweise.text }}</label>
         <span class="hb-hinweis">{% if job.pshuman.gerechnet %}gerechnet {{ job.pshuman.gerechnet }}{% else %}für diesen Job noch nicht gerechnet{% endif %}</span>
         <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
         <span class="hb-hinweis" data-meldung></span>
@@ -195,35 +198,7 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="module">
-import { Ai2d3dseite } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dseite.js' %}";
-{% if ist_test %}import { Ai2d3dkoerpergroesse } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dkoerpergroesse.js' %}";
-import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
-Ai2d3dkoerpergroesse.binden(document.getElementById('ai2d3d-groesse'));
-import { Ai2d3dnormalen } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dnormalen.js' %}";
-Ai2d3dnormalen.binden(document.getElementById('ai2d3d-normalen'));
-import { Ai2d3dtextur } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dtextur.js' %}";
-Ai2d3dtextur.binden(document.getElementById('ai2d3d-textur'));
-import { Ai2d3dform } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dform.js' %}";
-Ai2d3dform.binden(document.getElementById('ai2d3d-form'));
-import { Ai2d3dpshuman } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dpshuman.js' %}";
-Ai2d3dpshuman.binden(document.getElementById('ai2d3d-pshuman'));
-import { Ai2d3dpshumaneingabe } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dpshumaneingabe.js' %}";
-Ai2d3dpshumaneingabe.binden(document.getElementById('ai2d3d-pshumaneingabe'), document.getElementById('ai2d3d-jobwahl'));
-import { Ai2d3djobwahl } from "{% fassungspfad 'viewer/ai2d3d/ai2d3djobwahl.js' %}";
-Ai2d3djobwahl.binden(document.getElementById('ai2d3d-jobwahl'));
-Auftragname.binden();
-{% endif %}const seite = Ai2d3dseite.aufbauen();
-{% if daten.genesiszeile.ergebnis %}import { Ai2d3dhautangleich } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dhautangleich.js' %}";
-Ai2d3dhautangleich.binden(document.getElementById('ai2d3d-hautangleich'), seite);
-{% endif %}{% if daten.test.eigen %}import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
-import { Ai2d3dbewegung } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dbewegung.js' %}";
-import { Ai2d3dexportfigur } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dexportfigur.js' %}";
-import { Ai2d3dmodellspeichern } from "{% fassungspfad 'viewer/ai2d3d/ai2d3dmodellspeichern.js' %}";
-const figur = new Ai2d3dexportfigur('{{ daten.test.adresse|escapejs }}', seite.genesisfeld);
-const genesiskarte = document.querySelector('[data-feld="genesis"]').closest('section');          // in der dritten Zeile tragen auch Feld 1 und 3 eine Exportleiste (04.11.2026)
-Exportleiste.starten(genesiskarte.querySelector('.exportleiste'), figur);
-Ai2d3dbewegung.leisten(seite, figur);
-Ai2d3dmodellspeichern.binden('{{ daten.test.adresse|escapejs }}', '{{ job.name|escapejs }} 2d-3d-AI', genesiskarte);
-{% endif %}</script>
+{# Einstieg als EIN Bündel (08.11.2026, `viewer/ai2d3d/main.js`, `Modulbuendel.EINSTIEGE['ai2d3d']`): vorher rund 240 Einzelmodule aus diesem Inline-Skript #}
+<div id="ai2d3d-start" hidden data-test="{% if ist_test %}1{% endif %}" data-jobname="{{ job.name }}"></div>
+<script type="module" src="{% ai2d3dskript %}"></script>
 {% endblock %}

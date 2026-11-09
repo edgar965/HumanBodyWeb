@@ -16,8 +16,8 @@ class Ai2d3dseitendaten:
     #: `static/viewer/charakter/modellansichten.js` (FOV, RAND, BREITE, HOEHE) und der Grund der Szene in Edgars Exporten (`_bild3d/*/bilder/bilder.json` → `grund_rgb`).
     KAMERA_EXPORT = {'fov': 20, 'rand': 1.08, 'breite': 1536, 'hoehe': 2048, 'grund': [25, 26, 46]}
 
-    #: Netzart, die nicht ins Feld „Netz“ geht, sondern als Feld 3 in jede Zeile (`smplx`, `ai2d3dsmplx.js`)
-    SMPLX = 'pshuman_smplx'
+    #: Netzarten, die nicht ins Feld „Netz“ gehen, sondern als eigenes Feld in jede Zeile (`smplx`, `ai2d3dsmplx.js`): der Startkörper der Netzformung. Genesis seit 07.11.2026, SMPL-X in alten Jobs und bei UP2You
+    STARTKOERPER = ('pshuman_start', 'pshuman_smplx')
     #: PSHumans Endnetz — zusätzlich als eigenes Feld in jeder Zeile (`pshuman`,
     #: `_ai2d3d_pshumanfeld.html`); bleibt auch im Feld „Netz“
     PSHUMAN = 'pshuman'
@@ -30,9 +30,9 @@ class Ai2d3dseitendaten:
         return {
             'id': k, 'name': job['name'], 'art': job['art'], 'wahrheit': job['wahrheit'], 'hinweis': job['hinweis'], 'figur': job['figur'],
             'fotos': [{'nr': i, 'name': f['name'], 'winkel': f['winkel'], 'adresse': '/api/2d3dai/%s/foto/%d/' % (k, i), 'frei': bool(f.get('frei'))} for i, f in enumerate(job['fotos'])],
-            'netze': [n for n in netze if n['art'] != cls.SMPLX],
-            # 03.11.2026: PSHumans eingepasstes SMPL-X, seit 04.11. Feld 2 der Zeile mit den Genesis-Feldern — oder None
-            'smplx': next((n for n in netze if n['art'] == cls.SMPLX), None),
+            'netze': [n for n in netze if n['art'] not in cls.STARTKOERPER],
+            # 03.11.2026: PSHumans Startkörper, seit 04.11. Feld 2 der Zeile mit den Genesis-Feldern — oder None
+            'smplx': next((n for art in cls.STARTKOERPER for n in netze if n['art'] == art), None),
             # 04.11.2026, Edgar: „das ergebnis sollte doch auch ein Mesh sein, das ich im 3d View rotieren
             # kann?“ — „pshuman als zusätzliches Feld / View“: PSHumans Netz — oder None
             'pshuman': next((n for n in netze if n['art'] == cls.PSHUMAN), None),

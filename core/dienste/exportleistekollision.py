@@ -69,11 +69,11 @@ class Exportleistekollision:
         return welt
 
     def _kapseln(self, kapseln, kinematik, namen, ibm):
-        """Kapseln in der Bindelage der GLB, `nummer` = Platz im Skin (Format von `Koerperkollision`); Rest der Ausrichtung in mm."""
+        """Kapseln in der Bindelage der GLB, `nummer` = Platz im Skin (Format von `Koerperkollision`); Rest der Ausrichtung in mm; Haltung der KI im selben Rahmen (Koerperkollision Fassung 3) oder None."""
         bind = {n: np.linalg.inv(m)[:3, 3] for n, m in zip(namen, ibm, strict=True)}
         paare = [(np.asarray(k['zentrum'], dtype=np.float64), bind[k['name']]) for k in kinematik if k.get('name') in bind and k.get('zentrum') is not None]
         if len(paare) < 3:
-            return [], None
+            return [], None, None
         from KoerperKI_alle.kabsch import Kabsch
         a, b = np.array([p[0] for p in paare]), np.array([p[1] for p in paare])
         _s, r, t = Kabsch.lage(a, b)
@@ -81,7 +81,22 @@ class Exportleistekollision:
         platz = {n: i for i, n in enumerate(namen)}
         aus = [{'knochen': k['knochen'], 'nummer': platz[k['knochen']], 'a': (r @ np.asarray(k['a']) + t).tolist(), 'b': (r @ np.asarray(k['b']) + t).tolist(),
                 'ra': float(k['ra']), 'rb': float(k['rb'])} for k in (kapseln.get('kapseln') or []) if k.get('knochen') in platz]
-        return aus, rest_mm
+        return aus, rest_mm, self._haltung(kapseln.get('haltung'), kinematik, platz, r, t)
+
+    @staticmethod
+    def _haltung(haltung, kinematik, platz, r, t):
+        """Haltung der KI (x' = D x + v in der Kinematik) je Platz im Skin, in der Bindelage x_b = r x + t: D_b = r D rᵀ, v_b = r v + t − D_b t; Gelenke ohne Kinematik bleiben, wie sie sind."""
+        if not haltung:
+            return None
+        n = len(platz)
+        dreh, versch = np.tile(np.eye(3), (n, 1, 1)), np.zeros((n, 3))
+        for j, k in enumerate(kinematik):
+            i = platz.get(k.get('name'))
+            if i is None or j >= len(haltung['dreh']):
+                continue
+            dreh[i] = r @ np.asarray(haltung['dreh'][j], dtype=np.float64) @ r.T
+            versch[i] = r @ np.asarray(haltung['versch'][j], dtype=np.float64) + t - dreh[i] @ t
+        return {'dreh': dreh.tolist(), 'versch': versch.tolist()}
 
     def _ablegen(self, feld):
         feld = np.ascontiguousarray(feld)
@@ -155,14 +170,14 @@ class Exportleistekollision:
             skin = self.j['skins'][k['skin']]
             namen = [self.j['nodes'][g].get('name', '') for g in skin['joints']]
             ibm = self._feld(skin['inverseBindMatrices']).reshape(-1, 4, 4).transpose(0, 2, 1)
-            kap, rest_mm = self._kapseln(kapseln, kinematik, namen, ibm)
+            kap, rest_mm, haltung = self._kapseln(kapseln, kinematik, namen, ibm)
             if not kap:
                 continue
             gelenke = [np.einsum('gij,gjk->gik', np.array([w[g] for g in skin['joints']]), ibm)[:, :3, :] for w in welten]
             stueck = {'name': k['name'], 'rahmen_mm': round(rest_mm, 2), 'kapseln': len(kap), 'geschoben_max': 0, 'versatz_max_mm': 0.0}
             mesh = self.j['meshes'][k['mesh']]
             for prim in mesh['primitives']:
-                prim['targets'] = [{'POSITION': self._ziel(v)} for v in self._versaetze(prim, gelenke, Koerperkollision({'kapseln': kap}), stueck)]
+                prim['targets'] = [{'POSITION': self._ziel(v)} for v in self._versaetze(prim, gelenke, Koerperkollision({'kapseln': kap, 'haltung': haltung}), stueck)]
             mesh['weights'] = [0.0] * len(bilder)
             mesh.setdefault('extras', {})['targetNames'] = ['kollision_%04d' % f for f in bilder]
             t = self.m._anhaengen(zeiten[bilder], 'SCALAR', minmax=True)
@@ -190,7 +205,7 @@ class Exportleistekollision:
     def _versaetze(self, prim, gelenke, kollision, stueck):
         """Je Bild der Versatz der Punkte dieser Primitive in der Bindelage (N, 3), gerechnet auf der Karte. `v`, `gl`, `gw` sind über alle Bilder dieselben Tensoren: `schieben` nimmt
         das Stück beim ersten Bild als CUDA-Graphen auf und erkennt es an diesen Objekten wieder. `ruhe` = Bindelage, derselbe Rahmen wie die Kapseln (`_kapseln`): geschoben wird
-        nur, was tiefer in einer Kapsel liegt als in der Ruhe (Fassung 2). Bis 01.11.2026 auf der CPU, gemessen 2,6 s je Bild am Haar von Venus (377.752 Punkte).
+        nur, was tiefer in einer Kapsel liegt als in der Haltung der KI (Fassung 3, ohne `haltung` als in der Ruhe). Bis 01.11.2026 auf der CPU, gemessen 2,6 s je Bild am Haar von Venus (377.752 Punkte).
         Geschoben wird in float32 wie im Shader der Seite (WebGL): am Haar von Venus 18 ms je Bild gegen 170 ms in float64, Schub höchstens 0,0002 mm anders, gleich viele Punkte geschoben
         (`_wegwerf/exportleiste/schieben_typ_probe.py`, 01.11.2026, Karte dabei zu 55–63 % von einem anderen Lauf belegt). Gehäutet wird in float64 (`Kostuemgpu.haeuten`)."""
         import torch

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Ai2d3dhautangleich — Ablage und Lauf von „Haut angleichen“ eines Tests (05.11.2026, Edgar: „Vielleicht ein Schritt unabhängig von der Joberzeugung, danach? Ein paar slider wo man die Haut anpasst“).
 
-Der Schritt gehört zum Job, nicht zur Kette: Er liest die fertigen Kacheln `haut_<g>/10xx.jpg` des Mesh3D-AI-Tests des Jobs, die Regler rechnen im Browser (`Ai2d3dhautangleich` in `viewer/ai2d3d/`),
+Der Schritt gehört nicht zur Kette: Er liest die fertigen Kacheln `haut_<g>/10xx.jpg` eines Mesh3D-AI-Tests, von der Jobseite (`fuer`) wie von der Testseite (`fuer_test`), die Regler rechnen im Browser (`Ai2d3dhautangleich` in `viewer/ai2d3d/`),
 Speichern schreibt die Kacheln zurück. `angleich/original/` hält die Kacheln, von denen die Regler ausgehen; die Tonfelder rechnet `KoerperKI_Fotos.Hautangleich` einmal je Haut.
 
 Rechnet die Kette die Haut neu, sind die Kacheln weder das Original noch das zuletzt Gespeicherte: `_basis_gilt` wird falsch, der Stand zeigt wieder „vorbereiten“, und `vorbereiten` nimmt die neuen
@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 from io import BytesIO
+from pathlib import Path
 
 import psutil
 from django.conf import settings
@@ -48,15 +49,31 @@ class Ai2d3dhautangleich:
         self.original = self.ablage / 'original'
 
     @classmethod
-    def fuer(cls, job):
-        """Der Angleich des Tests zu `job` — None ohne Test oder ohne fertige Haut."""
-        kennung = (job or {}).get('test')
+    def _zum_test(cls, kennung, fotos):
+        """Der Angleich des Tests `kennung` — None ohne Test oder ohne fertige Haut. Was die Fotos sehen konnten, trägt den Bezugston (`Hautvertrauen`); ohne Fotos der Blick von vorn."""
         pfad = Mesh3daitest.pfad(kennung) if kennung else None
         if pfad is None:
             return None
         g = Mesh3daitest.geschlecht(pfad, {})
-        winkel = sorted({f['winkel'] for f in job.get('fotos') or [] if f.get('winkel') is not None}) or [0]          # Was die Fotos sehen konnten, trägt den Bezugston (`Hautvertrauen`)
+        winkel = sorted({f['winkel'] for f in fotos or [] if f.get('winkel') is not None}) or [0]
         return cls(kennung, g, winkel) if Mesh3daitesthaut.info(kennung, g) is not None else None
+
+    @classmethod
+    def fuer(cls, job):
+        """Der Angleich des Tests zu `job` — None ohne Test oder ohne fertige Haut."""
+        return cls._zum_test((job or {}).get('test'), (job or {}).get('fotos'))
+
+    @classmethod
+    def fuer_test(cls, kennung):
+        """Der Angleich von der Testseite (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“). Gehört der Test zu einem Job, gelten dessen Fotos: Beide Seiten teilen die Ablage."""
+        for datei in (Path(settings.OBJECTS_ROOT) / 'ai2d3d').glob('*/job.json'):
+            try:
+                job = json.loads(datei.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                continue
+            if job.get('mesh3dai_test') == kennung:
+                return cls._zum_test(kennung, job.get('fotos'))
+        return cls._zum_test(kennung, None)
 
     def kacheln(self):
         return sorted(d for d in self.haut.glob('10??.jpg') if self.KACHEL.match(d.stem))
@@ -98,8 +115,8 @@ class Ai2d3dhautangleich:
             return False
         return psutil.pid_exists(pid)
 
-    def stand(self, job_id):
-        adresse = '/api/2d3dai/%s/hautangleich/' % job_id
+    def stand(self, adresse):
+        """Stand für die Seite; `adresse`: der Endpunkt, über den sie liest (Jobseite oder Testseite)."""
         kopf = self._kopf() if self._basis_gilt() else None
         marke = int((self.ablage / 'felder.json').stat().st_mtime) if kopf else 0
         gespeichert = self._gespeichert() if kopf else {}

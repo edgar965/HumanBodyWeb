@@ -109,9 +109,8 @@ class Makehumangenital:
 
     def nahtfrei(self, roh):
         """Wie `Dazgeograft.nahtfrei`: `(erste, rep)` — die Punkte nach dem Verschweißen der UV-Nähte und auf welchen jeder Rohpunkt fällt."""
-        schluessel = np.round(roh / self.LAGE_M).astype(np.int64)
-        _, erste, rep = np.unique(schluessel, axis=0, return_index=True, return_inverse=True)
-        return erste, rep.ravel()
+        from .dazgeograft import Dazgeograft
+        return Dazgeograft.nahtfrei(self, roh)
 
     @staticmethod
     def aussen(punkte, dreiecke):

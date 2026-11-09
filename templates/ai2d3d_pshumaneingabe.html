@@ -2,6 +2,7 @@
 PSHuman-Eingabe eines Tests (03.11.2026, Edgar: „mach im job ein UI das entweder eines oder mehrere Bilder nimmt, mach vorschlag, wie die sein sollten, z.B. Umriss vom Körper,
 mit Upload möglichkeit für alle. Wenn ein Bild als Input, dann zeige die erzeugten bilder von pshuman“). Sechs Plätze = die sechs Ansichten von PSHumans Rekonstruktion
 (`Ai2d3dpshumaneingabe`); was jeder zeigt, entscheidet `ai2d3dpshumaneingabe.js` nach der Auswahl „Fotos“ (1–6) oben auf der Seite.
+Mit „Ansichten aus UP2You“ (05.11.2026, Edgar: „wo sind die vielen unterschiedlichen Eingabebilder?“) gehen alle Fotos des Jobs ein, ohne Winkel und Plätze: Sie stehen darum in einer eigenen Reihe, die sechs Plätze zeigen UP2Yous Ansichten.
 {% endcomment %}
 <section class="card ai2d3d-pshumaneingabe" id="ai2d3d-pshumaneingabe" data-job="{{ job.id }}"
          data-netz="{% for n in job.netze %}{% if n.art == 'pshuman' %}/api/2d3dai/{{ job.id }}/netz/pshuman/{% endif %}{% endfor %}">
@@ -20,6 +21,12 @@ mit Upload möglichkeit für alle. Wenn ein Bild als Input, dann zeige die erzeu
             <summary>Wie die Fotos sein sollten (Vorschlag)</summary>
             <ul>{% for v in pshuman_vorschlag %}<li>{{ v }}</li>{% endfor %}</ul>
         </details>
+    </div>
+    <div class="ai2d3d-up2youfotos" data-up2youfotos data-zahl="{{ job.fotos|length }}"{% if not job.pshuman.up2you %} hidden{% endif %}>
+        <p class="hb-hinweis">Eingabe von UP2You: alle {{ job.fotos|length }} Fotos des Jobs</p>
+        <div class="ai2d3d-up2youfotos-reihe">{% for f in job.fotos %}
+            <img src="/api/2d3dai/{{ job.id }}/foto/{{ forloop.counter0 }}/" alt="{{ f.name }}" title="{{ f.name }}" loading="lazy">{% endfor %}
+        </div>
     </div>
     <div class="ai2d3d-pshumanplaetze">{% for p in job.pshuman.eingabe %}
         <figure class="ai2d3d-pshumanplatz" data-winkel="{{ p.winkel }}" data-name="{{ p.name }}" data-quelle="{{ p.quelle|default_if_none:'' }}" data-stand="{{ p.stand }}"

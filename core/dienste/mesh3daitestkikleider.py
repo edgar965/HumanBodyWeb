@@ -62,6 +62,7 @@ class Mesh3daitestkikleider:
         if not kopf:
             return [], None
         adresse = adresse or '/api/mesh3dai/test/%s/kleid/%s/{weg}/{id}' % (kennung, geschlecht)
+        anatomie = cls._anatomie(ordner, geschlecht)
         aus = []
         for st in kopf.get('stuecke') or []:
             eintrag = {k: st.get(k) for k in ('id', 'name', 'art', 'region', 'bewegung', 'quelle', 'ki_vorgabe', *cls.KI)}
@@ -73,6 +74,42 @@ class Mesh3daitestkikleider:
                 e = eintrag.get(weg)
                 if isinstance(e, dict) and not e.get('fehler') and (ordner / weg / st['id'] / 'anzeige' / 'netz.npz').is_file():
                     eintrag[weg] = dict(e, netz=adresse.format(weg=weg, id=st['id']))
+                if isinstance(eintrag.get(weg), dict) and anatomie is not None:
+                    eintrag[weg] = cls._anatomie_tragen(eintrag[weg], anatomie, st.get('art'))
             aus.append(eintrag)
         info = {k: kopf.get(k) for k in ('gerechnet', 'grund', 'zerlegung', 'ausschnitt', 'quelle_ki', 'schnitt_lauf', 'probe')}
         return aus, info
+
+    @staticmethod
+    def _regel():
+        """`Kleideranatomie` und `Kleiderverdeckung` aus der Kette (`A:/3DTools/mesh3dai`, nur numpy)."""
+        from django.conf import settings
+        import sys
+        mesh = str(settings.TOOLS_ROOT / 'mesh3dai')
+        if mesh not in sys.path:
+            sys.path.insert(0, mesh)
+        from mesh3dai_kleider_anatomie import Kleideranatomie
+        from mesh3dai_kleider_verdeckung import Kleiderverdeckung
+        return Kleideranatomie, Kleiderverdeckung
+
+    @classmethod
+    def _anatomie(cls, ordner, geschlecht):
+        """bool je Dreieck der Figur: die Anatomie im Anzeigenetz neben der Kleiderliste (`<Test>/form_<g>/`, bei 2d-3d-AI `<Job>/figur/form_<g>/`) — None ohne Netz."""
+        import numpy as np
+        try:
+            with np.load(ordner.parent / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz') as z:
+                return z['etikett'] == cls._regel()[0].ETIKETT
+        except (OSError, KeyError, ValueError):
+            return None
+
+    @classmethod
+    def _anatomie_tragen(cls, e, anatomie, art):
+        """`traegt_anatomie` je Weg nach DER Regel (`Kleideranatomie.getragen`, 08.11.2026 — vorher entschieden das zwei weitere Regeln im Browser). Trägt das Stück sie, steht die ganze
+        Anatomie in seiner Maske (der Kostüm-Weg schreibt sie schon so, `Kleideranatomie.verdecken`; die anderen Wege bekommen sie hier), damit die stehende Figur dasselbe zeigt wie die bewegte."""
+        regel, verdeckung = cls._regel()
+        maske = verdeckung.dekodieren(e.get('verdeckt'), len(anatomie))
+        getragen = bool(e.get('verdeckt')) and regel.getragen(anatomie, maske, art)
+        e = dict(e, traegt_anatomie=getragen)
+        if getragen and not maske[anatomie].all():
+            e['verdeckt'] = verdeckung.kodieren(maske | anatomie)
+        return e

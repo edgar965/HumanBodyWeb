@@ -13,7 +13,7 @@
   {% for j in jobs %}<tr><td><a href="/2d-3d-AI/{{ j.id }}/">{{ j.name }}</a></td><td>Export, Wahrheit {{ j.figur }}</td><td class="num">{{ j.fotos|length }}</td>
     <td>{% for n in j.netze %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
     <td>{% if j.paar %}<a href="/mesh-3D-AI/{{ j.paar.kennung }}/">Mesh3D-AI · {{ j.paar.name }}</a>{% else %}—{% endif %}</td></tr>{% endfor %}
-  {% for j in tests %}<tr><td><a href="/2d-3d-AI/test/{{ j.id }}/">{{ j.name }}</a></td><td>echte Fotos</td><td class="num">{{ j.fotos|length }}</td>
+  {% for j in tests %}<tr><td><a href="/2d-3d-AI/test/{{ j.adresse }}/">{{ j.name }}</a></td><td>echte Fotos</td><td class="num">{{ j.fotos|length }}</td>
     <td>{% for n in j.netze %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
     <td>{% if j.test %}<a href="/mesh-3D-AI/test/{{ j.test }}/">Mesh3D-AI-Test · {{ j.test }}</a>{% else %}—{% endif %}</td></tr>{% endfor %}
   </tbody>

@@ -152,9 +152,9 @@ class Hbmorpheaufgenesis(Hbmorphuebertragung):
         for nr, name in enumerate(namen, 1):
             hb_plus, hb_minus = self.hb_delta(name, 1.0), self.hb_delta(name, -1.0)
             if name in self.SKELETT:
-                # Ein Regler, der Gelenke verschiebt, ist eine grosse, fast starre Verschiebung: im Weltraum uebertragen (siehe `uebertragen`).
-                plus, minus = self.uebertragen(hb_plus, welt=True), self.uebertragen(hb_minus, welt=True)
-                modus = 'welt'
+                # Ein Regler, der Gelenke verschiebt, ist eine grosse, fast starre Verschiebung: ohne Rueckfaelle (seit 08.11.2026 uebertragen alle im Weltraum, `uebertragen`).
+                plus, minus = self.uebertragen(hb_plus), self.uebertragen(hb_minus)
+                modus = 'normal'
             else:
                 plus, minus, modus = self.uebertragen_wirksam(hb_plus, hb_minus)
             nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]

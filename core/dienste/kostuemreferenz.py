@@ -29,6 +29,7 @@ import re
 
 from ..daten.blendermodellablage import Blendermodellablage
 from .kostuembild import Kostuembild
+from .iterationsreferenz import Iterationsreferenz
 
 __all__ = ['Kostuemreferenz']
 
@@ -45,17 +46,7 @@ class Kostuemreferenz:
         self.gewicht = gewicht
         self.bild = bild
 
-    @classmethod
-    def winkel_von(cls, eintrag):
-        """Grad oder None (siehe Kopf der Datei)."""
-        if isinstance(eintrag.get('winkel'), (int, float)):
-            return float(eintrag['winkel'])
-        treffer = cls.NAME.search(str(eintrag.get('original') or eintrag.get('datei') or ''))
-        if treffer and treffer.group(1) in cls.BOGEN:
-            return float(cls.BOGEN[treffer.group(1)])
-        if eintrag.get('rolle') in cls.ROLLEN:
-            return float(cls.ROLLEN[eintrag['rolle']])
-        return None
+    winkel_von = classmethod(Iterationsreferenz.winkel_von.__func__)          # dieselbe Rechnung wie `Iterationsreferenz.winkel_von` (bis 08.11.2026 eine Kopie hier)
 
     @classmethod
     def laden(cls, job):

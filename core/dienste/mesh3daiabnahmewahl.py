@@ -8,6 +8,7 @@ Fassung eines Laufs (er ändert keine Rechnung, nur das Urteil). Gelesen von `Pr
 """
 
 import logging
+from .hautentlichtung import Hautentlichtung
 
 logger = logging.getLogger('core')
 
@@ -20,14 +21,7 @@ class Mesh3daiabnahmewahl:
     MINIMUM = 1
     MAXIMUM = 1000
 
-    @classmethod
-    def aus(cls, prefs):
-        """Der Wert aus einem `ui_prefs`-Dict; was keine ganze Zahl im erlaubten Bereich ist, ist die Vorgabe."""
-        try:
-            w = int(str((prefs or {}).get(cls.SCHLUESSEL, cls.VORGABE)).strip())
-        except ValueError:
-            return cls.VORGABE
-        return w if cls.MINIMUM <= w <= cls.MAXIMUM else cls.VORGABE
+    aus = classmethod(Hautentlichtung.aus.__func__)          # dieselbe Rechnung wie `Hautentlichtung.aus` (bis 08.11.2026 eine Kopie hier)
 
     @classmethod
     def gewaehlt(cls):

@@ -10,7 +10,7 @@ still auf die Vorgabe zurück); geprüft wird nur, dass der Name wie ein Ollama-
 
 import re
 
-from .ollamamodelle import Ollamamodelle
+from .iterationsoptionen import Iterationsoptionen
 
 __all__ = ['Kostuemoptionen']
 
@@ -147,42 +147,6 @@ class Kostuemoptionen:
     def vorgaben(cls):
         return {e['schluessel']: e['vorgabe'] for e in cls.KATALOG}
 
-    @classmethod
-    def katalog(cls):
-        modelle = Ollamamodelle.mit_bildern()
-        aus = []
-        for e in cls.KATALOG:
-            werte = e.get('werte', [])
-            if e['schluessel'] == 'pruefki':
-                # Die Vorgabe bleibt wählbar, auch wenn Ollama gerade schweigt — sonst zeigte das Feld „Aus",
-                # und das nächste Speichern schriebe es.
-                if cls.VORGABE_KI not in [n for n, _ in modelle]:
-                    modelle = [
-                        (cls.VORGABE_KI, '%s (Ollama antwortet gerade nicht)' % cls.VORGABE_KI)
-                    ] + modelle
-                werte = [(cls.AUS, 'Aus — nur der Optimierer')] + modelle
-            aus.append(dict(e, werte=[{'wert': w, 'text': t} for w, t in werte], fein=False))
-        return {'optionen': aus}
+    katalog = classmethod(Iterationsoptionen.katalog.__func__)          # dieselbe Rechnung wie `Iterationsoptionen.katalog` (bis 08.11.2026 eine Kopie hier)
 
-    @classmethod
-    def pruefen(cls, roh):
-        roh = roh if isinstance(roh, dict) else {}
-        aus = cls.vorgaben()
-        for e in cls.KATALOG:
-            wert = roh.get(e['schluessel'])
-            if wert is None:
-                continue
-            if e['schluessel'] == 'pruefki':
-                if str(wert) == cls.AUS or cls.OLLAMANAME.match(str(wert)):
-                    aus['pruefki'] = str(wert)
-            elif e['art'] == 'wahl':
-                if str(wert) in [w for w, _ in e.get('werte', [])]:
-                    aus[e['schluessel']] = str(wert)
-            elif e['art'] == 'zahl':
-                try:
-                    zahl = float(wert)
-                except TypeError, ValueError:
-                    continue
-                if e['min'] <= zahl <= e['max']:
-                    aus[e['schluessel']] = int(zahl) if zahl.is_integer() else zahl
-        return aus
+    pruefen = classmethod(Iterationsoptionen.pruefen.__func__)          # dieselbe Rechnung wie `Iterationsoptionen.pruefen` (bis 08.11.2026 eine Kopie hier)

@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('kennung', nargs='?', default=None)
-        parser.add_argument('--ab', default=None, help='erst ab diesem Schritt rechnen (Schlüssel, z. B. zerlegung); die Schritte davor bleiben, wie sie sind')
+        parser.add_argument('--ab', default=None, help='erst ab diesem Schritt rechnen (Schlüssel, z. B. meshanpassung nach dem Umstellen des Geschlechts); die Schritte davor bleiben, wie sie sind')
 
     def handle(self, *args, **optionen):
         k = optionen.get('kennung')

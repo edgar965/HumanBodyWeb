@@ -21,6 +21,7 @@ from .exportleisteablage import Exportleisteablage
 from .exportleistebewegung import Exportleistebewegung
 from .exportleistehautmaske import Exportleistehautmaske
 from .exportleisterendermodell import Exportleisterendermodell
+from .fotohautregler import Fotohautregler
 from .modellexportziel import Modellexportziel
 
 logger = logging.getLogger('core')
@@ -70,7 +71,7 @@ class Exportleiste:
         except (OSError, ValueError) as fehler:
             logger.warning('Exportleiste %s/%s: %s nicht lesbar (%s) — es gelten die Vorgaben', self.quelle.BEREICH, self.quelle.kennung, pfad, fehler)
             roh = {}
-        return {g: Filmregler.pruefen(g, (roh or {}).get(g)) for g in Filmregler.GRUPPEN}
+        return Fotohautregler.einsetzen({g: Filmregler.pruefen(g, (roh or {}).get(g)) for g in Filmregler.GRUPPEN}, self.quelle.kacheln())
 
     def optionen_speichern(self, roh):
         from Figurfilm.filmregler import Filmregler

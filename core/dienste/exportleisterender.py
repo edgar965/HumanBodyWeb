@@ -38,7 +38,9 @@ class Exportleisterender:
     PHYSIK_AUS = {('renderqualitaet', 'stoff.modus'): 'haut', ('renderphysik', 'haar.an'): False, ('renderphysik', 'bart.an'): False,
                   ('renderphysik', 'uhr.an'): False, ('renderphysik', 'wind.staerke'): 0.0}
     MIN_SEKUNDEN = 10 / 30
-    SPP, SPP_MIN, SPP_MAX = 96, 8, 256
+    #: 384 als Vorgabe und Obergrenze (05.11.2026, Edgar: Sand auf der Haut von Edgar_1, „mach die Standardausgabe bei Qualität rendern sehr hoch“): erst dort ist das Rauschen weg, bei 192 und 256 nur
+    #: schwächer (`ProjektTemp/_wegwerf/edgar1_textur/sprenkel_probe.py`).
+    SPP, SPP_MIN, SPP_MAX = 384, 8, 384
     BEFEHL = 'exportleiste_render'
 
     def __init__(self, leiste):

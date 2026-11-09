@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}{% load jsfassung %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load szenenskript %}
 {% block title %}{{ test.name }} · Test · Mesh3D-AI{% endblock %}
 
 {% comment %}
@@ -41,6 +41,7 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
 <section class="card mesh3dai-rechnen" id="mesh3dai-rechnen" data-kennung="{{ test.kennung }}">
     <div class="mesh3dai-rechnen-kopf">
         <button type="button" class="btn btn-primary" data-aktion="rechnen"><span><i class="fas fa-play"></i> Rechnen</span></button>
+        <button type="button" class="btn btn-secondary" data-aktion="rechnen-ab" data-ab="meshanpassung" title="Rechnet nur Einpassung, Figur, Haut, Kleider und Prüfung für das eingestellte Geschlecht. Rig, Erkennung und Zerlegung bleiben. Dafür nach dem Umstellen des Geschlechts."><span><i class="fas fa-step-forward"></i> Ab Einpassung rechnen</span></button>
         <span class="mesh3dai-rechnen-status" data-status>Stand wird geladen …</span>
     </div>
     <div class="progress-bar-mini mesh3dai-rechnen-balken"><span class="progress-fill-mini" data-balken style="width: 0%"></span></div>
@@ -58,6 +59,12 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
             <option value="maennlich"{% if test.geschlecht == 'maennlich' %} selected{% endif %}>männlich</option>
         </select>
         <span class="mesh3dai-test-figur" id="mesh3dai-test-figur">{% if test.figur %}Ausgabe: {{ test.figur }}{% endif %}</span>
+        <span class="hb-hinweis" id="mesh3dai-test-geschlechtstand" hidden></span>
+        {# Häkchen eines Tests ohne Job (`Mesh3daitestwahl`); am Job stehen sie auf der Jobseite und gehen vor. #}
+        {% if wahl %}
+        <label title="Hautfarbe der Haut-KI. Aus: Haut ohne KI. Gilt beim nächsten Rechnen."><input type="checkbox" data-wahl="haut_ki"{% if wahl.haut_ki %} checked{% endif %}> Haut-KI</label>
+        <label title="Für Figuren ohne Kleidung: Alles außer Haar wird Haut. Gilt beim nächsten Rechnen."><input type="checkbox" data-wahl="keine_kleider"{% if wahl.keine_kleider %} checked{% endif %}> Keine Kleider</label>
+        {% endif %}
     </div>
     <div class="mesh3dai-zeilenkopf">
         <h2>Ganzer Körper</h2>
@@ -76,6 +83,8 @@ Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schal
             <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
             {% url 'mesh3dai_teststandardanimation' test.kennung as standardanimation %}
             {% include "_mesh3dai_figurbewegung.html" with adresse=standardanimation tasten=True %}
+            {# Haut angleichen wie am Job (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“); ohne fertige Haut blendet `Ai2d3dhautangleich` es aus #}
+            {% url 'mesh3dai_hautangleich' test.kennung as hautangleich_adresse %}{% include "_ai2d3d_hautangleich.html" with adresse=hautangleich_adresse %}
             <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
             {# Exportleiste rechts unten (31.10.2026, Edgar: „mach mir die Buttons zum speichern des Modells in dem Bereich ‚Ganzer Körper‘, rechts unten … export als glb, obj, blend“). #}
             {% include "_exportleiste.html" with bereich="mesh3daitest" kennung=test.kennung speichern_text="Übernehmen und als Modell speichern" speichern_hinweis="Übernimmt die Wahl der Karte „Kleider und Bestandteile“ und speichert die Figur als Genesis-Modell (Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle)." %}
@@ -167,23 +176,6 @@ diese Seite zeigt, gegen das Ziel (`Mesh3daitestfaelle`, `mesh3daitestfaelle.js`
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="module">
-import { Mesh3daitestseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestseite.js' %}";
-import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
-import { Mesh3dairechnen } from "{% fassungspfad 'viewer/mesh3dai/mesh3dairechnen.js' %}";
-import { Mesh3daitestmesspunkte } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestmesspunkte.js' %}";
-import { Mesh3dailinien } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailinien.js' %}";
-import { Mesh3daimeshanpassung } from "{% fassungspfad 'viewer/mesh3dai/mesh3daimeshanpassung.js' %}";
-import { Exportleiste } from "{% fassungspfad 'viewer/exportleiste/exportleiste.js' %}";
-import { Mesh3daiexportquelle } from "{% fassungspfad 'viewer/mesh3dai/mesh3daiexportquelle.js' %}";
-Mesh3daimeshanpassung.starten(document.getElementById('mesh3dai-meshanpassung'));
-Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
-// `starten` legt die Seite (und ihre bewegte Figur) gleich an, bevor es lädt — `window.__mesh3daitest`
-Exportleiste.starten(document.getElementById('exportleiste'), new Mesh3daiexportquelle(() => window.__mesh3daitest?.bewegung));
-Mesh3dailinien.testStarten(document.getElementById('mesh3dai-linien'));
-Mesh3daitestmesspunkte.starten(document.getElementById('mesh3dai-messpunkte'));
-Mesh3daitestmesspunkte.gesichtStarten(document.getElementById('mesh3dai-gesichtspunkte'));
-Auftragname.binden();
-new Mesh3dairechnen(document.getElementById('mesh3dai-rechnen'));
-</script>
+{# Einstieg als EIN Bündel (08.11.2026, `viewer/mesh3dai/main.js`, `Modulbuendel.EINSTIEGE['mesh3dai']`) #}
+<script type="module" src="{% mesh3daiskript %}"></script>
 {% endblock %}

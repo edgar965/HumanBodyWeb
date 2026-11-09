@@ -170,6 +170,6 @@ class KostuemoptionenTest(SimpleTestCase):
         )
 
     def test_ohne_ollama_bleibt_die_vorgabe_waehlbar(self):
-        with mock.patch('core.dienste.kostuemoptionen.Ollamamodelle.mit_bildern', return_value=[]):
+        with mock.patch('core.dienste.ollamamodelle.Ollamamodelle.mit_bildern', return_value=[]):
             feld = next(f for f in Kostuemoptionen.katalog()['optionen'] if f['schluessel'] == 'pruefki')
         self.assertEqual([w['wert'] for w in feld['werte']], ['aus', Kostuemoptionen.VORGABE_KI])

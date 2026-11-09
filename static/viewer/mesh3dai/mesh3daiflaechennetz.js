@@ -15,20 +15,24 @@ export class Mesh3daiflaechennetz {
 
     /**
      * @param basis Adresse ohne `netz/` bzw. `bild/…` — Vorgabe der Job (`/api/mesh3dai/<job>/flaeche`); die vorhergesagte Figur eines Tests hat ihre eigene (16.10.2026 abends, Formkopf).
+     * @param wunsch `{stufe: 1, matrix: true}` (09.11.2026, Edgar: „das ganze Anzeigenetz in Stufe 1“): der Körper der Testfigur auf Netzstufe 1 (Server `Mesh3daiflaechennetzfein`), mit
+     *   `matrix` die Unterteilungsmatrix für `ausKaefig`. Ob es kam, sagt `kopf.stufe`.
      * @returns {Promise<Mesh3daiflaechennetz>} wirft bei 404 (Netz noch nicht gebaut)
      */
-    static holen(jobId, basis = null) {
+    static holen(jobId, basis = null, wunsch = {}) {
         const z = Mesh3daiflaechennetz;
         const adresse = basis ?? `/api/mesh3dai/${encodeURIComponent(jobId)}/flaeche`;
-        if (!z._abrufe.has(adresse)) {
-            const abruf = fetch(`${adresse}/netz/`).then(async antwort => {
+        const frage = wunsch.stufe === 1 ? `?stufe=1${wunsch.matrix ? '&matrix=1' : ''}` : '';
+        const schluessel = adresse + frage;
+        if (!z._abrufe.has(schluessel)) {
+            const abruf = fetch(`${adresse}/netz/${frage}`).then(async antwort => {
                 if (!antwort.ok) throw new Error(antwort.status === 404 ? 'Anzeigenetz fehlt' : `Anzeigenetz: HTTP ${antwort.status}`);
                 return new Mesh3daiflaechennetz(jobId, await antwort.arrayBuffer(), adresse);
             });
-            abruf.catch(() => z._abrufe.delete(adresse));
-            z._abrufe.set(adresse, abruf);
+            abruf.catch(() => z._abrufe.delete(schluessel));
+            z._abrufe.set(schluessel, abruf);
         }
-        return z._abrufe.get(adresse);
+        return z._abrufe.get(schluessel);
     }
 
     /** Zerlegt das Paket (Sichten auf den Puffer, jeder Block beginnt auf einem Vielfachen von 4). */
@@ -82,11 +86,57 @@ export class Mesh3daiflaechennetz {
                 lin[i * 3 + 2] = c.b;
             }
             this.farbe = new THREE.BufferAttribute(lin, 3);
+            ab += auf4(v * 3);
+        }
+        // Stufe 1 (09.11.2026, Server `Mesh3daiflaechennetzfein`): Käfigdreieck je Dreieck — Masken des Käfigs (Verdeckung unter den Stücken) gelten für seine Kinder (`dreieckmaske`)
+        this.eltern = null;
+        if (this.kopf.eltern) {
+            this.eltern = new Uint32Array(puffer, ab, f);
+            ab += f * 4;
+        }
+        // Unterteilungsmatrix der Körperpunkte (CSR, Käfigpunkt → Punkt der Stufe 1) für `ausKaefig`
+        this.matrix = null;
+        if (this.kopf.matrix) {
+            const [zeilen, nnz] = this.kopf.matrix;
+            const anfang = new Uint32Array(puffer, ab, zeilen + 1);
+            ab += (zeilen + 1) * 4;
+            const spalte = new Uint16Array(puffer, ab, nnz);
+            ab += auf4(nnz * 2);
+            const wert = new Float32Array(puffer, ab, nnz);
+            ab += nnz * 4;
+            this.matrix = { zeilen, anfang, spalte, wert };
         }
         this.uvAttribut = new THREE.BufferAttribute(this.uv, 2);
         /** Indexlisten, die nur an der Verbindung hängen (ganze Figur, nur Körper, Kleider) — für alle Proben dieselben (`Mesh3daiflaechen.teil`). */
         this.indexAblage = new Map();
         this._materialien = null;
+    }
+
+    /** Dreiecke dieses Netzes auf dem Käfig — so lang ist eine Maske des Servers (`verdeckt` der Stücke, gerechnet auf dem Käfig). */
+    get kaefigDreiecke() {
+        return this.kopf.kaefig_dreiecke ?? this.material.length;
+    }
+
+    /** Eine Maske je Dreieck auf dieses Netz legen: auf Stufe 1 bekommt jedes Dreieck den Wert seines Käfigdreiecks (`eltern`); null bleibt null. */
+    dreieckmaske(maske) {
+        if (!maske || !this.eltern || maske.length !== this.kaefigDreiecke) return maske;
+        const aus = new Uint8Array(this.eltern.length);
+        for (let t = 0; t < aus.length; t++) aus[t] = maske[this.eltern[t]];
+        return aus;
+    }
+
+    /** Werte je Käfigpunkt (Daz-Nummer, `breite` je Punkt) auf die Körperpunkte der Stufe 1 (Unterteilungsmatrix) — oder null ohne Matrix. */
+    ausKaefig(werte, breite = 3) {
+        const m = this.matrix;
+        if (!m) return null;
+        const aus = new Float32Array(m.zeilen * breite);
+        for (let i = 0; i < m.zeilen; i++) {
+            for (let j = m.anfang[i]; j < m.anfang[i + 1]; j++) {
+                const w = m.wert[j], q = m.spalte[j] * breite;
+                for (let c = 0; c < breite; c++) aus[i * breite + c] += w * werte[q + c];
+            }
+        }
+        return aus;
     }
 
     /** Die Materialien in der Reihenfolge des Pakets, dazu am Ende eines mit der Farbe je Punkt (für Material −1). */

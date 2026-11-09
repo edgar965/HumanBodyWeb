@@ -42,6 +42,7 @@ from django.utils import timezone
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from ..models import Engine2d3dKleiderauftrag
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
+from .blendermodelllauf import Blendermodelllauf
 
 logger = logging.getLogger('core')
 
@@ -214,34 +215,11 @@ class Engine2d3dKleiderlauf:
     def angehalten(self):
         return Engine2d3dKleiderauftrag.objects.filter(pk=self.job.pk, status='angehalten').exists()
 
-    def _schritt(self, name):
-        if self.angehalten():
-            raise self.Angehalten()
-        self._band = self.BAENDER[name]
-        self.job.schritt = name
-        self.job.save(update_fields=['schritt', 'updated_at'])
-        self.melden(0, name)
+    _schritt = Blendermodelllauf._schritt          # dieselbe Rechnung wie `Blendermodelllauf._schritt` (bis 08.11.2026 eine Kopie hier)
 
     def sichern(self, *felder):
         self.job.save(update_fields=list(felder) + ['updated_at'])
 
-    def melden(self, anteil, text):
-        """Fortschritt im Band des Schritts — höchstens zweimal je Sekunde in die Datenbank."""
-        jetzt = time.monotonic()
-        if jetzt - self._letzte_db < 0.5 and anteil < 1.0:
-            return
-        self._letzte_db = jetzt
-        von, bis = self._band
-        self.job.progress = max(self.job.progress or 0, int(von + (bis - von) * max(0.0, min(1.0, anteil))))
-        self.job.progress_detail = str(text)[:200]
-        self.sichern('progress', 'progress_detail')
+    melden = Blendermodelllauf.melden          # dieselbe Rechnung wie `Blendermodelllauf.melden` (bis 08.11.2026 eine Kopie hier)
 
-    def _scheitern(self, text):
-        job = self.job
-        job.refresh_from_db()
-        if job.status == 'angehalten':
-            return
-        job.status = 'gescheitert'
-        job.error_message = text[:4000]
-        job.finished_at = timezone.now()
-        job.save(update_fields=['status', 'error_message', 'finished_at', 'updated_at'])
+    _scheitern = Blendermodelllauf._scheitern          # dieselbe Rechnung wie `Blendermodelllauf._scheitern` (bis 08.11.2026 eine Kopie hier)

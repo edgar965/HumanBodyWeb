@@ -21,6 +21,7 @@ __all__ = ['Iterationswahl']
 
 
 class Iterationswahl:
+    PARAMETER, OPTIONEN = Haarparameter, Iterationsoptionen       # Klassen der Familie (Kostuemkreislauf: Kostuem…)
     MISCHEN_HOECHSTENS = 3
 
     def __init__(self, optionen):
@@ -28,7 +29,7 @@ class Iterationswahl:
         self.o = optionen
 
     def kritik_faellig(self, i, ohne, seit_kritik):
-        if self.o['pruefki'] == Iterationsoptionen.AUS:
+        if self.o['pruefki'] == self.OPTIONEN.AUS:
             return False
         alle = int(self.o['pruefki_alle'])
         flaute = int(self.o['pruefki_stillstand'])
@@ -69,7 +70,7 @@ class Iterationswahl:
             for k, v in e['werte'].items():
                 if v != alt.get(k):
                     mix[k] = v
-        mix = Haarparameter.pruefen(mix)
+        mix = cls.PARAMETER.pruefen(mix)
         return None if mix == wahl['werte'] else mix
 
     def notiz(self, art, note, erg, kritik):

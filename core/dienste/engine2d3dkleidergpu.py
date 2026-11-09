@@ -15,6 +15,7 @@ from .blendermodellarbeiter import Blendermodellarbeiter
 from .engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
 from .mesharbeiter import Mesharbeiter
 from .meshfigurarbeiter import Meshfigurarbeiter
+from .blendermodellgpu import Blendermodellgpu
 
 __all__ = ['Engine2d3dKleidergpu']
 
@@ -28,17 +29,4 @@ class Engine2d3dKleidergpu:
         ('Mesh to 3D', Meshfigurauftrag, Meshfigurarbeiter),
     )
 
-    @classmethod
-    def belegt_durch(cls, job=None):
-        """Meldung, wenn ein ANDERER Auftrag rechnet — sonst ''."""
-        for bereich, modell, arbeiter in cls.BEREICHE:
-            laufende = modell.objects.filter(status='laeuft')
-            if job is not None and isinstance(job, modell):
-                laufende = laufende.exclude(pk=job.pk)
-            for anderer in laufende:
-                if arbeiter.lebt(anderer):
-                    return (
-                        '„%s" (%s) rechnet gerade — es gibt nur eine Grafikkarte. '
-                        'Erst abwarten oder dort anhalten.' % (anderer.name or anderer.kennung, bereich)
-                    )
-        return ''
+    belegt_durch = classmethod(Blendermodellgpu.belegt_durch.__func__)          # dieselbe Rechnung wie `Blendermodellgpu.belegt_durch` (bis 08.11.2026 eine Kopie hier)

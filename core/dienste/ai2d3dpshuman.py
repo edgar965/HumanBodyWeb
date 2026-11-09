@@ -23,8 +23,6 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
                  2–6: so viele echte Fotos statt erfundener Ansichten (Bildplätze `Ai2d3dpshumaneingabe`,
                  job.json `pshuman.eingabe` — bleibt beim Speichern hier unangetastet); Rechenweg
                  `pshuman_port14/mehrbild.py`, noch nie gelaufen
-  genesis        Edgar: „pshuman umbauen, dass es statt SMPLX optional ein Genesis Mesh ausgeben kann“ —
-                 `pshuman_port14/lauf.py --genesis=<masculine|feminine>` (Geschlecht des Jobs)
   vae_bildweise  eigene Zutat: der VAE-Dekoder rechnet die 14 Bilder einzeln (diffusers
                  `enable_vae_slicing`) — gemessen 03.11.2026 (`ProjektTemp/_wegwerf/textur/original/pshuman_port14_proben/vae_zeit.py`): bitgleich,
                  2,1 statt 120 s, +1,9 statt +27,6 GB
@@ -33,9 +31,12 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
   dichte         Edgar 04.11.2026: „die Auflösung im pshuman mesh ist ja nicht so gut wie im Foto“, „mach beides, einstellbar ganz oben beim Job“: Punkte je Körperhöhe des Netzes
                  (`pshuman_port14/poissontorch.py`): 480 = so viele wie bisher, 960 = viermal so viele Punkte; die Glättung hängt seit 05.11.2026 an der Körperhöhe, die Form bleibt
   fototextur     Textur aus den Fotos in voller Auflösung statt Punktfarben (`pshuman_port14/fototextur.py`); erfundene Ansichten bleiben bei 768 Pixeln
-  hand_ersatz    Edgar 05.11.2026 zu Edgar 1: „die Hände sind kaputt“: PSHumans `replace_hand` setzt die Hand des eingepassten SMPL-X ins Netz, wo MediaPipe sie meldet (`pshuman_port14/handersatz.py`, `MediapipeTorch/handpunkte.py`)
+  up2you         Edgar 05.11.2026: „machst du den edgar alle job mit Up2you?“: UP2You rechnet aus allen Fotos des Jobs sechs Ansichten in A-Pose und daraus das Netz, statt PSHumans Diffusion (`pshuman_port14/up2youlauf.py`)
+  hand_ersatz    Edgar 05.11.2026 zu Edgar 1: „die Hände sind kaputt“: PSHumans `replace_hand` setzt die Hand der eingepassten Genesis-Figur ins Netz, wo MediaPipe sie meldet (`pshuman_port14/handersatz.py`, `genesishand.py`, `MediapipeTorch/handpunkte.py`), seit 07.11.2026 statt der Hand des SMPL-X; UP2You nimmt die Hand seines SMPL-X (`up2youlauf.py`)
+  haut_ki        Edgar 05.11.2026: „Sollten wir im UI oben beim Job eine Checkbox machen - Haut KI?“, seit 06.11.2026 Vorgabe aus (`Hautohneki`, Messung dort): Aus schreibt der Schritt „Haut“ von Mesh3D-AI die Kacheln ohne Netz (`mesh3dai/mesh3dai_haut_ohneki.py`, liest diese Wahl selbst); PSHuman rechnet deshalb nicht neu
+  keine_kleider  Edgar 06.11.2026 zu n2: „mach n2 mit: keine Kleider“: In der Kostüm-Erkennung wird alles außer Haar zu Haut (`mesh3dai/mesh3dai_kostuem_ohnekleider.py`, liest diese Wahl selbst); PSHuman rechnet deshalb nicht neu
 
-    POST /api/2d3dai/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, genesis, genesis_aus_foto, fototextur, hand_ersatz, anzahl, dichte}   → {ok, pshuman}
+    POST /api/2d3dai/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, genesis_aus_foto, fototextur, hand_ersatz, up2you, haut_ki, keine_kleider, anzahl, dichte}   → {ok, pshuman}
 """
 
 import json
@@ -48,20 +49,22 @@ __all__ = ['Ai2d3dpshuman']
 
 class Ai2d3dpshuman:
     FELD = 'pshuman'
-    VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'genesis': False, 'genesis_aus_foto': False, 'fototextur': False, 'hand_ersatz': False}  # noqa: RUF012 — nur gelesen
+    VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'genesis_aus_foto': False, 'fototextur': False, 'hand_ersatz': False, 'up2you': False, 'haut_ki': False, 'keine_kleider': False}  # noqa: RUF012 — nur gelesen
     WEGE = (('zeile1', 'Netz als Zeile 1'), ('drehteller', 'Drehteller'), ('vae_bildweise', 'VAE bildweise'),
-            ('genesis', 'Genesis statt SMPL-X'), ('genesis_aus_foto', 'Genesis direkt aus dem Foto'), ('fototextur', 'Textur aus den Fotos'), ('hand_ersatz', 'Hände ersetzen'))
+            ('genesis_aus_foto', 'Genesis direkt aus dem Foto'), ('fototextur', 'Textur aus den Fotos'), ('hand_ersatz', 'Hände ersetzen'), ('up2you', 'Ansichten aus UP2You'), ('haut_ki', 'Haut-KI'), ('keine_kleider', 'Keine Kleider'))
     ANZAHL = (1, 2, 3, 4, 5, 6)
     DICHTEN = ((480, 'normal'), (960, 'dicht'))
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
-        'hand_ersatz': 'Im PSHuman-Netz sind die Finger oft verschmolzen. An: Wo MediaPipe eine Hand meldet, setzt PSHuman die Hand des eingepassten SMPL-X ins Netz.',
+        'keine_kleider': 'Die Person im Foto trägt nichts: Die Kostüm-Erkennung wertet alles außer Haar als Haut, die Figur bekommt keine Kleider und keine Stücke, nur das Haar. '
+                         'Aus (Vorgabe): Die Bilderkennung entscheidet. Wirkt in Mesh3D-AI ab dem nächsten Lauf.',
+        'haut_ki': 'Aus (Vorgabe): Die gesehene Haut kommt unverändert aus dem Netz, mit dem Licht des Fotos. '
+                   'An: Die Haut-KI rechnet die Hautkacheln der Genesis-Figur, nimmt das Licht des Fotos heraus und glättet Stellen mit Kleiderfarbe oder Flecken, verliert dabei aber Zeichnung. '
+                   'Ungesehene Haut wird in beiden Fällen ergänzt. Wirkt im Schritt „Haut“ von Mesh3D-AI.',
+        'up2you': 'UP2You rechnet aus allen Fotos des Jobs sechs Ansichten in A-Pose und daraus das Netz, statt PSHumans Diffusion. Die Fotos zeigen eine andere Haltung, darum gilt „Textur aus den Fotos“ hier nicht: Die Farbe kommt aus den Ansichten (768 Pixel).',
+        'hand_ersatz': 'Im PSHuman-Netz sind die Finger oft verschmolzen. An: Wo MediaPipe eine Hand meldet, kommt die Hand der Genesis-Figur ins Netz, Finger und Handgelenk wie im Foto. Mit UP2You: die Hand aus dessen SMPL-X.',
         'fototextur': 'Das PSHuman-Netz bekommt eine Textur aus den Fotos in voller Auflösung statt Farben je Punkt. Ansichten ohne Foto bleiben so scharf wie PSHuman sie erfindet (768 Pixel).',
         'genesis_aus_foto': 'Die Foto-Kette rechnet das Genesis-Modell direkt aus den Fotos (Feld „Genesis – 2d3dai (aus Fotos)“). '
                             'Aus: sie rechnet für diesen Job nicht; das Genesis-Modell kommt nur aus dem PSHuman-Netz (Mesh3D-AI).',
-        'genesis': 'PSHumans Rekonstruktion passt statt SMPL-X die Genesis-Figur an die 6 Ansichten an '
-                   '(gleiche Schleife und Verluste, Grundfigur des Geschlechts als Start) und legt sie mit '
-                   'Reglern und Haltung ab (pshuman/rekon/1/genesis.json, genesis.obj); daraus formt PSHuman '
-                   'wie gewohnt das freie Netz.',
         'vae_bildweise': 'Eigene Zutat (diffusers enable_vae_slicing): der VAE-Dekoder der Diffusion rechnet '
                          'die 14 Bilder einzeln statt auf einmal — gemessen bitgleich, 2,1 s statt 120 s, '
                          '+1,9 GB statt +27,6 GB Grafikspeicher.',
@@ -74,8 +77,8 @@ class Ai2d3dpshuman:
 
     @classmethod
     def auswahl(cls):
-        """Häkchen „PSHuman“: Name, Text, Beschreibung je Weg."""
-        return [{'wert': w, 'text': t, 'beschreibung': cls.BESCHREIBUNG[w]} for w, t in cls.WEGE]
+        """Häkchen „PSHuman“: {Name: {Text, Beschreibung}}; die Vorlage liest nach Namen, nicht nach Stelle."""
+        return {w: {'wert': w, 'text': t, 'beschreibung': cls.BESCHREIBUNG[w]} for w, t in cls.WEGE}
 
     @classmethod
     def lesen(cls, info):

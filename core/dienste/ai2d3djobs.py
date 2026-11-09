@@ -14,12 +14,16 @@ Zwei Arten, eine Form (`{id, name, art, figur, fotos: [{name, pfad, winkel}], ne
 `winkel` je Foto: Standort der Kamera um die Figur in Grad — 0 vorne, 90 links (Kamera bei +X, die linke Körperseite), 180 hinten, 270 rechts (`Modellansichten.ANSICHTEN`); `None` = unbekannt.
 """
 
+import copy
 import json
 import logging
+import threading
+import time
 from pathlib import Path
 
 from django.conf import settings
 
+from .ai2d3dadresse import Ai2d3dadresse
 from .ai2d3dfotojobs import Ai2d3dfotojobs
 from .ai2d3dpapierkorb import Ai2d3dpapierkorb
 
@@ -30,6 +34,13 @@ __all__ = ['Ai2d3djobs']
 
 class Ai2d3djobs:
     ANSICHTEN = (('vorne', 0), ('links', 90), ('rechts', 270), ('hinten', 180))
+    #: Ablage von `alle()` (08.11.2026, Edgar: „alle modelle sollen innerhalb von max. 5 s angezeigt werden“): Jede Anfrage der Jobseite fragt `job(<id>)`, und das las jedes Mal alle
+    #: Exporte, alle `paar.json` von Mesh3D-AI und alle Foto-Jobs von der Platte — gemessen im Log vom 07.11.2026 23:04 rund 0,45 s je Anfrage bei ~46 Anfragen je Seitenaufruf, am
+    #: 08.11.2026 01:35–02:13 bei Plattenlast durch einen Virenscan 26–290 s je Anfrage (py-spy: Fäden in `_paare`/`_figurname`). Gilt höchstens FRISCH_S lang; eine geänderte
+    #: `job.json`/`name.json` oder Ausblendliste (Schlüssel `_stand`) baut sofort neu. Was nicht im Schlüssel steht (PSHuman fertig, Kopf-Ergebnis, Netze), zeigt sich nach FRISCH_S.
+    FRISCH_S = 3.0
+    _ablage = None          # (Stand, Zeit, Jobs)
+    _sperre = threading.Lock()
 
     @staticmethod
     def ordner():
@@ -41,14 +52,47 @@ class Ai2d3djobs:
 
     @classmethod
     def alle(cls):
-        """Exporte (Reiter „Jobs“) und echte Fotos (Reiter „Test“); ausgeblendete Exporte (`Ai2d3dpapierkorb`) fehlen."""
+        """Exporte (Reiter „Jobs“) und echte Fotos (Reiter „Test“); ausgeblendete Exporte (`Ai2d3dpapierkorb`) fehlen. Aus der Ablage (`FRISCH_S`), als Kopie: Aufrufer dürfen die
+        Einträge verändern, ohne sie für die nächste Anfrage zu verändern. Gleichzeitige Anfragen warten auf EINE Rechnung."""
+        with cls._sperre:
+            stand = cls._stand()
+            a = cls._ablage
+            if a is None or a[0] != stand or time.monotonic() - a[1] > cls.FRISCH_S:
+                a = cls._ablage = (stand, time.monotonic(), cls._alle_lesen())
+            return copy.deepcopy(a[2])
+
+    @classmethod
+    def vergessen(cls):
+        """Die Ablage verwerfen (Tests, Löschen)."""
+        with cls._sperre:
+            cls._ablage = None
+
+    @classmethod
+    def _stand(cls):
+        """Zeitstempel der Dateien, deren Änderung sofort sichtbar sein muss: `job.json` und `name.json` der Foto-Jobs, die Ausblendliste der Exporte, die Liste der Exportordner."""
+        werte = []
+        for muster in ('*/job.json', '*/name.json'):
+            for p in Ai2d3dfotojobs.ordner().glob(muster):
+                try:
+                    werte.append((str(p), p.stat().st_mtime_ns))
+                except OSError:
+                    pass
+        for p in (Ai2d3dpapierkorb.wurzel() / Ai2d3dpapierkorb.AUSGEBLENDET, cls.ordner(), Ai2d3dfotojobs.ordner()):
+            try:
+                werte.append((str(p), p.stat().st_mtime_ns))
+            except OSError:
+                werte.append((str(p), None))
+        return tuple(sorted(werte, key=lambda w: w[0]))
+
+    @classmethod
+    def _alle_lesen(cls):
         jobs = []
         wurzel = cls.ordner()
         if wurzel.is_dir():
             paare, weg = cls._paare(), Ai2d3dpapierkorb.ausgeblendet()
             jobs = [j for j in (cls._job(o, paare) for o in sorted(p for p in wurzel.iterdir() if p.is_dir())) if j and j['id'] not in weg]
         bekannt = {j['id'] for j in jobs}
-        return jobs + [j for j in Ai2d3dfotojobs.alle() if j['id'] not in bekannt]
+        return Ai2d3dadresse.vergeben(jobs + [j for j in Ai2d3dfotojobs.alle() if j['id'] not in bekannt])
 
     @classmethod
     def exporte(cls):
@@ -60,7 +104,9 @@ class Ai2d3djobs:
 
     @classmethod
     def job(cls, kennung):
-        return next((j for j in cls.alle() if j['id'] == str(kennung).lower()), None)
+        """Der Job zu seiner Kennung oder zu seiner Adresse (`Ai2d3dadresse`), sonst `None`."""
+        gesucht = str(kennung).lower()
+        return next((j for j in cls.alle() if gesucht in (j['id'], j['adresse'])), None)
 
     @classmethod
     def _job(cls, ordner, paare):

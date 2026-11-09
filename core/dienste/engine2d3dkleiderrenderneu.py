@@ -9,6 +9,7 @@ Arbeitsprozess, der Rest steht in `arbeit/render/warteschlange.json`, die der Ar
 
 import json
 import logging
+from .engine2d3dkleiderrenderlaeufe import Engine2d3dKleiderrenderlaeufe
 
 __all__ = ['Engine2d3dKleiderrenderneu']
 
@@ -61,12 +62,7 @@ class Engine2d3dKleiderrenderneu:
 
     # ------------------------------------------------------------ Warteschlange
 
-    def lesen(self):
-        try:
-            return json.loads(self.pfad.read_text(encoding='utf-8')) if self.pfad.is_file() else []
-        except (OSError, ValueError) as fehler:
-            logger.warning('2D3D Kleider %s: render/%s nicht lesbar (%s)', self.render.job.kennung, self.DATEI, fehler)
-            return []
+    lesen = Engine2d3dKleiderrenderlaeufe.lesen          # dieselbe Rechnung wie `Engine2d3dKleiderrenderlaeufe.lesen` (bis 08.11.2026 eine Kopie hier)
 
     def schreiben(self, auftraege):
         if not auftraege:

@@ -11,6 +11,7 @@ from .api.ai2d3dfigur import Ai2d3dfigurendpunkte
 from .api.ai2d3dhautangleich import Ai2d3dhautangleichendpunkte
 from .api.ai2d3dpshumanendpunkte import Ai2d3dpshumanendpunkte
 from .api.ai2d3dstandardanimation import Ai2d3dstandardanimationendpunkte
+from .api.ai2d3dweitverdeckung import Ai2d3dweitverdeckungendpunkte
 from .api.seite_ai2d3d_einstellungen import ai2d3d_settings_page
 
 __all__ = ['AI2D3D']
@@ -33,6 +34,10 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/form/', Ai2d3daktionsendpunkte.form, name='ai2d3d_form'),
     # PSHuman-Weg eines Tests (03.11.2026, „pshuman als Option bei den jobs“) — `Ai2d3dpshuman`.
     path('api/2d3dai/<slug:job>/pshuman/', Ai2d3daktionsendpunkte.pshuman, name='ai2d3d_pshuman'),
+    path('api/2d3dai/<slug:job>/genesis-rechnen/', Ai2d3daktionsendpunkte.genesis_rechnen, name='ai2d3d_genesis_rechnen'),
+    # der ganze Job (06.11.2026): PSHuman, Foto-Kette, Genesis — `Ai2d3djoblauf`
+    path('api/2d3dai/<slug:job>/job-rechnen/', Ai2d3daktionsendpunkte.job_rechnen, name='ai2d3d_job_rechnen'),
+    path('api/2d3dai/<slug:job>/job-stand/', Ai2d3daktionsendpunkte.job_stand, name='ai2d3d_job_stand'),
     # Haut angleichen (05.11.2026, Edgar: „Ein paar slider wo man die Haut anpasst“) — `Ai2d3dhautangleich`, ein Schritt nach dem Job.
     path('api/2d3dai/<slug:job>/hautangleich/', Ai2d3dhautangleichendpunkte.stand, name='ai2d3d_hautangleich'),
     path('api/2d3dai/<slug:job>/hautangleich/vorbereiten/', Ai2d3dhautangleichendpunkte.vorbereiten, name='ai2d3d_hautangleich_vorbereiten'),
@@ -41,6 +46,10 @@ AI2D3D = [
     path('api/2d3dai/<slug:job>/hautangleich/zeichnung/<int:kachel>/', Ai2d3dhautangleichendpunkte.zeichnung, name='ai2d3d_hautangleich_zeichnung'),
     path('api/2d3dai/<slug:job>/hautangleich/speichern/', Ai2d3dhautangleichendpunkte.speichern, name='ai2d3d_hautangleich_speichern'),
     path('api/2d3dai/<slug:job>/hautangleich/zuruecksetzen/', Ai2d3dhautangleichendpunkte.zuruecksetzen, name='ai2d3d_hautangleich_zuruecksetzen'),
+    # Haut unter weiten Stücken (08.11.2026, Edgar: „diese extra regel möchte ich per UI auf der Jobseite laufen lassen können? Unter dem Genesis View?“) — `Ai2d3dweitverdeckung`.
+    path('api/2d3dai/<slug:job>/weitverdeckung/', Ai2d3dweitverdeckungendpunkte.stand, name='ai2d3d_weitverdeckung'),
+    path('api/2d3dai/<slug:job>/weitverdeckung/rechnen/', Ai2d3dweitverdeckungendpunkte.rechnen, name='ai2d3d_weitverdeckung_rechnen'),
+    path('api/2d3dai/<slug:job>/weitverdeckung/zuruecksetzen/', Ai2d3dweitverdeckungendpunkte.zuruecksetzen, name='ai2d3d_weitverdeckung_zuruecksetzen'),
     # Genesis-Grundfigur eines Tests (04.11.2026, „Auswahl ob Genesis Männlich, weiblich“) — `Ai2d3dgeschlecht`.
     path('api/2d3dai/<slug:job>/geschlecht/', Ai2d3daktionsendpunkte.geschlecht, name='ai2d3d_geschlecht'),
     # Bildplätze der PSHuman-Eingabe (03.11.2026, `Ai2d3dpshumaneingabe`): ein oder mehrere Fotos,

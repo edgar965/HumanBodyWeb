@@ -16,10 +16,16 @@ Django liest die Namen dieses Moduls, egal woher sie kommen. Alle Namen sind
 GROSS geschrieben; ein `_`-Name wäre von `import *` ohnehin ausgeschlossen.
 """
 
+import os
+
 from .pfade import *  # noqa: F401,F403
 from .protokoll import *  # noqa: F401,F403
 from .wurzeln import *  # noqa: F401,F403
 from .wurzeln import BASE_DIR  # noqa: F401
+
+# CUDA legt übersetzte Kerne im Zwischenspeicher `%APPDATA%\NVIDIA\ComputeCache` ab, Vorgabe rund 1 GiB. Er lief über, darum hing der erste Aufruf einer Rechenart je Prozess bis 12,6 s;
+# mit 4 GiB (Höchstwert) 0,9–1,0 s in 5 von 5 Läufen (`ProjektTemp/_wegwerf/n2_drehung/kern_wechsel.py`, 07.11.2026). Gilt für Server, Arbeitsprozess und ihre Kinder; von Hand gestartete Prozesse über die Nutzer-Umgebung (setx).
+os.environ.setdefault('CUDA_CACHE_MAXSIZE', str(4 * 2**30))
 
 SECRET_KEY = 'django-insecure-mocapnet-dev-key-change-in-production'
 DEBUG = True

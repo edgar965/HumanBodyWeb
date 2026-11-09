@@ -58,7 +58,9 @@ export class Mesh3daitestfaelle {
         const zeit = d.gerechnet ? d.gerechnet.replace('T', ' ').slice(0, 16) : '?';
         const kopf = el('p', {}, el('b', {}, `${rolle} ${d.test} (${d.geschlecht})`), ` · Lauf ${d.lauf} · gemessen ${zeit} · Abnahme: `,
             el('span', { class: a.ok ? 'mesh3dai-gruen' : 'mesh3dai-rot' }, a.ok ? 'OK' : 'NICHT OK'));
-        return el('div', { class: 'mesh3dai-testfaelle-messung' }, kopf, this._prios(d), this._tests(d), this._wache(d));
+        // Bau und Prüfung laufen getrennt: Solange die Prüfung aussteht, gehört die Tabelle zu den Stücken davor (`Mesh3daitestfaelle.fuer_test`).
+        const offen = d.stuecke_lauf ? el('p', { class: 'hb-hinweis' }, `Die Stücke stammen aus Lauf ${d.stuecke_lauf}, ihre Prüfung steht noch aus. Diese Tabelle gehört zum Lauf davor.`) : null;
+        return el('div', { class: 'mesh3dai-testfaelle-messung' }, kopf, offen, this._prios(d), this._tests(d), this._wache(d));
     }
 
     _prios(d) {

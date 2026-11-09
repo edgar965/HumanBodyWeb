@@ -20,6 +20,7 @@ Fortschrittsbalken und Beobachter gleich laufen.
 import uuid
 
 from django.db import models
+from .meshauftrag import Meshauftrag
 
 
 class Engine2d3dKleiderauftrag(models.Model):
@@ -91,24 +92,7 @@ class Engine2d3dKleiderauftrag(models.Model):
                 return eintrag
         return None
 
-    def bilder_sichern(self, *weitere):
-        """`bilder` (und `weitere` Felder) speichern — Rolle, Gewicht, Bereich und die REIHENFOLGE
-        kommen frisch aus der Datenbank: Der Lauf hält `bilder` minutenlang im Speicher, die Seite
-        darf derweil umstellen (dieselbe Falle wie `Meshauftrag.bilder_sichern`)."""
-        frisch = [
-            b
-            for b in (type(self).objects.filter(pk=self.pk).values_list('bilder', flat=True).first() or [])
-            if isinstance(b, dict)
-        ]
-        nach = {b.get('datei'): b for b in frisch}
-        for b in self.bilder or []:
-            alt = nach.get(b.get('datei'))
-            for feld in self.NUTZERFELDER:
-                if alt and feld in alt:
-                    b[feld] = alt[feld]
-        rang = {b.get('datei'): i for i, b in enumerate(frisch)}
-        self.bilder = sorted(self.bilder or [], key=lambda b: rang.get(b.get('datei'), len(rang) + 1))
-        self.save(update_fields=['bilder', *weitere, 'updated_at'])
+    bilder_sichern = Meshauftrag.bilder_sichern          # dieselbe Rechnung wie `Meshauftrag.bilder_sichern` (bis 08.11.2026 eine Kopie hier)
 
     def stellung(self):
         """Die Regler des Ergebnisses samt Eigenmorph und „Kopf-Eigen" — `{regler: wert}` (leer vor

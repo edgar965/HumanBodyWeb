@@ -39,6 +39,7 @@ from ..dienste.bildmodelloptionen import Bildmodelloptionen
 from ..dienste.bildmodellstart import Bildmodellstart
 from ..dienste.bildmodelltextur import Bildmodelltextur
 from ..models import Bildmodellauftrag
+from .auftragsfamilie import Auftragsfamilie
 
 logger = logging.getLogger('core')
 
@@ -180,14 +181,7 @@ class Bildmodellendpunkte:
 
     @staticmethod
     def _zustand_rechnen(job_id):
-        job = get_object_or_404(Bildmodellauftrag, pk=job_id)
-        if job.laeuft and not Bildmodellarbeiter.lebt(job):
-            job.refresh_from_db()
-            if job.laeuft:
-                job.status = 'gescheitert'
-                job.error_message = job.error_message or 'Arbeitsprozess lebt nicht mehr (auftrag.log)'
-                job.save(update_fields=['status', 'error_message', 'updated_at'])
-        return Bildmodellendpunkte._zustand(job)
+        return Auftragsfamilie.zustand_rechnen(Bildmodellauftrag, Bildmodellarbeiter, Bildmodellendpunkte._zustand, job_id)
 
     # -------------------------------------------------------------- Bilder
 

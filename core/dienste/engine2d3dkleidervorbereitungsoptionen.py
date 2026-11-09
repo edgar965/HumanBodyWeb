@@ -1,3 +1,4 @@
+from .engine2d3dkleiderkopfoptionen import Engine2d3dKleiderkopfoptionen
 # -*- coding: utf-8 -*-
 """Engine2d3dKleidervorbereitungsoptionen — die Gruppe `vorbereitung` der Optionen von „2D3D Kleider" (03.10.2026).
 
@@ -37,21 +38,6 @@ class Engine2d3dKleidervorbereitungsoptionen:
             return [eintrag['aus'], eintrag['an']]
         return [w for w, _ in eintrag['werte']]
 
-    @classmethod
-    def katalog(cls):
-        aus = []
-        for e in cls.KATALOG:
-            werte = [{'wert': w, 'text': t} for w, t in e.get('werte', [])]
-            aus.append(dict(e, werte=werte, fein=bool(e.get('fein'))))
-        return {'optionen': aus}
+    katalog = classmethod(Engine2d3dKleiderkopfoptionen.katalog.__func__)          # dieselbe Rechnung wie `Engine2d3dKleiderkopfoptionen.katalog` (bis 08.11.2026 eine Kopie hier)
 
-    @classmethod
-    def pruefen(cls, roh):
-        """Nur bekannte Schlüssel mit erlaubten Werten — der Rest wird Vorgabe."""
-        roh = roh if isinstance(roh, dict) else {}
-        aus = cls.vorgaben()
-        for e in cls.KATALOG:
-            wert = roh.get(e['schluessel'])
-            if wert is not None and str(wert) in cls._erlaubt(e):
-                aus[e['schluessel']] = str(wert)
-        return aus
+    pruefen = classmethod(Engine2d3dKleiderkopfoptionen.pruefen.__func__)          # dieselbe Rechnung wie `Engine2d3dKleiderkopfoptionen.pruefen` (bis 08.11.2026 eine Kopie hier)

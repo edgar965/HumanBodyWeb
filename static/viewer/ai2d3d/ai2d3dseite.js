@@ -95,7 +95,12 @@ export class Ai2d3dseite {
         this.fotos.gross.addEventListener('load', () => this._kameras());
         // Die Figur wird im Hintergrund gebaut; ist sie da (oder eine feinere Netzstufe), zeigt das Feld sie neu und der Vergleich rechnet nach.
         Mesh3daigenesisfigur.neuZeichnen = () => this._genesisZeigen(false);
-        if (this.genesis instanceof Ai2d3dtestfigur) this.genesis.nachgeladen = () => { clearTimeout(this._uhr); this._uhr = setTimeout(() => this._vergleich(), 500); };
+        // Vergleich nach nachgeladenen Texturen: einmal, wenn der Browser frei ist (08.11.2026) — vorher 500 ms nach JEDER Textur, und die Stücke kamen einzeln: der ganze Vergleich (acht
+        // Perspektiven, je Rendering, Maske, Pixelvergleich) lief so bis zu zwölfmal, während die übrigen Felder noch luden
+        if (this.genesis instanceof Ai2d3dtestfigur) this.genesis.nachgeladen = () => {
+            clearTimeout(this._uhr);
+            this._uhr = setTimeout(() => (window.requestIdleCallback ?? (f => f()))(() => this._vergleich(), { timeout: 5000 }), 1500);
+        };
         // Testzeilen „Messpunkte des Körpers“ und (25.10.2026) „… des Kopfes“ (nur Tests aus Fotos; Karten stehen nur dann im Template) — folgen der Wahl des Fotos
         const messkarte = document.getElementById('ai2d3d-messpunkte'), kopfkarte = document.getElementById('ai2d3d-kopfmesspunkte');
         const reglerkarte = document.getElementById('ai2d3d-reglermesspunkte');     // 25.10.2026 abends: an den Anfassern der Eigenregler (`Reglermesspunkte`)

@@ -30,6 +30,7 @@ from ..atomic_write import AtomarSchreiber
 from .mesh3daiaposewahl import Mesh3daiaposewahl
 from .mesh3daidaten import Mesh3daidaten
 from .mesh3dairig import Mesh3dairig
+from .mesh3daitestgeschlechtstand import Mesh3daitestgeschlechtstand
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +40,10 @@ __all__ = ['Mesh3daitest']
 class Mesh3daitest:
     #: Die Figur der Ausgabe, wenn `test.json` keine nennt (Tests vor dem 16.10.2026 abends, gerechnet mit dem Netz von Ursula1 allein).
     MODELL = 'Ursula1'
-    KENNUNG = re.compile(r'^[a-z0-9_]{1,64}$')
-    GESCHLECHTER = {'weiblich': 'weiblich', 'maennlich': 'männlich'}
+    #: Längste Kennung; `Mesh3dairechenschlange.anlegen` kürzt darauf. Bis 07.11.2026 prüfte die Seite 64 Zeichen, das Anlegen nichts: der Test des Jobs mit 61 Zeichen Namen (70 Zeichen Kennung) rechnete und gab 404.
+    KENNUNG_MAX = 100
+    KENNUNG = re.compile(r'^[a-z0-9_]{1,%d}$' % KENNUNG_MAX)
+    GESCHLECHTER ={'weiblich': 'weiblich', 'maennlich': 'männlich'}
 
     @staticmethod
     def ordner():
@@ -241,7 +244,7 @@ class Mesh3daitest:
         hoehe = f['hoehe_m'] if isinstance(f, dict) else info.get('hoehe_m')
         skala = hoehe / info['vorschau_hoehe_m'] if hoehe and info.get('vorschau_hoehe_m') else 1.0
         rest = form['rest_mm'] if form else cls.figuren(p, info, endung).get(figur, info.get('ik_rest_mm'))
-        info.update({'figur': figur, 'geschlecht': geschlecht, 'hoehe_m': hoehe, 'ik_rest_mm': rest})
+        info.update({'figur': figur, 'geschlecht': geschlecht, 'hoehe_m': hoehe, 'ik_rest_mm': rest, 'geschlecht_stand': Mesh3daitestgeschlechtstand.text(p, geschlecht)})
         return {
             'kennung': kennung, 'info': info, 'job': job, 'rig': beschr, 'figur_hinweis': hinweis, 'geschlechter': cls.GESCHLECHTER, 'netz_skala': round(float(skala), 6),
             'figur_netz': '/api/mesh3dai/test/%s/figur/%s' % (kennung, geschlecht) if form else None, 'form_regler': form['regler'] if form else None,

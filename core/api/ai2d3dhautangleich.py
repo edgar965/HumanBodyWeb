@@ -8,6 +8,8 @@
     GET  /api/2d3dai/<job>/hautangleich/zeichnung/<kachel>/→ dieselbe Kachel mit der Zeichnung gesehener Haut (`Hautzeichnung`)
     POST /api/2d3dai/<job>/hautangleich/speichern/        Formular: k1001 … (JPEG), regler (JSON) → Stand
     POST /api/2d3dai/<job>/hautangleich/zuruecksetzen/    → Stand
+
+Dieselben Endpunkte für die Testseite unter /api/mesh3dai/test/<kennung>/hautangleich/ (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“): `core/urls_mesh3dai.py` setzt `aus_test`.
 """
 
 import json
@@ -27,53 +29,57 @@ __all__ = ['Ai2d3dhautangleichendpunkte']
 
 class Ai2d3dhautangleichendpunkte:
     @staticmethod
-    def _angleich(job):
-        return Ai2d3dhautangleich.fuer(Ai2d3djobs.job(job))
+    def _angleich(job, aus_test):
+        return Ai2d3dhautangleich.fuer_test(job) if aus_test else Ai2d3dhautangleich.fuer(Ai2d3djobs.job(job))
+
+    @staticmethod
+    def _adresse(job, aus_test):
+        return ('/api/mesh3dai/test/%s/hautangleich/' if aus_test else '/api/2d3dai/%s/hautangleich/') % job
 
     @staticmethod
     def _keine():
-        return JsonResponse({'error': 'Dieser Job hat noch keine fertige Haut'}, status=404)
+        return JsonResponse({'error': 'Noch keine fertige Haut'}, status=404)
 
     @staticmethod
     @require_GET
-    def stand(request, job):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
-        return JsonResponse(a.stand(job)) if a else Ai2d3dhautangleichendpunkte._keine()
+    def stand(request, job, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
+        return JsonResponse(a.stand(Ai2d3dhautangleichendpunkte._adresse(job, aus_test))) if a else Ai2d3dhautangleichendpunkte._keine()
 
     @staticmethod
     @require_POST
-    def vorbereiten(request, job):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
+    def vorbereiten(request, job, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
         if a is None:
             return Ai2d3dhautangleichendpunkte._keine()
         a.vorbereiten()
-        return JsonResponse(a.stand(job))
+        return JsonResponse(a.stand(Ai2d3dhautangleichendpunkte._adresse(job, aus_test)))
 
     @staticmethod
     @require_GET
-    def daten(request, job, name):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
+    def daten(request, job, name, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
         pfad = a.datei(name) if a else None
         return Auftragsdatei.antwort(request, pfad) if pfad else JsonResponse({'error': 'Noch nicht vorbereitet'}, status=404)
 
     @staticmethod
     @require_GET
-    def original(request, job, kachel):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
+    def original(request, job, kachel, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
         pfad = a.originalbild(kachel) if a else None
         return Auftragsdatei.antwort(request, pfad) if pfad else JsonResponse({'error': 'Kein Original'}, status=404)
 
     @staticmethod
     @require_GET
-    def zeichnung(request, job, kachel):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
+    def zeichnung(request, job, kachel, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
         pfad = a.zeichnungsbild(kachel) if a else None
         return Auftragsdatei.antwort(request, pfad) if pfad else JsonResponse({'error': 'Keine Zeichnung'}, status=404)
 
     @staticmethod
     @require_POST
-    def speichern(request, job):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
+    def speichern(request, job, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
         if a is None:
             return Ai2d3dhautangleichendpunkte._keine()
         try:
@@ -83,16 +89,16 @@ class Ai2d3dhautangleichendpunkte:
         except (ValueError, KeyError, TypeError, OSError) as fehler:
             logger.warning('Haut angleichen: %s nicht gespeichert: %s', job, fehler)
             return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse(a.stand(job))
+        return JsonResponse(a.stand(Ai2d3dhautangleichendpunkte._adresse(job, aus_test)))
 
     @staticmethod
     @require_POST
-    def zuruecksetzen(request, job):
-        a = Ai2d3dhautangleichendpunkte._angleich(job)
+    def zuruecksetzen(request, job, aus_test=False):
+        a = Ai2d3dhautangleichendpunkte._angleich(job, aus_test)
         if a is None:
             return Ai2d3dhautangleichendpunkte._keine()
         try:
             a.zuruecksetzen()
         except (ValueError, OSError) as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse(a.stand(job))
+        return JsonResponse(a.stand(Ai2d3dhautangleichendpunkte._adresse(job, aus_test)))

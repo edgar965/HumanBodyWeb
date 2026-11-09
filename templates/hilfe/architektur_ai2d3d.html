@@ -24,7 +24,9 @@ Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …and
     <strong>Worum es geht:</strong> aus Fotos einer Person von mehreren Seiten ein Genesis-9-Modell machen — <strong>Haltung</strong> ({{ masse.knochen }} Knochen als Daz-Winkel),
     <strong>Form</strong> (Genesis-Formregler), <strong>Haut</strong>, <strong>Haar</strong> und <strong>Kleider</strong> —, das aus denselben Perspektiven gerendert <strong>so aussieht wie die
     Fotos</strong>. Jobs mit Wahrheit: <a href="/2d-3d-AI/">{{ jobs|length }} Exporte</a>; Tests mit echten Fotos: <a href="/2d-3d-AI/#test">{{ tests|length }}</a>.<br>
-    <strong>Gebaut (24.10.2026):</strong> die Kette nur aus Fotos (<a href="#kette">Abschnitt „Die Kette heute“</a>) — KopfKI und Körper aus den Fotos mit vier vortrainierten KIs und der
+    <strong>Stand 07.11.2026:</strong> Der Hauptweg läuft über ein Netz aus PSHuman oder UP2You und Mesh3D-AI (<a href="#heute">Was wir heute tun</a>, <a href="#pshuman">PSHuman</a>). Mehrere Fotos bringen dort noch keinen Gewinn;
+    Befund und Vorschlag stehen unter <a href="#mehrbild">Mehrere Fotos</a>.<br>
+    <strong>Gebaut (24.10.2026):</strong> die Kette nur aus Fotos (<a href="#kette">Abschnitt „Die Foto-Kette“</a>) — KopfKI und Körper aus den Fotos mit vier vortrainierten KIs und der
     Haut-KI von Mesh3D-AI, je eine Grafik unter <a href="#kis">„Die KIs der Kette“</a>, gemessen an EdgarTrip unter <a href="#stand">„Stand“</a>. Kleider werden aus den Fotos
     <strong>ausgeschnitten</strong> wie beim Kostüm-Weg von Mesh3D-AI, nicht aus dem Katalog gewählt (Edgar, 24.10.2026).<br>
     <strong>Im Bau (seit 26.10.2026):</strong> die <a href="#kopfnetz">Kopf-KI</a> — ein eigenes Netz für den Kopf, gebaut nur aus Teilen der KopfKI, zuerst an Edgar (Edgar: „erst Edgar perfekt
@@ -42,6 +44,8 @@ Daten: `core/dienste/architekturai2d3d.py` (…bild, …netz, …messung, …and
   {% endif %}
 
   {# 24.10.2026 abends: zuerst, was gebaut ist — Kette (Übersicht + KopfKI), die KIs je eine Grafik, der gemessene Stand; danach der Vorschlag Weg B #}
+  {% include "hilfe/_architektur_ai2d3d_pshuman.html" %}
+  {% include "hilfe/_architektur_ai2d3d_mehrbild.html" %}
   {% include "hilfe/_architektur_ai2d3d_kette.html" %}
   {% if kopfnetz %}{% include "hilfe/_architektur_ai2d3d_kopfnetz.html" %}{% endif %}
   {% include "hilfe/_architektur_ai2d3d_vieransichten.html" %}

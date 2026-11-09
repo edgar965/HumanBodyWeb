@@ -18,11 +18,13 @@ import hashlib
 import numpy as np
 
 from .kostuemparameter import Kostuemparameter
+from .iterationsoptimierer import Iterationsoptimierer
 
 __all__ = ['Kostuemoptimierer']
 
 
 class Kostuemoptimierer:
+    PARAMETER = Kostuemparameter            # Parameterklasse der Familie (`Iterationsoptimierer.kandidaten`, `veraenderlich`)
     SCHRITT_START = 0.08
     SCHRITT_MIN, SCHRITT_MAX = 0.01, 0.3
     WACHSEN, SCHRUMPFEN = 1.25, 0.9
@@ -51,44 +53,9 @@ class Kostuemoptimierer:
         saat = int(hashlib.sha256(('%s:%d' % (self.kennung, runde)).encode()).hexdigest()[:12], 16)
         return np.random.default_rng(saat)
 
-    @classmethod
-    def veraenderlich(cls, werte):
-        """Die stetigen Werte, die zu einem sichtbaren Teil gehören."""
-        schema = Kostuemparameter.schema()
+    veraenderlich = classmethod(Iterationsoptimierer.veraenderlich.__func__)          # dieselbe Rechnung wie `Iterationsoptimierer.veraenderlich` (bis 08.11.2026 eine Kopie hier)
 
-        def an(teil):
-            schalter = '%s.an' % teil
-            return schalter not in schema or werte.get(schalter, 1) >= 0.5
-
-        aus = []
-        for k, e in schema.items():
-            if e['art'] != 'mass':
-                continue
-            if k.startswith('farbe.') and cls.FARBEN_FEST:
-                continue
-            teile = cls.FARBE_TEILE.get(k.split('.')[1], ()) if k.startswith('farbe.') else (k.split('.')[0],)
-            if not teile or any(an(t) for t in teile):
-                aus.append(k)
-        return aus
-
-    def kandidaten(self, bester, anzahl, runde):
-        schema = Kostuemparameter.schema()
-        stetig = self.veraenderlich(bester)
-        zufall = self._zufall(runde)
-        aus = []
-        for i in range(anzahl):
-            # Jeder zweite Kandidat springt weiter (`GROB`): Die Schrittweite schrumpft in einer langen Flaute bis zum
-            # Mindestwert (30.09.2026: 0,01 der Spanne, Abweichung 0,2560 → 0,2559 in 20 Runden), und neue Maße —
-            # `hut.seite`, `stab.krone` — brauchten dann Dutzende Erfolge hintereinander, um einen sinnvollen Wert
-            # zu erreichen.
-            breite = min(self.SCHRITT_MAX, self.schritt * (self.GROB if i % 2 else 1.0))
-            neu = dict(bester)
-            n = int(zufall.integers(self.AENDERUNGEN[0], self.AENDERUNGEN[1] + 1))
-            for k in zufall.choice(stetig, size=min(n, len(stetig)), replace=False):
-                e = schema[k]
-                neu[k] = float(neu[k]) + float(zufall.normal(0.0, breite * (e['max'] - e['min'])))
-            aus.append(Kostuemparameter.pruefen(neu))
-        return aus
+    kandidaten = Iterationsoptimierer.kandidaten          # dieselbe Rechnung wie `Iterationsoptimierer.kandidaten` (bis 08.11.2026 eine Kopie hier)
 
     def anpassen(self, verbessert):
         faktor = self.WACHSEN if verbessert else self.SCHRUMPFEN

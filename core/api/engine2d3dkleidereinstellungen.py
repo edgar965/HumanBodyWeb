@@ -9,14 +9,13 @@ gespeicherten Stand und prüft das Ergebnis gegen die Kataloge. Wer die Seite ve
 nichts.
 """
 
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 
 from ..dienste.engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
 from ..dienste.engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from ..models import Engine2d3dKleiderauftrag
 from .engine2d3dkleider import Engine2d3dKleiderendpunkte
+from .auftragsfamilie import Auftragsfamilie
 
 __all__ = ['Engine2d3dKleidereinstellungen']
 
@@ -25,11 +24,4 @@ class Engine2d3dKleidereinstellungen:
     @staticmethod
     @require_POST
     def speichern(request, job_id):
-        job = get_object_or_404(Engine2d3dKleiderauftrag, pk=job_id)
-        if job.laeuft and Engine2d3dKleiderarbeiter.lebt(job):
-            return JsonResponse({'error': 'Der Auftrag läuft — Änderungen erst nach dem Lauf'}, status=409)
-        neu = Engine2d3dKleiderendpunkte.rumpf(request).get('optionen')
-        if isinstance(neu, dict):
-            job.optionen = Engine2d3dKleideroptionen.mischen(job.optionen, neu)
-            job.save(update_fields=['optionen', 'updated_at'])
-        return JsonResponse({'ok': True, 'optionen': Engine2d3dKleideroptionen.pruefen(job.optionen)})
+        return Auftragsfamilie.einstellungen_speichern(Engine2d3dKleiderauftrag, Engine2d3dKleiderarbeiter, Engine2d3dKleiderendpunkte.rumpf, Engine2d3dKleideroptionen, request, job_id)

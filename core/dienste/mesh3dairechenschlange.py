@@ -7,7 +7,6 @@ Ein Lauf zur Zeit: `3DObjects/mesh3dai/_rechnen/laeuft.json` (PID, Kennung) häl
 """
 import json
 import logging
-import re
 import subprocess
 import sys
 import time
@@ -18,6 +17,7 @@ from django.conf import settings
 from core.atomic_write import AtomarSchreiber
 
 from .auftragsarbeiter import Auftragsarbeiter
+from .kennungsstamm import Kennungsstamm
 from .mesh3dairechenlauf import Mesh3dairechenlauf
 from .mesh3daitest import Mesh3daitest
 
@@ -28,6 +28,8 @@ __all__ = ['Mesh3dairechenschlange']
 
 class Mesh3dairechenschlange:
     ENDUNGEN = ('.glb', '.obj', '.fbx', '.blend')
+    #: Eintrag für einen ganzen Job (`Ai2d3djoblauf`: PSHuman, Foto-Kette, dann der Test); sonst steht in der Schlange die Kennung eines Tests
+    JOB = 'job:'
 
     @staticmethod
     def ordner():
@@ -59,9 +61,30 @@ class Mesh3dairechenschlange:
         return [k for k in cls._lesen('schlange.json', []) if isinstance(k, str)]
 
     @classmethod
-    def starten(cls, kennung):
-        """Einreihen und den Arbeitsprozess starten, falls keiner läuft. → Stand des Laufs."""
-        stand = Mesh3dairechenlauf(kennung).vorbereiten('wartet')
+    def starten(cls, kennung, ab=None):
+        """Einreihen und den Arbeitsprozess starten, falls keiner läuft. `ab`: wie `Mesh3dairechenlauf.vorbereiten`, dort auch der `ValueError`. → Stand des Laufs."""
+        stand = Mesh3dairechenlauf(kennung).vorbereiten('wartet', ab=ab)
+        cls._einreihen(kennung)
+        return stand
+
+    @classmethod
+    def job_starten(cls, job):
+        """Einen ganzen Job einreihen (`Ai2d3djoblauf`). → Stand. `ValueError`, wenn er schon rechnet oder etwas fehlt."""
+        from .ai2d3djoblauf import Ai2d3djoblauf
+        if cls.job_aktiv(job['id']):
+            raise ValueError('Der Job rechnet schon')
+        stand = Ai2d3djoblauf(job).vorbereiten()
+        cls._einreihen(cls.JOB + job['id'])
+        return stand
+
+    @classmethod
+    def job_aktiv(cls, kennung):
+        """Wartet der Job in der Schlange, oder rechnet ihn der Arbeitsprozess? Kennung None: Der Prozess nimmt gerade den nächsten Eintrag."""
+        eintrag, lauf = cls.JOB + kennung, cls.laeuft()
+        return eintrag in cls.schlange() or (lauf is not None and lauf.get('kennung') in (eintrag, None))
+
+    @classmethod
+    def _einreihen(cls, kennung):
         schlange = cls.schlange()
         if kennung not in schlange:
             schlange.append(kennung)
@@ -71,7 +94,6 @@ class Mesh3dairechenschlange:
             p = subprocess.Popen([sys.executable, str(Path(settings.BASE_DIR) / 'manage.py'), 'mesh3dai_rechnen'], cwd=str(settings.BASE_DIR), stdin=subprocess.DEVNULL,
                                  stdout=protokoll, stderr=subprocess.STDOUT, creationflags=Auftragsarbeiter.flags())
             logger.info('Mesh3D-AI Rechenlauf: Arbeitsprozess %d gestartet für %s', p.pid, kennung)
-        return stand
 
     #: Sperrdatei des Arbeitsprozesses (30.10.2026): exklusiv angelegt (`os.O_EXCL`), Inhalt die PID; eine leere Datei ist höchstens so alt (s) noch „wird gerade geschrieben“
     SPERRE, SPERRE_LEER_S = 'arbeiter.sperre', 60.0
@@ -117,7 +139,7 @@ class Mesh3dairechenschlange:
                     AtomarSchreiber.json_schreiben(cls.ordner() / 'schlange.json', schlange)
                     AtomarSchreiber.json_schreiben(cls.ordner() / 'laeuft.json', {'pid': os.getpid(), 'kennung': kennung, 'seit': time.strftime('%Y-%m-%dT%H:%M:%S')})
                     try:
-                        Mesh3dairechenlauf(kennung).ausfuehren()
+                        cls._rechnen(kennung)
                     except Exception:          # noqa: BLE001 — ein Lauf scheitert, die Schlange läuft weiter; der Fehler steht im Log
                         logger.exception('Mesh3D-AI Rechenlauf %s abgebrochen', kennung)
                     zahl += 1
@@ -129,6 +151,15 @@ class Mesh3dairechenschlange:
         return zahl
 
     @classmethod
+    def _rechnen(cls, eintrag):
+        """Ein Eintrag der Schlange: ein Job oder die Kennung eines Tests."""
+        if eintrag.startswith(cls.JOB):
+            from .ai2d3djoblauf import Ai2d3djoblauf
+            Ai2d3djoblauf.aus_kennung(eintrag[len(cls.JOB):]).ausfuehren()
+        else:
+            Mesh3dairechenlauf(eintrag).ausfuehren()
+
+    @classmethod
     def anlegen(cls, name, datei, geschlecht, foto=None, maske=None):
         """Einen Test aus einer hochgeladenen Datei anlegen (Django `UploadedFile`). → Kennung. `foto` und `maske` (beide oder keins): das Foto, aus dem das Netz entstand, für den Schritt „foto“ (`Mesh3daifotogelenke`)."""
         name = str(name or '').strip() or Path(datei.name).stem
@@ -137,7 +168,7 @@ class Mesh3dairechenschlange:
             raise ValueError('Dateityp %s — erwartet %s' % (endung or '(keiner)', ', '.join(cls.ENDUNGEN)))
         if geschlecht not in ('weiblich', 'maennlich'):
             raise ValueError('Geschlecht weiblich oder maennlich')
-        stamm = re.sub(r'[^a-z0-9]+', '_', name.lower().replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue').replace('ß', 'ss')).strip('_') or 'test'
+        stamm = Kennungsstamm.aus_name(name, Mesh3daitest.KENNUNG_MAX - 4) or 'test'        # - 4: Platz für `_NN`
         kennung, n = stamm, 2
         while (Mesh3daitest.ordner() / kennung).exists():
             kennung, n = '%s_%d' % (stamm, n), n + 1

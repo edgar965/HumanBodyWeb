@@ -37,6 +37,7 @@ from .iterationsoptionen import Iterationsoptionen
 from .iterationsreferenz import Iterationsreferenz
 from .iterationsrunde import Iterationsrunde
 from .iterationswahl import Iterationswahl
+from .begutachtungsrunde import Begutachtungsrunde
 
 logger = logging.getLogger('core')
 
@@ -54,14 +55,7 @@ class Iterationskreislauf:
         self.o = Iterationsoptionen.pruefen((self.job.optionen or {}).get('iterationen'))
         self.regeln = Iterationswahl(self.o)
 
-    def _letzte_runde(self):
-        """Die höchste Rundennummer, die je vergeben wurde — auch die gelöschter Runden (Tabelle
-        „Iterationen"): Sonst bekäme eine neue Runde die Nummer und die Dateinamen einer gelöschten, und die
-        Kurve hätte zwei Punkte für dieselbe Runde."""
-        ergebnis = self.job.ergebnis
-        eintraege = [int(r.get('runde') or 0) for r in ergebnis.get('iterationen') or []]
-        verlauf = [int(p[0]) for p in (ergebnis.get('kreislauf') or {}).get('verlauf') or [] if p]
-        return max(eintraege + verlauf + [0])
+    _letzte_runde = Begutachtungsrunde._letzte_runde          # dieselbe Rechnung wie `Begutachtungsrunde._letzte_runde` (bis 08.11.2026 eine Kopie hier)
 
     def _loeschungen(self):
         """Löschwünsche der Seite abarbeiten (`Iterationsloeschung`) — nur der Lauf schreibt `ergebnis`."""

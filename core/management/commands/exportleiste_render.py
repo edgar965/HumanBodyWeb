@@ -66,6 +66,7 @@ class Command(BaseCommand):
             self._lauf(render)
 
     def _lauf(self, render):
+        from Figurfilm.figurbodenstand import Figurbodenstand
         from Figurfilm.filmregler import Filmregler
 
         from core.dienste.bewegungsschnitt import Bewegungsschnitt
@@ -92,6 +93,7 @@ class Command(BaseCommand):
         n = Bewegungsschnitt.bilder(voll, auftrag['sekunden'])          # 30 je Sekunde nach den Zeiten der Bewegung (DanceKurz kommt mit 60)
         bewegung = programme / 'bewegungen' / ('%s_bewegung.json' % name)
         Bewegungsschnitt.schreiben(voll, bewegung, n)
+        logger.info('Exportleiste %s: Bodenstand %s', render.job.kennung, Figurbodenstand(glb).datei(bewegung))      # wie die Seite: tiefster Punkt von Körper und Schuhen auf dem Boden
         self._vorbereiten(programme, name, glb)
         optionen = render.leiste.optionen() if auftrag.get('physik') is not False else render.ohne_physik(render.leiste.optionen())
         regler = Filmregler.schreiben(render._datei('regler.json'), optionen)

@@ -14,6 +14,7 @@ nur bei den Dateien mit abweichender Ordnung, also scheinbar zufällig.
 """
 
 import numpy as np
+from Genesis9.knochenmatrizen import G9knochenmatrizen
 
 
 class Vorwaertskinematik:
@@ -70,13 +71,4 @@ class Vorwaertskinematik:
                 matrix = matrix @ self.achsendrehung(kanal[0], kanalwerte.get((gelenk, kanal), 0))
         return matrix
 
-    @staticmethod
-    def achsendrehung(achse, grad):
-        """Drehmatrix um X, Y oder Z (Rechtshandsystem, Grad)."""
-        bogen = np.radians(grad)
-        cos, sin = np.cos(bogen), np.sin(bogen)
-        if achse == 'X':
-            return np.array([[1, 0, 0], [0, cos, -sin], [0, sin, cos]])
-        if achse == 'Y':
-            return np.array([[cos, 0, sin], [0, 1, 0], [-sin, 0, cos]])
-        return np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
+    achsendrehung = staticmethod(G9knochenmatrizen._achse)          # dieselbe Rechnung wie `G9knochenmatrizen._achse` (bis 08.11.2026 eine Kopie hier)

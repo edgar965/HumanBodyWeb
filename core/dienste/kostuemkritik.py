@@ -16,6 +16,7 @@ import base64
 
 from .kostuemparameter import Kostuemparameter
 from .ollamamodelle import Ollamamodelle
+from .iterationskritik import Iterationskritik
 
 __all__ = ['Kostuemkritik']
 
@@ -127,17 +128,4 @@ class Kostuemkritik:
             'sekunden': round((zahlen.get('total_duration') or 0) / 1e9, 1),
         }
 
-    @staticmethod
-    def _details(roh):
-        """[{bereich, passt, abweichung}] — nur wohlgeformte Einträge, gekürzt."""
-        aus = []
-        for e in roh if isinstance(roh, list) else []:
-            if isinstance(e, dict) and isinstance(e.get('passt'), int) and 1 <= e['passt'] <= 10:
-                aus.append(
-                    {
-                        'bereich': str(e.get('bereich') or '')[:60],
-                        'passt': e['passt'],
-                        'abweichung': str(e.get('abweichung') or '')[:240],
-                    }
-                )
-        return aus[:16]
+    _details = staticmethod(Iterationskritik._details)          # dieselbe Rechnung wie `Iterationskritik._details` (bis 08.11.2026 eine Kopie hier)

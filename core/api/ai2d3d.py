@@ -45,7 +45,7 @@ class Ai2d3dendpunkte:
         if gefunden is None:
             raise Http404('Kein Job %s' % job)
         if gefunden['art'] != 'export':
-            return redirect('ai2d3d_test', kennung=job)
+            return redirect('ai2d3d_test', kennung=gefunden['adresse'])
         return Ai2d3dendpunkte._jobseite(request, gefunden, test=False)
 
     @staticmethod
@@ -59,6 +59,8 @@ class Ai2d3dendpunkte:
             raise Http404('Kein Test %s' % kennung)
         if gefunden['art'] == 'export':
             return redirect('ai2d3d_job', job=kennung)
+        if kennung != gefunden['adresse']:                                 # die alte Adresse eines umbenannten Tests (`Ai2d3dadresse`)
+            return redirect('ai2d3d_test', kennung=gefunden['adresse'])
         return Ai2d3dendpunkte._jobseite(request, gefunden, test=True)
 
     @staticmethod

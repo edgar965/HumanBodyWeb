@@ -27,7 +27,6 @@ Nach jeder Änderung an Platz 1 wird das kleine Vorlagenbild der Tabelle neu ges
 """
 
 import logging
-import os
 
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -38,6 +37,8 @@ from ..dienste.blendermodellvorlage import Blendermodellvorlage
 from ..dienste.meshoptionen import Meshoptionen
 from ..models import Blendermodellauftrag
 from .blendermodell import Blendermodellendpunkte
+from .auftragsfamilie import Auftragsfamilie
+from .meshfotos import Meshfotoendpunkte
 
 logger = logging.getLogger('core')
 
@@ -60,18 +61,7 @@ class Blendermodellfotoendpunkte:
             raise Http404('Kein Bild %s' % datei)
         return eintrag
 
-    @staticmethod
-    def _vorbereitetes_loeschen(ablage, datei):
-        """Die freigestellte Fassung eines Fotos verwerfen (siehe Kopf der Datei)."""
-        stamm = os.path.splitext(str(datei))[0]
-        ordner = ablage.unter(Blendermodellablage.VORBEREITET)
-        if not ordner.is_dir():
-            return
-        for pfad in ordner.glob(stamm + '.*'):
-            try:
-                pfad.unlink()
-            except OSError:
-                logger.warning('Vorbereitetes Foto %s ließ sich nicht löschen', pfad)
+    _vorbereitetes_loeschen = staticmethod(Meshfotoendpunkte._vorbereitetes_loeschen)          # dieselbe Rechnung wie `Meshfotoendpunkte._vorbereitetes_loeschen` — Blendermodellablage erbt `VORBEREITET` von Meshablage` (bis 08.11.2026 eine Kopie hier)
 
     @staticmethod
     def _eingang_loeschen(ablage, datei):
@@ -169,13 +159,7 @@ class Blendermodellfotoendpunkte:
     def gewicht(request, job_id, datei):
         """Fotogewicht (0..100) und optionaler Bereichsausschnitt — wirkt beim nächsten Lauf von „netz"."""
         job = Blendermodellfotoendpunkte._job(job_id)
-        eintrag = Blendermodellfotoendpunkte._bild_oder_404(job, datei)
-        rumpf = Blendermodellendpunkte.rumpf(request)
-        eintrag['gewicht'] = Meshoptionen.gewicht_pruefen(rumpf.get('gewicht'))
-        if 'bereich' in rumpf:
-            eintrag['bereich'] = Meshoptionen.bereich_pruefen(rumpf.get('bereich'))
-        job.save(update_fields=['bilder', 'updated_at'])
-        return JsonResponse({'ok': True, 'bild': eintrag})
+        return Auftragsfamilie.foto_gewicht(job, Blendermodellfotoendpunkte._bild_oder_404(job, datei), Blendermodellendpunkte.rumpf(request))
 
     @staticmethod
     @require_POST
@@ -187,22 +171,4 @@ class Blendermodellfotoendpunkte:
         Lauf, der seine alte Ordnung zurückschreibt) und hätte genau die Änderung verworfen, die der
         Aufruf bewirken soll (erst im Browser aufgefallen: 200 und keine Wirkung, `auftragsseiten.md`).
         """
-        job = Blendermodellfotoendpunkte._job(job_id)
-        rumpf = Blendermodellendpunkte.rumpf(request)
-        datei = str(rumpf.get('datei') or '')
-        bilder = list(job.bilder or [])
-        stelle = next((i for i, b in enumerate(bilder) if b.get('datei') == datei), None)
-        if stelle is None:
-            raise Http404('Kein Bild %s' % datei)
-        try:
-            ziel = int(rumpf.get('index'))
-        except TypeError, ValueError:
-            return JsonResponse({'error': 'index fehlt oder ist keine Zahl'}, status=400)
-        ziel = max(0, min(len(bilder) - 1, ziel - 1))
-        vorher = bilder[0].get('datei')
-        bilder.insert(ziel, bilder.pop(stelle))
-        job.bilder = bilder
-        job.save(update_fields=['bilder', 'updated_at'])
-        if bilder[0].get('datei') != vorher:
-            Blendermodellvorlage.erneuern(job)
-        return Blendermodellfotoendpunkte._antwort(job)
+        return Auftragsfamilie.foto_reihenfolge(Blendermodellfotoendpunkte._job(job_id), Blendermodellendpunkte.rumpf(request), Blendermodellvorlage.erneuern, Blendermodellfotoendpunkte._antwort)

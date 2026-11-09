@@ -47,6 +47,7 @@ from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellbildtypen import Bildmodellbildtypen
 from .bildmodellmehrbild import Bildmodellmehrbild
 from .bildmodelltextur import Bildmodelltextur
+from .bildmodellanpassung import Bildmodellanpassung
 
 logger = logging.getLogger('core')
 
@@ -90,14 +91,7 @@ class Bildmodellfototextur:
                 aus.append(b)
         return aus
 
-    def stellung(self):
-        """Die Regler des Ergebnisses samt Restmorph (wie `Bildmodellanpassung.stellung`)."""
-        a = self.job.ergebnis.get('anpassung') or {}
-        stellung = dict(a.get('regler') or {})
-        r = self.job.ergebnis.get('rest') or {}
-        if r.get('regler'):
-            stellung[r['regler']] = 1.0
-        return stellung
+    stellung = Bildmodellanpassung.stellung          # dieselbe Rechnung wie `Bildmodellanpassung.stellung` (bis 08.11.2026 eine Kopie hier)
 
     # ------------------------------------------------------------- Runner
 

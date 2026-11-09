@@ -42,6 +42,7 @@ from .blendimportschamhoehe import Blendimportschamhoehe
 from .blendimportschamregister import Blendimportschamregister
 from .blendimportschamschnitt import Blendimportschamschnitt
 from .blendimportschamtiefe import Blendimportschamtiefe
+from .schamtiefenfeld import Schamtiefenfeld
 
 logger = logging.getLogger('core')
 
@@ -207,10 +208,8 @@ class Blendimportscham:
 
     @staticmethod
     def randpunkte(dreiecke):
-        """Punkte an offenen Kanten (Kante in genau einem Dreieck)."""
-        kanten = np.sort(np.concatenate([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), axis=1)
-        roh, zaehl = np.unique(kanten, axis=0, return_counts=True)
-        return np.unique(roh[zaehl == 1])
+        """Punkte an offenen Kanten (Kante in genau einem Dreieck) — `Schamtiefenfeld.randpunkte`."""
+        return Schamtiefenfeld.randpunkte(dreiecke)
 
     # --------------------------------------------------------------- Rand (auch für das Daz-Stück: `Dazgeograftangepasst`)
     @classmethod
