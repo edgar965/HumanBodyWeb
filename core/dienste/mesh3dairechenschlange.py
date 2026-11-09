@@ -114,7 +114,13 @@ class Mesh3dairechenschlange:
                     continue                                      # eben weggeräumt — noch einmal versuchen
                 if (inhalt and cls._lebt(inhalt)) or (not inhalt and alter < cls.SPERRE_LEER_S):
                     return False
-                datei.unlink(missing_ok=True)
+                # Seit 09.11.2026: Zwei Arbeiter sahen dieselbe tote Sperre; der erste räumte sie weg und legte seine an, der zweite löschte danach und bekam unter Windows
+                # PermissionError (die neue Sperre war noch offen) — der Arbeiter stürzte ab. Gelöscht wird nur, was noch dieselbe tote Sperre ist; sonst noch einmal von vorn.
+                try:
+                    if datei.read_text(encoding='utf-8').strip() == inhalt:
+                        datei.unlink()
+                except OSError:
+                    pass
                 continue
             with os.fdopen(fd, 'w', encoding='utf-8') as aus:
                 aus.write(str(os.getpid()))
