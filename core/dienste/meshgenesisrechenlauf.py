@@ -1,0 +1,252 @@
+# -*- coding: utf-8 -*-
+"""Meshgenesisrechenlauf — EIN Lauf mit festen Schritten: Mesh rein → Testseite fertig (23.10.2026, Edgar: „Die Rechenkette gehört ins Projekt … Knopf auf der Seite: Mesh hochladen,
+„Rechnen“, Fortschritt sehen“ — „tu das, aber schnell und mit EINEM Testjob“).
+
+Bis heute entstand jedes Ergebnis aus Bash-Ketten unter `ProjektTemp/_wegwerf/` (`meshgenesis_test_einzeln2.sh`, `meshgenesis_kostuem_lauf.py`, …), deren Skripte ihre Netze selbst wählten. Hier stehen
+die Schritte fest, in dieser Reihenfolge, mit den Netzen aus `Meshgenesiskifassungen`; Stand und Log liegen im Testordner (`rechnen/stand.json`, `rechnen/lauf.log`), die Seite fragt den Stand ab.
+**Der Rechencode liegt seit 23.10.2026 nachts im Projekt, `A:\\3DTools\\meshgenesis\\`** (Edgar: „Die 8 Schritte rufen noch die Skripte unter ProjektTemp/_wegwerf/ auf … mach alles“): die 185 Module,
+die die Schritte brauchen, aus `_wegwerf/` kopiert (`ProjektTemp/_wegwerf/rechenkette_ins_projekt.py`; `sys.path`, Unterprozesse und Arbeitsverzeichnis zeigen auf den neuen Ordner, Daten wie `teile.pkl`,
+GPU-Sperre und Ablagen bleiben, wo sie sind). Änderungen an der Kette gehören dorthin; die Originale in `_wegwerf/` sind das Archiv der Versuche und laufen hier nicht mehr.
+GPU: jeder Schritt nimmt die Sperre selbst (`meshgenesis_stimmen_lauf.py`, `Gpusperre`); Warteschlange: `Meshgenesisrechenschlange` (ein Lauf zur Zeit).
+
+    Meshgenesisrechenlauf(kennung).ausfuehren()      # im Arbeitsprozess (`manage.py meshgenesis_rechnen`)
+"""
+import json
+import logging
+import os
+import sys
+import time
+from pathlib import Path
+
+from django.conf import settings
+
+from core.atomic_write import AtomarSchreiber
+
+from .meshgenesiskifassungen import Meshgenesiskifassungen
+from .meshgenesisrechenmessung import Meshgenesisrechenmessung
+from .meshgenesisrechenschritt import Meshgenesisrechenschritt
+
+logger = logging.getLogger('core')
+
+__all__ = ['Meshgenesisrechenlauf']
+
+
+class Meshgenesisrechenlauf:
+    #: (Schlüssel, Klartext, Skript und Argumente — {k} Kennung, {…} aus den KI-Fassungen)
+    SCHRITTE = (
+        ('rig', 'Rig und A-Pose (Make-It-Animatable, Netz der Vorstufe)', ['-u', 'meshgenesis_vorstufe.py', 'test', '{k}', '--weg', 'mia', '--netz-mia', '{vorstufe_mia_pfad}',
+                                                                                  '--netz', '{vorstufe_pfad}']),
+        ('haltung', 'Haltung aus der KI', ['meshgenesis_stimmen_lauf.py', 'meshgenesis_test_form.py', '--vorhersagen', '--lauf', '{haltung}', '--nur', '{k}']),
+        ('figur', 'Figur bauen', ['meshgenesis_formfigur.py', '--parallel', '1', '--nur', '{k}']),          # im Skriptdienst nur ein Faden (29.10.2026, `Skriptdienstruf.ERLAUBT`)
+        ('anpassen', 'Figur in die Haltung legen', ['meshgenesis_stimmen_lauf.py', 'meshgenesis_test_form.py', '--anpassen', '--nur', '{k}']),
+        ('haltung2', 'Haltung aus Gelenken und Enden', ['meshgenesis_stimmen_lauf.py', 'meshgenesis_test_form_haltung.py', '--nur', '{k}']),
+        ('segmentierung', 'Bilderkennung vorbereiten (Sapiens2 + SAM 3)', ['meshgenesis_kostuem_segmentierung.py', '{k}']),
+        # Haut aus der KI (23.10.2026 nachts, Edgar: „Haut: Die Haut-KI ist nicht angebunden“ → „mach alles“): Stufe 2 braucht die Zerlegung des Tests; sie schreibt `haut_<g>/` und Stücke des
+        # Wegs g — die Kleider der Seite kommen danach aus dem Kostüm-Weg (der Schritt danach schreibt `ki.json` neu, die Wahl je Stück bleibt „k“).
+        ('zerlegung', 'Zerlegung aus der KI (Haut, Haar, Kleidungsstücke je Punkt)', ['meshgenesis_stimmen_lauf.py', 'meshgenesis_kleider_zerlegung.py', '--nur', '{k}', '--lauf', '{zerlegung}']),
+        # Zeile 2 baut auf Zeile 1 auf (30.10.2026, Edgar: „du solltest diese Berechnungen aus der 1. Zeile für die 2. Zeile nutzen, was machst du stattdessen?“ — gewählt „Figur aus Zeile 1“):
+        # die Mesh-Anpassung ohne KI (`Meshgenesismeshanpassung`, braucht Vorstufe und Zerlegung), dann ihre Regler, ihr Versatz und ihre Haltung als Figur der Kette (`Zeile1figur`). Sie
+        # ersetzen „form“ (Regler-KI bzw. Formkopf), „kopf“, „lage“ und „koerper“ (bis 29.10.2026, Module bleiben in `meshgenesis/`); Haut und Kleider rechnen auf dieser Figur.
+        # Hat der Test ein Foto (`<test>/foto/`), liefert SAM 3D Body daran die Gelenke für Start und Prüfung (`Meshgenesisfotogelenke`); ohne Foto tut der Schritt nichts.
+        ('foto', 'Gelenke am Foto (SAM 3D Body), wenn der Test ein Foto hat', ['-u', 'meshgenesis_fotogelenke.py', '{k}']),
+        ('meshanpassung', 'Genesis ins Mesh einpassen — ohne KI (Zeile 1)', ['-u', 'meshgenesis_meshanpassung.py', '--nur', '{k}']),
+        ('zeile1', 'Figur aus Zeile 1 (Regler, Versatz und Haltung der Einpassung)', ['-u', 'meshgenesis_zeile1figur.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # `--hautki` (24.10.2026 abends): steht in den KI-Fassungen ein Lauf der Haut-KI im Bildraum, schreibt sie die Hautkacheln (`Hautkieinsatz`), sonst das Netz `haut` von Stufe 2
+        ('haut', 'Haut aus der KI (Stufe 2: Farbe je Texel)', ['-u', 'meshgenesis_stufe2_lauf.py', '--nur-einsatz', '{stufe2}', '--fassung', '{stufe2_fassung}', '--test', '{k}', '--job', '',
+                                                                '--geschlecht', '{g}', '--hautki', '{hautki}']),
+        # Echte Haut von Rücken und Seiten aus den weiteren Fotos des Jobs (07.11.2026, Edgar: „mach den Code generisch“, `Meshgenesisfotohaut`); ohne solche Fotos tut der Schritt nichts
+        ('fotohaut', 'Haut von Rücken und Seiten aus den weiteren Fotos des Jobs', ['-u', 'meshgenesis_fotohaut.py', '{k}', '--geschlecht', '{g}']),
+        ('kleider', 'Kleider und Haar aus dem Mesh ausschneiden und auflegen, Hautmasken', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--ohne-pruefung']),
+        # Die Prüfung als eigener Schritt (06.11.2026): sie misst die Stücke auf der Platte, also das, was die Seite lädt; `--ab pruefung` prüft neu, ohne neu zu bauen. Bau 41 s, Prüfung 1:48–1:57 min (polstertaenzer).
+        ('pruefung', 'Prüfung der Kleider: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--nur-pruefen']),
+    )
+    #: Schritt „form“ aus der Regler-KI statt aus dem Formkopf — nur für einen Test, dessen `einstellung.json` es nennt (`form_ki`: {"art": "reglerki", "lauf": <Lauf unter
+    #: `_reglerki/laeufe`>}), nie als Vorgabe (27.10.2026, Edgar: „ich will bei einem Trainings oder Testjob mal ergebnisse sehen“)
+    FORM_REGLERKI = ('form', 'Form aus der Regler-KI (Genesis-Regler, Hauptregler und Anfasser)', ['-u', 'meshgenesis_reglerki_test.py', '--lauf', '{reglerki_lauf}', '--als-form', '--nur', '{k}'])
+    #: Rückfall (27.10.2026, Edgar: „In der Kette automatisch auf den Formkopf zurückfallen, sobald MIA durchfällt“): die Regler-KI kennt nur MIAs A-Pose; stammt die jüngste A-Pose vom Rig
+    #: (MIAs Prüfung nicht bestanden) und hat der gewählte Lauf den Weg „Rig“ nicht gelernt (`reglerki_wege`), rechnet der Schritt „form“ mit dem Formkopf der KI-Fassungen
+    RUECKFALL_TEXT = 'Form aus der KI (Formkopf) — Rückfall: MIAs A-Pose ist durch die Prüfung gefallen, die Regler-KI kennt nur MIAs A-Pose'
+    #: Was ein Schritt im Log schreibt, wenn er scheitert, ohne mit einem Fehlercode zu enden (die Kostüm-Kette fängt Fehler je Test ab)
+    FEHLERZEILEN = ('GESCHEITERT', 'Traceback (most recent call last)')
+    HAUT = 'Haut: aus der KI (Stufe 2, Lauf in den KI-Fassungen) für das eingestellte Geschlecht; das andere Geschlecht trägt die Grundhaut.'
+    #: Erster Schritt, der das eingestellte Geschlecht kennt (06.11.2026, Edgar: „bau start ab "meshanpassung"“). Davor entsteht alles unabhängig davon: Rig, Erkennung, Zerlegung, Foto-Gelenke, und
+    #: `figur`, `anpassen`, `haltung2` bauen beide Figuren. Ab hier rechnet die Kette nur das eingestellte Geschlecht, darum genügt nach dem Umstellen der Start hier.
+    AB_GESCHLECHT = 'meshanpassung'
+    #: Was dieser Start aus einem früheren Lauf braucht, relativ zum Testordner; {g} = eingestelltes Geschlecht
+    VORLAUF = ('test.json', 'form.npz', 'vorstufe/*/apose.npz', 'form_{g}/modell.json', 'ergebnis_Form_{g}.npz')
+
+    def __init__(self, kennung):
+        from .meshgenesistest import Meshgenesistest
+        self.kennung = str(kennung)
+        self.test = Meshgenesistest.ordner() / self.kennung
+        self.ordner = self.test / 'rechnen'
+
+    @staticmethod
+    def kette():
+        """Ordner des Rechencodes (Arbeitsverzeichnis jedes Schritts)."""
+        return Path(settings.TOOLS_ROOT) / 'meshgenesis'
+
+    @classmethod
+    def modul(cls, name):
+        """Ein leichtes Modul des Rechencodes (`meshgenesis/<name>.py`, nur Standardbibliothek oder numpy beim Import) im Serverprozess — der Server ruft dieselbe Rechnung wie die Kette,
+        statt sie nachzubauen (09.11.2026: `Probenziel.stempel`, `Kostuemweitschritt.stempel_von`)."""
+        import importlib
+        import sys
+        pfad = str(cls.kette())
+        if pfad not in sys.path:
+            sys.path.insert(0, pfad)
+        return importlib.import_module(name)
+
+    def form_ki(self):
+        """`{'art': 'reglerki', 'lauf': …}` aus `einstellung.json` des Tests oder None (dann der Formkopf der KI-Fassungen)."""
+        try:
+            wahl = json.loads((self.test / 'einstellung.json').read_text(encoding='utf-8')).get('form_ki')
+        except (OSError, ValueError):
+            return None
+        return wahl if isinstance(wahl, dict) and wahl.get('art') == 'reglerki' and wahl.get('lauf') else None
+
+    def schritte(self):
+        """Die Schritte dieses Tests: `SCHRITTE`, mit `FORM_REGLERKI`, wenn der Test die Regler-KI wählt."""
+        if self.form_ki() is None:
+            return self.SCHRITTE
+        return tuple(self.FORM_REGLERKI if s[0] == 'form' else s for s in self.SCHRITTE)
+
+    def mia_apose(self):
+        """Ob die jüngste A-Pose der Vorstufe von MIA stammt (`apose.npz` → `weg` = 'mia'); dieselbe Kette wie `Kleiderzerlegung.kette`, die auch die Regler-KI liest."""
+        import numpy as np
+        ketten = sorted(p.parent for p in (self.test / 'vorstufe').glob('*/apose.npz'))
+        if not ketten:
+            return False
+        with np.load(ketten[-1] / 'apose.npz') as ap:
+            return 'weg' in ap.files and str(ap['weg']) == 'mia'
+
+    def reglerki_wege(self):
+        """Die Wege der A-Pose, die der gewählte Lauf der Regler-KI gelernt hat (`lauf_ergebnis.json` → `wege`; Läufe bis 27.10.2026 nur MIA)."""
+        try:
+            datei = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_reglerki' / 'laeufe' / self.form_ki()['lauf'] / 'lauf_ergebnis.json'
+            return list(json.loads(datei.read_text(encoding='utf-8')).get('wege') or ['mia'])
+        except (OSError, ValueError, TypeError):
+            return ['mia']
+
+    def stand(self):
+        try:
+            return json.loads((self.ordner / 'stand.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return None
+
+    def _schreiben(self, stand):
+        self.ordner.mkdir(parents=True, exist_ok=True)
+        AtomarSchreiber.json_schreiben(self.ordner / 'stand.json', stand)
+
+    def vorlauf_fehlt(self):
+        """Was einem Start ab `AB_GESCHLECHT` im Testordner fehlt (Liste aus `VORLAUF`), leer = er geht."""
+        g = self._geschlecht()
+        return [m for m in (v.format(g=g) for v in self.VORLAUF) if not any(self.test.glob(m))]
+
+    def vorbereiten(self, status='wartet', ab=None):
+        """Stand „wartet“ mit allen Schritten — vor dem Start, damit die Seite sofort die Liste zeigt. `ab` (Schlüssel eines Schritts): die Schritte davor rechnet der Lauf nicht neu, ihr Ergebnis
+        liegt schon im Testordner (23.10.2026 nachts: ein neuer Haut-Schritt soll nicht das Rig von 4 min wiederholen). `ValueError`, wenn es den Schritt nicht gibt oder der Vorlauf fehlt."""
+        schluessel = [s for s, _t, _a in self.schritte()]
+        if ab is not None and ab not in schluessel:
+            raise ValueError('Schritt „%s“ gibt es nicht (%s)' % (ab, ', '.join(schluessel)))
+        fehlt = self.vorlauf_fehlt() if ab == self.AB_GESCHLECHT else []
+        if fehlt:
+            raise ValueError('Ab der Einpassung geht hier nicht, aus einem früheren Lauf fehlt %s. Den Test ganz rechnen.' % ', '.join(fehlt))
+        alt ={s.get('schluessel'): s for s in (self.stand() or {}).get('schritte', [])} if ab else {}
+        vor = set(schluessel[:schluessel.index(ab)]) if ab else set()
+        stand = {'kennung': self.kennung, 'status': status, 'angefragt': time.strftime('%Y-%m-%dT%H:%M:%S'), 'fassungen': Meshgenesiskifassungen.lesen(), 'haut': self.HAUT, 'ab': ab,
+                 'schritte': [dict(alt.get(s) or {}, schluessel=s, text=t, status='fertig', uebernommen=True) if s in vor else {'schluessel': s, 'text': t, 'status': 'offen'}
+                              for s, t, _a in self.schritte()]}
+        self._schreiben(stand)
+        self._warteschlange_eintragen()
+        return stand
+
+    def _warteschlange_eintragen(self):
+        """Eintrag dieses Laufs in `ProjektTemp/mia_daten/warteschlange.json` (jede Kette braucht dort einen, sonst steht sie in „Lauf Aktuell“ nur unter „nicht beschrieben“): Log, Endmarke, je Schritt
+        die Marke, die `ausfuehren` ins Log schreibt. Ein Fehler hier hält keinen Lauf auf."""
+        import os
+        try:
+            datei = Path(settings.TOOLS_ROOT) / 'ProjektTemp' / 'mia_daten' / 'warteschlange.json'
+            plan = json.loads(datei.read_text(encoding='utf-8')) if datei.is_file() else {'ketten': []}
+            log = os.path.relpath(self.ordner / 'lauf.log', datei.parent).replace('\\', '/')
+            schritte = [{'marke': '== %d %s' % (nr + 1, text), 'titel': text,
+                         'prozess': next((a[:-3] for a in roh if a.endswith('.py') and a != 'meshgenesis_stimmen_lauf.py'), roh[0])} for nr, (_s, text, roh) in enumerate(self.schritte())]
+            eintrag = {'skript': 'meshgenesis_rechnen', 'titel': 'Rechnen per Knopf: Test „%s“' % self.kennung, 'log': log, 'ende': 'RECHENLAUF FERTIG', 'schritte': schritte}
+            plan['ketten'] = [k for k in plan.get('ketten', []) if k.get('log') != log] + [eintrag]
+            AtomarSchreiber.json_schreiben(datei, plan)
+        except (OSError, ValueError) as fehler:
+            logger.warning('Mesh-Genesis Rechenlauf %s: Warteschlange nicht eingetragen (%s)', self.kennung, fehler)
+
+    def _geschlecht(self):
+        """Das eingestellte Geschlecht des Tests (`einstellung.json`, sonst `test.json` → `geschlecht_vorgabe`) — wie `Kostuemlauf.geschlecht`; gelesen erst, wenn ein Schritt es braucht."""
+        for datei, feld in (('einstellung.json', 'geschlecht'), ('test.json', 'geschlecht_vorgabe'), ('anlage.json', 'geschlecht')):
+            try:
+                g = json.loads((self.test / datei).read_text(encoding='utf-8')).get(feld)
+            except (OSError, ValueError):
+                continue
+            if g in ('weiblich', 'maennlich'):
+                return g
+        return 'weiblich'
+
+    def _argumente(self, roh, f):
+        werte = dict(f, k=self.kennung, vorstufe_mia_pfad=str(Meshgenesiskifassungen.vorstufe_pfad(f['vorstufe_mia'])),
+                     vorstufe_pfad=str(Meshgenesiskifassungen.vorstufe_pfad(f['vorstufe'])))
+        if any('{g}' in a for a in roh):
+            werte['g'] = self._geschlecht()
+        if any('{reglerki_lauf}' in a for a in roh):
+            werte['reglerki_lauf'] = self.form_ki()['lauf']
+        return [a.format(**{x: str(y) for x, y in werte.items()}) for a in roh]
+
+    def ausfuehren(self):
+        """Alle Schritte der Reihe nach; hält beim ersten Fehler an. → Stand."""
+        f = Meshgenesiskifassungen.lesen()
+        stand = self.stand() or self.vorbereiten()
+        stand.update(status='laeuft', beginn=time.strftime('%Y-%m-%dT%H:%M:%S'), fassungen=f, fehler=None)
+        self._schreiben(stand)
+        log = self.ordner / 'lauf.log'
+        t_alles = time.perf_counter()
+        with open(log, 'a', encoding='utf-8') as aus:
+            aus.write('\n==== Lauf %s, KI-Fassungen %s\n' % (time.strftime('%Y-%m-%d %H:%M:%S'), json.dumps(f, ensure_ascii=False)))
+            for nr, (schluessel, text, roh) in enumerate(self.schritte()):
+                eintrag = stand['schritte'][nr]
+                if eintrag.get('uebernommen'):
+                    aus.write('== %d %s %s (übernommen, nicht neu gerechnet)\n' % (nr + 1, text, time.strftime('%H:%M:%S')))
+                    continue
+                if roh is self.FORM_REGLERKI[2] and not self.mia_apose() and 'rig' not in self.reglerki_wege():
+                    text, roh = self.RUECKFALL_TEXT, next(s[2] for s in self.SCHRITTE if s[0] == 'form')
+                    eintrag['text'] = text
+                eintrag.update(status='laeuft', beginn=time.strftime('%H:%M:%S'))
+                stand['schritt'] = nr + 1
+                self._schreiben(stand)
+                befehl = [sys.executable] + self._argumente(roh, f)
+                aus.write('== %d %s %s\n%s\n' % (nr + 1, text, time.strftime('%H:%M:%S'), ' '.join(befehl)))
+                aus.flush()
+                t0 = time.perf_counter()
+                with Meshgenesisrechenmessung() as messung:
+                    zeilen, rc = self._schritt(befehl, aus, messung)
+                eintrag['dauer_s'] = round(time.perf_counter() - t0, 1)
+                eintrag.update(messung.bericht(eintrag['dauer_s']))
+                if rc != 0:
+                    fehler = 'Fehlercode %d — %s' % (rc, ' / '.join(zeilen[-5:]))
+                else:
+                    fehler = next((z for z in zeilen if any(m in z for m in self.FEHLERZEILEN)), None)
+                if fehler:
+                    eintrag['status'] = 'fehler'
+                    stand.update(status='fehler', fehler='Schritt „%s“: %s' % (text, fehler), ende=time.strftime('%Y-%m-%dT%H:%M:%S'),
+                                 dauer_s=round(time.perf_counter() - t_alles, 1))
+                    self._schreiben(stand)
+                    logger.warning('Mesh-Genesis Rechenlauf %s: %s', self.kennung, stand['fehler'])
+                    return stand
+                eintrag['status'] = 'fertig'
+                self._schreiben(stand)
+            aus.write('RECHENLAUF FERTIG %s\n' % time.strftime('%H:%M:%S'))         # Endmarke der Warteschlange (`warteschlange.json`)
+        stand.update(status='fertig', ende=time.strftime('%Y-%m-%dT%H:%M:%S'), dauer_s=round(time.perf_counter() - t_alles, 1))
+        self._schreiben(stand)
+        logger.info('Mesh-Genesis Rechenlauf %s fertig in %.0f s', self.kennung, stand['dauer_s'])
+        return stand
+
+    def _schritt(self, befehl, aus, messung):
+        """Einen Schritt rechnen (`Meshgenesisrechenschritt`). → (letzte Zeilen, Rückgabewert)."""
+        # reproduzierbar (26.10.2026, Edgar: „kette muss Reproduzierbar sein“): `meshgenesis/meshgenesis_determinismus.py` schaltet damit in jedem Prozess der Kette ein, Kindprozesse erben die Variable
+        env = dict(os.environ, PYTHONIOENCODING='utf-8', MESHGENESIS_DETERMINISTISCH='1', CUBLAS_WORKSPACE_CONFIG=':4096:8', PYTHONHASHSEED='0')
+        return Meshgenesisrechenschritt.rechnen(befehl, aus, messung, self.kette(), env, 'Mesh-Genesis Rechenlauf %s' % self.kennung)

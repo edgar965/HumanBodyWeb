@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-u"""G9texturkopie — ein Bild der Daz-Bibliothek mit höchstens `kante` Pixeln an der längsten Seite (19.10.2026, Weg A von `Mesh3daitexturwahl`).
+u"""G9texturkopie — ein Bild der Daz-Bibliothek mit höchstens `kante` Pixeln an der längsten Seite (19.10.2026, Weg A von `Meshgenesistexturwahl`).
 
-Gemessen 19.10.2026 an Damira0 (Mesh3D-AI, Tagebuch „Spätabend“): ein Satz aus 22 Bildern, 15 davon 4096², kostete beim Laden 1,7–2,8 s `texSubImage2D` auf dem Hauptfaden;
+Gemessen 19.10.2026 an Damira0 (Mesh-Genesis, Tagebuch „Spätabend“): ein Satz aus 22 Bildern, 15 davon 4096², kostete beim Laden 1,7–2,8 s `texSubImage2D` auf dem Hauptfaden;
 im Browser auf 1024 verkleinert 0,11–0,15 s, im Feld (668 × 735 px) im Mittel 0,16 von 255 verschieden. Hier geschieht dasselbe auf dem Server, einmal je Bild.
 
 Das Format bleibt das des Originals: JPEG bleibt JPEG (Qualität `QUALITAET`), alles andere wird PNG (Durchsichtigkeit bleibt). Ein Bild, das schon klein genug ist, kommt

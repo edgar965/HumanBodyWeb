@@ -145,7 +145,7 @@ export class Figurhaut {
     }
 
     static indexSetzen(geo, index, gruppen) {
-        // Punkte, die immer wegfallen (`geo.userData.punkteWeg`, Uint8Array je Punkt; 31.10.2026, Mesh3D-AI „Ohne fehlende Glieder“): ein Dreieck mit einem solchen Punkt fällt aus
+        // Punkte, die immer wegfallen (`geo.userData.punkteWeg`, Uint8Array je Punkt; 31.10.2026, Mesh-Genesis „Ohne fehlende Glieder“): ein Dreieck mit einem solchen Punkt fällt aus
         // jedem Index, den die Hautverdeckung setzt. Ohne das Feld wie bisher.
         const weg = geo.userData?.punkteWeg;
         if (weg) ({ index, gruppen } = Figurhaut._ohnePunkte(index, gruppen, weg));

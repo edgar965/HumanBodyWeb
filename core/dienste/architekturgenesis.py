@@ -78,7 +78,7 @@ class Architekturgenesis:
 
     #: Mesh → Genesis (28.10.2026, Abschnitt 12 der Seite): die zwei Portierungen und ihre Teile — dieselbe Prüfung.
     MESH = [
-        ('Genesis9/meshgenesis.py', 'G9meshgenesis', 'Ablauf: Verfahren aus Einstellungen → 2d-3d-AI, Ableitung im Speicher, Einpassen, nach innen, Mesh-Regler'),
+        ('Genesis9/meshgenesis.py', 'G9meshgenesis', 'Ablauf: Verfahren aus Einstellungen → Foto-Genesis, Ableitung im Speicher, Einpassen, nach innen, Mesh-Regler'),
         ('Genesis9/meshipnet.py', 'G9meshipnet', 'IPNet fit_SMPL_IPNet + fit_SMPLD (Adam, Abstand Punkt ↔ Fläche, Chamfer je Teil, Versatz mit Laplace)'),
         ('Genesis9/meshtransfer.py', 'G9meshtransfer', 'smplx transfer_model (Kantenstufe, Punktstufe, minimize)'),
         ('Genesis9/trustregion.py', 'G9trustregion', 'torch-trust-ncg, Weg cg (Steihaug)'),
@@ -94,7 +94,7 @@ class Architekturgenesis:
         ('Genesis9/meshgrenzen.py', 'G9meshgrenzen', 'Haltung in Daz\' Gelenkgrenzen (Genesis9.dsf), Euler je Reihenfolge'),
         ('Genesis9/meshziel.py', 'G9meshziel', 'Das Ziel: Punkte, Normalen, Klasse je Punkt, Teile'),
         ('Genesis9/meshregler.py', 'G9meshregler', 'Kategorie „Mesh“: je Körperteil ein Eigenmorph'),
-        ('HumanBodyWeb/core/dienste/ai2d3dmeshwahl.py', 'Ai2d3dmeshwahl', 'Einstellung: welche Portierung'),
+        ('HumanBodyWeb/core/dienste/fotogenesismeshwahl.py', 'Fotogenesismeshwahl', 'Einstellung: welche Portierung'),
     ]
 
     @classmethod

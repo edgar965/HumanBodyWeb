@@ -13,10 +13,10 @@ from django.urls import path
 
 from .api.hilfe_andere_modelle import AndereModelle, Figurbild
 from .api.hilfe_architektur_2d3d import HilfeArchitektur2d3d
-from .api.hilfe_architektur_ai2d3d import HilfeArchitekturAi2d3d
+from .api.hilfe_architektur_fotogenesis import HilfeArchitekturFotogenesis
 from .api.hilfe_architektur_arp import HilfeArchitekturArp
 from .api.hilfe_architektur_genesis import HilfeArchitekturGenesis
-from .api.hilfe_architektur_mesh3dai import HilfeArchitekturMesh3dai
+from .api.hilfe_architektur_meshgenesis import HilfeArchitekturMeshgenesis
 from .api.hilfe_webserver import HilfeWebserver
 
 urlpatterns = [
@@ -25,9 +25,9 @@ urlpatterns = [
     path('2d3d/', HilfeArchitektur2d3d.ansicht(), name='hilfe_architektur_2d3d'),
     path('genesis/', HilfeArchitekturGenesis.ansicht(), name='hilfe_architektur_genesis'),
     path('arp-modell/', HilfeArchitekturArp.ansicht(), name='hilfe_architektur_arp'),
-    path('mesh3dai/', HilfeArchitekturMesh3dai.ansicht(), name='hilfe_architektur_mesh3dai'),
-    # Fotos → KI → Genesis-Modell (24.10.2026), Seite wie Mesh3DAI.
-    path('2d-3d-ai/', HilfeArchitekturAi2d3d.ansicht(), name='hilfe_architektur_ai2d3d'),
+    path('mesh-genesis/', HilfeArchitekturMeshgenesis.ansicht(), name='hilfe_architektur_meshgenesis'),
+    # Fotos → KI → Genesis-Modell (24.10.2026), Seite wie Mesh-Genesis.
+    path('foto-genesis/', HilfeArchitekturFotogenesis.ansicht(), name='hilfe_architektur_fotogenesis'),
     path(
         'andere-modelle/vorschau/<str:ordner>/<str:datei>',
         Figurbild.vorschau,

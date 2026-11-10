@@ -160,7 +160,7 @@ export class Anatomiehaut {
     }
 
     /**
-     * Trägt der Körper Fotokacheln (`inst.fototextur`, Haut-KI von Mesh3D-AI und 2d-3d-AI, Mesh to 3D)? Dann ist `inst.haut` leer, aber die Haut nicht die des Katalogs, und
+     * Trägt der Körper Fotokacheln (`inst.fototextur`, Haut-KI von Mesh-Genesis und Foto-Genesis, Mesh to 3D)? Dann ist `inst.haut` leer, aber die Haut nicht die des Katalogs, und
      * das Stück folgt ihr (31.10.2026, Venus: Ursulas Genitalkarte auf der KI-Haut, Edgar: „Geschlechtsteil hat Einheitsfarbe, nicht Körperfarbe“).
      */
     static fotohaut(inst) {

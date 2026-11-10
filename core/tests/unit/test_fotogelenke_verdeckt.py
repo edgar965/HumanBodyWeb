@@ -1,10 +1,10 @@
-"""`Mesh3daifotogelenke.verdeckt`: Ein Gelenk hinter einem anderen Körperteil ist im Foto nicht zu sehen. Ohne Karte."""
+"""`Meshgenesisfotogelenke.verdeckt`: Ein Gelenk hinter einem anderen Körperteil ist im Foto nicht zu sehen. Ohne Karte."""
 import sys
 import unittest
 
-sys.path.insert(0, r'A:\3DTools\mesh3dai')
+sys.path.insert(0, r'A:\3DTools\meshgenesis')
 
-from mesh3dai_fotogelenke import Mesh3daifotogelenke as F  # noqa: E402
+from meshgenesis_fotogelenke import Meshgenesisfotogelenke as F  # noqa: E402
 
 
 class VerdecktTest(unittest.TestCase):

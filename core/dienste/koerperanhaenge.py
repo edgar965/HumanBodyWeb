@@ -31,7 +31,7 @@ class Koerperanhaenge:
         Wimpern in der Haarfarbe von `modell` (`ModellMitKleidern`)."""
         haarfarbe = (getattr(modell, 'farben', None) or {}).get('haar')
         # Mit den fremden Reglern (`G9formung.eigen`: Eigenmorphe, Anfasser `eigenform:…`, hb:/mh:/sx:/uma:) — `morphwerte()` kennt nur die Daz-Formeln, die Augen sitzen aber auf
-        # `morphpunkte` MIT den fremden Morphen. Ohne sie bekam im Skriptdienst ein Bau mit gleichen Daz-Werten die Augen des vorigen (26.10.2026, 2d-3d-AI: ampel1, ampel2 → grundform4r).
+        # `morphpunkte` MIT den fremden Morphen. Ohne sie bekam im Skriptdienst ein Bau mit gleichen Daz-Werten die Augen des vorigen (26.10.2026, Foto-Genesis: ampel1, ampel2 → grundform4r).
         schluessel = json.dumps([bau.formung.morphwerte(), bau.formung.eigen(), haarfarbe], sort_keys=True, default=str)
         if schluessel not in cls._vorrat:
             cls._vorrat.clear()                      # eine Formung je Lauf: kein Wachsen über Runden

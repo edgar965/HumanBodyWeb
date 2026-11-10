@@ -3,8 +3,8 @@ import { Modellpruefungdurchstoss } from './modellpruefungdurchstoss.js';
 
 /**
  * Modellpruefungsaum — sind die Säume der Kleidung glatt? Klasse des Modell Checks (`Modellpruefung`, 02.11.2026, Sitzung roomguest-f0; Edgar: „Zacken beim Ärmel (kein
- * Saum)“, „sind diese Testmethoden für die Figur auch in dem generischen Code … Modell Check? wenn nicht, dann tu das“). Dasselbe Maß wie der Saumtest von 2d-3d-AI
- * (`HumanBodyWeb/core/tests/automated/ai2d3d_saummass.py`, torch: `KoerperKI_Fotos/saummass.py`): Randschleifen über die gerichteten Randkanten (Punkte gleicher Lage
+ * Saum)“, „sind diese Testmethoden für die Figur auch in dem generischen Code … Modell Check? wenn nicht, dann tu das“). Dasselbe Maß wie der Saumtest von Foto-Genesis
+ * (`HumanBodyWeb/core/tests/automated/fotogenesis_saummass.py`, torch: `KoerperKI_Fotos/saummass.py`): Randschleifen über die gerichteten Randkanten (Punkte gleicher Lage
  * vorher verschweißt — three.js trennt sie an UV-Nähten), ab LOCH_MM ein Saum, kürzere sind Löcher; je Saum die Schleife auf SCHRITT_MM gleichmäßig umgetastet und
  * kreisförmig mit einem Gauß von GLAETTE_MM geglättet; Zacken = P95 des Abstands der Randpunkte von der geglätteten Schleife an derselben Stelle, Überlänge = Länge /
  * geglättete Länge − 1. Grenzen wie dort: ZACKEN_MM, UEBERLAENGE (gemessen 02.11.2026: Säume der Zeile 1 2,1–3,3 mm, gerade Schnitte 0,8–1,15 mm bei 0,6–1,6 %).

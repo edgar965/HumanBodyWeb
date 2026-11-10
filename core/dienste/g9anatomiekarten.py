@@ -3,7 +3,7 @@ u"""G9anatomiekarten — die im Browser gerechneten Karten des Anatomie-Stücks 
 
 Edgar, 19.10.2026: „warum muss die immer neu gerechnet werden? kannst du die im modell nicht speichern?" und „alle Anzeigen speichern, sodass sie beim Laden
 schnell angezeigt werden". `Anatomiebacken` rechnet Farbe, Normalen und Rauheit des Stücks aus den Karten der Haut — gemessen am 19.10.2026 an Damira0
-(Mesh3D-AI, zwei Figuren, grob) 9,6 s von „Texturen da" bis „Hautfarbe fertig", bei jedem Laden. Die Karten hängen nur an der Eingabe: Lage des Stücks und der
+(Mesh-Genesis, zwei Figuren, grob) 9,6 s von „Texturen da" bis „Hautfarbe fertig", bei jedem Laden. Die Karten hängen nur an der Eingabe: Lage des Stücks und der
 Haut darunter (`Anatomiehash`), den Bildern der Haut (ihre Adressen), der Größe und der Fassung der Rechnung — der Schlüssel ist ein Hash darüber
 (`gemeinsam/anatomievorrat.js`). Hier liegen sie unter ihm, bis zu `PLATTE_MB`; was am längsten nicht gelesen wurde, fällt zuerst.
 

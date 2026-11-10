@@ -25,8 +25,8 @@ Rändern jedes Teilbilds, sonst mischten die Nachbarteilbilder herein. Fassung 3
 ABLAGE: `Genesis9/ablage/hautteile_<geschlecht>_v<FASSUNG>_<kachel>.png` und `….json` — die Gewichte hängen nicht am Geschlecht; gebaut wird trotzdem je Geschlecht, weil die
 Ablage der Hautkarten so arbeitet (`G9hautfaltenablage`).
 
-LESER außer dem Browser: die Haut-KI von Mesh3D-AI (Konzept `Docu/konzepte/2026-10-25_haut-ki-eingang-richtig-ablesen-konzept.md`, Fassung 2, Abschnitte 3 und 4: Ton-KI je Körperteil, Prüftöne und Training je
-Körperteil) liest die Ablage bzw. `G9hautteile`. Ändern sich Format, `TEILE`-Reihenfolge oder `FASSUNG`: der Mesh3D-AI-Sitzung vorher Bescheid geben.
+LESER außer dem Browser: die Haut-KI von Mesh-Genesis (Konzept `Docu/konzepte/2026-10-25_haut-ki-eingang-richtig-ablesen-konzept.md`, Fassung 2, Abschnitte 3 und 4: Ton-KI je Körperteil, Prüftöne und Training je
+Körperteil) liest die Ablage bzw. `G9hautteile`. Ändern sich Format, `TEILE`-Reihenfolge oder `FASSUNG`: der Mesh-Genesis-Sitzung vorher Bescheid geben.
 """
 import json
 import logging

@@ -36,9 +36,9 @@
         mit der Formrechnung, jeder Regler allein am Ende seines Bereichs. <strong>Wirksamkeit</strong>: größte Verschiebung eines Hautpunkts (4.000 Körper-, 5.101 Kopfpunkte) oder
         Gelenks; der Tooltip zeigt Körper, Kopf, Gelenke und was die Pipelines davon sehen. <strong>Empfehlung</strong> „nutzen“, wenn der Regler wirkt (≥ {{ regler_kopf.schwellen.stumm_mm|floatformat:"0" }} mm),
         nicht doppelt ist (ein anderer Regler macht dieselbe Form bis auf {{ regler_kopf.schwellen.doppelt_mm|floatformat:"0" }} mm) und am Eingang der Pipeline sichtbar ist —
-        Mesh3D-AI: entlang der Messlinien des Netzes ≥ {{ regler_kopf.schwellen.netz_mm|floatformat:"0" }} mm; 2d-3d-AI: quer zum Umriss (vorn, Seite) oder im Gesicht von vorn
-        ≥ {{ regler_kopf.schwellen.foto_mm|floatformat:"0" }} mm. Die Schwellen sind Setzungen; die Fotoseite ist eine Näherung (ohne Verdeckung), nicht das Messwerk von 2d-3d-AI.
-        Ohne Wirkung: {{ regler_kopf.ohne_wirkung }}, doppelt: {{ regler_kopf.doppelt }}, nutzen Mesh3D-AI: {{ regler_kopf.mesh3dai }}, nutzen 2d-3d-AI: {{ regler_kopf.ai2d3d }}.
+        Mesh-Genesis: entlang der Messlinien des Netzes ≥ {{ regler_kopf.schwellen.netz_mm|floatformat:"0" }} mm; Foto-Genesis: quer zum Umriss (vorn, Seite) oder im Gesicht von vorn
+        ≥ {{ regler_kopf.schwellen.foto_mm|floatformat:"0" }} mm. Die Schwellen sind Setzungen; die Fotoseite ist eine Näherung (ohne Verdeckung), nicht das Messwerk von Foto-Genesis.
+        Ohne Wirkung: {{ regler_kopf.ohne_wirkung }}, doppelt: {{ regler_kopf.doppelt }}, nutzen Mesh-Genesis: {{ regler_kopf.meshgenesis }}, nutzen Foto-Genesis: {{ regler_kopf.fotogenesis }}.
         „Gesetzt in Prüfformen“: {{ regler_kopf.pruefformen }} Wahrheiten aus dem Lauf {{ regler_kopf.lauf }}. Ablage <code>{{ regler_kopf.datei }}</code>, neu messen:
         <code>{{ regler_befehl }}</code>.</p>
     {% if regler_kopf.andere %}<p class="hint hb-schlecht">Daneben liegen Ablagen eines anderen Reglerraums: {{ regler_kopf.andere|join:", " }} — gezeigt ist die jüngste.</p>{% endif %}

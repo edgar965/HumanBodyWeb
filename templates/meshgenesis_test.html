@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load szenenskript %}
+{% block title %}{{ test.name }} · Test · Mesh-Genesis{% endblock %}
+
+{% comment %}
+Mesh-Genesis, Reiter „Test“ (16.10.2026, Edgar: „darin auch eine Jobliste, aber nur Mesh und Ausgabe … testen, wie das bei Meshes ausschaut, wo wir keine Trainingsdaten haben“).
+Ein Test: ein Netz ohne Trainingsdaten (dasselbe wie ein Testauftrag auf /mesh-3D/), gerechnet mit dem Netz von Mesh-Genesis (`Meshgenesistest`). Zwei gekoppelte Felder:
+Mesh (das Netz im Rahmen des Datensatzes, mit dem vorhergesagten Rig) und Ausgabe (die trainierte Figur mit dem kleinsten Rest der Anpassung — `test.json` → `figur`, vor dem 16.10.2026 abends immer Ursula1 — in der vorhergesagten Haltung, gehäutet wie auf der Jobseite). Kein Ziel, keine Fehlerzahl.
+Endpunkte `core/api/meshgenesistest.py`, Seite `static/viewer/meshgenesis/meshgenesistestseite.js`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesis.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/figurbewegung.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesisrechnen.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/fotogenesis.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesislinien.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/exportleiste.css' %}">
+{# Die Karte des Anatomie-Stücks (Haut des Körpers, `Meshgenesisanatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
+<meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
+{% comment %}Die Animation der Ausgabe ist eine Genesis-Figur aus dem Code der Charakter-Seite (22.10.2026, `Meshgenesisfigurbewegung`) — dieselben Angaben wie auf der Jobseite (`meshgenesis.html`):
+Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schaltet), Weg der Bilder.{% endcomment %}
+<meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="schnellanzeige" content="an">
+<meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
+{# subdivide und mesh_bvh: Die Exportleiste schreibt GLB und OBJ mit `Modellexport` der Charakter-Seite, dessen Module beide erwarten (wie `meshfigur_auftrag.html`). #}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-microchip"></i> <a href="/mesh-genesis/" class="meshgenesis-zurueckzurliste" title="Alle Jobs">Mesh-Genesis</a> <span class="meshgenesis-pfad">›</span>
+        <a href="/mesh-genesis/#test" class="meshgenesis-zurueckzurliste" title="Alle Tests">Test</a> <span class="meshgenesis-pfad">›</span>
+        {# Name änderbar (19.10.2026, Stift wie bei Mesh-3D: `gemeinsam/auftragname.js`, `Meshgenesisname`); Kennung und Adresse bleiben. #}
+        <span id="auftrag-name" data-adresse="{% url 'meshgenesis_testname' test.kennung %}">{{ test.name }}</span></h1>
+</div>
+
+{% comment %}Knopf „Rechnen“ (23.10.2026, Edgar: „Knopf auf der Seite: Mesh hochladen, ‚Rechnen‘, Fortschritt sehen“): `Meshgenesisrechenlauf` — feste Schritte, KI-Fassungen aus `Meshgenesiskifassungen`.{% endcomment %}
+<section class="card meshgenesis-rechnen" id="meshgenesis-rechnen" data-kennung="{{ test.kennung }}">
+    <div class="meshgenesis-rechnen-kopf">
+        <button type="button" class="btn btn-primary" data-aktion="rechnen"><span><i class="fas fa-play"></i> Rechnen</span></button>
+        <button type="button" class="btn btn-secondary" data-aktion="rechnen-ab" data-ab="meshanpassung" title="Rechnet nur Einpassung, Figur, Haut, Kleider und Prüfung für das eingestellte Geschlecht. Rig, Erkennung und Zerlegung bleiben. Dafür nach dem Umstellen des Geschlechts."><span><i class="fas fa-step-forward"></i> Ab Einpassung rechnen</span></button>
+        <span class="meshgenesis-rechnen-status" data-status>Stand wird geladen …</span>
+    </div>
+    <div class="progress-bar-mini meshgenesis-rechnen-balken"><span class="progress-fill-mini" data-balken style="width: 0%"></span></div>
+    <ol class="meshgenesis-rechnen-schritte" data-schritte></ol>
+</section>
+
+{% include "_meshgenesis_meshanpassung.html" with kennung=test.kennung %}
+
+<section class="card meshgenesis-zeile" id="meshgenesis-test" data-kennung="{{ test.kennung }}">
+    {# Geschlecht der Figur (16.10.2026 abends, Edgar: „ganz oben im Testjob soll die Einstellung änderbar sein, ob es weiblich oder männlich ist“) — `Meshgenesistest.geschlecht_setzen`. #}
+    <div class="meshgenesis-test-einstellung">
+        <label for="meshgenesis-test-geschlecht">Figur:</label>
+        <select id="meshgenesis-test-geschlecht" data-reihenfolge="fest" disabled>
+            <option value="weiblich"{% if test.geschlecht == 'weiblich' %} selected{% endif %}>weiblich</option>
+            <option value="maennlich"{% if test.geschlecht == 'maennlich' %} selected{% endif %}>männlich</option>
+        </select>
+        <span class="meshgenesis-test-figur" id="meshgenesis-test-figur">{% if test.figur %}Ausgabe: {{ test.figur }}{% endif %}</span>
+        <span class="hb-hinweis" id="meshgenesis-test-geschlechtstand" hidden></span>
+        {# Häkchen eines Tests ohne Job (`Meshgenesistestwahl`); am Job stehen sie auf der Jobseite und gehen vor. #}
+        {% if wahl %}
+        <label title="Hautfarbe der Haut-KI. Aus: Haut ohne KI. Gilt beim nächsten Rechnen."><input type="checkbox" data-wahl="haut_ki"{% if wahl.haut_ki %} checked{% endif %}> Haut-KI</label>
+        <label title="Für Figuren ohne Kleidung: Alles außer Haar wird Haut. Gilt beim nächsten Rechnen."><input type="checkbox" data-wahl="keine_kleider"{% if wahl.keine_kleider %} checked{% endif %}> Keine Kleider</label>
+        {% endif %}
+    </div>
+    <div class="meshgenesis-zeilenkopf">
+        <h2>Ganzer Körper</h2>
+        {# Ansichtsarten, Rig, Kleider wie auf den Jobseiten (24.10.2026, Edgar: „es fehlen die View Buttons für Kleider an / aus, usw.“) — `Meshgenesistestansicht`. #}
+        {% include "_meshgenesis_ansichtwahl.html" with ohne_animation=True %}
+    </div>
+    <p class="hb-hinweis" id="meshgenesis-test-info">Netz ohne Trainingsdaten — es gibt kein Ziel, darum keine Fehlerzahl. Wird geladen …</p>
+    <div class="meshgenesis-bereiche meshgenesis-bereiche-zwei">
+        <div class="meshgenesis-feld">
+            <h3><span class="meshgenesis-nummer">1</span> Mesh</h3>
+            <div class="meshgenesis-leinwand" data-art="eingabe"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="eingabe"></div>
+        </div>
+        <div class="meshgenesis-feld">
+            <h3><span class="meshgenesis-nummer">2</span> Ausgabe</h3>
+            <div class="meshgenesis-leinwand" data-art="ausgabe"></div>
+            {% url 'meshgenesis_teststandardanimation' test.kennung as standardanimation %}
+            {% include "_meshgenesis_figurbewegung.html" with adresse=standardanimation tasten=True %}
+            {# Haut angleichen wie am Job (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“); ohne fertige Haut blendet `Fotogenesishautangleich` es aus #}
+            {% url 'meshgenesis_hautangleich' test.kennung as hautangleich_adresse %}{% include "_fotogenesis_hautangleich.html" with adresse=hautangleich_adresse %}
+            <div class="meshgenesis-bereichsinfo" data-info="ausgabe"></div>
+            {# Exportleiste rechts unten (31.10.2026, Edgar: „mach mir die Buttons zum speichern des Modells in dem Bereich ‚Ganzer Körper‘, rechts unten … export als glb, obj, blend“). #}
+            {% include "_exportleiste.html" with bereich="meshgenesistest" kennung=test.kennung speichern_text="Übernehmen und als Modell speichern" speichern_hinweis="Übernimmt die Wahl der Karte „Kleider und Bestandteile“ und speichert die Figur als Genesis-Modell (Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle)." %}
+        </div>
+    </div>
+</section>
+
+{% include "_meshgenesis_linien.html" with kennung=test.kennung %}
+
+{% comment %}
+Messpunkte des Körpers (24.10.2026 nachts, Edgar zu randy_tropical: „Du hast doch messmethoden … mach im Job eine zweite Zeile mit den Messungen, so wie hier“ — Vorbild die Testzeile von
+`/foto-genesis/test/edgartrip/`): dieselbe Anzeige (`Fotogenesismesspunkte`, Klassen und CSS von Foto-Genesis), Daten aus der Kostüm-Prüfung (`Kostuemmesspunkte`, `Meshgenesistestmesspunkte`).
+{% endcomment %}
+<section class="card fotogenesis-messkarte" id="meshgenesis-messpunkte" data-kennung="{{ test.kennung }}">
+    <div class="meshgenesis-zeilenkopf">
+        <h2>Test: Messpunkte des Körpers — Eingang gegen Ergebnis</h2>
+        <div class="schalterleiste">
+            <button type="button" class="schaltknopf" data-messansicht="vorne" aria-pressed="true">vorne</button>
+            <button type="button" class="schaltknopf" data-messansicht="hinten" aria-pressed="false">hinten</button>
+            <button type="button" class="schaltknopf" data-messansicht="links" aria-pressed="false">links</button>
+            <button type="button" class="schaltknopf" data-messansicht="rechts" aria-pressed="false">rechts</button>
+        </div>
+    </div>
+    <p class="hb-hinweis">Gemessen wird mit denselben Detektoren wie bei Foto-Genesis auf dem Eingang (Mesh) und dem Ergebnis (Figur mit ihren Stücken), beide aus derselben Kamera (orthografisch, ohne
+        Licht): 23 Punkte von ViTPose (Kopf, Gelenke, Füße) und 40 Randpunkte auf dem Umriss, je zwei an 20 Linien quer zu Hals, Rumpf, Armen und Beinen. Jede Linie hängt an den Gelenken des Eingangs
+        und wird in beiden Bildern an derselben Stelle abgeschritten. Blau: Eingang, schwarz: Ergebnis, dünne Linien: das Gerippe von ViTPose (daran hängen die Messlinien), grau: nicht gewertet;
+        Feld 3 nur die rote Abweichung je Punkt. Zeile berühren hebt den Punkt hervor, der Tooltip nennt die Abweichung. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).
+        Diese Punkte prüfen das fertige Ergebnis der Kette — das Training der Regler-KI misst nicht hier, sondern an den 9.101 Messlinien oben.</p>
+    <p class="hb-hinweis fotogenesis-mess-info" data-info>Messpunkte werden geladen …</p>
+    <div class="fotogenesis-messzeile">
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">1</span> Eingang (Mesh)</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">2</span> Ergebnis (Figur mit Stücken)</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">3</span> Ergebnis über dem Eingang</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="fotogenesis-messtabelle"><table class="fotogenesis-kopftabelle" data-sort-aus data-sort-key="meshgenesis-messpunkte">
+            <thead><tr><th>Nr</th><th>Messpunkt</th><th class="num">Eingang</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+
+{% comment %} Gesichtspunkte (27.10.2026, Edgar: „Es fehlt eine Zeile mit dem MediaPipe oder der ViTPose, je nachdem was du gerade gerechnet hast“): MediaPipe der Kostüm-Prüfung
+(`Kostuemgesicht`, abgelegt von `Kostuemgesichtszeile`), dieselbe Anzeige wie die Gesichtspunkte von Foto-Genesis. {% endcomment %}
+<section class="card fotogenesis-messkarte" id="meshgenesis-gesichtspunkte" data-kennung="{{ test.kennung }}" data-nur-deltas>
+    <h2>Test: Gesichtspunkte (MediaPipe) — Eingang gegen Ergebnis</h2>
+    <p class="hb-hinweis">Kamera frontal auf den Kopf der Figur (orthografisch, ohne Licht). Blau: die 478 Punkte, die MediaPipe auf dem Eingang (Mesh mit Textur) findet. Schwarz: dieselben Punkte am
+        Käfig der Figur — nicht erkannt, sondern an festen Stellen des Netzes (der Käfig hat keine Augäpfel, MediaPipe erkennt auf ihm kein Gesicht). Die dünnen Linien in Feld 1 und 2 verbinden die
+        Merkmale wie MediaPipe selbst (Lippen, Augen, Brauen, Nase, Umriss). Feld 3: je Punkt eine rote Linie zwischen Eingang und Ergebnis. Die Tabelle nennt die Maße der Kostüm-Prüfung
+        „Gesicht wie der Eingang“. Neu gerechnet mit der Kostüm-Prüfung (Schritt „Kleider“).</p>
+    <p class="hb-hinweis fotogenesis-mess-info" data-info>Gesichtspunkte werden geladen …</p>
+    <div class="fotogenesis-messzeile">
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">1</span> Eingang (Mesh) — MediaPipe</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">2</span> Ergebnis (Figur) — feste Netzstellen</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">3</span> Abweichung: rote Linie Eingang – Ergebnis</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="fotogenesis-messtabelle"><table class="fotogenesis-kopftabelle" data-sort-aus data-sort-key="meshgenesis-gesichtspunkte">
+            <thead><tr><th>Nr</th><th>Maß · Gruppe</th><th class="num">Eingang</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>
+
+{% comment %}
+Kleider und Bestandteile (17.10.2026 nachts, Edgar: „Toggle für jedes Kleidungsstück für beide Optionen und Button zum übernehmen von Option a oder b in das End-Modell, mit speichern des Modells“) —
+`Meshgenesistestkleider` (Server und Seite), `Meshgenesistestmodell`.
+{% endcomment %}
+<section class="card meshgenesis-kleider" id="meshgenesis-kleider">
+    <div class="meshgenesis-zeilenkopf">
+        <h2>Kleider und Bestandteile</h2>
+        <div class="schalterleiste">
+            <span class="meshgenesis-kleider-titel">Alle:</span>
+            <button type="button" class="schaltknopf" data-kleider-alle="ki" aria-pressed="false" title="Nur was die KI ausgibt: je Stück Schnitt, sonst geschnitten; Haar aus dem Netz geschnitten, keine Frisur der Garderobe (Vorgabe)">KI</button>
+            <button type="button" class="schaltknopf" data-kleider-alle="a" aria-pressed="false" title="Jedes Stück des Mesh-3D-Laufs aus dem Katalog, wo es eines gibt (nicht aus der KI)">a · Katalog</button>
+            <button type="button" class="schaltknopf" data-kleider-alle="b" aria-pressed="false" title="Jedes Stück so, wie der Mesh-3D-Lauf es aus dem Netz geschnitten hat (nicht aus der KI)">b · Mesh-3D-Lauf</button>
+        </div>
+    </div>
+    <p class="hb-hinweis" data-kleider="info">Wird geladen …</p>
+    <table class="doku meshgenesis-kleider-tabelle">
+        <thead><tr><th>Stück</th><th>Name im Modell</th><th>Kategorie</th><th>Wege</th><th>Wahl</th></tr></thead>
+        <tbody data-kleider="tabelle"></tbody>
+    </table>
+    {# „Übernehmen und als Modell speichern“ steht seit 31.10.2026 in der Exportleiste unter der Ausgabe (Zeile „Ganzer Körper“). #}
+</section>
+
+{% comment %}
+Testfälle der Kleider-KI (22.10.2026, Edgar: „wieviel Fehler von wievielen insgesamt, für alle Prioritäten … in das UI … für die trainings und Testjobs … in einer Tabelle“) — die Messung der Stücke, die
+diese Seite zeigt, gegen das Ziel (`Meshgenesistestfaelle`, `meshgenesistestfaelle.js`); Tests ohne Ziel haben keine.
+{% endcomment %}
+<section class="card meshgenesis-testfaelle" id="meshgenesis-testfaelle">
+    <h2>Testfälle der KI</h2>
+    <div data-testfaelle="inhalt"><span class="hb-hinweis">Wird geladen …</span></div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+{# Einstieg als EIN Bündel (08.11.2026, `viewer/meshgenesis/main.js`, `Modulbuendel.EINSTIEGE['meshgenesis']`) #}
+<script type="module" src="{% meshgenesisskript %}"></script>
+{% endblock %}

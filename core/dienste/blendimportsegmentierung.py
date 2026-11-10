@@ -94,11 +94,11 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
 
     @staticmethod
     def rendern(glb, ziele):
-        """Die vier Ansichten (pyrender, `Mesh3dansicht.rundum`). Mesh3D-AI rendert sie in torch auf der Karte, reproduzierbar (`mesh3dai/mesh3dai_bilderkennung.py`, 26.10.2026)."""
+        """Die vier Ansichten (pyrender, `Mesh3dansicht.rundum`). Mesh-Genesis rendert sie in torch auf der Karte, reproduzierbar (`meshgenesis/meshgenesis_bilderkennung.py`, 26.10.2026)."""
         Mesh3dansicht.rundum(glb, ziele)
 
     def begriffe_rechnen(self):
-        """SAM 3 über die Begriffe als eigener Prozess in python12 (`Blendimportbegriffe`). Mesh3D-AI rechnet ihn im eigenen python14-Prozess mit dem Port (`mesh3dai/mesh3dai_bilderkennung.py`)."""
+        """SAM 3 über die Begriffe als eigener Prozess in python12 (`Blendimportbegriffe`). Mesh-Genesis rechnet ihn im eigenen python14-Prozess mit dem Port (`meshgenesis/meshgenesis_bilderkennung.py`)."""
         return Blendimportbegriffe(self).ausfuehren()
 
     #: Ab so vielen Dreiecken stimmt ein Abstimm-Netz ab (darunter deckt jede Fläche mehrere Pixel), und so viele hat es (Setzung: bei 56.560 cm² Netzfläche rund 3,8 cm² je Fläche, ~100 Pixel).

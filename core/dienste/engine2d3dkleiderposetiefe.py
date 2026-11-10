@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Engine2d3dKleiderposetiefe — die Tiefe der SAM-Gelenke an Händen und Füßen entlang der Kette, nicht nur aus der Mitte der Dicke (17.10.2026).
 
-Anlass (Mesh3D-AI, Vorstufe „Nur Rig“): an zwei Posen zeigte der linke Fuß der Rig-Figur 124° bzw. 151° falsch. SAM 3D Body hatte die Tiefe richtig (sitzend: Zeh 0,19 m VOR dem Knöchel,
+Anlass (Mesh-Genesis, Vorstufe „Nur Rig“): an zwei Posen zeigte der linke Fuß der Rig-Figur 124° bzw. 151° falsch. SAM 3D Body hatte die Tiefe richtig (sitzend: Zeh 0,19 m VOR dem Knöchel,
 laufend: Zeh hinter dem Knöchel — wie das Ziel), verloren ging sie beim Legen ins Netz: die Mitte der Netzpunkte im Strahl ist nur dann das Gelenk, wenn das Glied quer zum Strahl liegt.
-Zeigt der Fuß zur Kamera, landen Ferse und Zeh am selben Punkt; liegt das Schienbein im Strahl der Zehenspitze, landet die Zehe auf dem Schienbein (`ProjektTemp/_wegwerf/mesh3dai_fuesse_schichten.py`).
+Zeigt der Fuß zur Kamera, landen Ferse und Zeh am selben Punkt; liegt das Schienbein im Strahl der Zehenspitze, landet die Zehe auf dem Schienbein (`ProjektTemp/_wegwerf/meshgenesis_fuesse_schichten.py`).
 
 Die Regel: Die Gelenke in `KETTE` hängen an ihrem Elterngelenk: Vorhersage = Tiefe des Elterngelenks im Netz + Tiefenunterschied bei SAM (k3; die Kamera blickt nach +z, das Netz zeigt zur Kamera)
 × Maßstab SAM → Netz. Bereich = vorderste bis hinterste Netzfläche im Strahl (2.–98. Perzentil, wie die Mitte). Ist er kurz (Glied quer zum Strahl, bis `KURZ` Radien), gilt seine Mitte wie bisher;
@@ -11,7 +11,7 @@ ist er lang (ab `LANG` Radien), die Vorhersage in den Bereich geklemmt; dazwisch
 Gelenk (SAM setzte die Zehenspitze des laufenden Fußes 10 cm zu tief, der Strahl traf das Schienbein): das Gelenk fällt weg — eine falsche Landmarke dreht den Fuß, eine fehlende überlässt ihn der Fläche.
 Alle übrigen Gelenke (Rumpf, Gesicht, Schultern, Hüften, Ellbogen, Knie, Knöchel) behalten die Mitte — an ihr ist die SAM-Tabelle (`Samkalibrierung`, A-Pose) gemessen.
 
-Was gemessen wurde (12 Mesh-3D-Aufträge mit Ziel, `mesh3dai_fuesse_rig_messen.py`; Tagebuch 2026-10-17, Abschnitt „Füße"): die Kette auch an Knien/Knöcheln/Ellbogen machte die Landmarken genauer
+Was gemessen wurde (12 Mesh-3D-Aufträge mit Ziel, `meshgenesis_fuesse_rig_messen.py`; Tagebuch 2026-10-17, Abschnitt „Füße"): die Kette auch an Knien/Knöcheln/Ellbogen machte die Landmarken genauer
 (Tiefe Ø 37,3 → 16,5 mm), zog aber die Anpassung einer sitzenden Figur ins Becken (Rumpf 7 → 38 mm; mit Hüften an den Schultern 57 mm) — die Fläche hielt Knie und Becken vorher selbst richtig, nur die
 Füße und Hände drehte sie mit den falschen Spitzen. Schichten (Lücken im Strahl) taugen NICHT als Glieder: das Netz ist hohl, ein dickes Glied zerfällt in Vorder- und Rückseite.
 """
@@ -30,7 +30,7 @@ class Engine2d3dKleiderposetiefe:
         'left-hip': 'left-shoulder', 'right-hip': 'right-shoulder',
     }
     #: Die Gelenke, deren Tiefe die Kette rechnet: Hüften (an den Schultern), Arme ab dem Ellbogen, Beine ab dem Knie; Schultern und Gesicht behalten die Mitte. Gemessen an 12 Mesh-3D-Aufträgen mit Ziel
-    #: (`mesh3dai_fuesse_rig_messen.py`, Rig gegen Ziel Ø 138 Gelenke): alle Gelenke Mitte 21,2 mm · ohne die Hüften 12,7 · mit 12,3 · nur Ferse/Zehe/Handgelenk 17,2 mm (der laufende Fuß wieder 151°
+    #: (`meshgenesis_fuesse_rig_messen.py`, Rig gegen Ziel Ø 138 Gelenke): alle Gelenke Mitte 21,2 mm · ohne die Hüften 12,7 · mit 12,3 · nur Ferse/Zehe/Handgelenk 17,2 mm (der laufende Fuß wieder 151°
     #: verdreht: der Knöchel lag in der Mitte 23 cm neben dem Gelenk). Die Hüften gehören dazu, seit MannLaufen mit Stiefeln neu gebaut war: dort lag die Mitte der linken Hüfte 29 cm hinter dem Gelenk
     #: (der Strahl lief durch das nach hinten gestreckte Bein), Knie und Fuß folgten ihr (Fuß 70° verdreht). Preis: das Becken der sitzenden Figur liegt 57 statt 38 mm neben dem Ziel (Ursache offen).
     KETTE = ('left-hip', 'right-hip', 'left-elbow', 'right-elbow', 'left-wrist', 'right-wrist', 'left-knee', 'right-knee', 'left-ankle', 'right-ankle',
@@ -40,7 +40,7 @@ class Engine2d3dKleiderposetiefe:
     #: Fassung 3 (17.10.2026 nachts, Edgar am Zwischenbild von DamiraSitzen: „das becken ist doch riesig“): die Hüften nehmen die Mitte des Strahls ein Viertel des Wegs zur Schulter derselben Seite —
     #: dort läuft er durch den Rumpf, nicht durch ein Bein, das zur Kamera zeigt oder nach hinten gestreckt ist. Fassung 2 (Schulter + Tiefenunterschied aus SAM) legte die Hüften der sitzenden Figur
     #: 44/59 mm zu weit vor; die Anpassung holte sie mit einem um 65° gekippten Becken (65 mm hinter dem Ziel) und einem um 95° verdrehten Oberschenkel — das Mittel der 138 Gelenke sah es nicht (13 mm).
-    #: Gemessen nur die Abbildung (`ProjektTemp/_wegwerf/mesh3dai_huefttiefe_pruefen.py`, 24 Hüften an 12 Aufträgen mit Ziel, |z − Oberschenkelgelenk|): Mitte 35,7 · Fassung 2 19,3 · Rumpf 0,25 16,8 mm
+    #: Gemessen nur die Abbildung (`ProjektTemp/_wegwerf/meshgenesis_huefttiefe_pruefen.py`, 24 Hüften an 12 Aufträgen mit Ziel, |z − Oberschenkelgelenk|): Mitte 35,7 · Fassung 2 19,3 · Rumpf 0,25 16,8 mm
     #: (0,15: 29,2, 0,35: 18,6, 0,5: 33,4, Median statt Mitte schlechter). Ist der Bereich dort länger als `RUMPF_HOECHST` Radien, liegt etwas vor oder hinter dem Rumpf (Ursula1 Probe 47: ein Arm vor dem
     #: Bauch, 12–19 Radien; sonst 4,3–7,5) — dann gilt die Kette wie in Fassung 2. Zusammen 9,8 mm, größter 41 mm.
     RUMPF = {'left-hip': 'left-shoulder', 'right-hip': 'right-shoulder'}

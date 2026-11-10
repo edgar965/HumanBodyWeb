@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Mesh-Genesis{% endblock %}
+
+{% comment %}
+Dashboard „Mesh-Genesis“, Hauptansicht (Edgar, 14.10.2026: „wir werden bei /mesh-3D-AI/ mehrere Jobs außer Ursula haben … eine Hauptansicht mit einer Tabelle so wie bei /mesh-3D/, und dann die Unterjobs wie Ursula1 als Unterseiten / unter Menüeinträge“).
+Ein Job ist ein Modell, an dem eine KI „Netz → Genesis-Modell“ trainiert wird; seine Seite (`meshgenesis.html`, `/mesh-genesis/<job>/`) zeigt Eingabe, gewünschte Ausgabe und Ausgabe des Netzes.
+Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Meshgenesisattrappe`). Endpunkte: `core/api/meshgenesis.py`; Tabelle: `core/dienste/meshgenesistabelle.py`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesis.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesisrechnen.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesislaufaktuell.css' %}">
+{% comment %}Die Reiterleiste (`.seitenreiter`) ist in `mesh.css` gestaltet — dieselbe wie auf /mesh-3D/ und „Modell aus Dateien“.{% endcomment %}
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+{% comment %}`gemeinsam/serverabruf.js` zieht über `registrierung.js` three.js nach — ohne die Importkarte bricht jedes Modul der Seite ab, ohne Meldung außer „Failed to resolve module specifier“.{% endcomment %}
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-microchip"></i> Mesh-Genesis</h1>
+</div>
+
+{% if hinweis %}
+<div class="card meshgenesis-attrappe" role="note">
+    <strong><i class="fas fa-exclamation-triangle"></i> Attrappe.</strong> {{ hinweis }}
+</div>
+{% endif %}
+
+{% comment %}Zwei Reiter (16.10.2026, Edgar: „mach auf /mesh-3D-AI/ einen zweiten Tab: Test, darin auch eine Jobliste, aber nur Mesh und Ausgabe“): Jobs (Training) und Test (Netze ohne Trainingsdaten).{% endcomment %}
+<div class="seitenreiter" role="tablist" id="meshgenesis-reiter">
+    <button type="button" role="tab" data-reiter="jobs" aria-selected="true"><i class="fas fa-list"></i> Jobs</button>
+    <button type="button" role="tab" data-reiter="test" aria-selected="false"><i class="fas fa-vial"></i> Test ({{ testtabelle.zeilen|length }})</button>
+    <button type="button" role="tab" data-reiter="formtraining" aria-selected="false"><i class="fas fa-shapes"></i> Formtraining ({{ formtraining.zeilen|length }})</button>
+    <button type="button" role="tab" data-reiter="aktuell" aria-selected="false"><i class="fas fa-gauge-high"></i> Lauf Aktuell</button>
+</div>
+
+<div data-reiterfeld="jobs">
+<div class="card meshgenesis-joblist" data-loeschen="jobs">
+    <h2>Jobs</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/meshgenesis/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p class="hb-hinweis">Ein Job ist ein Modell, an dem eine KI aus einem Netz ein Genesis-Modell machen lernt. Ein Klick auf eine Zeile öffnet die Seite des Jobs: Proben, Start (was das Netz sieht), Ziel (was es liefern soll) und Ergebnis (was es liefert).</p>
+    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+</div>
+</div>
+
+<div data-reiterfeld="test" hidden>
+<div class="card meshgenesis-joblist" data-loeschen="tests">
+    <h2>Test</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/meshgenesis/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p class="hb-hinweis">Netze, für die es <strong>keine Trainingsdaten</strong> gibt — dieselben wie die Testaufträge auf /mesh-3D/ (Edgar, Zauberer, Spiralballerina …). Gerechnet mit dem Netz von Mesh-Genesis, das nur an Ursula1 trainiert ist.
+        Ein Klick öffnet den Test mit zwei Feldern: <strong>Mesh</strong> (das Netz, mit dem vorhergesagten Rig) und <strong>Ausgabe</strong> (Ursula1 in der vorhergesagten Haltung). Ein Ziel gibt es nicht, darum keine Fehlerzahl.</p>
+    {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
+</div>
+{% comment %}Neuer Test aus einem Mesh (23.10.2026, Edgar: „Knopf auf der Seite: Mesh hochladen, ‚Rechnen‘, Fortschritt sehen“) — `Meshgenesisrechenschlange.anlegen`, danach rechnet der Lauf von selbst.{% endcomment %}
+<form class="card meshgenesis-joblist meshgenesis-testneu" id="meshgenesis-testneu">
+    <h2>Neuer Test aus einem Mesh</h2>
+    <p class="hb-hinweis">Datei (GLB, OBJ, FBX, Blend) hochladen — danach rechnet der Lauf mit festen Schritten (Rig und A-Pose, Haltung, Form, Figur, Kleider und Haar aus dem Mesh, Prüfung); den Fortschritt zeigt die Seite des Tests.</p>
+    <label>Datei <input type="file" name="datei" accept=".glb,.obj,.fbx,.blend" required></label>
+    <label>Name <input type="text" name="name" placeholder="wie die Datei"></label>
+    <label>Figur <select name="geschlecht" data-reihenfolge="fest"><option value="weiblich">weiblich</option><option value="maennlich">männlich</option></select></label>
+    <button type="submit" class="btn btn-primary"><span><i class="fas fa-upload"></i> Anlegen und rechnen</span></button>
+    <span class="hb-hinweis" data-meldung></span>
+</form>
+</div>
+
+{% comment %}Dritter Reiter „Formtraining“ (18.10.2026, Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw. … mach einen neuen Tab ‚Formtraining‘“):
+die Trainingsläufe der gemeinsamen Netze (`Meshgenesisformtrainingtabelle`) und die synthetischen Figuren (`Meshgenesisformvariantentabelle`), alles von der Platte.
+Ein Lauf öffnet seine Seite `/mesh-genesis/formtraining/<lauf>/` (`meshgenesis_formlauf.html`); die Formvarianten öffnen (noch) keine.{% endcomment %}
+<div data-reiterfeld="formtraining" hidden>
+<div class="card meshgenesis-joblist meshgenesis-jetzt" role="status">
+    <h2>Jetzt</h2>
+    <ul>{% for zeile in jetzt %}<li>{{ zeile }}</li>{% endfor %}</ul>
+    <p class="hb-hinweis">Stand beim Laden der Seite (Formvarianten höchstens 30 s alt). Ein Lauf, der noch auf die GPU oder auf Daten wartet, hat noch keinen Ordner und erscheint erst, wenn er beginnt.</p>
+</div>
+<div class="card meshgenesis-joblist">
+    <h2>Trainingsläufe</h2>
+    <p class="hb-hinweis">Je Lauf ein Netz, das an den Jobs und den Formvarianten zugleich trainiert wird (Ordner <code>3DObjects/meshgenesis/_vorstufe/laeufe/</code>). <strong>Formkopf</strong> sagt Rig und Genesis-Formregler voraus,
+        <strong>Vorstufe</strong> nur das Rig in der A-Pose. Laufende Läufe sind hervorgehoben; die Messwerte der letzten Zwischenmessung stehen im Tooltip der Statuszelle.
+        Ein Klick auf eine Zeile öffnet den Lauf: Verlauf, Ergebnis je Gruppe, Vergleich mit dem vorigen Lauf, Kopfmessung, Ergebnis je Figur, Log.</p>
+    {% include "djangobase/_tabelle.html" with tabelle=formtraining %}
+</div>
+<div class="card meshgenesis-joblist">
+    <h2>Formvarianten ({{ formvarianten.zeilen|length }})</h2>
+    <p class="hb-hinweis">Die synthetischen Figuren: je Variante ein Charaktermix mit Formreglern auf einem der vier Jobs, in dessen Kleidung, mit eigenen Posen (Ordner <code>3DObjects/meshgenesis/FormNNN/</code>).
+        Der Datenlauf rechnet je Pose zuerst MIA (Rig und Ruhelage, Make-It-Animatable), danach die A-Pose-Wolke Fassung 9, die das Formtraining liest. <strong>Prüfformen</strong> werden nie trainiert, nur gemessen.</p>
+    {% include "djangobase/_tabelle.html" with tabelle=formvarianten %}
+</div>
+</div>
+
+{% comment %}Vierter Reiter „Lauf Aktuell“ (18.10.2026, Edgar: „wo du den gerade laufenden Job listest, mit GPU, CPU-Verbrauch und Fortschrittsbalken“): gebaut im Browser aus
+`GET /api/meshgenesis/lauf-aktuell/` (`Meshgenesislaufaktuell`), abgefragt nur, solange dieses Feld sichtbar ist.{% endcomment %}
+<div data-reiterfeld="aktuell" hidden>
+<div data-laufaktuell><div class="card meshgenesis-joblist"><p class="hb-hinweis">Stand wird geladen … (die erste Messung nach einem Serverstart dauert einige Sekunden)</p></div></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_sortierung.js' %}"></script>
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_breiten.js' %}"></script>
+<script type="module">
+import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
+import { Meshgenesisliste } from "{% fassungspfad 'viewer/meshgenesis/meshgenesisliste.js' %}";
+import { Meshgenesislaufaktuell } from "{% fassungspfad 'viewer/meshgenesis/meshgenesislaufaktuell.js' %}";
+import { Meshgenesisloeschen } from "{% fassungspfad 'viewer/meshgenesis/meshgenesisloeschen.js' %}";
+import { Meshgenesistestneu } from "{% fassungspfad 'viewer/meshgenesis/meshgenesistestneu.js' %}";
+Meshgenesistestneu.binden(document.getElementById('meshgenesis-testneu'));
+Seitenreiter.binden(document.getElementById('meshgenesis-reiter'), 'meshgenesis_reiter');
+Meshgenesisliste.aufbauen();
+Meshgenesisloeschen.aufbauen();
+Meshgenesislaufaktuell.binden(document.querySelector('[data-reiterfeld="aktuell"]'));
+</script>
+{% endblock %}

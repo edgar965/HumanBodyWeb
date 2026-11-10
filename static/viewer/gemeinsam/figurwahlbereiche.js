@@ -72,6 +72,8 @@ export class Figurwahlbereiche {
                 eintraege.filter(e => (e.bereich || 'standard') === bereich));
             const zahl = liste.parentElement.querySelector('[data-zahl]');
             if (zahl) zahl.textContent = `(${eigene.length})`;
+            // Bereiche wie „MB-Lab“ nur mit Zeilen (`Figurkataloge.NUR_MIT_ZEILEN`, 10.11.2026)
+            liste.parentElement.classList.toggle('hb-versteckt', Figurkataloge.NUR_MIT_ZEILEN.has(bereich) && !eigene.length);
             // Die gespeicherten Modelle in Ordnern, mit Mehrfachauswahl (15.10.2026, `Figurwahlordner`).
             if (bereich === 'gespeichert' && ordner) {
                 ordner.fuellen(behaelter.dataset.quelle, liste, eigene, zeile, eintraege.length ? 'Keine Einträge.' : leerText);

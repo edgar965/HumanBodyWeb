@@ -2,7 +2,7 @@
 u"""G9texturfassung — ein Bild der Daz-Bibliothek so, wie die Seite es bestellt: unverändert, verkleinert (`?kante=1024`) oder als GPU-Block (`?format=bc`), 19.10.2026.
 
 Edgar (19.10.2026, nach der Untersuchung „ein Bildersatz kostet 1,7–2,8 s, weil 15 von 22 Bildern 4096² sind“): „mach alle 3, per Option einstellbar, default: A“ —
-Einstellungen → Mesh3D-AI (`Mesh3daitexturwahl`). Die Seite hängt ihre Wahl an die Adresse jedes Bildes (`gemeinsam/texturweg.js`); dieselbe Adresse beantworten der
+Einstellungen → Mesh-Genesis (`Meshgenesistexturwahl`). Die Seite hängt ihre Wahl an die Adresse jedes Bildes (`gemeinsam/texturweg.js`); dieselbe Adresse beantworten der
 Einzelabruf (`G9garderobeapi.textur`) und das Bündel (`G9texturbuendelapi`). Ohne Zusatz kommt das Original wie bisher.
 
     kante=512|1024|2048   `G9texturkopie` (Weg A)

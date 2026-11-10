@@ -1,9 +1,9 @@
-/* Standardanimation einer Genesis-Figur (22.10.2026, `_mesh3dai_figurbewegung.html`): Leiste wie bei Mesh-3D (`mesh3d.css`, `.mesh3d-animationsleiste`), Zahlen mit fester Breite,
-   damit der Schieber nicht wandert. Seit 31.10.2026 eigene Datei (aus mesh3dai.css): auch die Jobseite von 2d-3d-AI trägt die Leiste (`Ai2d3dbewegung`). */
-.mesh3dai-figurbewegung { display: flex; flex-direction: column; gap: 4px; }
-.mesh3dai-figurbewegung-leiste, .mesh3dai-figurbewegung-wahl { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
-.mesh3dai-figurbewegung-schieber { flex: 1 1 140px; min-width: 120px; accent-color: var(--accent, #e94560); }
-.mesh3dai-figurbewegung-zahl { font-size: 0.82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mesh3dai-figurbewegung-wahl label { font-size: 0.85rem; color: var(--text-muted, #8a93a6); margin: 0; }
-.mesh3dai-figurbewegung-wahl select { max-width: 16em; }
-.mesh3dai-figurbewegung .mesh3dai-ansichtname { font-size: 0.85rem; color: var(--text-muted, #8a93a6); }
+/* Standardanimation einer Genesis-Figur (22.10.2026, `_meshgenesis_figurbewegung.html`): Leiste wie bei Mesh-3D (`mesh3d.css`, `.mesh3d-animationsleiste`), Zahlen mit fester Breite,
+   damit der Schieber nicht wandert. Seit 31.10.2026 eigene Datei (aus meshgenesis.css): auch die Jobseite von Foto-Genesis trägt die Leiste (`Fotogenesisbewegung`). */
+.meshgenesis-figurbewegung { display: flex; flex-direction: column; gap: 4px; }
+.meshgenesis-figurbewegung-leiste, .meshgenesis-figurbewegung-wahl { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
+.meshgenesis-figurbewegung-schieber { flex: 1 1 140px; min-width: 120px; accent-color: var(--accent, #e94560); }
+.meshgenesis-figurbewegung-zahl { font-size: 0.82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meshgenesis-figurbewegung-wahl label { font-size: 0.85rem; color: var(--text-muted, #8a93a6); margin: 0; }
+.meshgenesis-figurbewegung-wahl select { max-width: 16em; }
+.meshgenesis-figurbewegung .meshgenesis-ansichtname { font-size: 0.85rem; color: var(--text-muted, #8a93a6); }

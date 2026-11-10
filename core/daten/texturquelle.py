@@ -23,16 +23,16 @@ class Texturquelle:
         r'(?P<name>[^/?#]+)/?$'
     )
 
-    #: Die Hautkachel der Figur eines 2d-3d-AI-Jobs (`Ai2d3dfigur._kacheln`, 31.10.2026 für `Ai2d3dmodell`) — nur Kacheln `10??.jpg`.
-    FIGUR_2D3DAI = re.compile(r'^/api/2d3dai/(?P<job>[-a-zA-Z0-9_]+)/figur/(?P<g>maennlich|weiblich)/bild/(?P<name>10\d\d\.jpg)$')
+    #: Die Hautkachel der Figur eines Foto-Genesis-Jobs (`Fotogenesisfigur._kacheln`, 31.10.2026 für `Fotogenesismodell`) — nur Kacheln `10??.jpg`.
+    FIGUR_FOTOGENESIS = re.compile(r'^/api/fotogenesis/(?P<job>[-a-zA-Z0-9_]+)/figur/(?P<g>maennlich|weiblich)/bild/(?P<name>10\d\d\.jpg)$')
 
     @classmethod
     def pfad(cls, adresse):
         """Die Datei hinter einer Auftragsadresse (`Path`) — oder None."""
-        figur = cls.FIGUR_2D3DAI.match(str(adresse or '').split('?')[0])
+        figur = cls.FIGUR_FOTOGENESIS.match(str(adresse or '').split('?')[0])
         if figur:
-            from ..dienste.ai2d3dfigur import Ai2d3dfigur
-            return Ai2d3dfigur.figurbild(figur['job'], figur['g'], figur['name'])
+            from ..dienste.fotogenesisfigur import Fotogenesisfigur
+            return Fotogenesisfigur.figurbild(figur['job'], figur['g'], figur['name'])
         treffer = cls.MUSTER.match(str(adresse or '').split('?')[0])
         if not treffer:
             return None

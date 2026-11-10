@@ -1,0 +1,14 @@
+/* Tabelle und Karte „Testfälle der KI“: Testseite von Mesh-Genesis (über meshgenesis.css) und Jobseite von Foto-Genesis (06.11.2026). */
+.meshgenesis-kleider-tabelle { width: 100%; margin: 6px 0 10px; }
+/* Durchsichtig mit geerbter Farbe: die Seitenstile legen jeder Tabelle einen dunklen Grund unter (dunkel auf dunkel, gesehen 17.10.2026 — wie die Statuskarte am 15.10.). */
+.meshgenesis-kleider-tabelle, .meshgenesis-kleider-tabelle thead, .meshgenesis-kleider-tabelle tbody, .meshgenesis-kleider-tabelle tr,
+.meshgenesis-kleider-tabelle th, .meshgenesis-kleider-tabelle td { background: transparent; color: inherit; }
+.meshgenesis-kleider-tabelle th, .meshgenesis-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }
+/* Testfälle der Kleider-KI (22.10.2026, `meshgenesistestfaelle.js`): Tabellen wie die Kleiderkarte, FEHLER rot, keine grün — in den Farben des Themes. */
+.meshgenesis-testfaelle { margin-top: 12px; }
+.meshgenesis-testfaelle h3 { font-size: 1rem; margin: 10px 0 4px; }
+.meshgenesis-testfaelle-messung + .meshgenesis-testfaelle-messung { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border, #3a4254); }
+.meshgenesis-testfaelle .meshgenesis-rot, .meshgenesis-testfaelle-tabelle td.meshgenesis-rot { color: var(--danger, #e74c3c); font-weight: 600; }
+.meshgenesis-testfaelle .meshgenesis-gruen, .meshgenesis-testfaelle-tabelle td.meshgenesis-gruen { color: var(--success, #27ae60); }
+.meshgenesis-testfaelle-tabelle td.meshgenesis-testfaelle-fehler { font-size: 0.85rem; }
+.meshgenesis-testfaelle-tabelle tr.meshgenesis-testfaelle-gewaehlt td { font-weight: 600; }

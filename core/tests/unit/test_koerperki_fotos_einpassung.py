@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests für die Kamera von `KoerperKI_Fotos.fotoeinpassung.Fotoeinpassung` (24.10.2026, 2d-3d-AI): Drehung, Bild, Profilseite, Startkamera.
+"""Tests für die Kamera von `KoerperKI_Fotos.fotoeinpassung.Fotoeinpassung` (24.10.2026, Foto-Genesis): Drehung, Bild, Profilseite, Startkamera.
 
 WARUM: Bild = s · (x′, −y′) + t mit x′ = R_x(φ) · R_y(w + δ) · x muss dieselbe Kamera sein wie in `Koerperlage` (Profil 90° = linke Seite zur Kamera), sonst passt das Einpassen die
 Gegenseite ein. Das Einpassen eines Kunstkörpers (über 1 s) steht in `longrunner/test_koerperki_fotos_einpassen.py`.
@@ -27,7 +27,7 @@ class DieKamera(unittest.TestCase):
     def test_profil_90_sieht_die_linke_seite_wie_der_kopf(self):
         """90° („links“): Kamera bei +X, die linke Körperseite (+x) zeigt zur Kamera (z′ > 0), der Blick der Figur (+z) geht im Bild nach LINKS — dieselbe Drehung wie die Kopflage der
         KopfKI (`Kopflagen.drehung_profil`, deren Lagen an den Fotos geprüft sind). Bis 24.10.2026 abends stand hier das Gegenteil (Kamera bei −X): im perspektivischen Lauf lag der ferne Fuß
-        unter dem Bild, die Profile waren gespiegelt (`ProjektTemp/_wegwerf/ai2d3d/profilseite_probe.py`)."""
+        unter dem Bild, die Profile waren gespiegelt (`ProjektTemp/_wegwerf/fotogenesis/profilseite_probe.py`)."""
         from KopfKI.kopflagen import Kopflagen
         r = Fotoeinpassung._dreh(torch.tensor(math.pi / 2), torch.tensor(0.0))
         self.assertTrue(torch.allclose(r @ torch.tensor([1.0, 0, 0]), torch.tensor([0.0, 0, 1]), atol=1e-6))

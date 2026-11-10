@@ -2,7 +2,7 @@
 """Engine2d3dKleiderexportquelle — die Exportleiste auf der Auftragsseite „2D3D Kleider" (31.10.2026, `Exportleistequelle`).
 
 Edgar: „mach beides" (auf den Vorschlag, 2D3D Kleider auf die Exportleiste umzustellen). Die rechte Spalte der Seite war das Vorbild der Leiste (Export 03.10.2026, Render
-04.10.2026); jetzt trägt sie die Leiste selbst. Anders als Mesh3D-AI und 2d-3d-AI baut der SERVER das Modell (`EIGENES_MODELL`): das Stand-Modell der Bühne
+04.10.2026); jetzt trägt sie die Leiste selbst. Anders als Mesh-Genesis und Foto-Genesis baut der SERVER das Modell (`EIGENES_MODELL`): das Stand-Modell der Bühne
 (`Engine2d3dKleideranimexport.quelle`: Körper mit gebackenen Kacheln, Augen, Mund, Wimpern, Brauen, Kleider und Haar am Rig, sonst die GLB der besten Runde). Nur so behält der
 Render die Stoffsimulation der Kleider (`kleidung__gc_…`) und die Haarsträhnen (`haar__…`) — `Exportleisterendermodell` würde jedes Stück der Browser-GLB in `kleidung__eigen_…`
 umbenennen und starr häuten. Die Bewegung ist die des Auftrags (`Engine2d3dKleideranimexport.bewegung`: `film_bewegung.json`, bei einer anderen BVH neu gerechnet und so abgelegt,

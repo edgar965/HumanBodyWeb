@@ -38,7 +38,7 @@ class MeshgrenzenTest(unittest.TestCase):
         self.assertTrue(torch.allclose(self.gr._euler(self.gr._matrix(w)), w, atol=1e-4))
 
     def test_zu_euler_ist_die_umkehrung_von_aus_euler(self):
-        """`mesh3dai_zeile1haltung._start` ruft `zu_euler`; beim Umbau auf `_euler` fiel die Methode weg, die Kette brach erst im Schritt „zeile1“ ab."""
+        """`meshgenesis_zeile1haltung._start` ruft `zu_euler`; beim Umbau auf `_euler` fiel die Methode weg, die Kette brach erst im Schritt „zeile1“ ab."""
         w = (torch.rand(8, 3) * 2.0 - 1.0) * math.radians(60.0)
         for r in self.reihen:
             self.assertTrue(torch.allclose(G9meshgrenzen.zu_euler(G9meshgrenzen.aus_euler(w, r), r), w, atol=1e-4), r)

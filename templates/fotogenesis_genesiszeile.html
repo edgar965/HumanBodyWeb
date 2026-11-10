@@ -1,0 +1,35 @@
+{% comment %}04.11.2026, Edgar: „welche ist unsere beste Methode für genesis modell aus mesh?“ — „mach eine dritte Zeile in der View“ — „2. Zeile: Fotos, PSHuman, SMPLX (PSHUman)
+wie bisher / 3. Zeile: Genesis - Mesh3d-AI, Genesis - 2d3dai (aus Fotos), Genesis Ergebnis (mes3d-ai)“, danach „mach in der 3. Zeile "Genesis-Ergebnis (Mesh3D-AI)" an zweiter Stelle“.
+Seit 04.11.2026 abends (Edgar: „smpl-x ergebnis in die dritte zeile verschieben“, „Genesis-Ergebnis (Mesh3D-AI) in die zweite Zeile“): Feld 1 die Einpassung aus dem Mesh-Genesis-Test zum PSHuman-Netz
+(job.json `meshgenesis_test`; `Fotogenesisgenesiszeile`, Daten `daten.genesiszeile`), Feld 2 SMPL-X (`Fotogenesissmplx`), Feld 3 das Genesis-Modell aus den Fotos (`_fotogenesis_genesisfeld.html`). Gekoppelt mit den übrigen Feldern. Bei jedem Test aus Fotos.{% endcomment %}
+{% with g=daten.genesiszeile %}{% url 'fotogenesis_standardanimation' job.id as bewegung_adresse %}
+<div class="fotogenesis-zeile fotogenesis-genesiszeile" id="fotogenesis-genesiszeile">
+    {# eigene Leiste der Zeile (04.11.2026, Edgar: „in jeder Zeile ab Zeile 3 diese ansichten plus die Rig, Kleider Toggle buttons“) — `Fotogenesiszeilenleiste` #}
+    <div class="card fotogenesis-steuerung fotogenesis-zeilenleiste" data-zeilenleiste="genesis"></div>
+    {# vom PSHuman-Netz zur Mesh-Genesis-Kette, mit dem Foto des Jobs (`Fotogenesisgenesisstart`) #}
+    {% if g.rechnen %}<button type="button" class="btn btn-primary" data-aktion="genesis-rechnen" data-adresse="{% url 'fotogenesis_genesis_rechnen' job.id %}"
+        title="Rechnet aus dem PSHuman-Netz einen neuen Mesh-Genesis-Test, der alte bleibt liegen."><i class="fas fa-play"></i> Genesis rechnen</button>{% endif %}
+    {# der ganze Job in einem Lauf (`Fotogenesisjoblauf`): Foto-Mesh (PSHuman), dann der Mesh-Genesis-Test #}
+    <button type="button" class="btn btn-primary" data-aktion="job-rechnen" data-adresse="{% url 'fotogenesis_job_rechnen' job.id %}" data-stand="{% url 'fotogenesis_job_stand' job.id %}"
+        title="Rechnet Foto-Mesh (PSHuman) und legt den Mesh-Genesis-Test an. Ein schon gerechnetes PSHuman-Netz bleibt."><i class="fas fa-play"></i> Job rechnen</button>
+    <span class="hb-hinweis" data-jobstand></span>
+    <div class="fotogenesis-bereiche">
+        <section class="card fotogenesis-bereich">
+            <h2><span class="fotogenesis-nummer">1</span> Genesis – Mesh-Genesis</h2>
+            <div class="fotogenesis-leinwand" data-feld="genesis-meshgenesis"></div>
+            <p class="hb-hinweis">Genesis in das Netz eingepasst, ohne KI (Zeile 1 der Mesh-Genesis-Testseite){% if g.test %} — Test
+                <a href="/mesh-genesis/test/{{ g.test }}/">{{ g.test }}</a>{% endif %}</p>
+            {# Abspielleiste und Export (04.11.2026, Edgar: „playleiste und export für alle 3“): die Form der Zeile 1 als Genesis-Figur ohne Haut und Stücke der KI (`Fotogenesisexportfigur` nackt) #}
+            {% if g.figur %}{% include "_meshgenesis_figurbewegung.html" with adresse=bewegung_adresse %}
+            {% include "_exportleiste.html" with bereich="meshgenesisanpassung" kennung=g.test speichern_hinweis="Als Modell speichern gibt es für die Einpassung nicht — Export als GLB, OBJ oder Blender geht." %}{% endif %}
+        </section>
+        {% include "_fotogenesis_smplxfeld.html" with feld="smplx" nummer=2 %}
+        {% include "_fotogenesis_genesisfeld.html" with nummer=3 titel="Genesis – fotogenesis (aus Fotos)" %}
+    </div>
+</div>
+{# Testfälle wie auf der Testseite (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“), `Meshgenesistestfaelle` in `Fotogenesisgenesiszeile` #}
+{% if g.testfaelle %}<section class="card meshgenesis-testfaelle" id="meshgenesis-testfaelle" data-adresse="{{ g.testfaelle }}">
+    <h2>Testfälle der KI</h2>
+    <div data-testfaelle="inhalt"><span class="hb-hinweis">Wird geladen …</span></div>
+</section>{% endif %}
+{% endwith %}

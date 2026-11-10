@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """`KoerperKI_alle.formgraph.Formgraph` gegen `G9formeln` an der echten Daz-Bibliothek (27.10.2026,
-Besitzer Mesh3D-AI).
+Besitzer Mesh-Genesis).
 
 WARUM: Die Formrechnung der Regler-KI lag an den Vorhersagen 13–17 mm neben G9formung, obwohl jeder
 Regler einzeln stimmte: Daz klemmt einen Kanal NACH der Summe aller Formeln. Der Graph rechnet das

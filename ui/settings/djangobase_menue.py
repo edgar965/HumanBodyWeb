@@ -13,25 +13,25 @@ MENUE = [
             {'label': 'Studio', 'icon': 'bi-scissors', 'url': '/studio/'},
             {'label': 'Charakter', 'icon': 'bi-lightbulb', 'url': '/Charakter/'},
             # Seit 14.10.2026 (Edgar: „Mach das Menü Dashboard – Mesh3D-AI und zeige mir den Input, gewünschten Trainingsoutput und Output, mit Dummies für Ursula1“):
-            # die Seite für das Training einer KI, die aus einem Netz ein Genesis-Modell macht — heute nur die Oberfläche mit Dummies (`core/api/mesh3dai.py`).
+            # die Seite für das Training einer KI, die aus einem Netz ein Genesis-Modell macht — heute nur die Oberfläche mit Dummies (`core/api/meshgenesis.py`).
             # Seit 14.10.2026 (Edgar: „mehrere Jobs außer Ursula … eine Hauptansicht mit einer Tabelle wie bei /mesh-3D/, und die Unterjobs wie Ursula1 als Unterseiten / unter Menüeinträge“):
-            # „Alle Jobs“ ist die Tabelle, jeder Job eine Unterseite `/mesh-3D-AI/<job>/`. Die Job-Einträge stehen NICHT hier: die Marke `dynamisch` lässt den `menu_provider`
-            # (`DJANGOBASE['menu_provider']` → `core/dienste/mesh3daimenue.py`) je Job aus `Mesh3daiattrappe.stammdaten()` einen Eintrag hinter „Alle Jobs“ hängen — ein neuer Job braucht hier nichts.
+            # „Alle Jobs“ ist die Tabelle, jeder Job eine Unterseite `/mesh-genesis/<job>/`. Die Job-Einträge stehen NICHT hier: die Marke `dynamisch` lässt den `menu_provider`
+            # (`DJANGOBASE['menu_provider']` → `core/dienste/meshgenesismenue.py`) je Job aus `Meshgenesisattrappe.stammdaten()` einen Eintrag hinter „Alle Jobs“ hängen — ein neuer Job braucht hier nichts.
             {
-                'label': 'Mesh3D-AI',
+                'label': 'Mesh-Genesis',
                 'icon': 'bi-cpu',
-                'dynamisch': 'mesh3dai_jobs',
+                'dynamisch': 'meshgenesis_jobs',
                 'untermenu': [
-                    {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/mesh-3D-AI/'},
+                    {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/mesh-genesis/'},
                 ],
             },
-            # Seit 24.10.2026 (Edgar: „mach eine Kopie von Dashboard - Mesh3d-AI ohne Inhalte (nur Seiten …) und benenne sie 2d-3d-AI“): dieselben Seiten leer (`core/api/ai2d3d.py`).
-            # Ohne Jobs gibt es keine Einträge je Job — kommt einer dazu, hängt ihn ein `menu_provider` an wie bei Mesh3D-AI (`mesh3daimenue.py`).
+            # Seit 24.10.2026 (Edgar: „mach eine Kopie von Dashboard - Mesh3d-AI ohne Inhalte (nur Seiten …) und benenne sie 2d-3d-AI“): dieselben Seiten leer (`core/api/fotogenesis.py`).
+            # Ohne Jobs gibt es keine Einträge je Job — kommt einer dazu, hängt ihn ein `menu_provider` an wie bei Mesh-Genesis (`meshgenesismenue.py`).
             {
-                'label': '2d-3d-AI',
+                'label': 'Foto-Genesis',
                 'icon': 'bi-image',
                 'untermenu': [
-                    {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/2d-3d-AI/'},
+                    {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/foto-genesis/'},
                 ],
             },
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
@@ -109,10 +109,10 @@ EINSTELLUNGEN_EXTRA = [
     {'label': '2D3D Kleider', 'url': '/settings/2d3dkleider/', 'icon': 'bi-brush'},
     # Scham-Methode der Blender-Importe (Edgar, 11.10.2026: „in Einstellungen mache eine neue Seite Genesis").
     {'label': 'Genesis', 'url': '/settings/genesis/', 'icon': 'bi-person-bounding-box'},
-    # Abfragetakt der Statuskarte von Mesh3D-AI (Edgar, 14.10.2026: „Mach eine Seite Einstellungen – Mesh3D-AI").
-    {'label': 'Mesh3D-AI', 'url': '/settings/mesh3dai/', 'icon': 'bi-cpu'},
+    # Abfragetakt der Statuskarte von Mesh-Genesis (Edgar, 14.10.2026: „Mach eine Seite Einstellungen – Mesh-Genesis").
+    {'label': 'Mesh-Genesis', 'url': '/settings/mesh-genesis/', 'icon': 'bi-cpu'},
     # Quelle der Gelenke in den Fotos (Edgar, 24.10.2026: „Mach auch du eine Seite Einstellungen - 2d-3d-KI").
-    {'label': '2d-3d-AI', 'url': '/settings/2d-3d-ai/', 'icon': 'bi-camera'},
+    {'label': 'Foto-Genesis', 'url': '/settings/foto-genesis/', 'icon': 'bi-camera'},
 ]
 
 
@@ -197,20 +197,20 @@ HILFE_EXTRA = [
                 'url': '/hilfe/architektur/arp-modell/',
                 'aktiv': 'hilfe_architektur_arp',
             },
-            # Das Netz von Mesh3D-AI, die Genesis-Regler, das Vorgehen und die Kleider (Edgar, 16.10.2026: „Mach eine Seite Hilfe - Architektur - Mesh3DAI").
+            # Das Netz von Mesh-Genesis, die Genesis-Regler, das Vorgehen und die Kleider (Edgar, 16.10.2026: „Mach eine Seite Hilfe - Architektur - Mesh-Genesis").
             {
-                'label': 'Mesh3DAI',
+                'label': 'Mesh-Genesis',
                 'icon': 'bi-cpu',
-                'url': '/hilfe/architektur/mesh3dai/',
-                'aktiv': 'hilfe_architektur_mesh3dai',
+                'url': '/hilfe/architektur/mesh-genesis/',
+                'aktiv': 'hilfe_architektur_meshgenesis',
             },
             # Fotos → KI → Genesis-Modell: Netz (Vorschlag), Prüfung, Messlatte, andere Anbieter, Plan (Edgar, 24.10.2026: „erstelle eine neue Seite hilfe - Architektur - 3d-3d-AI in der Art von
-            # /hilfe/architektur/mesh3dai/“ — gemeint ist 2d-3d-AI).
+            # /hilfe/architektur/mesh3dai/“ — gemeint ist Foto-Genesis).
             {
-                'label': '2d-3d-AI',
+                'label': 'Foto-Genesis',
                 'icon': 'bi-image',
-                'url': '/hilfe/architektur/2d-3d-ai/',
-                'aktiv': 'hilfe_architektur_ai2d3d',
+                'url': '/hilfe/architektur/foto-genesis/',
+                'aktiv': 'hilfe_architektur_fotogenesis',
             },
         ],
     },

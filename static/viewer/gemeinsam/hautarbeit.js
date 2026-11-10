@@ -5,7 +5,7 @@ import { Protokoll } from './protokoll.js';
  *
  * EIN Worker zur Zeit, Aufträge in einer Warteschlange. Ein neuer Auftrag DERSELBEN Figur (`kennung`: ein Stück kam oder ging, der Körper wurde neu gebaut)
  * überholt ihren alten — läuft er, wird der Worker beendet; wartet er, fällt er heraus; beide melden `VERALTET`. Aufträge ANDERER Figuren warten, bis der
- * laufende fertig ist. Bis 19.10.2026 überholte jeder neue Auftrag jeden alten: Auf Mesh3D-AI (Ziel und Ergebnis, zwei Figuren) brach die Maske der zweiten
+ * laufende fertig ist. Bis 19.10.2026 überholte jeder neue Auftrag jeden alten: Auf Mesh-Genesis (Ziel und Ergebnis, zwei Figuren) brach die Maske der zweiten
  * Figur die der ersten ab, und niemand plante sie neu — die erste Figur blieb ohne Maske (gesehen im Serverlog des Maskenvorrats: angefragt, nie abgelegt).
  * Nach jedem Auftrag wird der Worker beendet (Neustart ~50 ms gegen 3 s Rechnung); so hält er keinen Speicher und keinen Faden, während nichts zu tun ist.
  *

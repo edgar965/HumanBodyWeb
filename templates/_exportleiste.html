@@ -1,6 +1,6 @@
 {% comment %}
 Exportleiste (31.10.2026, Edgar: „baue die ganze Exportleiste auf mit Physik usw." — Vorbild die rechte Spalte von „2D3D Kleider" —, „mach das als wiederverwendbares Modul").
-Aufruf: {% include "_exportleiste.html" with bereich="mesh3daitest" kennung=test.kennung %} und auf der Seite `Exportleiste.starten(document.getElementById('exportleiste'), quelle)`
+Aufruf: {% include "_exportleiste.html" with bereich="meshgenesistest" kennung=test.kennung %} und auf der Seite `Exportleiste.starten(document.getElementById('exportleiste'), quelle)`
 (`static/viewer/exportleiste/exportleiste.js`; die Quelle gibt die Figur der Seite). Server: `core/api/exportleiste.py`, Bereiche in `Exportleistebereiche`.
 „Modell speichern" bindet die Seite selbst (Felder `exportleiste-modell-*`): Was ein gespeichertes Modell ist, weiß nur der Bereich.
 CSS: `css/exportleiste.css`.

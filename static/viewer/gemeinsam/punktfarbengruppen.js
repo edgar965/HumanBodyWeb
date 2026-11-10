@@ -4,7 +4,7 @@ import * as THREE from 'three';
  * Punktfarbengruppen — Punktfarben in der Exportkopie so, wie three sie zeigt (31.10.2026).
  *
  * three nimmt die Punktfarben (`color`) nur in Materialien mit `vertexColors`; glTF dagegen multipliziert `COLOR_0` IMMER mit Farbfaktor und Bild, und alle Gruppen
- * (Primitive) eines Netzes teilen ihre Attribute. Gemessen 31.10.2026 an Mesh3D-AI Venus (Exportleiste, GLB): die KI-Stücke tragen zwei Gruppen — Bild OHNE Punktfarben und
+ * (Primitive) eines Netzes teilen ihre Attribute. Gemessen 31.10.2026 an Mesh-Genesis Venus (Exportleiste, GLB): die KI-Stücke tragen zwei Gruppen — Bild OHNE Punktfarben und
  * Punktfarben ohne Bild —, und das Haar kam im Export golden × dunkelbraun = dunkelbraun heraus (Punktfarben im Mittel 0,10/0,06/0,03 linear, `glb_netze.py`: Bild ja, COLOR_0 ja).
  * Regel je Netz mit `color`: kein Material mit `vertexColors` → `color` fällt weg; alle → bleibt; gemischt → die Gruppen ohne Punktfarben bekommen eigene Punkte (Kopien) mit Weiß,
  * damit an den Grenzen keine Gruppe die Farbe der anderen mitnimmt.

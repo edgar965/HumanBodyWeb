@@ -7,7 +7,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-_quelle = importlib.util.spec_from_file_location('nurfotos_ablage_probe', Path(settings.TOOLS_ROOT) / 'ai2d3d' / 'nurfotos_ablage.py')
+_quelle = importlib.util.spec_from_file_location('nurfotos_ablage_probe', Path(settings.TOOLS_ROOT) / 'fotogenesis' / 'nurfotos_ablage.py')
 _modul = importlib.util.module_from_spec(_quelle)
 _quelle.loader.exec_module(_modul)
 Kettenablage = _modul.Kettenablage

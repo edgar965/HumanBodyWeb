@@ -1,0 +1,12 @@
+{% comment %}Das Feld „Genesis-Modell“ der Jobseite (Weg B: Genesis aus den Fotos, `Fotogenesisseite.genesisfeld`, `data-feld="genesis"`) mit Abspiel- und Exportleiste — aus fotogenesis.html
+herausgelöst (04.11.2026): bei PSHuman-Jobs steht es in der dritten Zeile (fotogenesis_genesiszeile.html, Edgar: „3. Zeile: Genesis - Mesh3d-AI, Genesis - 2d3dai (aus Fotos), Genesis
+Ergebnis (mes3d-ai)“), sonst in der Körperzeile. Genau einmal je Seite. Parameter: nummer, titel.{% endcomment %}
+<section class="card fotogenesis-bereich">
+    <h2><span class="fotogenesis-nummer">{{ nummer }}</span> {{ titel }}</h2>
+    <div class="fotogenesis-leinwand" data-feld="genesis"></div>
+    <p class="hb-hinweis" id="fotogenesis-genesisinfo"></p>
+    {# Abspielleiste (31.10.2026, `Fotogenesisbewegung`) — wie auf der Mesh-Genesis-Testseite #}
+    {% if daten.test.eigen %}{% url 'fotogenesis_standardanimation' job.id as bewegung_adresse %}{% include "_meshgenesis_figurbewegung.html" with adresse=bewegung_adresse %}{% endif %}
+    {# Exportleiste (31.10.2026, Edgar: „baue diese Exportleiste … auch für /2d-3d-AI/test/edgartrip/“) — nur mit eigener Figur aus den Fotos (`Fotogenesisexportquelle`). #}
+    {% if daten.test.eigen %}{% include "_exportleiste.html" with bereich="fotogenesis" kennung=job.id %}{% endif %}
+</section>

@@ -6,7 +6,7 @@ Edgar: „baue die ganze Exportleiste auf mit Physik usw." — „mach das als w
 (Render-Läufe, Regler, Bewegungen) und die Pfade für „Gespeichert unter". Das Modell selbst baut der Browser (die Figur der Seite) und schickt es mit jedem Export und
 jedem Render als GLB; Bewegung, Blender und Render rechnet der Server. Eingetragen wird eine neue Quelle in `Exportleistebereiche`.
 
-    quelle = Exportleistebereiche.quelle('mesh3daitest', 'koenigin1')     # oder None
+    quelle = Exportleistebereiche.quelle('meshgenesistest', 'koenigin1')     # oder None
     quelle.name(), quelle.exportordner(), quelle.arbeitsordner(), quelle.pfade()
 
 Baut der Server die Figur selbst (2D3D Kleider: das Stand-Modell mit den Stoffstücken `kleidung__gc_` und den Haarsträhnen `haar__`, die der Render simuliert), setzt die Quelle

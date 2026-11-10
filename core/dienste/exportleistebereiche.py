@@ -11,11 +11,11 @@ __all__ = ['Exportleistebereiche']
 class Exportleistebereiche:
     @staticmethod
     def klassen():
-        from .ai2d3dexportquelle import Ai2d3dexportquelle
+        from .fotogenesisexportquelle import Fotogenesisexportquelle
         from .engine2d3dkleiderexportquelle import Engine2d3dKleiderexportquelle
-        from .mesh3daianpassungexportquelle import Mesh3daianpassungexportquelle
-        from .mesh3daitestexportquelle import Mesh3daitestexportquelle
-        klassen = (Mesh3daitestexportquelle, Mesh3daianpassungexportquelle, Ai2d3dexportquelle,
+        from .meshgenesisanpassungexportquelle import Meshgenesisanpassungexportquelle
+        from .meshgenesistestexportquelle import Meshgenesistestexportquelle
+        klassen = (Meshgenesistestexportquelle, Meshgenesisanpassungexportquelle, Fotogenesisexportquelle,
                    Engine2d3dKleiderexportquelle)
         return {k.BEREICH: k for k in klassen}
 

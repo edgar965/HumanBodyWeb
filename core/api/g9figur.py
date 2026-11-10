@@ -78,10 +78,12 @@ class G9figur:
             return JsonResponse({'figuren': [], 'vorhanden': False,
                                  'fehler': FEHLT})
         try:
+            # `quelle` (10.11.2026, Edgar: MB-Lab-Einträge in eine eingeklappte Gruppe): 'MB-Lab' für `G9mblabvorlagen`, der Dialog legt sie in den Bereich „MB-Lab“
             figuren = [{'name': e['name'], 'anzeige': e['anzeige'],
                         'geschlecht': e['geschlecht'],
                         'regler': dict(e['regler']),
-                        'haut': e.get('haut') or ''}
+                        'haut': e.get('haut') or '',
+                        'quelle': e.get('quelle') or ''}
                        for e in G9charaktere.liste()]
         except (OSError, ValueError) as fehler:
             logger.warning('Genesis 9: Katalog nicht lesbar: %s', fehler)

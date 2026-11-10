@@ -2,7 +2,7 @@
 """Tests für den ViTPose-Nachbau `A:\\3DTools\\VitposeTorch` (24.10.2026): Dekodierung (DARK-UDP), Spiegeltabelle, Ausschnitt, Rückgrat und Kopf.
 
 WARUM: Die Gelenke der Körperlage aus den Fotos kommen seit 24.10.2026 aus diesem Nachbau (Sapiens2-Teilgrenzen lagen bis 40 cm daneben). Die Gegenprobe gegen das Original (FootMR, python10)
-braucht Gewichte und Fotos und steht in `ProjektTemp/_wegwerf/ai2d3d/vitpose_gegenprobe.py`; hier wird ohne Gewichte auf der CPU geprüft, was jede Stelle für sich zusagt — auch der ganze Weg
+braucht Gewichte und Fotos und steht in `ProjektTemp/_wegwerf/fotogenesis/vitpose_gegenprobe.py`; hier wird ohne Gewichte auf der CPU geprüft, was jede Stelle für sich zusagt — auch der ganze Weg
 Foto → Ausschnitt → Wärmebild → Foto mit einem Kunstkopf, der sein Wärmebild dorthin legt, wo der Eingang hell ist.
 """
 import sys

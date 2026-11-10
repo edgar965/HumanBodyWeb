@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 from django.conf import settings
 
-sys.path.insert(0, str(Path(settings.TOOLS_ROOT) / 'mesh3dai'))
+sys.path.insert(0, str(Path(settings.TOOLS_ROOT) / 'meshgenesis'))
 sys.path.insert(0, str(Path(settings.TOOLS_ROOT) / 'pshuman_port14'))
-from mesh3dai_mia_zuordnung import Miazuordnung  # noqa: E402
+from meshgenesis_mia_zuordnung import Miazuordnung  # noqa: E402
 from startgelenke import Startgelenke  # noqa: E402
 
 
@@ -39,7 +39,7 @@ class StartgelenkeTest(unittest.TestCase):
         self.assertEqual(s.gelenke.shape, (len(Startgelenke.zuordnung()), 3))
 
     def test_namen_sind_mia_namen(self):
-        """`Mesh3daimeshstart` ordnet über `Miazuordnung` zu; ein Tippfehler im Namen ließe das Gelenk still ohne Ziel."""
+        """`Meshgenesismeshstart` ordnet über `Miazuordnung` zu; ein Tippfehler im Namen ließe das Gelenk still ohne Ziel."""
         namen = ['hip', 'l_forearm', 'l_hand', 'neck1', 'head']
         zu = Miazuordnung(list(Startgelenke.zuordnung()), namen, [-1, 0, 1, 0, 3])
         self.assertTrue(zu.direkt.all(), zu.bericht())

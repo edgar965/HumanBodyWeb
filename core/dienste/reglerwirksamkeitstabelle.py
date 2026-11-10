@@ -4,8 +4,8 @@
 Edgar (27.10.2026): „mach bei http://127.0.0.1:8081/settings/genesis/ die liste der Regler in einer djangoBase Tabelle. Spalten: Wirksamkeit, 3dmesh-ai , 2d-3d-ai . Die letzten
 2 Spalten : Empfehlung ob man die in den Pipelines nutzen sollte“.
 
-Liest nur die Ablage `3DObjects/mesh3dai/regler_wirksamkeit_v<Fassung>_<Fingerabdruck des Reglerraums>.json`; gemessen wird sie auf der Karte von
-`mesh3dai/mesh3dai_reglerwirksamkeit.py` (nie aus der Seite). Liegen mehrere (anderer Reglerraum), nimmt die Seite die jüngste und sagt es; fehlt jede, bleibt die Tabelle
+Liest nur die Ablage `3DObjects/meshgenesis/regler_wirksamkeit_v<Fassung>_<Fingerabdruck des Reglerraums>.json`; gemessen wird sie auf der Karte von
+`meshgenesis/meshgenesis_reglerwirksamkeit.py` (nie aus der Seite). Liegen mehrere (anderer Reglerraum), nimmt die Seite die jüngste und sagt es; fehlt jede, bleibt die Tabelle
 leer und der Hinweis nennt den Befehl.
 """
 
@@ -21,17 +21,17 @@ class Reglerwirksamkeitstabelle:
 
     SCHLUESSEL = 'genesis-regler'
     MUSTER = 'regler_wirksamkeit_v*_*.json'
-    BEFEHL = 'python14 mesh3dai/mesh3dai_reglerwirksamkeit.py'
+    BEFEHL = 'python14 meshgenesis/meshgenesis_reglerwirksamkeit.py'
     SPALTEN = (
         {'label': 'Regler', 'key': 'regler', 'titel': 'Anzeigename, darunter der Name im Reglerraum der Regler-KI'},
         {'label': 'Wirksamkeit', 'key': 'wirkung', 'num': True,
          'titel': 'größte Verschiebung eines Punkts der Haut (Körper, Kopf) oder eines Gelenks, wenn der Regler allein am Ende seines Bereichs steht (mm)'},
-        {'label': 'Mesh3D-AI', 'key': 'mesh3dai', 'titel': 'Empfehlung: Regler in der Pipeline Mesh3D-AI nutzen (Eingang: Netz, Messlinien entlang der Hautnormale)'},
-        {'label': '2d-3d-AI', 'key': 'ai2d3d', 'titel': 'Empfehlung: Regler in der Pipeline 2d-3d-AI nutzen (Eingang: Fotos, Umriss und Gesicht)'},
+        {'label': 'Mesh-Genesis', 'key': 'meshgenesis', 'titel': 'Empfehlung: Regler in der Pipeline Mesh-Genesis nutzen (Eingang: Netz, Messlinien entlang der Hautnormale)'},
+        {'label': 'Foto-Genesis', 'key': 'fotogenesis', 'titel': 'Empfehlung: Regler in der Pipeline Foto-Genesis nutzen (Eingang: Fotos, Umriss und Gesicht)'},
     )
 
     def __init__(self, ordner=None):
-        self.ordner = Path(ordner) if ordner else Path(settings.OBJECTS_ROOT) / 'mesh3dai'
+        self.ordner = Path(ordner) if ordner else Path(settings.OBJECTS_ROOT) / 'meshgenesis'
         self.dateien = sorted(self.ordner.glob(self.MUSTER), key=lambda p: p.stat().st_mtime, reverse=True)
         self.daten = self._lesen(self.dateien[0]) if self.dateien else None
 
@@ -53,10 +53,10 @@ class Reglerwirksamkeitstabelle:
         return {'datei': self.dateien[0].name, 'andere': [p.name for p in self.dateien[1:]], 'erzeugt': self.daten['erzeugt'], 'lauf': self.daten['lauf'],
                 'pruefformen': self.daten['pruefformen'], 'anzahl': len(r), 'schwellen': self.daten['schwellen'],
                 'ohne_wirkung': sum(1 for z in r if z['wirkung_mm'] < self.daten['schwellen']['stumm_mm']), 'doppelt': sum(1 for z in r if 'doppelt' in z),
-                'mesh3dai': sum(1 for z in r if z['mesh3dai']['nutzen']), 'ai2d3d': sum(1 for z in r if z['ai2d3d']['nutzen'])}
+                'meshgenesis': sum(1 for z in r if z['meshgenesis']['nutzen']), 'fotogenesis': sum(1 for z in r if z['fotogenesis']['nutzen'])}
 
     def zeile(self, z):
-        return {'id': z['name'], 'html': self._regler(z) + self._wirkung(z) + self._empfehlung(z['mesh3dai']) + self._empfehlung(z['ai2d3d'])}
+        return {'id': z['name'], 'html': self._regler(z) + self._wirkung(z) + self._empfehlung(z['meshgenesis']) + self._empfehlung(z['fotogenesis'])}
 
     @staticmethod
     def _regler(z):

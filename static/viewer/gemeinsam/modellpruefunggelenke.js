@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
 /**
- * Modellpruefunggelenke — sitzen die Gelenke im Körper? Fünfte Klasse des Modell Checks (`Modellpruefung`, 02.11.2026, 2d-3d-AI; Edgar: „Die andere Session hat auch
- * einen Figur-Check eingebaut. Erweitere ihn“). Anlass: Eigenmorphe (Versatz der Zeile 1 im Job 2d-3d-AI) verschoben die Haut bis 17 cm, das Skelett blieb stehen —
- * an Kat_EigenShirt_Hose_Gehen lagen der linke Oberschenkel 21 mm, das rechte Schienbein 30 mm außerhalb der Haut (`ProjektTemp/_wegwerf/ai2d3d/ergaenzung/
+ * Modellpruefunggelenke — sitzen die Gelenke im Körper? Fünfte Klasse des Modell Checks (`Modellpruefung`, 02.11.2026, Foto-Genesis; Edgar: „Die andere Session hat auch
+ * einen Figur-Check eingebaut. Erweitere ihn“). Anlass: Eigenmorphe (Versatz der Zeile 1 im Job Foto-Genesis) verschoben die Haut bis 17 cm, das Skelett blieb stehen —
+ * an Kat_EigenShirt_Hose_Gehen lagen der linke Oberschenkel 21 mm, das rechte Schienbein 30 mm außerhalb der Haut (`ProjektTemp/_wegwerf/fotogenesis/ergaenzung/
  * gelenke_ruhe_diag.py`); beim Bewegen verformt sich die Figur dann falsch. Seither tragen die Eigenmorphe Gelenkversatz (`G9eigenmorphe.gelenke`, geschätzt mit
  * `Genesis9/gelenkversatz.py` in `KoerperKI_Fotos/zeile1regler.py`).
  *

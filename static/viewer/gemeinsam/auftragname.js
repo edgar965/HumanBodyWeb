@@ -145,9 +145,9 @@ export class Auftragname {
             Aktionsprotokoll.melden('name_gespeichert', JSON.stringify(antwort.name || name));
             this.beenden(antwort.name || name);
             document.title = document.title.replace(alt, antwort.name || name);
-            // Weitere Stellen derselben Seite, die den Namen zeigen (Mesh3D-AI: Karte „Job“, 19.10.2026), tragen `data-auftragname-kopie`.
+            // Weitere Stellen derselben Seite, die den Namen zeigen (Mesh-Genesis: Karte „Job“, 19.10.2026), tragen `data-auftragname-kopie`.
             document.querySelectorAll('[data-auftragname-kopie]').forEach((el) => { el.textContent = antwort.name || name; });
-            // Folgt die Adresse dem Namen (2d-3d-AI, `Ai2d3dadresse`), nennt die Antwort sie; die Seite bleibt offen.
+            // Folgt die Adresse dem Namen (Foto-Genesis, `Fotogenesisadresse`), nennt die Antwort sie; die Seite bleibt offen.
             if (antwort.adresse && antwort.adresse !== location.pathname) history.replaceState(history.state, '', antwort.adresse + location.search + location.hash);
         } catch (fehler) {
             Aktionsprotokoll.melden('name_fehler', `${fehler.status || '?'} ${fehler.daten?.error || fehler.message}`, 'error');

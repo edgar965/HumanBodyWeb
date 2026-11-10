@@ -1,8 +1,0 @@
-{% comment %}03.11.2026, Edgar: „im Job mach als zusätzliche 4. View in jeder Zeile das SMPLX modell bei pshuman jobs, zum testen“ — PSHumans Startkörper der freien Netzformung: seit 07.11.2026 Genesis
-(`<job>/pshuman/1_start.glb`, job.json `netze` Art 'pshuman_start'), in alten Jobs und bei UP2You SMPL-X (Art 'pshuman_smplx'). Die Überschrift ist der Name der Netzart (`Ai2d3dfotojobs.NETZNAMEN`).
-Gezeichnet von `Ai2d3dsmplx` (ai2d3dsmplx.js), dreht mit den übrigen Feldern. `feld`: Name für `data-feld`, `nummer`: Nummer des Feldes (04.11.2026: bei PSHuman-Jobs 3, hinter dem PSHuman-Netz).{% endcomment %}
-<section class="card ai2d3d-bereich ai2d3d-smplxbereich">
-    <h2><span class="ai2d3d-nummer">{{ nummer }}</span> {{ daten.smplx.name|default:"Startkörper (Genesis)" }}</h2>
-    <div class="ai2d3d-leinwand" data-feld="{{ feld }}" data-smplx></div>
-    {% if not daten.smplx %}<p class="hb-hinweis">Für diesen Job noch kein Startkörper von PSHuman gerechnet.</p>{% endif %}
-</section>

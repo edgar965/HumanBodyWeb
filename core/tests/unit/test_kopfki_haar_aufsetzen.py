@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Tests für `KopfKI.Fotohaarschale.aufsetzen` und `auf_figur` (01.11.2026, Besitzer 2d-3d-AI): die Haarschale auf einen anderen Kopf derselben Punktfolge setzen.
+"""Tests für `KopfKI.Fotohaarschale.aufsetzen` und `auf_figur` (01.11.2026, Besitzer Foto-Genesis): die Haarschale auf einen anderen Kopf derselben Punktfolge setzen.
 
 WARUM: Bis zum 01.11.2026 wurde die Schale (am Kopf der Startfigur geschnitten) nur um die Differenz der Kopfmitten auf die eingepasste Figur verschoben. Wo die Einpassung den Schädel
-anders formte, stach er durch die nur Millimeter hohe Schale (`_wegwerf/ai2d3d/haut_haar_lage_probe.py`: Baron 19,8 %, Ed2010 49,1 % der Punkte; EdgarTrip kahler Hinterkopf).
+anders formte, stach er durch die nur Millimeter hohe Schale (`_wegwerf/fotogenesis/haut_haar_lage_probe.py`: Baron 19,8 %, Ed2010 49,1 % der Punkte; EdgarTrip kahler Hinterkopf).
 Aufgesetzt liegt jeder Punkt genau seine Höhe über dem NEUEN Kopf — auch wo der Kopf gewachsen ist —, und auf dem alten Kopf kommt dieselbe Schale wieder heraus.
 """
 import sys

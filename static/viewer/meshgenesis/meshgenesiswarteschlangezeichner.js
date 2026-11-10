@@ -1,0 +1,160 @@
+import { Meshgenesislaufaktuellzeichner as Z } from './meshgenesislaufaktuellzeichner.js';
+
+/**
+ * Meshgenesiswarteschlangezeichner — die Karte „Warteschlange“ im Reiter „Lauf Aktuell“ auf /mesh-genesis/ (18.10.2026; ersetzt „Ketten im Hintergrund“).
+ * Edgar: „soll die aktuelle Job queue enthalten, mit der Jobliste, und Spalte mit Fortschrittsbalken bei aktuellem Job“ → „statt Jobliste: Warteschlange“.
+ * Je Kette eine Kopfzeile (Zustand, worauf sie wartet, PID), darunter ihre Schritte mit Nummer, Zustand, Beginn, Dauer; der laufende Schritt trägt den Balken.
+ * Daten: `stand.warteschlange` (`Meshgenesiswarteschlange`). Alles über `textContent`.
+ */
+export class Meshgenesiswarteschlangezeichner {
+    static ZUSTAND = {
+        'fertig': '✓ fertig', 'läuft': '▶ läuft', 'wartet': 'wartet', 'übersprungen': 'übersprungen', 'abgebrochen': 'abgebrochen', 'nicht gestartet': 'nicht gestartet',
+    };
+
+    /** Zustände, die in die Warteschlange gehören — alles andere ist erledigt (19.10.2026, Edgar: „was soll diese Gaga Warteschlange?? die jobs sind doch als erledigt markiert, das ist doch keine Warteschlange??“). */
+    static OFFEN = ['läuft', 'wartet'];
+
+    static karte(stand, jetzt) {
+        const w = stand.warteschlange;
+        if (!w) return null;
+        // Oben nur, was läuft oder wartet — der laufende Ablauf zuerst, die Schritte neu durchgezählt; Erledigtes eingeklappt darunter.
+        const offen = (w.ketten || []).filter((k) => this.OFFEN.includes(k.zustand))
+            .sort((a, b) => (a.zustand === 'läuft' ? 0 : 1) - (b.zustand === 'läuft' ? 0 : 1))
+            .map((k) => ({ ...k, schritte: k.schritte.map((s) => ({ ...s })) }));
+        const erledigt = (w.ketten || []).filter((k) => !this.OFFEN.includes(k.zustand) && k.zustand !== 'nicht gestartet');
+        const schritte = offen.flatMap((k) => k.schritte);
+        schritte.forEach((s, i) => { s.nr = i + 1; });
+        const wartend = schritte.filter((s) => s.zustand === 'wartet').length;
+        const karte = Z.karte(offen.length ? `Warteschlange (${offen.length} ${offen.length === 1 ? 'Ablauf' : 'Abläufe'}, noch ${wartend} ${wartend === 1 ? 'Schritt' : 'Schritte'})` : 'Warteschlange (leer)');
+        if (w.fehler) karte.append(Z.el('p', 'meshgenesis-la-fehler', `${w.fehler} (${w.datei})`));
+        const laeuft = schritte.filter((s) => s.zustand === 'läuft');
+        karte.append(Z.el('p', '', laeuft.length ? `Gerade: ${laeuft.map((s) => s.titel).join(' · ')}` : (offen.length ? 'Gerade läuft kein Schritt — der nächste wartet.' : 'Gerade läuft nichts, und nichts wartet.')));
+        if (schritte.length) karte.append(this.tabelle({ ketten: offen }, jetzt));
+        if (w.unbeschrieben?.length) karte.append(this.unbeschrieben(w.unbeschrieben, jetzt));
+        if (erledigt.length) karte.append(this.erledigt(erledigt, jetzt));
+        const hinweis = Z.el('p', 'hb-hinweis', 'Die Schritte laufen von selbst nacheinander: jeder Block wartet, bis der vorige fertig ist. Wo sich der Fortschritt nicht messen lässt, läuft der Balken durch.');
+        hinweis.title = `Beschreibung der Ketten: ${w.datei}`;
+        karte.append(hinweis);
+        return karte;
+    }
+
+    static tabelle(w, jetzt) {
+        const rahmen = Z.el('div', 'meshgenesis-ws-rahmen');
+        const tabelle = Z.el('table', 'doku meshgenesis-ws-tabelle');
+        const kopf = Z.el('tr');
+        for (const t of ['Nr', 'Schritt', 'Zustand', 'Beginn', 'Dauer', 'Fortschritt']) kopf.append(Z.el('th', '', t));
+        const thead = Z.el('thead');
+        thead.append(kopf);
+        const tbody = Z.el('tbody');
+        for (const k of w.ketten) {
+            tbody.append(this.kettenzeile(k, jetzt));
+            for (const s of k.schritte) tbody.append(this.schrittzeile(s, jetzt));
+        }
+        tabelle.append(thead, tbody);
+        rahmen.append(tabelle);
+        return rahmen;
+    }
+
+    static kettenzeile(k, jetzt) {
+        const tr = Z.el('tr', 'meshgenesis-ws-kette');
+        const td = Z.el('td');
+        td.colSpan = 6;
+        td.title = `${k.skript} · Log ${k.log}${k.prozesse?.length ? ` · PID ${k.prozesse.map((p) => p.pid).join(', ')}` : ''}`;
+        td.append(Z.el('strong', '', k.titel), document.createTextNode(' '), this.marke(k.zustand), document.createTextNode(` ${this.kettentext(k, jetzt)}`));
+        if (k.doppelt) td.append(Z.el('strong', 'meshgenesis-la-doppelt', ' · läuft doppelt — rechnet dieselben Schritte zweimal'));
+        tr.append(td);
+        return tr;
+    }
+
+    static kettentext(k, jetzt) {
+        // Läuft: seit dem ersten begonnenen Schritt — der Prozess der Kette lebt schon, während sie wartet (Formkette: Prozess 19:04, erster Schritt 22:35).
+        const beginn = k.schritte.find((s) => s.start)?.start;
+        const seit = beginn ? `seit ${Z.uhr(beginn)} Uhr` : '';
+        if (k.zustand === 'fertig') return k.ende ? `um ${Z.uhr(k.ende)} Uhr` : '';
+        if (k.zustand === 'abgebrochen') return '— ist stehen geblieben, bevor alle Schritte fertig waren';
+        if (k.zustand === 'nicht gestartet') return '— ist nicht eingeplant';
+        if (k.zustand === 'wartet' && k.wartet_auf) {
+            return k.wartet_auf.erreicht ? '— beginnt gleich' : `bis „${k.wartet_auf.titel}“ fertig ist`;
+        }
+        return seit;
+    }
+
+    static schrittzeile(s, jetzt) {
+        const tr = Z.el('tr', `meshgenesis-ws-schritt meshgenesis-ws-${this.klasse(s.zustand)}`);
+        tr.append(Z.el('td', 'num', String(s.nr)), Z.el('td', '', s.titel));
+        const zustand = Z.el('td');
+        zustand.append(this.marke(s.zustand));
+        tr.append(zustand, Z.el('td', 'num', s.start ? Z.uhr(s.start) : ''));
+        let dauer = '';
+        if (s.dauer_s != null) dauer = Z.spanne(s.dauer_s);
+        else if (s.zustand === 'läuft' && s.seit_s != null) dauer = `seit ${Z.spanne(s.seit_s)}`;
+        tr.append(Z.el('td', 'num', dauer));
+        const zelle = Z.el('td', 'meshgenesis-ws-fortschritt');
+        if (s.zustand === 'läuft') this.fortschritt(zelle, s);
+        tr.append(zelle);
+        return tr;
+    }
+
+    /** Balken (oder laufender Balken), Text, Abschnitt und letzte Zeile des Logs, Link zum Lauf. */
+    static fortschritt(zelle, s) {
+        const f = s.fortschritt;
+        const anteil = f?.gesamt ? f.fertig / f.gesamt : null;
+        const balken = Z.el('div', 'meshgenesis-la-balken');
+        if (anteil != null && Number.isFinite(anteil)) {
+            const fuellung = Z.el('div', 'meshgenesis-la-fuellung meshgenesis-la-fortschrittsfuellung');
+            fuellung.style.width = `${Math.max(0, Math.min(100, 100 * anteil))}%`;
+            balken.append(fuellung);
+        } else {
+            balken.classList.add('meshgenesis-la-unbestimmt');
+        }
+        zelle.append(balken);
+        const rest = f?.rest_s != null ? ` · noch etwa ${Z.spanne(f.rest_s)}` : '';
+        const text = f ? `${f.text}${anteil != null ? ` · ${Z.zahl(100 * anteil)} %` : ''}${rest}` : 'läuft — wie weit, lässt sich nicht messen';
+        const zeile = Z.el('div', 'meshgenesis-ws-text', text);
+        // Abschnitt und letzte Logzeile nur im Tooltip (Edgar: „Lass deine blöden Technik infos weg“).
+        zeile.title = [f?.hinweis, s.abschnitt && `Abschnitt: ${s.abschnitt}`, s.letzte_zeile && `Log zuletzt: ${s.letzte_zeile}`].filter(Boolean).join('\n');
+        zelle.append(zeile);
+        if (s.lauf) zelle.append(Z.link(s.lauf.adresse, 'Zwischenstand ansehen'));
+    }
+
+    /** Erledigte Abläufe der letzten 24 Stunden, eingeklappt: je Ablauf eine Zeile (fertig um … / stehen geblieben). */
+    static erledigt(ketten, jetzt) {
+        const block = Z.el('details', 'meshgenesis-ws-erledigt');
+        block.append(Z.el('summary', '', `Erledigt in den letzten 24 Stunden (${ketten.length})`));
+        const ul = Z.el('ul', 'meshgenesis-la-liste');
+        for (const k of ketten) {
+            const li = Z.el('li');
+            li.append(Z.el('strong', '', k.titel), document.createTextNode(' '), this.marke(k.zustand), document.createTextNode(` ${this.kettentext(k, jetzt)}`));
+            li.title = `${k.skript} · Log ${k.log}`;
+            ul.append(li);
+        }
+        block.append(ul);
+        return block;
+    }
+
+    static unbeschrieben(liste, jetzt) {
+        const block = Z.el('div');
+        block.append(Z.el('p', '', 'Außerdem laufen diese Abläufe, deren Schritte hier nicht beschrieben sind:'));
+        const ul = Z.el('ul', 'meshgenesis-la-liste');
+        for (const k of liste) {
+            // Dateiname ohne „meshgenesis_“ und „.sh“ (20.10.2026: „gaga Texte“); der volle Name im Tooltip.
+            const name = k.name.replace(/^meshgenesis_/, '').replace(/\.sh$/, '').replaceAll('_', ' ');
+            const li = Z.el('li', '', `${name} · seit ${Z.uhr(k.start)} Uhr (${Z.spanne(jetzt - k.start)})`);
+            li.title = `${k.name} · PID ${k.pid}`;
+            if (k.doppelt) li.append(Z.el('strong', 'meshgenesis-la-doppelt', ' · läuft doppelt'));
+            ul.append(li);
+        }
+        block.append(ul);
+        return block;
+    }
+
+    static marke(zustand) {
+        const span = Z.el('span', 'meshgenesis-ws-zustand', this.ZUSTAND[zustand] || zustand);
+        span.dataset.zustand = this.klasse(zustand);
+        return span;
+    }
+
+    static klasse(zustand) {
+        return { 'läuft': 'laeuft', 'übersprungen': 'uebersprungen', 'nicht gestartet': 'nichtgestartet' }[zustand] || zustand;
+    }
+}

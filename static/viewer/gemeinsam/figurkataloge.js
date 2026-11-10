@@ -33,7 +33,12 @@ export class Figurkataloge {
      * Platte (`data/models/*.json` je `quelle`, die UMA-Figuren).
      */
     static BEREICHE = [['standard', 'Standard-Modelle'],
-                       ['gespeichert', 'Gespeicherte Modelle']];
+                       ['gespeichert', 'Gespeicherte Modelle'],
+                       ['mblab', 'MB-Lab']];
+
+    /** Bereiche, die nur erscheinen, wenn sie Zeilen haben (10.11.2026, Edgar zu den 112 MB-Lab-Einträgen in der Genesis-9-Liste: „wer hat diese Modellflut an
+     *  standardmodellen erzeugt??“ → eingeklappte eigene Gruppe). Nur Genesis 9 füllt „MB-Lab“ (`G9mblabvorlagen`, Server-Feld `quelle`). */
+    static NUR_MIT_ZEILEN = new Set(['mblab']);
 
     static QUELLEN = {
         modell: { titel: 'HumanBody', adresse: '/api/character/models/',
@@ -137,7 +142,7 @@ export class Figurkataloge {
             // in der Unterzeile — das Modell bleibt wählbar.
             unterzeile: (f.befund || []).join(' · '),
             warnung: (f.befund || []).length ? f.befund.join(' · ') : null,
-            bereich: f.gespeichert ? 'gespeichert' : 'standard',
+            bereich: f.gespeichert ? 'gespeichert' : (f.quelle === 'MB-Lab' ? 'mblab' : 'standard'),
             gespeichert: Boolean(f.gespeichert),
             // Aus einem Blender-Import (`herkunft.import`, `Blendimportmodell`): der Dialog bietet „Import löschen …".
             importKennung: f.herkunft?.import ? String(f.herkunft.import) : null,

@@ -1,0 +1,83 @@
+/**
+ * Fotogenesiskamera — die Kamera der Fotos auf der Seite „Foto-Genesis“ (24.10.2026): dieselbe Regel, nach der die Charakter-Seite die vier Exportfotos aufnimmt (`charakter/modellansichten.js`,
+ * `Modellansichten.aufnehmen`): Blick auf die Mitte der Hülle, Abstand so, dass Höhe und Breite mit dem Rand ins Bild passen, plus halbe Tiefe. Hier für JEDEN Winkel um die Hochachse
+ * (echte Fotos stehen auch bei 45°) — bei 0/90/180/270° ergibt die Formel genau die der Charakter-Seite (Breite = x bzw. z, Tiefe = z bzw. x).
+ *
+ * `rahmen`: Drehung vom Rahmen der Fotos in die Welt des Felds. Exporte: der Rahmen der Figurgruppe (vorne = +Z der Gruppe); die Mesh-Genesis-Figuren stehen im Rahmen des Datensatzes
+ * (`Meshgenesisgenesisfigur` richtet sie auf das Rig der Probe aus) — `Fotogenesisgenesis.rahmen` misst die Drehung dazwischen an der wahren Figur. Ohne Wahrheit: keine Drehung.
+ */
+import * as THREE from 'three';
+
+export class Fotogenesiskamera {
+    /** Höchstens so viele Punkte je Netz für die Hülle (wie `Modellansichten.PROBEN`): jeder Punkt wird gehäutet. */
+    static PROBEN = 80000;
+    /** Ausschnitt „Kopf“ (24.10.2026): die Punkte im obersten Anteil der Figurhöhe — Kopf und etwas Hals (Kopfhöhe ≈ 1/7,5 der Körperhöhe). */
+    static KOPF = 0.14;
+
+    /** Richtung von der Figur zur Kamera im Rahmen der Fotos: 0° vorne (+Z), 90° links (+X, die linke Körperseite), 180° hinten, 270° rechts. */
+    static richtung(winkel) {
+        const w = THREE.MathUtils.degToRad(winkel);
+        return new THREE.Vector3(Math.sin(w), 0, Math.cos(w));
+    }
+
+    /**
+     * Die Hülle der sichtbaren Netze unter `wurzel` im Rahmen der Fotos — gehäutet und mit Morphs (`getVertexPosition`), wie `Modellansichten._huelle`.
+     * @param {THREE.Object3D} wurzel @param {THREE.Quaternion} rahmen Fotos → Welt @param {number} ab nur Punkte ab dieser Höhe (Rahmen der Fotos) @returns {THREE.Box3}
+     */
+    static huelle(wurzel, rahmen, ab = -Infinity) {
+        wurzel.updateMatrixWorld(true);
+        const box = new THREE.Box3(), umkehr = rahmen.clone().invert(), p = new THREE.Vector3();
+        wurzel.traverseVisible(o => {
+            const lage = o.geometry?.getAttribute?.('position');
+            // Ein Rig (`nurAnsicht`, Knopf „Rig“) ist keine Figur — seine Kugeln sind Instanzen einer Einheitskugel um den Ursprung und blähten die Hülle sonst auf 1 m auf
+            if (!o.isMesh || !lage || o.userData.nurAnsicht) return;
+            const schritt = Math.max(1, Math.floor(lage.count / Fotogenesiskamera.PROBEN));
+            for (let i = 0; i < lage.count; i += schritt) {
+                o.getVertexPosition(i, p);
+                p.applyMatrix4(o.matrixWorld).applyQuaternion(umkehr);
+                if (p.y >= ab) box.expandByPoint(p);
+            }
+        });
+        return box;
+    }
+
+    /** Die Hülle des Kopfs: die Punkte im obersten `KOPF`-Anteil der ganzen Hülle. */
+    static kopfhuelle(wurzel, rahmen) {
+        const ganz = Fotogenesiskamera.huelle(wurzel, rahmen);
+        return ganz.isEmpty() ? ganz : Fotogenesiskamera.huelle(wurzel, rahmen, ganz.max.y - Fotogenesiskamera.KOPF * (ganz.max.y - ganz.min.y));
+    }
+
+    /**
+     * Die Kamera nach der Regel stellen. @param {THREE.PerspectiveCamera} kamera (FOV und Seitenverhältnis gesetzt) @param {THREE.Box3} box im Rahmen der Fotos
+     * @param {number} winkel Grad @param {THREE.Quaternion} rahmen @param {number} rand Luft um die Figur (`Modellansichten.RAND`) @returns {THREE.Vector3} das Blickziel in der Welt
+     */
+    static stellen(kamera, box, winkel, rahmen, rand = 1.08) {
+        const mitte = box.getCenter(new THREE.Vector3()), g = box.getSize(new THREE.Vector3()), r = Fotogenesiskamera.richtung(winkel);
+        const breite = Math.abs(r.z) * g.x + Math.abs(r.x) * g.z, tiefe = Math.abs(r.x) * g.x + Math.abs(r.z) * g.z;
+        const halbTan = Math.tan(THREE.MathUtils.degToRad(kamera.fov / 2));
+        const abstand = Math.max(g.y / 2 / halbTan, breite / 2 / (halbTan * kamera.aspect)) * rand + tiefe / 2;
+        const ziel = mitte.clone().applyQuaternion(rahmen);
+        kamera.position.copy(mitte).addScaledVector(r, abstand).applyQuaternion(rahmen);
+        kamera.up.set(0, 1, 0).applyQuaternion(rahmen);
+        kamera.lookAt(ziel);
+        const entfernung = kamera.position.distanceTo(ziel);
+        kamera.near = entfernung / 50;
+        kamera.far = entfernung * 4;
+        kamera.updateProjectionMatrix();
+        return ziel;
+    }
+
+    /** Ein Feld (`Meshgenesisansicht`) auf den Winkel stellen: Kamera und Drehpunkt der Steuerung; `kopf`: nur der Kopf. Liefert `false`, wenn nichts Sichtbares im Feld liegt. */
+    static feldStellen(ansicht, winkel, rahmen, rand = 1.08, kopf = false) {
+        const box = kopf ? Fotogenesiskamera.kopfhuelle(ansicht.inhalt, rahmen) : Fotogenesiskamera.huelle(ansicht.inhalt, rahmen);
+        if (box.isEmpty()) return false;
+        const ziel = Fotogenesiskamera.stellen(ansicht.kamera, box, winkel, rahmen, rand);
+        // Für das gekoppelte Drehen (`Fotogenesisansicht._uebernehmen`): Größe der gezeigten Hülle und Rahmen dieses Felds.
+        ansicht.groesse = box.max.y - box.min.y;
+        ansicht.rahmen = rahmen.clone();
+        ansicht.steuerung.target.copy(ziel);
+        ansicht.steuerung.update();
+        ansicht.zeichnen();
+        return true;
+    }
+}

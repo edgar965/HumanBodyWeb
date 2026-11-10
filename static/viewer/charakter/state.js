@@ -17,6 +17,7 @@ import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Serverprotokoll } from '../gemeinsam/serverprotokoll.js';
+import { Studiolicht } from '../gemeinsam/studiolicht.js';
 
 // Re-export everything that other modules may need
 export { THREE, OrbitControls, TransformControls, BVHLoader, GLTFLoader };
@@ -62,13 +63,8 @@ export const LIGHT_PRESETS = {
     // keine Reichweite, nur die Richtung zählt. Die Intensität behält das
     // gemessene Verhältnis 400:100:50 der Wattzahlen, Key auf die bisherige
     // Stärke (3.0) genormt, damit Belichtung/Tonemapping weiter passen.
-    studio: {
-        key:     { intensity: 3.0,  color: 0xffffff, pos: [0.43, 1.58, 6.50] },
-        fill:    { intensity: 0.375, color: 0xffffff, pos: [6.14, -0.91, -2.52] },
-        back:    { intensity: 0.75, color: 0xffffff, pos: [2.25, 0.79, -6.26] },
-        ambient: { intensity: 0.8, color: 0xffffff },
-        exposure: 1.6
-    },
+    // Seit 09.11.2026 in `gemeinsam/studiolicht.js` (Mesh-Genesis zeichnet die Genesis-Figuren damit).
+    studio: Studiolicht.WERTE,
     outdoor: {
         key:     { intensity: 4.0, color: 0xfff5e0, pos: [5, 8, -2] },
         fill:    { intensity: 1.5, color: 0x8899cc, pos: [-4, 2, -3] },

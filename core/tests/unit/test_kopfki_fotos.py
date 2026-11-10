@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests für die Ports und Bausteine der Fotos-Kette von KopfKI (24.10.2026): safetensors-Leser (Sapiens2Torch), CLIP-Tokenizer und roi_align (Sam3Torch), Push-Pull der Bartschicht und
-Teilung der Haarschale (KopfKI). Klein, auf der CPU, ohne Gewichte und ohne Fotos — die Gegenproben gegen die Originale stehen in `ProjektTemp/_wegwerf/ai2d3d/*_gegenprobe.py`."""
+Teilung der Haarschale (KopfKI). Klein, auf der CPU, ohne Gewichte und ohne Fotos — die Gegenproben gegen die Originale stehen in `ProjektTemp/_wegwerf/fotogenesis/*_gegenprobe.py`."""
 import json
 import struct
 import sys
@@ -11,7 +11,7 @@ import torch
 from django.conf import settings
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
-sys.path.insert(0, str(settings.TOOLS_ROOT / 'mesh3dai'))
+sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))
 
 from HaarKI.haarschale import Haarschale  # noqa: E402
 from KopfKI.fotobart import Fotobart  # noqa: E402

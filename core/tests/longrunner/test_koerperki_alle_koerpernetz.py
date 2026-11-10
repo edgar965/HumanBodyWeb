@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests für `KoerperKI_alle.koerpernetz.Koerpernetz` (24.10.2026, Besitzer 2d-3d-AI) an einer echten gebauten Figur (`unit/_gebautefigur.py`) — im LongRunner (Genesis laden ~3 s).
+"""Tests für `KoerperKI_alle.koerpernetz.Koerpernetz` (24.10.2026, Besitzer Foto-Genesis) an einer echten gebauten Figur (`unit/_gebautefigur.py`) — im LongRunner (Genesis laden ~3 s).
 
 WARUM: Das Einpassen in die Fotos häutet den Käfig mit dieser Klasse. Hautgewichte und Gelenkzentren kommen aus der gebauten Figur, die Ruhelage aus der Formung der Regler — passen beide
 nicht zusammen, rechnet alles stumm mit einer anderen Figur (zweiter Einpass-Lauf 24.10.2026 15:02: Figur noch mit den Reglern aus Runde 1, Start mit anderen Reglern). Die Häutung muss in Ruhe

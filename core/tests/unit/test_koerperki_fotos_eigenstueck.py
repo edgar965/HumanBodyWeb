@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Tests für Stufe K4 der eigenen Kleider (25.10.2026, Besitzer 2d-3d-AI): `KoerperKI_Fotos.Fotoeigenstueck.schnitt` (Säume aus der Foto-Schale), `Eigenstueckbau` (Sitz und
+"""Tests für Stufe K4 der eigenen Kleider (25.10.2026, Besitzer Foto-Genesis): `KoerperKI_Fotos.Fotoeigenstueck.schnitt` (Säume aus der Foto-Schale), `Eigenstueckbau` (Sitz und
 Schnitt wie der Shader `EigenkleidGLSL`/`EigenkleidschnittGLSL`) und der nächste Punkt auf einem Dreieck, den `Flaechenabstand` seit 01.11.2026 aus `Kleidergpu.naechste_stelle`
-(Mesh3D-AI) nimmt — an Kunstwerten, ohne Figur; nur dieser letzte Test braucht die Grafikkarte (Kleidergpu rechnet nur dort).
+(Mesh-Genesis) nimmt — an Kunstwerten, ohne Figur; nur dieser letzte Test braucht die Grafikkarte (Kleidergpu rechnet nur dort).
 
 WARUM: Die Gegenprobe „Foto-Schale → eigenes Stück“ misst den Abstand und die Saumlage mit diesen drei Bausteinen. Ein Schnitt auf der falschen Seite, ein vertauschter Sitzwert
 (oben ↔ unten) oder ein nächster Punkt außerhalb des Dreiecks ergäbe Millimeter, die nach Übereinstimmung aussehen.
@@ -15,11 +15,11 @@ import torch
 from django.conf import settings
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
-sys.path.insert(0, str(Path(settings.TOOLS_ROOT) / 'mesh3dai'))
+sys.path.insert(0, str(Path(settings.TOOLS_ROOT) / 'meshgenesis'))
 
 from KoerperKI_Fotos.eigenstueckbau import Eigenstueckbau  # noqa: E402
 from KoerperKI_Fotos.fotoeigenstueck import Fotoeigenstueck  # noqa: E402
-from mesh3dai_kleidergpu import Kleidergpu  # noqa: E402
+from meshgenesis_kleidergpu import Kleidergpu  # noqa: E402
 
 D = torch.float64
 

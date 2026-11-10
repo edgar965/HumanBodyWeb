@@ -2,7 +2,7 @@
  * Modellpruefunghaar — Haarkarten ohne Deckkraft, Teil der Klasse „haare“ des Modell Checks (`Modellpruefung`; aus `modellpruefung.js` abgeteilt 02.11.2026 abends).
  * Ein Material mit Bild, aber ohne Alpha, Schnitt, Durchsicht, Alpha-to-Coverage oder Linien lässt auf Haarkarten den Kartengrund als Blöcke stehen (Amala charm_hair,
  * Birne sallymae_hair, 02.11.2026). Ein geschlossenes Haarnetz trägt sein Bild ohne Deckkraft zu Recht — bis 02.11.2026 abends zählte jedes Netz, das Haar von
- * „Edgar 2d-3d-AI“ (2d-3d-AI) fiel mit 100 % durch. Karten = das größte zusammenhängende Stück trägt weniger als KARTEN_ANTEIL der Dreiecke; gemessen 02.11.2026 im
+ * „Edgar Foto-Genesis“ (Foto-Genesis) fiel mit 100 % durch. Karten = das größte zusammenhängende Stück trägt weniger als KARTEN_ANTEIL der Dreiecke; gemessen 02.11.2026 im
  * MCP-Tab (Netze aus `/api/character/genesis9-figur/garderobe/<id>/netz/`): edgar_2d_3d_ai_haar 92 %, aldora_hair 37, sallymae_hair 11, charm_hair 10, toulouse_hair 5,
  * hs_viola_hair_g9 0; die Kappe der g9_base_dforce_pixie_hair (eigenes Netz) 100. Der Anteil der Randkanten trennte nicht (edgar 3,1 %, aldora 3,4, sallymae 4,9).
  * Gezählt werden nur Dreiecke mit UV-Fläche (`mitBild`): eigen_herrenhaar (Strähnen als Bänder, ~30.000 Stücke) zeigt je Dreieck mit allen drei Ecken auf die Mitte

@@ -1,0 +1,16 @@
+{% comment %} Ein Block der aufgeräumten Jobseite (26.10.2026, `Abnahmebloecke`, `Fotogenesisbloecke`): Foto · Ergebnis · beide und die Tabelle je Eigenregler. Parameter: block, titel, text. {% endcomment %}
+<section class="card fotogenesis-messkarte" id="fotogenesis-block-{{ block }}" data-block="{{ block }}">
+    <h2>{{ titel }} <span class="fotogenesis-fotowahl" data-fotowahl></span></h2>
+    <p class="hb-hinweis">{{ text }}</p>
+    <p class="hb-hinweis fotogenesis-mess-info" data-info>{{ titel }} wird geladen …</p>
+    <div class="fotogenesis-messzeile">
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">1</span> Foto — Vorlage</figcaption><canvas data-ansicht="vorlage"></canvas></figure>
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">2</span> Genesis-Modell aus der Kamera des Fotos — Ergebnis</figcaption><canvas data-ansicht="ergebnis"></canvas></figure>
+        {% comment %} Mit Training (27.10.2026, Edgar: „mach die geometrische figur an 3. Stelle (und den vergleich aus der 3. Stelle an 4. Stelle)“): 3 die gerechnete Figur, 4 der Vergleich. {% endcomment %}
+        {% if training %}<figure class="fotogenesis-messansicht fotogenesis-training"><figcaption><span class="fotogenesis-nummer">3</span> Gerechnete Figur — Geometrie, die das Training misst</figcaption><canvas data-training></canvas><p class="hb-hinweis" data-training-info>Training wird geladen …</p></figure>{% endif %}
+        <figure class="fotogenesis-messansicht"><figcaption><span class="fotogenesis-nummer">{% if training %}4{% else %}3{% endif %}</span> Ergebnis über der Vorlage</figcaption><canvas data-ansicht="beide"></canvas></figure>
+        <div class="fotogenesis-messtabelle"><table class="fotogenesis-kopftabelle" data-sort-aus data-sort-key="fotogenesis-block-{{ block }}">
+            <thead><tr><th>Nr</th><th>Eigenregler · Messung</th><th class="num">Vorlage</th><th class="num">Ergebnis</th><th class="num">Abweichung</th></tr></thead><tbody></tbody>
+        </table></div>
+    </div>
+</section>

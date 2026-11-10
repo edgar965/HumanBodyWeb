@@ -3,7 +3,7 @@
 
 Edgar, 28.10.2026 (Mesh3D-AI, Test edgar, Bild): „fixe auch das Geschlechtsteil, das ist entweder nicht da oder monströs in der 2. Zeile“. Gemessen: In der Ruhelage
 ist „Daz Anatomie Mann“ ganz. Gehäutet in der Haltung des Tests (Oberschenkel 10° und 17,6° gegen die Ruhe) liegen die Lagen, die die Knochen eines Punkts ihm geben,
-bis 83 mm auseinander (p90 48 mm, 30 % der Punkte über 10 mm), das Stück zerknüllt (`ProjektTemp/_wegwerf/regler_ki/anatomie_pruefen.py`, im Tab `__mesh3daitest`).
+bis 83 mm auseinander (p90 48 mm, 30 % der Punkte über 10 mm), das Stück zerknüllt (`ProjektTemp/_wegwerf/regler_ki/anatomie_pruefen.py`, im Tab `__meshgenesistest`).
 Ursache: `Blendimportschamgewichte` gibt jedem Punkt die Gewichte der Haut, die ihn verdeckt. Penis und Hoden hängen zwischen den Oberschenkeln, ihre Verdecker sind deren
 Innenseiten: 2.971 bzw. 2.975 von 6.028 Punkten trugen `l_/r_thightwist1` (Summe 791 und 785, zusammen 26 %). Dazs Geograft (`Genesis9MaleGenitalia.dsf`, `SkinBinding`)
 gibt den Oberschenkeln 0,9 % (Summe 13 von 1.516, `geograft_gewichte.py`), alles andere `pelvis` und eigenen Knochen darunter (`genbase`, `gen1`–`gen6`, `testes`,

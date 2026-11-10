@@ -1,0 +1,16 @@
+{% comment %}Feld „Genesis-Ergebnis (Mesh-Genesis)“ — seit 04.11.2026 Feld 3 der Zeile Fotos · PSHuman (Edgar: „Genesis-Ergebnis (Mesh3D-AI) in die zweite Zeile (eine darüber)“). Daten `daten.genesiszeile`,
+gezeichnet von `Fotogenesisgenesiszeile`, folgt der Leiste oben.{% endcomment %}
+{% with g=daten.genesiszeile %}{% url 'fotogenesis_standardanimation' job.id as bewegung_adresse %}{% url 'fotogenesis_hautangleich' job.id as hautangleich_adresse %}{% url 'fotogenesis_weitverdeckung' job.id as weitverdeckung_adresse %}
+<section class="card fotogenesis-bereich">
+    <h2><span class="fotogenesis-nummer">3</span> Genesis-Ergebnis (Mesh-Genesis)</h2>
+    <div class="fotogenesis-leinwand" data-feld="genesis-ergebnis"></div>
+    <p class="hb-hinweis">Ergebnis des Mesh-Genesis-Tests: Figur aus der Einpassung, Haut und Kleider</p>
+    {% if g.stand %}<p class="hb-hinweis">{{ g.stand }}</p>{% endif %}
+    {% if g.lauf and g.ergebnis %}<p class="hb-hinweis">{{ g.lauf }}</p>{% endif %}
+    {% if g.ergebnis %}{% include "_fotogenesis_hautangleich.html" with adresse=hautangleich_adresse %}
+    {% include "_fotogenesis_weitverdeckung.html" with adresse=weitverdeckung_adresse %}{% endif %}
+    {# Abspielleiste und Export wie auf der Mesh-Genesis-Testseite (Bereich meshgenesistest, dieselbe Figur wie dort) #}
+    {% if g.ergebnis %}{% include "_meshgenesis_figurbewegung.html" with adresse=bewegung_adresse %}
+    {% include "_exportleiste.html" with bereich="meshgenesistest" kennung=g.test speichern_hinweis="Als Modell speichern: auf der Mesh-Genesis-Testseite („Übernehmen und als Modell speichern“)." %}{% endif %}
+</section>
+{% endwith %}

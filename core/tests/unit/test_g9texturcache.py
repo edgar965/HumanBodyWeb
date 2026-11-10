@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 u"""Die Bilder einer Genesis-Figur darf der Browser behalten (19.10.2026): `G9texturbuendelapi` per GET mit ETag, `G9garderobeapi.textur` über `Auftragsdatei`.
 
-Gemessen an Mann1 (Mesh3D-AI): jedes Laden übertrug alle Bilder neu (das Bündel war ein POST, das Einzelbild `no-store`) — ein Bündel mit 48,6 MB in 5,2 s. Danach kam
+Gemessen an Mann1 (Mesh-Genesis): jedes Laden übertrug alle Bilder neu (das Bündel war ein POST, das Einzelbild `no-store`) — ein Bündel mit 48,6 MB in 5,2 s. Danach kam
 dasselbe Bündel als 304 aus dem Speicher des Browsers (0,2–0,9 s).
 
 1. Bündel per GET: 200, Inhalt wie per POST, ETag und `no-cache`; mit derselben Marke in `If-None-Match` 304 ohne Inhalt; ändert sich ein Bild (Größe/Zeit), ändert sich die Marke.

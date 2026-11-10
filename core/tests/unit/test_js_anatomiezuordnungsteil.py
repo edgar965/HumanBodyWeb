@@ -2,7 +2,7 @@
 u"""Die schnellere Anatomie-Zuordnung (19.10.2026): Vorfilter, Schranke und Strahlfolge in `Anatomiezuordnung`, Abschnitte in `Anatomiezuordnungsteil`, die Nachricht
 `zuordnung` in `anatomiearbeiter.js` — in Node, mit den echten Modulen.
 
-Gemessen an Damira0 (Mesh3D-AI, ultrafein, 1,18 Mio. Texel, 19.012 Hautdreiecke): die Zuordnung 21,5–22,2 s am Stück auf dem Hauptfaden, mit den Vorfiltern 13,5 s, auf
+Gemessen an Damira0 (Mesh-Genesis, ultrafein, 1,18 Mio. Texel, 19.012 Hautdreiecke): die Zuordnung 21,5–22,2 s am Stück auf dem Hauptfaden, mit den Vorfiltern 13,5 s, auf
 vier Workern 4,5 s; das ganze Backen der Hautfarbe ~35 s → 7,0 s. Jede Abkürzung ist EXAKT gebaut — dieselben Texel, Dreiecke und Gewichte, Bit für Bit. Das prüft dieser Test:
 
 1. Kunstwelt mit Gefälle (gewellte Haut, Stück 4 mm darüber mit gekippten Normalen): `Anatomiezuordnung.rechnen` gegen dieselbe Rechnung mit Referenzfassungen von `_kandidaten`,

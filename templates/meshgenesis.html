@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}{% load jsfassung %}
+{% block title %}Mesh-Genesis{% endblock %}
+
+{% comment %}
+Dashboard „Mesh3D-AI“ (Edgar, 14.10.2026: „Mach das Menü Dashboard – Mesh-Genesis und zeige mir den Input, gewünschten Trainingsoutput und Output Bereich, mit Dummies für Ursula1“).
+Zweck der Seite: eine KI, die aus einem Netz ein Genesis-Modell macht, an einem Modell trainieren und jede Probe ansehen — Eingabe (Außenfläche des Netzes), gewünschte Ausgabe (Genesis-Modell in der
+Pose) und Ausgabe des Netzes nebeneinander. Fünf Zeilen: ganzer Körper, nur Körper (ohne Kleider), Gesicht, Hände/Füße, Kleider; je Zeile eine Wahl der Ansichtsart (Oberfläche, Drahtnetz, Textur …) und Download-Knöpfe.
+Ohne fertigen Trainingslauf erfundene Daten (`Meshgenesisattrappe`); mit Lauf echte Daten (`Meshgenesisdaten`: gehäutete Figur je Probe, Rig, Vorhersage — `.claude/rules/meshgenesis.md`). Export ist nicht gebaut.
+Endpunkte: `core/api/meshgenesis.py`. Seit 14.10.2026 ist das die Seite EINES Jobs (`/mesh-genesis/<job>/`); die Liste aller Jobs steht auf `/mesh-genesis/` (`meshgenesis_liste.html`).
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshgenesis.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/figurbewegung.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
+{# Die Karte des Anatomie-Stücks (Haut des Körpers, `Meshgenesisanatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
+<meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
+{# Ziel und Ergebnis sind Genesis-Figuren aus dem Code der Charakter-Seite (`Meshgenesisgenesisfigur`): die Haut-Maske rechnet in deren Worker. #}
+<meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+{# Ihr Ergebnis liegt dauerhaft auf dem Server, unter der Fassung DIESES Codes (`core/dienste/jsquellen.py`, `gemeinsam/hautmaskenvorrat.js`). #}
+<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+{% comment %}Schnelle Anzeige (19.10.2026, `gemeinsam/schnellanzeige.js`): Figuren auf Daz' Käfig (grob), Leinwände mit Pixeldichte 1 — bis zu acht Figuren und 16 Felder auf einer Seite.
+Strg+Alt+H schaltet die Netzstufe weiter (grob → fein → ultrafein). Die Charakter-Seite bleibt bei der Vorgabe (fein); sie schaltet die schnelle Anzeige mit derselben Zeile ein.{% endcomment %}
+<meta name="schnellanzeige" content="an">
+{# Wie die Bilder der Genesis-Figuren kommen (Einstellungen → Mesh-Genesis, `Meshgenesistexturwahl`, `gemeinsam/texturweg.js`): klein · verteilt · komprimiert. #}
+<meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
+{% comment %}Die Ansichten zeichnen mit three.js — ohne die Importkarte bricht jedes Modul der Seite ab, ohne Meldung außer „Failed to resolve module specifier“ in der Konsole.{% endcomment %}
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-microchip"></i> <a href="/mesh-genesis/" class="meshgenesis-zurueckzurliste" title="Alle Jobs">Mesh-Genesis</a> <span class="meshgenesis-pfad">›</span>
+    {# Name änderbar (19.10.2026, Stift wie bei Mesh-3D: `gemeinsam/auftragname.js`, `Meshgenesisname`); Kennung und Adresse bleiben. #}
+    <span id="auftrag-name" data-adresse="{% url 'meshgenesis_name' job.id %}">{{ job.name }}</span></h1>
+</div>
+
+{% comment %}
+Der Block oben bleibt beim Blättern stehen (Edgar, 14.10.2026: „mach diesen Bereich oben fest, wenn ich blättere, möchte ich den Bereich noch sehen“): Hinweis, Job und Probenwahl. Darunter bleibt der Kopf der Zeile mit der Ansichtswahl hängen,
+solange die Zeile zu sehen ist (`meshgenesis.css`; die Höhen setzt `Meshgenesisseite` als `--meshgenesis-leiste` und `--meshgenesis-oben`).
+{% endcomment %}
+<div class="meshgenesis-oben" id="meshgenesis-oben">
+{% comment %}Seit 15.10.2026 zeigt die Seite echte Daten, sobald ein Trainingslauf fertig ist (`Meshgenesisdaten`, Edgar: „das ist doch noch nichts?“); ohne Lauf weiter die Attrappe.{% endcomment %}
+<div class="card {% if echt %}meshgenesis-echt{% else %}meshgenesis-attrappe{% endif %}" id="meshgenesis-attrappe" role="note">
+    {% if echt %}<strong><i class="fas fa-check-circle"></i> Echte Daten.</strong>{% else %}<strong><i class="fas fa-exclamation-triangle"></i> Attrappe.</strong>{% endif %} {{ hinweis }}
+</div>
+
+<div class="card" id="meshgenesis-job" data-job="{{ job.id }}">
+    <div class="meshgenesis-kopf">
+        <span>Job (ein Modell): <b data-auftragname-kopie>{{ job.name }}</b></span>
+        <a href="/mesh-genesis/" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
+        <span class="hb-hinweis" id="meshgenesis-jobinfo"></span>
+        <div class="meshgenesis-zusammenfassung" id="meshgenesis-zusammenfassung"></div>
+    </div>
+    {% comment %}Datum und Dauer des Laufs (22.10.2026, Edgar: „im job schreibe oben eine Zeile mit dem Datum des Laufs und die Dauer“) — `Meshgenesislaufzeile`, dieselben Zahlen wie die Jobliste.{% endcomment %}
+    <div class="meshgenesis-laufzeile">{% for t in laufzeile %}{% if not forloop.first %} · {% endif %}<span title="{{ t.tipp }}">{{ t.titel }}: <b>{{ t.wert }}</b></span>{% endfor %}</div>
+</div>
+
+<div class="card" id="meshgenesis-probenkarte">
+    <div class="meshgenesis-probenkopf">
+        <h2>Proben</h2>
+        <div class="meshgenesis-probenknoepfe">
+            <button type="button" class="btn btn-secondary btn-sm" id="meshgenesis-zurueck" title="Vorherige Probe (Pfeil links)"><i class="fas fa-chevron-left"></i></button>
+            <span class="meshgenesis-probenzaehler" id="meshgenesis-zaehler"></span>
+            <button type="button" class="btn btn-secondary btn-sm" id="meshgenesis-weiter" title="Nächste Probe (Pfeil rechts)"><i class="fas fa-chevron-right"></i></button>
+            <label class="meshgenesis-filter"><input type="checkbox" id="meshgenesis-nurpruefung"> nur Prüfposen</label>
+            <label class="meshgenesis-filter"><input type="checkbox" id="meshgenesis-schlechtzuerst"> schlechteste zuerst</label>
+        </div>
+    </div>
+    <div class="meshgenesis-chips" id="meshgenesis-chips" role="listbox" aria-label="Proben"></div>
+    <div class="meshgenesis-probeninfo" id="meshgenesis-probeninfo"></div>
+</div>
+</div>
+
+<div class="meshgenesis-zeile meshgenesis-koerperzeile" data-bereich="koerper" id="meshgenesis-zeile-koerper">
+    <div class="meshgenesis-zeilenkopf">
+        <h2>Ganzer Körper</h2>
+        {% include "_meshgenesis_ansichtwahl.html" %}
+    </div>
+    <div class="meshgenesis-bereiche" id="meshgenesis-bereiche">
+        <section class="card meshgenesis-bereich" id="meshgenesis-eingabe">
+            {% comment %}Die drei Felder heißen seit 15.10.2026 Start · Ziel · Ergebnis (Edgar: „mache die 3 Ansichten mit neuen Namen: Start, Ziel und Ergebnis“); im Code bleiben die Schlüssel eingabe · soll · ausgabe.{% endcomment %}
+            <h2><span class="meshgenesis-nummer" data-nummer="eingabe">1</span> Start</h2>
+            <p class="hb-hinweis">Was die KI bekommt: nur die Außenfläche.</p>
+            <div class="meshgenesis-leinwand" data-art="eingabe"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="eingabe"></div>
+            {% include "_meshgenesis_download.html" with art="eingabe" %}
+        </section>
+
+        {% comment %}Zwischenbild „Rig → A-Pose“ (Edgar, 17.10.2026: „nicht drei Bilder, sondern vier Bilder, mit dem Rig und Bringen in die A-Position“): nur bei der Probe, auf der die Kette der Vorstufe lief
+        (`probe.apose`, Server `Meshgenesisapose`); sonst verborgen, und die Felder zählen 1–3 (`Meshgenesiszeile._aposeFeld`).{% endcomment %}
+        <section class="card meshgenesis-bereich" id="meshgenesis-apose" data-feld="apose" hidden>
+            <h2><span class="meshgenesis-nummer" data-nummer="apose">2</span> Rig → A-Pose</h2>
+            {% comment %}17.10.2026 (Edgar: „im zweiten Schritt hast du den Körper in A-Pose gebracht … Warum sind die zwei Bilder rechts dann doch in der Laufpose?“): der Text sagt, dass NUR hier in der A-Pose gerechnet
+            wird und Ziel/Ergebnis die Haltung des Netzes zeigen; durchscheinend = Löcher der Außenfläche (bis 17.10.2026 abends dunkel — sah aus wie falsche Textur), orange = die Gelenke des Netzes (`Meshgenesisapose`, `Meshgenesisrigzeichner`).{% endcomment %}
+            <p class="hb-hinweis">Netz in der A-Pose; orange: Gelenke der Vorstufe.</p>
+            <div class="meshgenesis-leinwand" data-art="apose"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="apose"></div>
+        </section>
+
+        <section class="card meshgenesis-bereich" id="meshgenesis-soll">
+            <h2><span class="meshgenesis-nummer" data-nummer="soll">2</span> Ziel</h2>
+            <p class="hb-hinweis">Soll: Genesis-Modell mit Kleidern, Haar und Rig.</p>
+            <div class="meshgenesis-leinwand" data-art="soll"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="soll"></div>
+            {% include "_meshgenesis_download.html" with art="soll" %}
+        </section>
+
+        <section class="card meshgenesis-bereich" id="meshgenesis-ausgabe">
+            <h2><span class="meshgenesis-nummer" data-nummer="ausgabe">3</span> Ergebnis</h2>
+            <p class="hb-hinweis">Ausgabe der KI. Punkte: Fehler je Knochen (grün 0, rot ab 30 mm).</p>
+            <div class="meshgenesis-leinwand" data-art="ausgabe"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="ausgabe"></div>
+            {% url 'meshgenesis_standardanimation' job.id as standardanimation %}
+            {% include "_meshgenesis_figurbewegung.html" with adresse=standardanimation tasten=False %}
+            <div class="meshgenesis-guete" data-guete></div>
+            {% include "_meshgenesis_download.html" with art="ausgabe" %}
+            <div class="meshgenesis-bereichsknoepfe meshgenesis-geistwahl">
+                {% comment %}Vorgabe aus (Edgar, 15.10.2026: „warum noch immer 2 Meshes beim Ergebnis und zwei Rigs?“) — an zeigt das Soll (Fläche und graues Rig) zusätzlich zur Ausgabe.{% endcomment %}
+                <label class="meshgenesis-filter"><input type="checkbox" id="meshgenesis-geist"> Ziel als Geist darüber (in allen Zeilen)</label>
+            </div>
+        </section>
+    </div>
+</div>
+
+{% comment %}Hinweise der Zeilen seit 20.10.2026 abends leer (Edgar: „ich brauche keine Romane … oder ggf. gar kein Text“) — der Titel sagt, was die Zeile zeigt.{% endcomment %}
+{% include "_meshgenesis_zeile.html" with bereich="koerper_nackt" titel="Nur Körper (ohne Kleider)" hinweis="" %}
+
+{% include "_meshgenesis_zeile.html" with bereich="gesicht" titel="Gesicht" hinweis="" %}
+
+{% include "_meshgenesis_zeile.html" with bereich="haende" titel="Hände und Füße" hinweis="" %}
+
+{% include "_meshgenesis_zeile.html" with bereich="kleider" titel="Kleider" hinweis="" %}
+
+<div class="card" id="meshgenesis-kennzahlen">
+    <h2>Kennzahlen dieser Probe</h2>
+    <div id="meshgenesis-kennzahlentext"></div>
+</div>
+
+{% comment %}
+Datensatz, Training und Testfälle stehen HINTER den Ansichten (22.10.2026, Edgar: „zeige zuerst die View und dann diese ganzen Bereiche“).
+Statuskarte (Edgar, 14.10.2026: „aktualisierst du alle paar Minuten den Trainingsstand auf der Ursula Seite? … mach das, alle paar Minuten, damit es die Trainings nicht beeinträchtigt … einstellbar"): ECHTE Zahlen von der Platte
+(Datensatz, jüngster Trainingslauf), im Takt von Einstellungen → Mesh-Genesis. Nicht Teil des festen Blocks oben, damit der nicht höher wird. `meshgenesisstand.js`.
+{% endcomment %}
+<div class="card meshgenesis-stand" id="meshgenesis-stand">
+    <div class="meshgenesis-standkopf">
+        <h2>Datensatz und Training <span class="meshgenesis-marke" title="Diese Karte liest Datensatz und Trainingslauf direkt von der Platte, im eingestellten Takt.">echt, von der Platte</span></h2>
+        <span class="hb-hinweis" data-stand="zeit"></span>
+        <button type="button" class="btn btn-secondary btn-sm" data-stand="jetzt" title="Stand sofort neu holen"><i class="fas fa-sync-alt"></i> Jetzt</button>
+        <a href="/settings/mesh-genesis/" class="btn btn-secondary btn-sm" title="Abfragetakt einstellen (Einstellungen → Mesh-Genesis)"><i class="fas fa-cog"></i> Takt</a>
+    </div>
+    <div data-stand="inhalt"><span class="hb-hinweis">Stand wird geholt …</span></div>
+</div>
+
+{% comment %}
+Testfälle der Kleider-KI am Trainingsjob (22.10.2026, Edgar: „wieviel Fehler von wievielen insgesamt, für alle Prioritäten … in das UI … für die trainings und Testjobs … in einer Tabelle“): die Messung
+des jüngsten Stufe-2-Trainings dieses Jobs gegen das Ziel samt Verlauf der Prio-1-Wache (`Meshgenesistestfaelle.fuer_job`, `meshgenesistestfaelle.js`).
+{% endcomment %}
+<div class="card meshgenesis-testfaelle" id="meshgenesis-testfaelle" data-adresse="{% url 'meshgenesis_jobtestfaelle' job.id %}">
+    <h2>Testfälle der Kleider-KI (Training)</h2>
+    <div data-testfaelle="inhalt"><span class="hb-hinweis">Wird geladen …</span></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Meshgenesisseite } from "{% fassungspfad 'viewer/meshgenesis/meshgenesisseite.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
+import { Meshgenesistestfaelle } from "{% fassungspfad 'viewer/meshgenesis/meshgenesistestfaelle.js' %}";
+Meshgenesisseite.aufbauen();
+Auftragname.binden();
+const testfaelle = document.getElementById('meshgenesis-testfaelle');
+new Meshgenesistestfaelle(testfaelle).laden(`${testfaelle.dataset.adresse}?t=${Date.now()}`);
+</script>
+{% endblock %}

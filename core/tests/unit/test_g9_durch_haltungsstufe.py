@@ -7,9 +7,9 @@ import torch
 
 from Genesis9.meshipnet import G9meshipnet
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'mesh3dai'))
-from mesh3dai_meshglieder import Mesh3daimeshglieder  # noqa: E402
-from mesh3dai_meshpruefung import Mesh3daimeshpruefung  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'meshgenesis'))
+from meshgenesis_meshglieder import Meshgenesismeshglieder  # noqa: E402
+from meshgenesis_meshpruefung import Meshgenesismeshpruefung  # noqa: E402
 
 
 class EinpassungOhneStrafeTest(unittest.TestCase):
@@ -52,7 +52,7 @@ class StrafeNurAufDerHaltungTest(unittest.TestCase):
     databases = []
 
     def glieder(self):
-        g = object.__new__(Mesh3daimeshglieder)
+        g = object.__new__(Meshgenesismeshglieder)
         g.k = lambda x, haltung, trans: (x.sum() * torch.ones(2, 3) + haltung.sum() + trans.sum(),)
         g.ipnet = type('Ipnet', (), {'_durchdringung': staticmethod(lambda v: (v ** 2).sum())})()
         return g
@@ -75,12 +75,12 @@ class GelenkdickeTest(unittest.TestCase):
     databases = []
 
     def test_keilarm_ist_rot(self):
-        zeilen = Mesh3daimeshpruefung.dicke_zeilen({'Handgelenk l': 0.57, 'Ellbogen l': 0.9})
+        zeilen = Meshgenesismeshpruefung.dicke_zeilen({'Handgelenk l': 0.57, 'Ellbogen l': 0.9})
         self.assertEqual(len(zeilen), 1)
         self.assertIn('Handgelenk l', zeilen[0])
 
     def test_gesunde_figur_ist_nicht_rot(self):
-        self.assertEqual(Mesh3daimeshpruefung.dicke_zeilen({'Ellbogen l': 0.768, 'Handgelenk l': 0.78}), [])
+        self.assertEqual(Meshgenesismeshpruefung.dicke_zeilen({'Ellbogen l': 0.768, 'Handgelenk l': 0.78}), [])
 
     def test_ohne_abnahme_nichts(self):
-        self.assertEqual(Mesh3daimeshpruefung.dicke_zeilen(None), [])
+        self.assertEqual(Meshgenesismeshpruefung.dicke_zeilen(None), [])

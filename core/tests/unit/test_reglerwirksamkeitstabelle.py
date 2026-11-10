@@ -14,7 +14,7 @@ from ._pruefablage import Pruefablage
 def _regler(name, wirkung, nutzen_netz=True, nutzen_foto=True, doppelt=None):
     z = {'name': name, 'anzeige': name.title(), 'bereich': 'Kopf', 'familie': 'Daz', 'art': 'daz', 'lo': -1.0, 'hi': 1.0, 'ende': 1.0, 'wirkung_mm': wirkung,
          'koerper_mm': wirkung, 'kopf_mm': wirkung, 'gelenke_mm': 0.0, 'netz_mm': wirkung, 'umriss_mm': wirkung, 'gesicht_mm': 0.0, 'in_pruefformen': 1,
-         'vorhergesagt': 2, 'gedreht': False, 'mesh3dai': {'nutzen': nutzen_netz, 'grund': 'netz'}, 'ai2d3d': {'nutzen': nutzen_foto, 'grund': 'foto'}}
+         'vorhergesagt': 2, 'gedreht': False, 'meshgenesis': {'nutzen': nutzen_netz, 'grund': 'netz'}, 'fotogenesis': {'nutzen': nutzen_foto, 'grund': 'foto'}}
     if doppelt:
         z['doppelt'] = {'zu': doppelt, 'anzeige': doppelt.title(), 'rest_mm': 0.2, 'wert': 0.5}
     return z
@@ -38,13 +38,13 @@ class ReglerwirksamkeitstabelleTest(SimpleTestCase):
         t = Reglerwirksamkeitstabelle(self.ordner)
         self.assertIsNone(t.kopf())
         self.assertEqual(t.tabelle()['zeilen'], [])
-        self.assertIn('mesh3dai_reglerwirksamkeit.py', t.tabelle()['leer'])
+        self.assertIn('meshgenesis_reglerwirksamkeit.py', t.tabelle()['leer'])
 
     def test_vier_spalten_und_empfehlung(self):
         self._ablage('aaaa', [_regler('nase', 12.5), _regler('zahn', 0.0, False, False), _regler('ohr', 3.0, False, False, doppelt='nase')], 1000)
         t = Reglerwirksamkeitstabelle(self.ordner)
         tab = t.tabelle()
-        self.assertEqual([s['label'] for s in tab['spalten']], ['Regler', 'Wirksamkeit', 'Mesh3D-AI', '2d-3d-AI'])
+        self.assertEqual([s['label'] for s in tab['spalten']], ['Regler', 'Wirksamkeit', 'Mesh-Genesis', 'Foto-Genesis'])
         self.assertEqual(len(tab['zeilen']), 3)
         self.assertEqual(tab['zeilen'][0]['html'].count('<td'), 4)
         self.assertIn('12,5 mm', tab['zeilen'][0]['html'])
@@ -52,7 +52,7 @@ class ReglerwirksamkeitstabelleTest(SimpleTestCase):
         self.assertIn('weglassen', tab['zeilen'][1]['html'])
         self.assertIn('doppelt zu Nase', tab['zeilen'][2]['html'])
         k = t.kopf()
-        self.assertEqual((k['ohne_wirkung'], k['doppelt'], k['mesh3dai'], k['ai2d3d']), (1, 1, 1, 1))
+        self.assertEqual((k['ohne_wirkung'], k['doppelt'], k['meshgenesis'], k['fotogenesis']), (1, 1, 1, 1))
 
     def test_juengste_ablage_und_andere_genannt(self):
         self._ablage('alt', [_regler('a', 5.0)], 1000)

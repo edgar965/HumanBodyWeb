@@ -7,7 +7,7 @@ tönen sie eine schon richtige Haut noch einmal orange und legen Öl darüber �
 
 Darum gilt für jede Figur mit eigenen Kacheln (`Exportleistequelle.kacheln`): keine Tönung, kein Klarlack, Rauheit wie auf der Seite. `RAUHEIT` ist der Mittelwert der Mediane der Rauheitskarten,
 die die Seite auf der Haut zeigt: 0,725–0,773 je Material, gemessen an der GLB der Seite von Edgar_1 (`ProjektTemp/_wegwerf/edgar1_textur/rauheit_seite.py`). `spekular` bleibt: die Seite rechnet
-wie die Vorgabe 0,5 mit F0 = 0,04. Ohne eigene Kacheln (Daz-Haut, 2D3D Kleider, Feld „Mesh3D-AI“) bleibt alles wie bisher.
+wie die Vorgabe 0,5 mit F0 = 0,04. Ohne eigene Kacheln (Daz-Haut, 2D3D Kleider, Feld „Mesh-Genesis“) bleibt alles wie bisher.
 
 Kein Relief (05.11.2026, Edgar: „es gibt noch abweichungen zu dem genesis modell“): Die Normalenkarten sind Daz' Poren und Falten, nicht die der Person, die Seite zeichnet ohne sie (im Chrome
 gelesen: keine `normalMap`). Den Sprenkel auf der Brust erklärt das nicht: Er ist Bildrauschen bei 96 Proben (`ProjektTemp/_wegwerf/edgar1_textur/sprenkel_probe.py`), mit Relief 0 unverändert.

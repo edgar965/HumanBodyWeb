@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Gebautefigur — eine echte gebaute Genesis-Figur als Grundlage der Tests von `KoerperKI_alle.Koerpernetz` und `Koerpermodell` (24.10.2026).
 
-Quelle: die Figur des 2d-3d-AI-Jobs EdgarTrip `3DObjects/ai2d3d/EdgarTrip/figur/form_maennlich` (bis 25.10.2026 16:17 der Mesh3D-AI-Test `_test/edgar_foto`, seither getrennt; Regler aus `modell.json`, Anzeigenetz, `kinematik.json`). Die drei Dateien werden in eine eigene
-Ablage kopiert (`Pruefablage`), gelesen wird nur die Kopie. Fehlt die Figur, überspringt der Test. Die älteren Figuren unter `3DObjects/mesh3dai/` taugen nicht: Ursula1, Mann1 und Damira0
-haben keine `modell.json`, und ihr Anzeigenetz weicht von der Formung ohne Regler um 25–47 mm ab (gemessen 24.10.2026, `ProjektTemp/_wegwerf/ai2d3d/koerpernetz_probe.py`).
+Quelle: die Figur des Foto-Genesis-Jobs EdgarTrip `3DObjects/fotogenesis/EdgarTrip/figur/form_maennlich` (bis 25.10.2026 16:17 der Mesh-Genesis-Test `_test/edgar_foto`, seither getrennt; Regler aus `modell.json`, Anzeigenetz, `kinematik.json`). Die drei Dateien werden in eine eigene
+Ablage kopiert (`Pruefablage`), gelesen wird nur die Kopie. Fehlt die Figur, überspringt der Test. Die älteren Figuren unter `3DObjects/meshgenesis/` taugen nicht: Ursula1, Mann1 und Damira0
+haben keine `modell.json`, und ihr Anzeigenetz weicht von der Formung ohne Regler um 25–47 mm ab (gemessen 24.10.2026, `ProjektTemp/_wegwerf/fotogenesis/koerpernetz_probe.py`).
 Während eines Einpass-Laufs (`nurfotos_einpassen.py`) baut der Lauf diese Figur neu — dann nicht testen.
 """
 import json
@@ -17,11 +17,11 @@ from django.conf import settings
 from ._pruefablage import Pruefablage
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
-sys.path.insert(0, str(settings.TOOLS_ROOT / 'mesh3dai'))
+sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))
 
 
 class Gebautefigur:
-    QUELLE = Path(settings.TOOLS_ROOT) / '3DObjects' / 'ai2d3d' / 'EdgarTrip' / 'figur' / 'form_maennlich'
+    QUELLE = Path(settings.TOOLS_ROOT) / '3DObjects' / 'fotogenesis' / 'EdgarTrip' / 'figur' / 'form_maennlich'
     DATEIEN = ('modell.json', 'kinematik.json', 'anzeige/netz.npz')
 
     @classmethod

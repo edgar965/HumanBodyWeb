@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'mesh3dai'))
-from mesh3dai_kostuem_haarkopf import Kostuemhaarkopf  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'meshgenesis'))
+from meshgenesis_kostuem_haarkopf import Kostuemhaarkopf  # noqa: E402
 
 
 class SchnipselTest(unittest.TestCase):

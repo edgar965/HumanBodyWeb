@@ -144,7 +144,7 @@ class Exportleisterendermodell:
         `eigen_foto_` wie die Fotostücke von 2D3D Kleider: Nur so gibt das Werkstoffprofil des Renders (`profil_generisch.json`, Regel `^kleidung__(gc_|eigen_foto_)`) ihnen
         die Textur, und die Stoffsimulation lässt sie starr (gehäutet wie im Browser). Mit `kleidung__stueck__…` kamen sie einfarbig grau (Regel `^kleidung__` → `farbe`),
         gesehen im Render vom 31.10.2026 an Test edgar. Ein Stück OHNE Bild heißt `kleidung__eigen_farbe_…` (nur Regel `^kleidung__`: `farbe` mit seiner eigenen Farbe) — als
-        `eigen_foto_` verlangte das Profil ein Bild, und Mitsuba brach ab (`Material.woerterbuch`: KeyError 'bild', 2d-3d-AI EdgarTrip, 31.10.2026). Trägt es Punktfarben
+        `eigen_foto_` verlangte das Profil ein Bild, und Mitsuba brach ab (`Material.woerterbuch`: KeyError 'bild', Foto-Genesis EdgarTrip, 31.10.2026). Trägt es Punktfarben
         (`COLOR_0`; EdgarTrip: alle fünf Stücke, UV überall 0, `_wegwerf/exportleiste/stueck_attribute_probe.py`), gehen sie als `farben` mit in die Render-GLB (`_farben`), und der
         Render rechnet Faktor × Punktfarbe wie glTF (`Figurcache`: `punktfarben`, `Mitsubafilm`); bis zum Abend des 31.10.2026 bekam das Stück nur ihr Mittel, Verläufe fehlten.
         """

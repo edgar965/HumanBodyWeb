@@ -1,15 +1,15 @@
-{% comment %}28.10.2026 — von Hilfe → Architektur → 2d-3d-AI hierher umgezogen (Edgar: „Was hast du jetzt genau gemacht? Hast du den Code übernommen von einem GitHub-Projekt?
+{% comment %}28.10.2026 — von Hilfe → Architektur → Foto-Genesis hierher umgezogen (Edgar: „Was hast du jetzt genau gemacht? Hast du den Code übernommen von einem GitHub-Projekt?
 Dokumentiere das in Seite http://127.0.0.1:8081/hilfe/architektur/genesis/“). Auftrag: „gehe genau den code von IPNet und smplx transfer_model durch … und übernimm diesen Code“,
-„portiere beide Methoden, mach in den Einstellungen - 2d-3d-AI die Option welche Portierung wir dafür nehmen, per default die beste“, „alles soll auf GPU laufen, alles im RAM, ohne
+„portiere beide Methoden, mach in den Einstellungen - Foto-Genesis die Option welche Portierung wir dafür nehmen, per default die beste“, „alles soll auf GPU laufen, alles im RAM, ohne
 zwischendateien“.{% endcomment %}
 <h2 id="mesh">12. Genesis in ein Netz: zwei Portierungen und die Kategorie „Mesh“ (28.10.2026)</h2>
 
 <div class="info-box info-box-blue">
   <strong>Aufgabe:</strong> Eine Genesis-Figur so formen, dass sie <strong>innerhalb</strong> eines Netzes liegt, mit Mindestabstand (1 mm) — an der Haut dicht, unter Haar und
   Kleidung nur innen. Ergebnis: die üblichen Genesis-Regler plus die Kategorie <strong>„Mesh“</strong> mit einem Regler je Körperteil (32 Regler in fünf Gruppen), alle auf 1 = genau
-  die eingepasste Figur. Erster Einsatz: die geometrische Figur von 2d-3d-AI (EdgarTrip).<br>
+  die eingepasste Figur. Erster Einsatz: die geometrische Figur von Foto-Genesis (EdgarTrip).<br>
   <strong>Wie:</strong> Der Code von <strong>IPNet</strong> und von <strong>smplx transfer_model</strong> wurde gelesen und Funktion für Funktion auf Genesis übertragen; welche Portierung
-  rechnet, steht unter <a href="/settings/2d-3d-ai/">Einstellungen → 2d-3d-AI</a>. Alles läuft auf der Grafikkarte im Speicher: keine Ablage der Ableitung, keine Zwischendateien;
+  rechnet, steht unter <a href="/settings/foto-genesis/">Einstellungen → Foto-Genesis</a>. Alles läuft auf der Grafikkarte im Speicher: keine Ablage der Ableitung, keine Zwischendateien;
   geschrieben werden nur die Mesh-Regler (das Ergebnis) und der Bericht des Laufs.
 </div>
 
@@ -56,13 +56,13 @@ zwischendateien“.{% endcomment %}
 1  Formung auf der Karte prüfen    G9meshformung gegen G9formung (CPU) an der Startfigur — muss 0 mm sein
 2  Ableitung auf der Karte          G9meshableitung: alle 457 Regler in einem Stapel — Daz' Formelgraph als Tensor (KoerperKI_alle.Formgraph),
                                     Knochenmatrizen Ebene für Ebene mit Drehung, Haut als Matrixprodukt; 1,5 s, keine Datei
-3  Einpassung                       G9meshipnet  oder  G9meshtransfer   (Einstellungen → 2d-3d-AI); danach die Finger auf die Hände des Ziels (G9meshfinger)
+3  Einpassung                       G9meshipnet  oder  G9meshtransfer   (Einstellungen → Foto-Genesis); danach die Finger auf die Hände des Ziels (G9meshfinger)
    (nach jedem Schritt: Regler in Daz' min/max, Haltung in Daz' Gelenkgrenzen — G9meshgrenzen)
 4  Innen-Stufe                      G9meshinnenstufe: ein glattes Versatzfeld (Adam, Laplace), jeder Punkt mindestens 1 mm innen
 5  Rest nach innen                  G9meshinnen.nach_innen: was danach fehlt, Punkt für Punkt
 6  Mesh-Regler                      Morph geschlossen: m = M⁻¹ (Soll + Boden − c) − Morphpunkte  (Haut der Formung ist linear)
                                     → G9meshregler.ablegen (32 Regler) → auf der Karte neu geformt gegen das Soll</pre>
-<p><strong>Innen oder außen</strong> — drei Fehler, alle gemessen (<code>ProjektTemp/_wegwerf/ai2d3d/diag_innen.py</code>, <code>diag_vorzeichen.py</code>): Der erste Test (Ebene
+<p><strong>Innen oder außen</strong> — drei Fehler, alle gemessen (<code>ProjektTemp/_wegwerf/fotogenesis/diag_innen.py</code>, <code>diag_vorzeichen.py</code>): Der erste Test (Ebene
   durch die erste Ecke des nächsten Dreiecks) hielt an der sauberen Startfigur selbst 3.842 Punkte für „außen“, die 1 mm innen lagen. Mit dem Pseudo-Normalenvektor am nächsten Punkt
   (<code>G9meshvorzeichen</code>) blieben die Fälle, in denen sich Flächen durchdringen. Jetzt: die Hülle sind nur Dreiecke, die nicht in einem anderen Teil stecken (Windungszahl
   0,1 mm vor ihrer Fläche ≤ 0,5; an EdgarTrip 4.578 von 50.312 vergraben), der Abstand gilt zu dieser Hülle, und ob ein Punkt innen liegt, sagt nahe der Hülle die Windungszahl über
@@ -74,9 +74,9 @@ zwischendateien“.{% endcomment %}
 
 <h3 id="mesh-jobseite">Auf der Jobseite</h3>
 <p>Edgar, 28.10.2026: „eine extra Zeile ganz oben mit den 3 Views, wo das Genesis Modell mit dieser Mesh Methode gerechnet wird … Ich brauche auch eine geometrische Form des ganzen
-  Körpers im 2. Bild“. Die Jobseite (<code>/2d-3d-AI/test/&lt;job&gt;/</code>) hat dafür ganz oben die <strong>Mesh-Zeile</strong> (<code>ai2d3d_meshzeile.html</code>,
-  <code>ai2d3dmeshzeile.js</code>): Feld 1 das Foto, Feld 2 die geometrische Figur allein (ganzer Körper, ohne Genesis darüber), Feld 3 die eingepasste Genesis-Figur
-  (<code>ai2d3dmeshfigur.js</code>, Eintrag <code>genesis</code> in <code>training_figur.json</code>), die Maße des Laufs im Hinweis. Die drei Felder drehen mit den übrigen
+  Körpers im 2. Bild“. Die Jobseite (<code>/foto-genesis/test/&lt;job&gt;/</code>) hat dafür ganz oben die <strong>Mesh-Zeile</strong> (<code>fotogenesis_meshzeile.html</code>,
+  <code>fotogenesismeshzeile.js</code>): Feld 1 das Foto, Feld 2 die geometrische Figur allein (ganzer Körper, ohne Genesis darüber), Feld 3 die eingepasste Genesis-Figur
+  (<code>fotogenesismeshfigur.js</code>, Eintrag <code>genesis</code> in <code>training_figur.json</code>), die Maße des Laufs im Hinweis. Die drei Felder drehen mit den übrigen
   Zeilen mit. Auch Feld 2 der Trainingszeile zeigt seither nur noch die geometrische Figur — die halb durchsichtige Genesis-Figur darin ist entfernt.</p>
 
 <h3 id="mesh-sperre">Regler-Sperre für die KI (<code>G9reglersperre</code>)</h3>
@@ -144,7 +144,7 @@ zwischendateien“.{% endcomment %}
     <tr><td>Einpassung</td><td>83 s</td><td>71 s</td></tr>
   </tbody>
 </table>
-<p><strong>Vorgabe IPNet</strong> (<code>Ai2d3dmeshwahl.VORGABE</code>): Maß ist, wie dicht die Figur an der Haut des Ziels liegt — IPNet folgt der Fläche, transfer_model den einmal
+<p><strong>Vorgabe IPNet</strong> (<code>Fotogenesismeshwahl.VORGABE</code>): Maß ist, wie dicht die Figur an der Haut des Ziels liegt — IPNet folgt der Fläche, transfer_model den einmal
   zugeordneten Punkten. <strong>Endlauf</strong> mit der Vorgabe (10:10 Uhr): 32 Mesh-Regler abgelegt, die Formung der Regler plus Mesh-Regler trifft das Soll auf
   <strong>0,000 mm</strong> (auf der Karte neu geformt aus den abgelegten Morphen); Ziel-Haut → Figur 0,80 mm; außen noch 186 Punkte, bis 3,1 mm — Hände 128, Kopf 44, Becken 7,
   Fuß 7. Die Hände dieses Ziels sind die gefalteten der Startfigur (gemessen, <a href="#mesh-sperre">Regler-Sperre</a>).
@@ -164,17 +164,17 @@ zwischendateien“.{% endcomment %}
   (<code>genesis</code> in <code>training_figur.json</code>); jeder Lauf von <code>form_direkt.py</code> schreibt die Datei neu, danach ist das Feld leer, bis
   <code>mesh_auf_genesis.py</code> wieder läuft.
   Zwei Läufe mit demselben Eingang unterscheiden sich in der letzten Stelle (außen 216 gegen 186): die Suche auf der Karte ist nicht bitgleich wiederholbar.</p>
-<p><strong>Ohne Wartepunkte im Schritt (28.10.2026, Befund der Sitzung 3dtools-02 an Mesh3D-AI Test edgar: 32.009 Wartepunkte je Lauf):</strong> Abstand Punkt ↔ Fläche wählt die Art
+<p><strong>Ohne Wartepunkte im Schritt (28.10.2026, Befund der Sitzung 3dtools-02 an Mesh-Genesis Test edgar: 32.009 Wartepunkte je Lauf):</strong> Abstand Punkt ↔ Fläche wählt die Art
   je Punkt mit <code>torch.where</code> statt <code>masked_scatter</code>, IPNets Teil-Chamfer zählt die Hautpunkte mit Gewicht (<code>G9meshflaeche.chamfer_maske</code>) statt per
   Auswahl, das Klemmen in die Gelenkgrenzen rechnet jeden Knochen mit Grenze und behält den nicht geklemmten (Indizes einmal im Aufbau), <code>nach_innen</code> fragt nur jede
-  fünfte Runde, ob noch etwas zu schieben ist. Alte Fassung unter <code>ProjektTemp/_wegwerf/ai2d3d/alt_mesh/_vor_ohne_warten_mesh_2026-10-28/</code>.
+  fünfte Runde, ob noch etwas zu schieben ist. Alte Fassung unter <code>ProjektTemp/_wegwerf/fotogenesis/alt_mesh/_vor_ohne_warten_mesh_2026-10-28/</code>.
   Abgleich (<code>mesh_ohne_warten_abgleich.py</code>): Abstände, Gradienten, Chamfer, Klemmen alt gegen neu Abweichung 0. Gezählt am Lauf 14.04 von EdgarTrip
   (<code>koerper_eigen/abstimmung_messen.py</code>): in den Mesh-Modulen 736 Wartepunkte, keiner mehr in den Schritten von IPNet; übrig sind Aufbau, Berichte (<code>masse</code>) und
   die Innen/Außen-Prüfung einmal je Runde der Innen-Stufe. Der ganze Lauf (mit dem Bau des Jobs) 6.345, davon 3.119 in <code>eigenkarte.py</code>.
   Ein IPNet-Lauf ist schon vor dem Umbau nicht wiederholbar: <code>part</code> nach pose_only Iter 0 alt 0,294 und 0,145, neu 0,144, 0,701 und 0,701 bei gleichem ersten Schritt
   (<code>mesh_ohne_warten_schritt.py</code>); nach Iter 2 alt 0,0145, neu 0,0146 und 0,0148.</p>
 <p><strong>Drei Befunde von 3dtools-02, behoben 28.10.2026 nachmittags</strong> (<code>diag_aussen_rest.py</code>, <code>mesh_masse_abgleich.py</code>; alte Fassung
-  <code>ProjektTemp/_wegwerf/ai2d3d/alt_mesh/_vor_ruhelage_innen_2026-10-28_1455/</code>):
+  <code>ProjektTemp/_wegwerf/fotogenesis/alt_mesh/_vor_ruhelage_innen_2026-10-28_1455/</code>):
   (1) <em>Punkte außen am Ende</em> (tiefster −1,0 mm): Löcher waren es nicht (Median 899 mm bis zum nächsten Rand), sondern gefaltete und umgestülpte Stellen des Ziels, an denen
   die Normale nach innen zeigt (Windungszahl auf der Fläche −0,43). Jetzt entscheidet die Windungszahl nur an verlässlichen Hüllendreiecken
   (<code>G9meshinnen.verlaesslich</code>: Windung 0,1 mm innen ≥ 0,5). Was danach noch außen ist, legt <code>_flach</code> auf ½, ¼ oder ⅛ des Mindestabstands nach innen. Außen
@@ -193,7 +193,7 @@ zwischendateien“.{% endcomment %}
 <h3 id="mesh-mensch">Genesis als Mensch in die geometrische Figur — Analyse und Vorschlag (28.10.2026)</h3>
 <p>Edgar: „Die geometrische Figur vom Kopf ist nahezu perfekt … Wichtig ist, dass es ein Mensch ist und nicht Armgelenke hat, die so groß wie eine Stecknadel sind, kaputte Hände
   oder kaputte Füße.“ Gemessen an EdgarTrip, Lauf <code>2026.10.28.14.51_form_koerper_vier_arme_gelenke</code>, je Stufe von Mesh → Genesis gegen die Startfigur
-  (<code>ProjektTemp/_wegwerf/ai2d3d/diag_stufen.py</code>, <code>diag_normalversatz.py</code>, Logs daneben). <em>Umgeklappt</em> = Dreiecksnormale über 90° gegen die Startfigur,
+  (<code>ProjektTemp/_wegwerf/fotogenesis/diag_stufen.py</code>, <code>diag_normalversatz.py</code>, Logs daneben). <em>Umgeklappt</em> = Dreiecksnormale über 90° gegen die Startfigur,
   <em>Falte</em> = Diederwinkel über 120°, wo die Startfigur unter 60° hat, <em>zusammengefallen</em> = Fläche unter 20 %; <em>Gelenkdicke</em> = Median-Radius der Punkte, deren
   Hautgewicht zu je mindestens 20 % auf beide Knochen fällt, geteilt durch den der Startfigur; <em>Haut</em> = mittlerer Abstand der Haut-Zielpunkte zur Figur.</p>
 <table class="doku m3a-schichten">
@@ -215,7 +215,7 @@ zwischendateien“.{% endcomment %}
   ohne Versatz. Ergebnis wie in der Tabelle: Gelenke und Hände bleiben menschlich, Arme und Beine liegen dichter an der Haut als heute. Offen bleiben der Kopf (348 umgeklappt;
   Vermutung: dünne Teile wie Ohren, Lider, Lippen, nicht nach Stelle gemessen) und die Hände und Füße, die aus dem kaputten Ziel bzw. dem Schuh herausragen (außen 1.692 / 1.544
   Handpunkte, 747 / 840 Fußpunkte). Ein erster Versuch, der durch den Kosinus der Normalen teilte, schob je Runde bis zum Deckel (gesamt 110 mm, Kopf 1.329 umgeklappt).</p>
-<p><strong>Kopf und Hals in Ruhe am Mesh3D-AI-Test edgar</strong> (Befund 3dtools-02: Gesicht schräg, Mund zerknittert, Stufe am Hals; <code>diag_edgar_kopf.py</code>): Die Rückrechnung
+<p><strong>Kopf und Hals in Ruhe am Mesh-Genesis-Test edgar</strong> (Befund 3dtools-02: Gesicht schräg, Mund zerknittert, Stufe am Hals; <code>diag_edgar_kopf.py</code>): Die Rückrechnung
   in die Ruhelage ist es nicht. Ihr Anteil in Ruhe beträgt im Mittel 0,9 mm am Kopf und 0,6 mm am Hals. Der Kopf in Ruhe ist bis auf 1,0 mm eine starre Kopie des Kopfs der
   eingepassten Figur, um 34,6° gedreht. Die Verformung steckt in IPNets Versatz D, der schon in Ruhe lebt: Kopf im Mittel 7,8 mm, bis 42,9 mm, Hals 10,8 / 28,5 mm; nicht starr
   9,8 bzw. 11,5 mm. Die Haltung dreht neck2 um 22,1° und head um 19,9° in dieselbe Richtung, eine Gegendrehung gibt es also nicht. Am Hals sind 46 % der Kanten in Ruhe um mehr als
@@ -224,7 +224,7 @@ zwischendateien“.{% endcomment %}
 <p><strong>Vorschlag</strong> (so gestellt am 28.10.2026 nachmittags; umgesetzt am Abend, Abweichungen unter „Umgesetzt“):</p>
 <ol>
   <li><strong>Körper:</strong> Regler und Haltung wie heute, danach statt IPNets freiem Versatz der Normalversatz der Probe. Das weicht vom genauen IPNet-Port ab; IPNet bleibt als
-    Wahl unter Einstellungen → 2d-3d-AI.</li>
+    Wahl unter Einstellungen → Foto-Genesis.</li>
   <li><strong>Kopf:</strong> die Kopfregler (523) und Anfasser (282) der Kopf-KI gegen die Fläche der geometrischen Kopfform statt eines freien Versatzes. Anfasser sind glatte Felder
     und halten Ohren, Lider und Lippen als Genesis-Form. Danach höchstens ein dünner Normalversatz. <code>genesis_einpassen.py</code> (28.10. vormittags) tat das mit
     Punkt-i-Zuordnung; die Haut lag dabei 3,5 mm innen, der Kopf war also zu klein. Mit Flächenabstand ist es nicht geprüft.</li>
@@ -233,12 +233,12 @@ zwischendateien“.{% endcomment %}
   <li><strong>Füße:</strong> nur Regler, einseitig in den Schuh.</li>
   <li><strong>Abnahme in jeder Einpassung:</strong> die Maße von <code>diag_stufen.py</code> als Baustein (umgeklappt, Falten, Gelenkdicke, Haut je Teil), im Bericht und auf der
     Jobseite. Ein Stand, der Gelenke unter 0,95 drückt oder deutlich mehr umklappt als Regler + Haltung, wird nicht abgelegt.</li>
-  <li><strong>Über das Mesh</strong> (Mesh3D-AI, 3dtools-02) läuft dieselbe <code>G9meshgenesis</code>. Die Änderung wirkt dort mit und betrifft genau den Kopf/Hals-Befund an edgar.</li>
+  <li><strong>Über das Mesh</strong> (Mesh-Genesis, 3dtools-02) läuft dieselbe <code>G9meshgenesis</code>. Die Änderung wirkt dort mit und betrifft genau den Kopf/Hals-Befund an edgar.</li>
   <li><strong>KI:</strong> Die Einpassung ist eine Übertragung (wie IPNet), keine KI. Eine KI, die Gewichte über alle Jobs lernt, nimmt diese Maße als Verlust: Fotos → Regler und
     Haltung, mit heilen Gelenken und Händen als Teil des Verlusts. Nicht Teil dieses Vorschlags.</li>
 </ol>
-<p><strong>Umgesetzt (28.10.2026 abends, Edgar: „mach deinen Vorschlag“; „Nichts mit SMPLX“).</strong> Wahl unter Einstellungen → 2d-3d-AI → „Versatz danach“
-  (<code>Ai2d3dmeshversatz</code>, Vorgabe <code>normale</code>; <code>frei</code> = der Versatz des Originals). Gilt für 2d-3d-AI und Mesh3D-AI (<code>G9meshgenesis.einpassen(versatz=…)</code>).</p>
+<p><strong>Umgesetzt (28.10.2026 abends, Edgar: „mach deinen Vorschlag“; „Nichts mit SMPLX“).</strong> Wahl unter Einstellungen → Foto-Genesis → „Versatz danach“
+  (<code>Fotogenesismeshversatz</code>, Vorgabe <code>normale</code>; <code>frei</code> = der Versatz des Originals). Gilt für Foto-Genesis und Mesh-Genesis (<code>G9meshgenesis.einpassen(versatz=…)</code>).</p>
 <ul>
   <li><strong>Rig:</strong> Beide Portierungen stellen die Haltung auf dem Genesis-Rig statt auf der Gelenkauswahl von SMPL bzw. SMPL-X (<code>G9meshkoerper.ENDEN</code>,
     <code>WEICHTEIL</code>): 35 Knochen, ohne alles unter <code>head</code>, den Händen und den Füßen (Gesichtsrig, Finger, Zehen) und ohne die Brustknochen —
@@ -300,7 +300,7 @@ zwischendateien“.{% endcomment %}
     Körper DARUNTER (Haar und Kleidung zählen einseitig), hat aber kein eigenes Haar und keine Kleider. Gemessen an Lauf 20.34 (<code>genesis_teile.py</code>, <code>genesis_teile1.log</code>):
     Rumpf 9–16 mm, Ärmel bis 43 mm, Kragen 6–13 mm kleiner als das Foto, der Kopf im Mittel 4–7 mm daneben ohne einheitliches Vorzeichen. Neu: <code>mesh_auf_genesis.huellen</code>
     legt die Dreiecke der geometrischen Figur, deren Ecken in den Fotos Haar bzw. Kleidung sind, als eigene Stücke <code>haar</code> und <code>kleid</code> zur Genesis-Figur
-    (mit den Farben der Fotos, gezeichnet wie die Augäpfel, <code>Ai2d3dmeshfigur.STUECKE</code>). Der Körper bleibt eine Genesis-Form; der Umriss ist dort der des Mesh.</li>
+    (mit den Farben der Fotos, gezeichnet wie die Augäpfel, <code>Fotogenesismeshfigur.STUECKE</code>). Der Körper bleibt eine Genesis-Form; der Umriss ist dort der des Mesh.</li>
   <li><strong>Die Messblöcke unter den Zeilen</strong> („Kopf vorne“ usw., Feld 4 „Ergebnis über der Vorlage“) messen noch die Figur der KI-Kette (Zeile 2) mit dem Stand nurjob4
     vom 27.10.2026, nicht die Genesis-Figur der Mesh-Zeile.</li>
 </ul>{% include "hilfe/_architektur_genesis_mesh_anatomie.html" %}
@@ -315,12 +315,12 @@ zwischendateien“.{% endcomment %}
     die geometrische Figur hatte zerfranste Finger (Feld 2, seit Lauf 18.47 starr) — ob die 113 daher kamen, ist nicht gemessen. Der Fingerabdruck der Regler-KI hat sich mit der Sperre
     geändert — ihr Netz muss neu lernen.</li>
   <li><strong>Die Figur übernimmt Fehler des Ziels:</strong> seit 28.10.2026 abends ist der Versatz längs der Normale die Vorgabe (<a href="#mesh-mensch">Umgesetzt</a>). Offen:
-    Kopf, Hände und Füße liegen teils außerhalb des Ziels (geschützt, siehe dort); der Kopf an edgar (Mesh3D-AI) ist mit dem neuen Versatz noch nicht nachgemessen.</li>
+    Kopf, Hände und Füße liegen teils außerhalb des Ziels (geschützt, siehe dort); der Kopf an edgar (Mesh-Genesis) ist mit dem neuen Versatz noch nicht nachgemessen.</li>
   <li><strong>Brust und Schultern unter dem T-Shirt</strong> (EdgarTrip, gesehen): Die Regler wachsen gemeinsam mit Armen und Beinen, und unter Kleidung schiebt der Versatz nur
     hinein — die Figur füllt das Hemd. Eine Schätzung der Stoffdicke fehlt (siehe Kleider).</li>
   <li><strong>Haltungsprior:</strong> Genesis hat keinen gelernten; die Daz-Grenzen sind nur ein Kasten. Die Zehen stehen an der Grenze, weil der Schuh sie hineindrückt.
     Die Twist-Knochen bremst der Kasten gar nicht: <code>Genesis9.dsf</code> gibt <code>l_thightwist1/2</code> auf y, <code>l_upperarmtwist1/2</code> und
-    <code>l_forearmtwist1/2</code> auf x je −180…180° (<code>diag_twistgrenzen.py</code>; der Elternknochen <code>l_thigh</code> hat auf y −75…75°). Am Mesh3D-AI-Test edgar
+    <code>l_forearmtwist1/2</code> auf x je −180…180° (<code>diag_twistgrenzen.py</code>; der Elternknochen <code>l_thigh</code> hat auf y −75…75°). Am Mesh-Genesis-Test edgar
     (Befund 3dtools-02, 28.10.2026, Lauf 6, fast A-Pose) drehte <code>l_thightwist1</code> 72,5° und <code>r_thightwist1</code> 58,9°, an EdgarTrip 14,9°. Vermutung, nicht
     gemessen: die Drehung um die Beinachse ist am fast runden Bein kaum bestimmt und läuft ohne Prior weg.</li>
 </ul>

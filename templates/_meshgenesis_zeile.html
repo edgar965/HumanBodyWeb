@@ -1,0 +1,33 @@
+{% comment %}
+Eine Zeile unter dem ganzen Körper auf „Mesh-Genesis“ (14.10.2026, Edgar: „… Vergleichs-Zeilen für Gesicht, Hände/Füße, Kleider“ und „NUR Körper, also ohne Kleider“): drei gekoppelte Felder wie beim Körper — Eingabe · gewünschte Ausgabe · Ausgabe des Netzes —,
+dazu die Wahl der Ansichtsart und je Feld die Download-Knöpfe. Aufruf: {% include "_meshgenesis_zeile.html" with bereich="gesicht" titel="Gesicht" hinweis="…" %}.
+`bereich` ist der Schlüssel in `static/viewer/meshgenesis/meshgenesisbereiche.js` (Zeichner, Kamera, Texte) und in den Daten des Servers (`Meshgenesisattrappe.TEILE`).
+{% endcomment %}
+<section class="card meshgenesis-zeile meshgenesis-teilzeile" data-bereich="{{ bereich }}" id="meshgenesis-zeile-{{ bereich }}">
+    <div class="meshgenesis-zeilenkopf">
+        <h2>{{ titel }}</h2>
+        {% include "_meshgenesis_ansichtwahl.html" %}
+    </div>
+    {% if hinweis %}<p class="hb-hinweis">{{ hinweis }}</p>{% endif %}
+    <div class="meshgenesis-bereiche">
+        <div class="meshgenesis-feld">
+            <h3><span class="meshgenesis-nummer">1</span> Start</h3>
+            <div class="meshgenesis-leinwand" data-art="eingabe"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="eingabe"></div>
+            {% include "_meshgenesis_download.html" with art="eingabe" %}
+        </div>
+        <div class="meshgenesis-feld">
+            <h3><span class="meshgenesis-nummer">2</span> Ziel</h3>
+            <div class="meshgenesis-leinwand" data-art="soll"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="soll"></div>
+            {% include "_meshgenesis_download.html" with art="soll" %}
+        </div>
+        <div class="meshgenesis-feld">
+            <h3><span class="meshgenesis-nummer">3</span> Ergebnis</h3>
+            <div class="meshgenesis-leinwand" data-art="ausgabe"></div>
+            <div class="meshgenesis-bereichsinfo" data-info="ausgabe"></div>
+            <div class="meshgenesis-guete" data-guete></div>
+            {% include "_meshgenesis_download.html" with art="ausgabe" %}
+        </div>
+    </div>
+</section>

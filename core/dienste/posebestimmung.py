@@ -34,7 +34,7 @@ class Posebestimmung:
     FASSUNG = 2
     #: Anteil des Fortschritts, den SAM belegt (der Rest gehört dem Aufrufer: Abbildung, Bilder).
     ANTEIL_SAM = 0.6
-    #: Woher der Schätzer kommt: None = jedes Mal neu geladen (Server, Auftragsprozess); der Skriptdienst der Mesh3D-AI-Kette hält ihn im Vorrat (`Vorstufenriglauf`)
+    #: Woher der Schätzer kommt: None = jedes Mal neu geladen (Server, Auftragsprozess); der Skriptdienst der Mesh-Genesis-Kette hält ihn im Vorrat (`Vorstufenriglauf`)
     schaetzer_quelle = None
 
     def __init__(self, ordner, bezeichnung, melden, angehalten=lambda: False, abbrechen=RuntimeError):

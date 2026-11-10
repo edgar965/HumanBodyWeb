@@ -102,7 +102,7 @@ export class Genesis9vorrat {
         return n;
     }
 
-    /** Stufe + Stellung, die in diesem Seitenleben schon vorab abgelegt sind: dieselbe Figur in mehreren Feldern (Mesh3D-AI) fragt nur einmal. */
+    /** Stufe + Stellung, die in diesem Seitenleben schon vorab abgelegt sind: dieselbe Figur in mehreren Feldern (Mesh-Genesis) fragt nur einmal. */
     static _abgelegt = new Set();
 
     static async _ablegen({ adresse, nutzlast, stellung }, stufe, teil) {

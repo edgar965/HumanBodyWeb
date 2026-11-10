@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Perspektivisches Einpassen eines Kunstkörpers mit fester Körpergröße (`KoerperKI_Fotos.fotoeinpassung.Fotoeinpassung`, 24.10.2026, 2d-3d-AI) — im LongRunner (CPU, einige Sekunden).
+"""Perspektivisches Einpassen eines Kunstkörpers mit fester Körpergröße (`KoerperKI_Fotos.fotoeinpassung.Fotoeinpassung`, 24.10.2026, Foto-Genesis) — im LongRunner (CPU, einige Sekunden).
 
 WARUM: Edgar, 24.10.2026: „mach B“ und „die körpergröße pro Job fest“. Der dritte Einpass-Lauf an EdgarTrip schrumpfte die Figur auf 1,435 m: beim Kopfmaßstab erscheint Edgar in den
-Fotos 1,36–1,45 m groß (`ProjektTemp/_wegwerf/ai2d3d/perspektive_probe.py`), angegeben sind 1,85 m. Fotos aus 1,3–1,4 m Abstand mit 26-mm-Weitwinkel bilden den Kopf größer ab als die
+Fotos 1,36–1,45 m groß (`ProjektTemp/_wegwerf/fotogenesis/perspektive_probe.py`), angegeben sind 1,85 m. Fotos aus 1,3–1,4 m Abstand mit 26-mm-Weitwinkel bilden den Kopf größer ab als die
 Füße; eine Kamera mit EINEM Maßstab muss das als kleinere Figur lesen.
 Wahrheit: Maßstab 1,1 (Körper 1,76 m), Verschiebung (3, −2, 4) cm; Lochkamera f = 300 px, 2 m vor dem Drehpunkt, von oben (vorn φ = 0,25, links φ = 0,15). Start wie
 `nurfotos_einpassen.py`: Maßstab 1, s = Höhe der Maske / Angabe, t = Mitte des Maskenkastens, φ = 0. Die Angabe 1,76 m muss die Form stellen, der Rest die Kamera.
@@ -86,7 +86,7 @@ class DasPerspektivischeEinpassen(unittest.TestCase):
 
     def test_gelenke_treffen_im_bild(self):
         """Grenze 4 px (≈ 2,7 cm bei 150 px/m): nach dem Drehungs-Fix R_y(−w) gemessen höchstens 3,57 px, Knöchel vorn, weil die Ansicht vorn um 4,8° gedreht bleibt (Wahrheit 0°;
-        `ProjektTemp/_wegwerf/ai2d3d/perspektive_gelenkreste.py`), alle anderen Gelenke unter 2 px."""
+        `ProjektTemp/_wegwerf/fotogenesis/perspektive_gelenkreste.py`), alle anderen Gelenke unter 2 px."""
         for a in self.ansichten:
             uv = Fotoeinpassung.bild(self.erg['p'], *self.erg['kameras'][a['name']])
             for g, k, _p, _f in Posenpunkte.GELENKE:

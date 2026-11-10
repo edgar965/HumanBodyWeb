@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Exportleistekollision — das Wegschieben der Stücke aus fremden Gliedern (`KoerperKI_alle.Koerperkollision`, im Browser `Mesh3daikollision`) als Morph-Ziele in die animierte GLB der
+"""Exportleistekollision — das Wegschieben der Stücke aus fremden Gliedern (`KoerperKI_alle.Koerperkollision`, im Browser `Meshgenesiskollision`) als Morph-Ziele in die animierte GLB der
 Exportleiste (31.10.2026 nachts, Edgar: „mach das alles: … Das neue Wegschieben der Kleider beim Bewegen wirkt nur in der Anzeige, nicht im GLB-Export“).
 
 Im Browser schiebt ein Vertex-Shader je Bild (Kapseln aus `kleider_<g>/k/kapseln.json`); eine GLB kann keinen Shader tragen. Hier wird dieselbe Regel für jedes `SCHRITT`-te Bild der
@@ -7,7 +7,7 @@ eingebauten Bewegung gerechnet und als Morph-Ziel des Stücks abgelegt (nur die 
 genau dieses Ziel ein, dazwischen linear. Blender liest das als Formschlüssel mit Spur, three.js als Morph-Ziele.
 
 Rechnung je Bild f (glTF-Häutung, glTF 2.0 3.7.3): Gelenkmatrix J_k = Welt(Gelenk k, f) · IBM_k; Punkt im Bild q = Σ w_k J_k v. Die Kapseln stehen in der Ruhe der Kinematik und werden
-starr auf die Bindelage der GLB gelegt (Zentren der Kinematik ↔ inv(IBM), Kabsch); geschoben wird mit `Koerperkollision.schieben` (Besitzer Mesh3D-AI, seit 01.11.2026 gemeinsamer
+starr auf die Bindelage der GLB gelegt (Zentren der Kinematik ↔ inv(IBM), Kabsch); geschoben wird mit `Koerperkollision.schieben` (Besitzer Mesh-Genesis, seit 01.11.2026 gemeinsamer
 Baustein — keine eigene Fassung der Formel hier), J_k als `bild.dreh`/`bild.lage`. Der Versatz im Bild geht mit der nächsten Drehung zur Mischung Σ w_k J_k in die Bindelage (Morph
 wirkt vor der Häutung) — nicht mit ihrer Inversen: an der Achsel ist die Mischung fast singulär (`KoerperKI_Fotos.Zeile1versatz`: dort 440 mm mit `solve`). `SCHRITT` ist eine Setzung.
 Seit 01.11.2026 auf der Karte, im Prozess des Aufrufers unter der Gpusperre (Edgar: „alles auf GPU und RAM, in einem Prozess“): Häutung `Kostuemgpu.haeuten`, Schieben über den CUDA-Graphen
@@ -126,10 +126,10 @@ class Exportleistekollision:
         import torch
         if not torch.cuda.is_available():
             raise RuntimeError('Kollision im Export: keine CUDA-Karte')
-        mesh = str(settings.TOOLS_ROOT / 'mesh3dai')
+        mesh = str(settings.TOOLS_ROOT / 'meshgenesis')
         if mesh not in sys.path:
             sys.path.insert(0, mesh)
-        from mesh3dai_gpusperre import Gpusperre
+        from meshgenesis_gpusperre import Gpusperre
         k = ctypes.windll.kernel32
         k.GetCurrentProcess.restype = ctypes.c_void_p
         k.GetPriorityClass.argtypes = [ctypes.c_void_p]
@@ -209,7 +209,7 @@ class Exportleistekollision:
         Geschoben wird in float32 wie im Shader der Seite (WebGL): am Haar von Venus 18 ms je Bild gegen 170 ms in float64, Schub höchstens 0,0002 mm anders, gleich viele Punkte geschoben
         (`_wegwerf/exportleiste/schieben_typ_probe.py`, 01.11.2026, Karte dabei zu 55–63 % von einem anderen Lauf belegt). Gehäutet wird in float64 (`Kostuemgpu.haeuten`)."""
         import torch
-        from mesh3dai_kostuemgpu import Kostuemgpu
+        from meshgenesis_kostuemgpu import Kostuemgpu
         kg = Kostuemgpu.an()
         v = kg.feld(self._feld(prim['attributes']['POSITION']), torch.float64)
         gl = kg.feld(self._feld(prim['attributes']['JOINTS_0']), torch.int64)

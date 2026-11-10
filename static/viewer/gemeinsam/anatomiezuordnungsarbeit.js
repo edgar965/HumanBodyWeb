@@ -6,7 +6,7 @@ import { Protokoll } from './protokoll.js';
 /**
  * Anatomiezuordnungsarbeit — die Zuordnung des Anatomie-Stücks (Texel → Stelle der Haut) auf mehreren Workern nebeneinander (19.10.2026, Hauptfaden-Seite).
  *
- * Edgar, 19.10.2026: „fixe alle offenen punkte" — offen war „die erste ultrafeine Hautfarbe dauert einmal etwa 35 s". Gemessen an Damira0 (Mesh3D-AI, ultrafein): die Zuordnung
+ * Edgar, 19.10.2026: „fixe alle offenen punkte" — offen war „die erste ultrafeine Hautfarbe dauert einmal etwa 35 s". Gemessen an Damira0 (Mesh-Genesis, ultrafein): die Zuordnung
  * allein 22,2 s auf dem Hauptfaden; mit den exakten Vorfiltern in `Anatomiezuordnung` 13,5 s. Hier teilen sich bis zu `TEILE` Worker die Stück-Dreiecke in Abschnitten
  * (`Anatomiezuordnungsteil`), der Hauptfaden führt sie in Reihenfolge zusammen — dasselbe Ergebnis wie ein Lauf. Derselbe Worker wie für Bild und Füllen
  * (`anatomiearbeiter.js`, Nachricht `zuordnung`), je Abschnitt einer, danach beendet.

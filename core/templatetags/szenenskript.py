@@ -32,8 +32,8 @@ logger = logging.getLogger('core')
 EINZELN = Modulbuendel.EINSTIEGE['scene']
 EINZELN_STUDIO = Modulbuendel.EINSTIEGE['studio']
 EINZELN_MESH3D = Modulbuendel.EINSTIEGE['mesh3d']
-EINZELN_AI2D3D = Modulbuendel.EINSTIEGE['ai2d3d']
-EINZELN_MESH3DAI = Modulbuendel.EINSTIEGE['mesh3dai']
+EINZELN_FOTOGENESIS = Modulbuendel.EINSTIEGE['fotogenesis']
+EINZELN_MESHGENESIS = Modulbuendel.EINSTIEGE['meshgenesis']
 
 
 @register.simple_tag
@@ -55,15 +55,15 @@ def mesh3dskript():
 
 
 @register.simple_tag
-def ai2d3dskript():
-    """Die fertige Adresse der Jobseite „2d-3d-AI“ — mit Fassung im Pfad (08.11.2026, `viewer/ai2d3d/main.js`)."""
-    return _skript('ai2d3d', EINZELN_AI2D3D)
+def fotogenesisskript():
+    """Die fertige Adresse der Jobseite „Foto-Genesis“ — mit Fassung im Pfad (08.11.2026, `viewer/fotogenesis/main.js`)."""
+    return _skript('fotogenesis', EINZELN_FOTOGENESIS)
 
 
 @register.simple_tag
-def mesh3daiskript():
-    """Die fertige Adresse der Testseite „Mesh3D-AI“ — mit Fassung im Pfad (08.11.2026, `viewer/mesh3dai/main.js`)."""
-    return _skript('mesh3dai', EINZELN_MESH3DAI)
+def meshgenesisskript():
+    """Die fertige Adresse der Testseite „Mesh-Genesis“ — mit Fassung im Pfad (08.11.2026, `viewer/meshgenesis/main.js`)."""
+    return _skript('meshgenesis', EINZELN_MESHGENESIS)
 
 
 def _skript(seite, einzeln):

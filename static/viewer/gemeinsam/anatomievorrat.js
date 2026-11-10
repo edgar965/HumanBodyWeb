@@ -7,7 +7,7 @@ import { Genesis9vorrat } from './genesis9vorrat.js';
 /**
  * Anatomievorrat — die gerechneten Karten des Anatomie-Stücks (`Anatomiebacken`) dauerhaft auf dem Server (19.10.2026, `core/dienste/g9anatomiekarten.py`).
  *
- * Edgar, 19.10.2026: „warum muss die immer neu gerechnet werden? kannst du die im modell nicht speichern?" — gemessen an Damira0 (Mesh3D-AI, zwei Figuren, grob):
+ * Edgar, 19.10.2026: „warum muss die immer neu gerechnet werden? kannst du die im modell nicht speichern?" — gemessen an Damira0 (Mesh-Genesis, zwei Figuren, grob):
  * „Hautfarbe" stand 9,6 s nach den Texturen noch offen, bei jedem Laden. Die Karten hängen nur an der Eingabe; der Schlüssel ist ein Hash darüber:
  *
  *   die Lage (`Anatomiehash` wie die Zuordnung: Stück mit Einzug, Ruhe-Normalen, Haut darunter, Größe der Karte), die ADRESSEN der Bilder der Haut-Gruppen

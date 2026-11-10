@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tiefe der SAM-Gelenke entlang der Kette (`Engine2d3dKleiderposetiefe`, 17.10.2026) — Kunstdaten, ohne SAM und ohne Netz.
 
-Anlass: an zwei Mesh3D-AI-Posen zeigte der Fuß der Rig-Figur 124° bzw. 151° falsch, weil die Mitte der Netzpunkte im Strahl Ferse und Zehe eines zur Kamera zeigenden Fußes auf einen Punkt legt
-(`.claude/rules/mesh3dai-vorstufe.md`, Abschnitt „Füße"). Geschrieben, nicht gelaufen (Tests nur auf Ansage).
+Anlass: an zwei Mesh-Genesis-Posen zeigte der Fuß der Rig-Figur 124° bzw. 151° falsch, weil die Mitte der Netzpunkte im Strahl Ferse und Zehe eines zur Kamera zeigenden Fußes auf einen Punkt legt
+(`.claude/rules/meshgenesis-vorstufe.md`, Abschnitt „Füße"). Geschrieben, nicht gelaufen (Tests nur auf Ansage).
 Sabotage-Gegenproben (gedacht, nicht gelaufen): Vorzeichen der SAM-Tiefe umdrehen → `test_langes_glied_nimmt_die_vorhersage` rot; `KURZ` auf 0 → `test_kurzes_glied_behaelt_die_mitte` rot;
 `WEIT` sehr groß → `test_weit_daneben_faellt_weg` rot; Knie aus `KETTE` → `test_welche_gelenke` rot.
 """

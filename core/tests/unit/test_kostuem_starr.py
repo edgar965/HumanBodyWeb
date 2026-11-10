@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'mesh3dai'))
-from mesh3dai_kostuem_rueckhaeutung import Kostuemrueckhaeutung  # noqa: E402
-from mesh3dai_kostuem_starrinseln import Kostuemstarrinseln  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'meshgenesis'))
+from meshgenesis_kostuem_rueckhaeutung import Kostuemrueckhaeutung  # noqa: E402
+from meshgenesis_kostuem_starrinseln import Kostuemstarrinseln  # noqa: E402
 
 
 class StarrerKnochenTest(unittest.TestCase):

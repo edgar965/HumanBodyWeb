@@ -1,0 +1,213 @@
+/**
+ * Meshgenesiszeile — EINE Zeile der Seite „Mesh-Genesis“ (14.10.2026): drei gekoppelte Felder (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes), die Reihe der Ansichtsarten und die Texte darunter.
+ * Das Element der Zeile trägt `data-bereich` (Schlüssel in `Meshgenesisbereiche`), die Felder `.meshgenesis-leinwand[data-art]`, die Texte `[data-info]` und die Reihe `.meshgenesis-ansicht` (Schaltknöpfe)
+ * (Arten aus `Meshgenesismaterial.MODI` — Oberfläche, Drahtnetz, Textur, Matcap …). Seit 15.10.2026 gelten Ansichtsart und Rig-Knopf für ALLE Zeilen gemeinsam (`Meshgenesiszeile.alle`).
+ */
+import { Meshgenesisanimationsleiste } from './meshgenesisanimationsleiste.js';
+import { Meshgenesisansicht } from './meshgenesisansicht.js';
+import { Meshgenesisansichtgedaechtnis } from './meshgenesisansichtgedaechtnis.js';
+import { Meshgenesisapose } from './meshgenesisapose.js';
+import { Meshgenesisbereiche } from './meshgenesisbereiche.js';
+import { Meshgenesisechtteile } from './meshgenesisechtteile.js';
+import { Meshgenesisguete } from './meshgenesisguete.js';
+import { Meshgenesismaterial } from './meshgenesismaterial.js';
+
+export class Meshgenesiszeile {
+    /** Alle Zeilen der Seite — Ansichtsart und Rig-Knopf gelten für alle gemeinsam. */
+    static alle = [];
+
+    constructor(element) {
+        Meshgenesiszeile.alle.push(this);
+        this.element = element;
+        this.schluessel = element.dataset.bereich;
+        this.bereich = Meshgenesisbereiche.fuer(this.schluessel);
+        this.ansichten = [...element.querySelectorAll('.meshgenesis-leinwand')]
+            .map(feld => new Meshgenesisansicht(feld, feld.dataset.art, this.bereich.zeichner, this.bereich.kamera));
+        Meshgenesisansicht.koppeln(this.ansichten);
+        this.info = Object.fromEntries([...element.querySelectorAll('[data-info]')].map(el => [el.dataset.info, el]));
+        this.guete = element.querySelector('[data-guete]');
+        this.modus = Meshgenesismaterial.VORGABE;
+        this.rig = true;
+        this.kleider = true;
+        this._letzte = null;
+        this._antwort = null;
+        this._geist = false;   // wie das Kästchen „Soll als Geist“ (Vorgabe aus)
+        this._ansichtwahl(element.querySelector('.meshgenesis-ansicht'));
+        this._rigknopf(element.querySelector('.meshgenesis-rigleiste'));
+        const leiste = element.querySelector('.meshgenesis-animation');
+        this.animation = leiste ? new Meshgenesisanimationsleiste(leiste, this) : null;
+    }
+
+    /**
+     * Ansichtsart und Rig wie beim letzten Mal (16.10.2026, `Meshgenesisansichtgedaechtnis`) — für alle Zeilen, ohne zu zeichnen (die Seite ruft das vor der ersten Probe).
+     * Eine Art, die es nicht mehr gibt, bleibt bei der Vorgabe.
+     */
+    static gemerktSetzen(stand) {
+        const modus = Meshgenesismaterial.MODI.some(m => m.schluessel === stand?.modus) ? stand.modus : null;
+        for (const zeile of Meshgenesiszeile.alle) {
+            if (modus) zeile.modusSetzen(modus, false);
+            if (typeof stand?.rig === 'boolean') zeile.rigSetzen(stand.rig, false);
+            if (typeof stand?.kleider === 'boolean') zeile.kleiderSetzen(stand.kleider, false);
+        }
+    }
+
+    /** Die Antwort des Servers für den Job (Beschreibungen von Gerüst, Rig und Zeilen) — die Animationsleiste braucht sie, um ein Bild der Bewegung zu zeichnen und den Job zu kennen. */
+    get antwort() {
+        return this._antwort;
+    }
+
+    /**
+     * Neuer Job: die Antwort merken, eine laufende Animation anhalten und vergessen. Ansichtsarten und Rig-Knopf bleiben auch bei echten Daten stehen — sie wirken dort auf die gehäutete Figur
+     * (`Meshgenesisechtzeichner`). Am 15.10.2026 hatte ich sie bei echten Daten ausgeblendet („warum hast du das denn wieder ausgebaut??“); das war falsch.
+     */
+    jobSetzen(antwort) {
+        this._antwort = antwort;
+        this.animation?.zuruecksetzen(true);
+    }
+
+    /**
+     * Der Schaltknopf „Rig“: legt das Genesis-9-Rig über jede Ansichtsart (Vorgabe an — Edgar will das volle Skelett sehen). Er schaltet ALLE Zeilen
+     * (Edgar, 15.10.2026: „die Ansicht-Umschalt-Buttons und Rig button sollen für alle Views gelten, also auch für ‚Nur Körper‘ usw“).
+     */
+    _rigknopf(leiste) {
+        if (!leiste) return;
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'schaltknopf';
+        knopf.dataset.rig = '';
+        knopf.title = 'Das Genesis-9-Skelett ein- und ausblenden — in allen Zeilen: Soll in den Farben der Gruppen, Ausgabe nach dem Fehler je Knochen (grün bis rot). Gilt für jede Ansichtsart.';
+        knopf.innerHTML = '<i class="fas fa-bone"></i> ';
+        knopf.append('Rig');
+        knopf.addEventListener('click', () => {
+            const an = !this.rig;
+            Meshgenesisansichtgedaechtnis.merken({ rig: an });
+            for (const zeile of Meshgenesiszeile.alle) zeile.rigSetzen(an);
+        });
+        this._rigKnopf = knopf;
+        leiste.replaceChildren(knopf, this._kleiderknopf());
+        this.rigSetzen(this.rig, false);
+    }
+
+    rigSetzen(an, zeichnen = true) {
+        this.rig = an;
+        this._rigKnopf?.classList.toggle('active', an);
+        this._rigKnopf?.setAttribute('aria-pressed', String(an));
+        if (zeichnen && this._letzte) this.zeigen(...this._letzte);
+    }
+
+    /**
+     * Der Schaltknopf „Kleider“ (21.10.2026, Edgar: „mach auch einen Toggle ‚Kleider‘, mit dem ich die Kleider im Ergebnis aus- und einblenden kann“): blendet die Kleider aus der KI im Feld
+     * „Ergebnis“ aus (seit 30.10.2026 auch das Haar), die Haut darunter kommt wieder (`Meshgenesisgenesisfigur.einhaengen`). Ziel und Start bleiben unberührt; gilt für alle Zeilen, gemerkt wie „Rig“.
+     */
+    _kleiderknopf() {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'schaltknopf';
+        knopf.dataset.kleider = '';
+        knopf.title = 'Die Kleider und das Haar aus der KI im Ergebnis ein- und ausblenden — in allen Zeilen; die Haut darunter wird wieder gezeigt.';
+        knopf.innerHTML = '<i class="fas fa-tshirt"></i> ';
+        knopf.append('Kleider');
+        knopf.addEventListener('click', () => {
+            const an = !this.kleider;
+            Meshgenesisansichtgedaechtnis.merken({ kleider: an });
+            for (const zeile of Meshgenesiszeile.alle) zeile.kleiderSetzen(an);
+        });
+        this._kleiderKnopf = knopf;
+        this.kleiderSetzen(this.kleider, false);
+        return knopf;
+    }
+
+    kleiderSetzen(an, zeichnen = true) {
+        this.kleider = an;
+        this._kleiderKnopf?.classList.toggle('active', an);
+        this._kleiderKnopf?.setAttribute('aria-pressed', String(an));
+        if (zeichnen && this._letzte) this.zeigen(...this._letzte);
+    }
+
+    /** Die Reihe der Ansichtsarten aus `Meshgenesismaterial.MODI` bauen (ein Schaltknopf je Art, genau einer aktiv); ein Klick stellt ALLE Zeilen auf diese Art. */
+    _ansichtwahl(reihe) {
+        if (!reihe) return;
+        this._modusKnoepfe = Meshgenesismaterial.MODI.map(m => {
+            const knopf = document.createElement('button');
+            knopf.type = 'button';
+            knopf.className = 'schaltknopf';
+            knopf.dataset.modus = m.schluessel;
+            knopf.title = `${m.hinweis} Gilt für alle Zeilen.`;
+            knopf.innerHTML = `<i class="fas ${m.icon}"></i> `;
+            knopf.append(m.name);
+            knopf.addEventListener('click', () => {
+                Meshgenesisansichtgedaechtnis.merken({ modus: m.schluessel });
+                for (const zeile of Meshgenesiszeile.alle) zeile.modusSetzen(m.schluessel);
+            });
+            return knopf;
+        });
+        reihe.replaceChildren(...this._modusKnoepfe);
+        this.modusSetzen(this.modus, false);
+    }
+
+    modusSetzen(modus, zeichnen = true) {
+        this.modus = modus;
+        for (const k of this._modusKnoepfe ?? []) k.classList.toggle('active', k.dataset.modus === modus);
+        if (zeichnen && this._letzte) this.zeigen(...this._letzte);
+    }
+
+    /** Eine Probe aus der Probenwahl zeigen: eine laufende Animation hält an (die Felder zeigen dann die Probe, nicht ein Bild der Bewegung). */
+    probe(antwort, probe, geist) {
+        this.animation?.zuruecksetzen();
+        this.zeigen(antwort, probe, geist);
+    }
+
+    /** Das Soll als Geist ein- oder ausschalten, ohne die Probe oder das Bild der Animation zu wechseln. */
+    geistSetzen(geist) {
+        this._geist = geist;
+        if (this._letzte) this.zeigen(this._letzte[0], this._letzte[1], geist);
+    }
+
+    /** Ein Bild der Bewegung (hat die Form einer Probe) zeichnen. */
+    zeigenBild(bild) {
+        this.zeigen(this._antwort, bild, this._geist);
+    }
+
+    /** @param {object} antwort die Antwort von `/api/meshgenesis/<job>/proben/`; @param {object|null} probe; @param {boolean} geist das Soll als Drahtgitter über der Ausgabe */
+    zeigen(antwort, probe, geist) {
+        this._letzte = [antwort, probe, geist];
+        this._antwort = antwort;
+        this._geist = geist;
+        const echt = antwort?.attrappe === false;
+        // Echte Daten: der ganze Körper liegt in der Probe selbst, die Zeilen darunter sind Ausschnitte desselben Rigs und derselben Figur (`Meshgenesisechtteile`).
+        const grund = !probe ? null : echt && this.schluessel !== 'koerper' ? Meshgenesisechtteile.daten(antwort, probe, this.schluessel) : this.bereich.daten(antwort, probe);
+        // Die Punktwolke der Eingabe hängt an `id`; die Bilder der Bewegung tragen einen festen `punktsamen`, damit die Punkte nicht von Bild zu Bild flimmern.
+        const d = grund ? {
+            ...grund, probe, id: probe.punktsamen ?? probe.id, geist, modus: this.modus, echt, job: antwort.job, zeile: this.schluessel,
+            rig: this.rig, kleider: this.kleider, rigBeschreibung: antwort.rig, rigIndizes: antwort.rig?.zeilen?.[this.schluessel], rigMassstab: this.bereich.rigMassstab, haltung: antwort.haltung ?? null,
+            // 19.10.2026 spätabends: das Ergebnis zeigt keine Fläche des Ziels mehr (Server `ergebnis_flaeche: false`) — nur die Genesis-Figur aus der KI oder das Rig.
+            ergebnisOhneZielflaeche: antwort.ergebnis_flaeche === false,
+        } : null;
+        for (const a of this.ansichten) a.zeigen(d);
+        let texte = !d ? {} : echt ? Meshgenesisechtteile.texte(this.schluessel, probe, grund.teil, this.modus, antwort.modell) : this.bereich.texte({ probe, ...grund });
+        if (probe && !grund) texte = { ausgabe: 'Der Server liefert für diese Zeile keine Daten.' };
+        // Was im Ergebnis aus der KI kommt und was nicht (Server `ergebnis_text`, 19.10.2026 spätabends) — seit 20.10.2026 abends nur einmal, beim ganzen Körper (stand in allen fünf Zeilen).
+        if (echt && probe && antwort.ergebnis_text && this.schluessel === 'koerper') texte.ausgabe = texte.ausgabe ? `${texte.ausgabe}\n${antwort.ergebnis_text}` : antwort.ergebnis_text;
+        this._aposeFeld(!!(echt && probe?.apose));
+        if (this.info.apose) texte.apose = Meshgenesisapose.text(probe);
+        for (const [art, el] of Object.entries(this.info)) el.textContent = texte[art] ?? '';
+        // Unter dem Ergebnis: Tabelle „Wie gut?“ mit 14 Zahlen über die Rig-Punkte der Zeile (16.10.2026) — nur bei echten Daten.
+        this.guete?.replaceChildren(echt && d ? Meshgenesisguete.tabelle(Meshgenesisguete.werte(grund.teil, d.rigIndizes, antwort.rig?.knochen ?? [])) : '');
+    }
+
+    /**
+     * Das vierte Feld „Rig → A-Pose“ (17.10.2026, nur in der Zeile „Ganzer Körper“): sichtbar, wenn die Probe durch die Vorstufe lief; dann vier Spalten und die Felder heißen 1 Start · 2 Rig → A-Pose ·
+     * 3 Ziel · 4 Ergebnis, sonst drei wie bisher.
+     */
+    _aposeFeld(sichtbar) {
+        const feld = this.element.querySelector('[data-feld="apose"]');
+        if (!feld) return;
+        feld.hidden = !sichtbar;
+        feld.parentElement.classList.toggle('meshgenesis-bereiche-vier', sichtbar);
+        const folge = sichtbar ? ['eingabe', 'apose', 'soll', 'ausgabe'] : ['eingabe', 'soll', 'ausgabe'];
+        for (const nummer of this.element.querySelectorAll('[data-nummer]')) {
+            const platz = folge.indexOf(nummer.dataset.nummer);
+            if (platz >= 0) nummer.textContent = String(platz + 1);
+        }
+    }
+}

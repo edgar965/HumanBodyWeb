@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests für die Gelenke aus den Fotos (24.10.2026, 2d-3d-AI): `Posenpunkte` (ViTPose → Gelenke der Körperlage), `Fotogelenke` (Quelle nach Einstellung) und `Ai2d3dposewahl.aus`.
+"""Tests für die Gelenke aus den Fotos (24.10.2026, Foto-Genesis): `Posenpunkte` (ViTPose → Gelenke der Körperlage), `Fotogelenke` (Quelle nach Einstellung) und `Fotogenesisposewahl.aus`.
 
 WARUM: Edgar, 24.10.2026: „wenn du meinst, ViTPose ist besser, kannst du das auch ausprobieren, ggf. optional? … damit man das später beides ausprobieren kann“. Beide Quellen müssen dasselbe
 liefern — {Gelenk: (xy, Gewicht)} mit „_l“ = linke Körperseite der Person —, sonst passt das Einpassen je nach Einstellung spiegelverkehrt ein. ViTPose und SAM 3D Body laufen hier nicht:
@@ -23,7 +23,7 @@ from KoerperKI_Fotos.fotogelenke import Fotogelenke  # noqa: E402
 from KoerperKI_Fotos.posenpunkte import Posenpunkte  # noqa: E402
 from VitposeTorch.punkte import Vppunkte  # noqa: E402
 
-from core.dienste.ai2d3dposewahl import Ai2d3dposewahl  # noqa: E402
+from core.dienste.fotogenesisposewahl import Fotogenesisposewahl  # noqa: E402
 from core.dienste.engine2d3dkleiderposegelenke import Engine2d3dKleiderposegelenke  # noqa: E402
 
 
@@ -124,17 +124,17 @@ class DieFotogelenke(unittest.TestCase):
 
 class DiePosewahl(unittest.TestCase):
     def test_vorgabe_bei_fehlendem_oder_unbekanntem_wert(self):
-        self.assertEqual(Ai2d3dposewahl.aus(None), 'vitpose')
-        self.assertEqual(Ai2d3dposewahl.aus({}), 'vitpose')
-        self.assertEqual(Ai2d3dposewahl.aus({Ai2d3dposewahl.SCHLUESSEL: 'sapiens'}), 'vitpose')
+        self.assertEqual(Fotogenesisposewahl.aus(None), 'vitpose')
+        self.assertEqual(Fotogenesisposewahl.aus({}), 'vitpose')
+        self.assertEqual(Fotogenesisposewahl.aus({Fotogenesisposewahl.SCHLUESSEL: 'sapiens'}), 'vitpose')
 
     def test_gespeicherter_wert_ohne_leerraum(self):
-        self.assertEqual(Ai2d3dposewahl.aus({Ai2d3dposewahl.SCHLUESSEL: ' sam3dbody '}), 'sam3dbody')
+        self.assertEqual(Fotogenesisposewahl.aus({Fotogenesisposewahl.SCHLUESSEL: ' sam3dbody '}), 'sam3dbody')
 
     def test_jeder_wert_hat_text_beschreibung_und_einen_weg(self):
         """Ein neuer Wert braucht eine Beschreibung für die Seite und einen eigenen Zweig in `Fotogelenke.holen` (sonst nähme er stumm ViTPose)."""
-        werte = [w for w, _t in Ai2d3dposewahl.WERTE]
+        werte = [w for w, _t in Fotogenesisposewahl.WERTE]
         self.assertEqual(sorted(werte), ['sam3dbody', 'vitpose'])
-        self.assertEqual(sorted(Ai2d3dposewahl.BESCHREIBUNG), sorted(werte))
-        self.assertIn(Ai2d3dposewahl.VORGABE, werte)
-        self.assertEqual(Ai2d3dposewahl.text('vitpose'), dict(Ai2d3dposewahl.WERTE)['vitpose'])
+        self.assertEqual(sorted(Fotogenesisposewahl.BESCHREIBUNG), sorted(werte))
+        self.assertIn(Fotogenesisposewahl.VORGABE, werte)
+        self.assertEqual(Fotogenesisposewahl.text('vitpose'), dict(Fotogenesisposewahl.WERTE)['vitpose'])

@@ -6,9 +6,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, r'A:\3DTools\mesh3dai')
+sys.path.insert(0, r'A:\3DTools\meshgenesis')
 
-from mesh3dai_haut_ohneki import Hautohneki  # noqa: E402
+from meshgenesis_haut_ohneki import Hautohneki  # noqa: E402
 
 
 class HautohnekiTest(unittest.TestCase):
@@ -44,12 +44,12 @@ class HautohnekiTest(unittest.TestCase):
         self.assertFalse(Hautohneki.gewuenscht(self._mit('[]')))
 
     def _job(self, info, einstellung=None, anlage=None):
-        """Ablage wie `3DObjects`: Test `t` unter `mesh3dai/_test/`, Job `J` unter `ai2d3d/`."""
+        """Ablage wie `3DObjects`: Test `t` unter `meshgenesis/_test/`, Job `J` unter `fotogenesis/`."""
         wurzel = Path(tempfile.mkdtemp(dir=r'A:\3DTools\ProjektTemp\_wegwerf'))
-        test = wurzel / 'mesh3dai' / '_test' / 't'
+        test = wurzel / 'meshgenesis' / '_test' / 't'
         test.mkdir(parents=True)
-        (wurzel / 'ai2d3d' / 'J').mkdir(parents=True)
-        (wurzel / 'ai2d3d' / 'J' / 'job.json').write_text(json.dumps(info), encoding='utf-8')
+        (wurzel / 'fotogenesis' / 'J').mkdir(parents=True)
+        (wurzel / 'fotogenesis' / 'J' / 'job.json').write_text(json.dumps(info), encoding='utf-8')
         if einstellung is not None:
             (test / 'einstellung.json').write_text(json.dumps(einstellung), encoding='utf-8')
         if anlage is not None:
@@ -57,13 +57,13 @@ class HautohnekiTest(unittest.TestCase):
         return test
 
     def test_das_haekchen_des_jobs_entscheidet(self):
-        self.assertTrue(Hautohneki.gewuenscht(self._job({'mesh3dai_test': 't', 'pshuman': {'haut_ki': False}})))
-        self.assertFalse(Hautohneki.gewuenscht(self._job({'mesh3dai_test': 't', 'pshuman': {'haut_ki': True}}, {'haut_ki': False})))
+        self.assertTrue(Hautohneki.gewuenscht(self._job({'meshgenesis_test': 't', 'pshuman': {'haut_ki': False}})))
+        self.assertFalse(Hautohneki.gewuenscht(self._job({'meshgenesis_test': 't', 'pshuman': {'haut_ki': True}}, {'haut_ki': False})))
 
     def test_beim_ersten_lauf_ueber_den_namen(self):
-        self.assertTrue(Hautohneki.gewuenscht(self._job({'pshuman': {'haut_ki': False}}, anlage={'name': 'J-mesh3d-AI'})))
-        self.assertFalse(Hautohneki.gewuenscht(self._job({'pshuman': {'haut_ki': False}}, anlage={'name': 'Anderer-mesh3d-AI'})))
+        self.assertTrue(Hautohneki.gewuenscht(self._job({'pshuman': {'haut_ki': False}}, anlage={'name': 'J-mesh-genesis'})))
+        self.assertFalse(Hautohneki.gewuenscht(self._job({'pshuman': {'haut_ki': False}}, anlage={'name': 'Anderer-mesh-genesis'})))
 
     def test_job_ohne_wahl_laesst_die_einstellung_gelten(self):
-        self.assertTrue(Hautohneki.gewuenscht(self._job({'mesh3dai_test': 't'}, {'haut_ki': False})))
-        self.assertFalse(Hautohneki.gewuenscht(self._job({'mesh3dai_test': 't'})))
+        self.assertTrue(Hautohneki.gewuenscht(self._job({'meshgenesis_test': 't'}, {'haut_ki': False})))
+        self.assertFalse(Hautohneki.gewuenscht(self._job({'meshgenesis_test': 't'})))

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Das Einpassen eines Kunstkörpers in zwei Ansichten mit `KoerperKI_Fotos.fotoeinpassung.Fotoeinpassung` (24.10.2026, 2d-3d-AI) — im LongRunner, weil 200 Schritte auf der CPU ~6 s brauchen.
+"""Das Einpassen eines Kunstkörpers in zwei Ansichten mit `KoerperKI_Fotos.fotoeinpassung.Fotoeinpassung` (24.10.2026, Foto-Genesis) — im LongRunner, weil 200 Schritte auf der CPU ~6 s brauchen.
 
 WARUM: Edgar, 24.10.2026: „es gibt in mesh3d-ai auch die iterative vorgehensweise zu den Kleidern, Körper … das kannst du für die Bilder auch übernehmen“. Im ersten Lauf an EdgarTrip
-(`ProjektTemp/_wegwerf/ai2d3d/nurfotos_einpassen.py`, 24.10.2026 14:26–14:42) wurde Runde 2 abgelehnt (mittlere Deckung 0,724 → 0,646), Stufe B begann trotzdem mit den Kameras der abgelehnten
+(`ProjektTemp/_wegwerf/fotogenesis/nurfotos_einpassen.py`, 24.10.2026 14:26–14:42) wurde Runde 2 abgelehnt (mittlere Deckung 0,724 → 0,646), Stufe B begann trotzdem mit den Kameras der abgelehnten
 Runde — `rechnen` hatte sie in die übergebenen Ansichten geschrieben — und endete bei 0,609. Seither ändert `rechnen` die Ansichten nicht und gibt die eingepassten zurück
 (`erg['ansichten']`); der Aufrufer übernimmt sie nur mit der Runde.
 Wahrheit: Maßstab 1,1 und Verschiebung (3, −2, 4) cm, zwei Fotos (vorn 0°, links 90°), Kamera 100 px/m fest. Start: Maßstab 1, keine Verschiebung. Mit festem Kameramaßstab muss die FORM

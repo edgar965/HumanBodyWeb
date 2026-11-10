@@ -8,7 +8,7 @@
  *              verschweißte Stücke (Scham) bringen ihr Loch auch für diese Stufe mit (`G9stuecklochstufen`, `Stueckloch.fassung`)
  *   Leinwand   Pixeldichte 1 statt bis zu 2 (bei Bildschirmskalierung 1,5–2 ein Viertel bis die Hälfte der Pixel)
  *
- * Eingeschaltet wird sie von der SEITE, nicht im Code: `<meta name="schnellanzeige" content="an">` im Kopf der Vorlage (heute nur `mesh3dai.html`). Jede andere Seite — auch die
+ * Eingeschaltet wird sie von der SEITE, nicht im Code: `<meta name="schnellanzeige" content="an">` im Kopf der Vorlage (heute nur `meshgenesis.html`). Jede andere Seite — auch die
  * Charakter-Seite — bleibt bei der Vorgabe (fein, Pixeldichte des Bildschirms) und kann sie mit derselben Zeile einschalten. Strg+Alt+H schaltet die Netzstufe wie überall weiter
  * (grob → fein → ultrafein, `Netzstufenschalter`); die Pixeldichte bleibt beim Seitenaufruf.
  */

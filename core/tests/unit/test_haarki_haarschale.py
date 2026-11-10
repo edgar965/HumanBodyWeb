@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Tests für `HaarKI.haarschale.Haarschale` (24.10.2026, Besitzer 2d-3d-AI): Auswahl der Kopfdreiecke, Teilung, Normalen, leere Felder.
+"""Tests für `HaarKI.haarschale.Haarschale` (24.10.2026, Besitzer Foto-Genesis): Auswahl der Kopfdreiecke, Teilung, Normalen, leere Felder.
 
-WARUM: Fotos (`KopfKI.Fotohaarschale`) und Netz (`mesh3dai/mesh3dai_haarbeobachtung.py`, Sitzung 3dtools-cc) schreiben ihre Beobachtung je Schalenpunkt — Punkt i muss auf beiden Seiten
+WARUM: Fotos (`KopfKI.Fotohaarschale`) und Netz (`meshgenesis/meshgenesis_haarbeobachtung.py`, Sitzung 3dtools-cc) schreiben ihre Beobachtung je Schalenpunkt — Punkt i muss auf beiden Seiten
 derselbe sein. Das hält nur, wenn die Teilung deterministisch ist, gemeinsame Kanten keinen Punkt doppelt erzeugen und die Normalen nach außen zeigen (Höhe entlang der Normale).
 """
 import sys

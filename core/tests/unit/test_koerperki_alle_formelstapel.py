@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests für `KoerperKI_alle.formelstapel.Formelstapel` (27.10.2026, Besitzer Mesh3D-AI).
+"""Tests für `KoerperKI_alle.formelstapel.Formelstapel` (27.10.2026, Besitzer Mesh-Genesis).
 
 Seltene Daz-Formeln auf Tensoren, wie `G9formeln.rechnen`.
 

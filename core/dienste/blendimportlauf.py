@@ -42,7 +42,7 @@ class Blendimportlauf:
     BAENDER = {'umwandeln': (0, 2), 'export': (2, 3), 'umposen': (3, 5), 'koerper': (5, 7), 'pose': (7, 9), 'figur': (9, 70), 'finger': (70, 72),
                'stuecke': (72, 80), 'haut': (80, 95), 'augen': (95, 97), 'modell': (97, 100)}
 
-    #: Alles in DIESEM Prozess, auch die Runner von „Mesh to 3D“ (nur `Vorstufenriglauf` im Skriptdienst der Mesh3D-AI-Kette)
+    #: Alles in DIESEM Prozess, auch die Runner von „Mesh to 3D“ (nur `Vorstufenriglauf` im Skriptdienst der Mesh-Genesis-Kette)
     IM_PROZESS = False
 
     class Angehalten(Exception):

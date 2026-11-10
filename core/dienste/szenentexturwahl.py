@@ -2,9 +2,9 @@
 """Szenentexturwahl — wie /Charakter/ die Bilder der Genesis-Figuren lädt (19.10.2026).
 
 Edgar, 19.10.2026, nach dem KTX2-Versuch auf Mesh3D-AI („würde das auch was bringen für die Charakter seite?“): „mach das“ — gemeint waren die zwei Wege, die
-auf /Charakter/ taugen (die Figur füllt dort den Bildschirm, man zoomt aufs Gesicht; verkleinerte Bilder wie Weg A von Mesh3D-AI also nicht):
+auf /Charakter/ taugen (die Figur füllt dort den Bildschirm, man zoomt aufs Gesicht; verkleinerte Bilder wie Weg A von Mesh-Genesis also nicht):
     voll         die Originale wie bisher (Vorgabe — nichts ändert sich, bis jemand umstellt)
-    komprimiert  S3TC-Block mit Mip-Stufen (`G9texturblock`, Weg C von Mesh3D-AI)
+    komprimiert  S3TC-Block mit Mip-Stufen (`G9texturblock`, Weg C von Mesh-Genesis)
     uastc        UASTC (KTX2, `G9texturbasis`): kodiert im Hintergrund, bis dahin der S3TC-Block
 Die Seite trägt die Wahl im Kopf (`<meta name="texturweg">`, `{% szenentexturweg %}` in `scene_config.html`, `gemeinsam/texturweg.js`), gilt also ab dem nächsten
 Laden. Ohne S3TC im Browser fällt sie auf `voll` zurück (`data-rueckfall`), nicht auf verkleinerte Bilder. Wert in `AppSettings.ui_prefs` unter `SCHLUESSEL`
@@ -26,7 +26,7 @@ class Szenentexturwahl:
         ('komprimiert', 'Volle Bilder, für die Grafikkarte komprimiert (S3TC)'),
         ('uastc', 'Volle Bilder, fast verlustfrei komprimiert (UASTC)'),
     )
-    # Gemessen 19.10.2026 im Chrome an Damira0 auf Mesh3D-AI (Probe 41, 22 Bilder, davon 17 mit 4096 px), Ladeprobe mit 22 Einzelabrufen, je Weg drei Läufe im
+    # Gemessen 19.10.2026 im Chrome an Damira0 auf Mesh-Genesis (Probe 41, 22 Bilder, davon 17 mit 4096 px), Ladeprobe mit 22 Einzelabrufen, je Weg drei Läufe im
     # Wechsel; Bildvergleich gegen die vollen Bilder in Pixeln der Leinwand (0–255). Auf /Charakter/ selbst gemessen: Tagebuch 2026-10-19, Abschnitt „Abend, zweiter Teil“.
     BESCHREIBUNG = {
         'voll': 'wie bisher. Alle Bilder da nach 3,8–4,2 s, die Seite steht bis 0,64 s.',
@@ -38,7 +38,7 @@ class Szenentexturwahl:
     #: Kurzname je Weg für die Erklärung unter der Überschrift.
     KURZ = {'voll': 'Volle Bilder', 'komprimiert': 'S3TC', 'uastc': 'UASTC'}
     #: Woher die Zahlen sind (steht unter den drei Wegen auf der Einstellungsseite).
-    QUELLE = 'Gemessen an Damira0 (22 Bilder) auf Mesh3D-AI; Grafikspeicher gerechnet.'
+    QUELLE = 'Gemessen an Damira0 (22 Bilder) auf Mesh-Genesis; Grafikspeicher gerechnet.'
 
     @classmethod
     def aus(cls, prefs):

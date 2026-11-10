@@ -4,7 +4,7 @@
 Herausgelöst aus `Meshfigurlauf.runner` (12.10.2026, die Datei stand bei 342 Zeilen): die Deutung der Ausgabezeilen — `[fortschritt] <0..100> <Text>`, `[ergebnis] {…}`, `[fehler] {…}` — ist für beide Wege dieselbe;
 der Weg unterscheidet sich nur darin, WOHER die Zeilen kommen. Mit `Meshfigurdauerprozess` (Vorgabe) rechnet EIN Prozess alle Schritte des Laufs, sonst startet jeder Schritt seinen eigenen (`MESHFIGUR_DAUER=0`, oder wenn der
 Dauerprozess nicht startet — dann steht der Grund im Log und der Schritt läuft einzeln, nie stumm).
-Mit `lauf.im_prozess` (05.11.2026, Edgar: „alles möglichst in einem Prozess“, Mesh3D-AI-Kette im Skriptdienst) rechnet der Runner in DIESEM Prozess, die Zeilen kommen über `sys.stdout` wie sonst über die Pipe:
+Mit `lauf.im_prozess` (05.11.2026, Edgar: „alles möglichst in einem Prozess“, Mesh-Genesis-Kette im Skriptdienst) rechnet der Runner in DIESEM Prozess, die Zeilen kommen über `sys.stdout` wie sonst über die Pipe:
 python14 hat dieselbe torch-Fassung wie python10 (2.10.0+cu128), statt des Pakets `mediapipe` dieselben Netze in torch (`Meshfigurpunkte`).
 """
 

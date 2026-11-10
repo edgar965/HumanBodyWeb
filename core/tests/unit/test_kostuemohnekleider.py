@@ -7,26 +7,26 @@ from pathlib import Path
 
 import torch
 
-sys.path.insert(0, r'A:\3DTools\mesh3dai')
+sys.path.insert(0, r'A:\3DTools\meshgenesis')
 
-from mesh3dai_kostuem_ohnekleider import Kostuemohnekleider  # noqa: E402
-from mesh3dai_kostuemarten import Kostuemarten  # noqa: E402
+from meshgenesis_kostuem_ohnekleider import Kostuemohnekleider  # noqa: E402
+from meshgenesis_kostuemarten import Kostuemarten  # noqa: E402
 
 
 class KostuemohnekleiderTest(unittest.TestCase):
     databases = []
 
-    def _test(self, job=None, einstellung=None, name='n2-mesh3d-AI'):
-        """Ablage wie `3DObjects`: Test `t` unter `mesh3dai/_test/`, Job `n2` unter `ai2d3d/`."""
+    def _test(self, job=None, einstellung=None, name='n2-mesh-genesis'):
+        """Ablage wie `3DObjects`: Test `t` unter `meshgenesis/_test/`, Job `n2` unter `fotogenesis/`."""
         wurzel = Path(tempfile.mkdtemp(dir=r'A:\3DTools\ProjektTemp\_wegwerf'))
-        test = wurzel / 'mesh3dai' / '_test' / 't'
+        test = wurzel / 'meshgenesis' / '_test' / 't'
         test.mkdir(parents=True)
         (test / 'anlage.json').write_text(json.dumps({'name': name}), encoding='utf-8')
         if einstellung is not None:
             (test / 'einstellung.json').write_text(json.dumps(einstellung), encoding='utf-8')
         if job is not None:
-            (wurzel / 'ai2d3d' / 'n2').mkdir(parents=True)
-            (wurzel / 'ai2d3d' / 'n2' / 'job.json').write_text(json.dumps(job), encoding='utf-8')
+            (wurzel / 'fotogenesis' / 'n2').mkdir(parents=True)
+            (wurzel / 'fotogenesis' / 'n2' / 'job.json').write_text(json.dumps(job), encoding='utf-8')
         return test
 
     def test_nur_true_wirkt(self):
@@ -41,7 +41,7 @@ class KostuemohnekleiderTest(unittest.TestCase):
         self.assertTrue(Kostuemohnekleider.gewuenscht(self._test(None, {'keine_kleider': True})))
 
     def test_fremder_job_zaehlt_nicht(self):
-        test = self._test({'pshuman': {'keine_kleider': True}}, name='anderer-mesh3d-AI')
+        test = self._test({'pshuman': {'keine_kleider': True}}, name='anderer-mesh-genesis')
         self.assertFalse(Kostuemohnekleider.gewuenscht(test))
 
     def test_ohne_wahl_dasselbe_objekt(self):

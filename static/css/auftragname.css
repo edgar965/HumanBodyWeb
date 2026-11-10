@@ -1,5 +1,5 @@
 /* Name des Auftrags in der Überschrift ändern (`viewer/gemeinsam/auftragname.js`, 29.09.2026). Seit 19.10.2026 eigene Datei (vorher in `bildmodell.css`):
-   die Seiten von Mesh3D-AI tragen denselben Stift und laden `bildmodell.css` nicht. Jede Seite, die `Auftragname` bindet, lädt diese Datei. */
+   die Seiten von Mesh-Genesis tragen denselben Stift und laden `bildmodell.css` nicht. Jede Seite, die `Auftragname` bindet, lädt diese Datei. */
 .auftrag-name-editierbar { cursor: text; border-bottom: 1px dashed transparent; }
 .auftrag-name-editierbar:hover { border-bottom-color: var(--border, #3a4250); }
 .auftrag-name-stift { vertical-align: middle; }

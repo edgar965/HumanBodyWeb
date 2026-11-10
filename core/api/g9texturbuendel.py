@@ -37,7 +37,7 @@ das je Pfad (`art: null`), sie verschweigt es nicht.
 
 WARUM GET (19.10.2026, Edgar: „so dass alles schnell beim laden ist")
 =====================================================================
-Ein POST wird nie zwischengespeichert: jedes Laden übertrug alle Bilder neu — gemessen an Mann1 (Mesh3D-AI) ein Bündel mit 48,6 MB in
+Ein POST wird nie zwischengespeichert: jedes Laden übertrug alle Bilder neu — gemessen an Mann1 (Mesh-Genesis) ein Bündel mit 48,6 MB in
 5,2 s (0,4 s bis zum ersten Byte, der Rest Übertragung), die Texturen waren der letzte Posten in der Anzeige rechts unten. Jetzt fragt der
 Browser mit GET (Pfade als `p=…`), die Antwort trägt ein ETag aus Pfad, Größe und Änderungszeit jedes Bildes und `no-cache`: beim nächsten
 Laden fragt er nach und bekommt 304 ohne Inhalt, die Bytes kommen aus seinem Speicher. POST bleibt für ältere Tabs.

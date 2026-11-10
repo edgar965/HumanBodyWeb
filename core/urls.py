@@ -13,7 +13,7 @@ from .api import (
     seite_genesis_einstellungen,
     seite_kleider2d3d_einstellungen,
     seite_kleider_einstellungen,
-    seite_mesh3dai_einstellungen,
+    seite_meshgenesis_einstellungen,
     seite_theatre_einstellungen,
     seiten,
 )
@@ -64,8 +64,9 @@ from .urls_blendermodell import BLENDERMODELL  # noqa: E402
 from .urls_engine2d3dkleider import ENGINE2D3DKLEIDER  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
 from .urls_mesh3d import MESH3D  # noqa: E402
-from .urls_mesh3dai import MESH3DAI  # noqa: E402
-from .urls_ai2d3d import AI2D3D  # noqa: E402
+from .urls_meshgenesis import MESHGENESIS  # noqa: E402
+from .urls_fotogenesis import FOTOGENESIS  # noqa: E402
+from .api.genesisaltadressen import Genesisaltadressen  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
 from .urls_blendimport import BLENDIMPORT  # noqa: E402
 from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
@@ -140,8 +141,8 @@ urlpatterns = [
          name='settings_2d3dkleider'),
     # Scham-Methode der Blender-Importe: Eigen oder DAZ (11.10.2026, `dienste/schamwahl.py`).
     path('settings/genesis/', seite_genesis_einstellungen.genesis_settings_page, name='settings_genesis'),
-    # Abfragetakt der Statuskarte von Mesh3D-AI in Minuten (14.10.2026, `dienste/mesh3daistandwahl.py`).
-    path('settings/mesh3dai/', seite_mesh3dai_einstellungen.mesh3dai_settings_page, name='settings_mesh3dai'),
+    # Abfragetakt der Statuskarte von Mesh-Genesis in Minuten (14.10.2026, `dienste/meshgenesisstandwahl.py`).
+    path('settings/mesh-genesis/', seite_meshgenesis_einstellungen.meshgenesis_settings_page, name='settings_meshgenesis'),
     # Knopf „Neu backen" auf /settings/kleider/ (26.09.2026) — Unterprozess,
     # der Stand kommt aus einer Datei; siehe `dienste/gcstueckelauf.py`.
     path('api/kleider/gcstuecke/starten/', Gcstueckeendpunkte.starten, name='gcstuecke_starten'),
@@ -296,9 +297,11 @@ urlpatterns += BLENDERMODELL
 urlpatterns += ENGINE2D3DKLEIDER
 # Seite „Mesh-3D" (Netz → Genesis-Modell; ein Auftrag ist ein Modell-Import, `urls_mesh3d.py`), 11.10.2026.
 urlpatterns += MESH3D
-# Seite „Mesh3D-AI" (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes, zunächst mit Dummies für Ursula1, `urls_mesh3dai.py`), 14.10.2026.
-urlpatterns += MESH3DAI
-# Seite „2d-3d-AI" (leere Kopie der Seiten von Mesh3D-AI, `urls_ai2d3d.py`), 24.10.2026.
-urlpatterns += AI2D3D
+# Seite „Mesh-Genesis" (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes, zunächst mit Dummies für Ursula1, `urls_meshgenesis.py`), 14.10.2026.
+urlpatterns += MESHGENESIS
+# Seite „Foto-Genesis" (leere Kopie der Seiten von Mesh-Genesis, `urls_fotogenesis.py`), 24.10.2026.
+urlpatterns += FOTOGENESIS
+# Bis 09.11.2026 hießen die beiden Seiten „Mesh3D-AI“ und „2d-3d-AI“: die alten Adressen leiten weiter (`api/genesisaltadressen.py`).
+urlpatterns += Genesisaltadressen.muster()
 # Exportleiste (Export, Render mit Physik, Modell speichern) für jede Seite mit einer Figur, `urls_exportleiste.py`, 31.10.2026.
 urlpatterns += EXPORTLEISTE

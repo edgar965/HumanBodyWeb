@@ -24,7 +24,7 @@
 /* Läufe des Renders (`Exportleistelaeufe`) */
 .exportleiste-laeufe { overflow-x: auto; }
 .exportleiste-laeufe table { width: 100%; border-collapse: collapse; }
-/* Lesbar auf hellen und dunklen Seiten (31.10.2026, gemessen auf Mesh3D-AI: Zeilen rgb(33,37,41) auf rgb(22,33,62) — ein Tabellenstil der Seite färbte den Grund, nicht die Schrift):
+/* Lesbar auf hellen und dunklen Seiten (31.10.2026, gemessen auf Mesh-Genesis: Zeilen rgb(33,37,41) auf rgb(22,33,62) — ein Tabellenstil der Seite färbte den Grund, nicht die Schrift):
    Kopf dunkel mit heller Schrift, Zeilen ohne eigenen Grund in der Schrift der Leiste. */
 .exportleiste-laeufe table.db-tabelle { background: transparent; color: inherit; }
 .exportleiste-laeufe thead th { background: #16213e; color: #e8ecf4; }

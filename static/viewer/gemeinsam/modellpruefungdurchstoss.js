@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * Modellpruefungdurchstoss — sticht der Körper durch die Kleidung? Klasse des Modell Checks (`Modellpruefung`, 02.11.2026, Sitzung roomguest-f0; Edgar: „sind diese
- * Testmethoden für die Figur auch in dem generischen Code … Modell Check? wenn nicht, dann tu das“). Anlass 2d-3d-AI, Probejob EdgarTrip--versatz: die Knöchelhaut lag
+ * Testmethoden für die Figur auch in dem generischen Code … Modell Check? wenn nicht, dann tu das“). Anlass Foto-Genesis, Probejob EdgarTrip--versatz: die Knöchelhaut lag
  * außerhalb des Sockenbunds, im Bild ein Hautring in der Socke (Socken „falsch“ 2.009 Pixel, Zeile 1 852; `KoerperKI_Fotos/fotoauswendig.py`, DICKE_M).
  *
  * Je Körperpunkt zwei Strahlen längs seiner Normale (`Modellpruefung.normalen`, nach außen) gegen jedes Kleidungsnetz: trifft der Strahl nach innen höchstens AUSSEN_M
@@ -13,11 +13,11 @@ import * as THREE from 'three';
  *     const d = Modellpruefungdurchstoss.pruefen(koerper, lage, netze, nrm);
  *     // lage, nrm: Float32Array (3 n) Welt (`Modellpruefung.normalen`); netze: die sichtbaren Netze (Kleidung sucht `kleider`)
  *     // → {geprueft, stuecke: [{name, zahl, tief_mm, punkte: [Körperpunkt …]}], zu: [Stücke über PUNKTE_MAX], punkte: [alle Körperpunkte mit Befund]}
- * Grenze PUNKTE_MAX GESETZT wie `Modellpruefung.HAND_PUNKTE_MAX`, noch an keinem Daz-Modell geeicht; Edgar 2d-3d-AI (Charakter, 02.11.2026): Socken 178 Punkte.
+ * Grenze PUNKTE_MAX GESETZT wie `Modellpruefung.HAND_PUNKTE_MAX`, noch an keinem Daz-Modell geeicht; Edgar Foto-Genesis (Charakter, 02.11.2026): Socken 178 Punkte.
  */
 export class Modellpruefungdurchstoss {
 
-    static ZELLE_M = 0.015;                 // Edgar 2d-3d-AI (104.480 Körperpunkte, 4 Stücke): 30 mm 1,86 s, 20 mm 0,89 s, 15 mm 0,65 s, gleicher Befund (02.11.2026)
+    static ZELLE_M = 0.015;                 // Edgar Foto-Genesis (104.480 Körperpunkte, 4 Stücke): 30 mm 1,86 s, 20 mm 0,89 s, 15 mm 0,65 s, gleicher Befund (02.11.2026)
     static AUSSEN_M = 0.015;
     static OBEN_M = 0.03;
     static TIEFE_M = 0.001;
@@ -47,7 +47,7 @@ export class Modellpruefungdurchstoss {
     }
 
     /** Tiefe des Stoffs unter dem Punkt (m), 0 wenn darüber Stoff liegt oder darunter keiner. Nur die Zellen, durch die die Strecke p − AUSSEN_M·n … p + OBEN_M·n läuft
-     *  (Amanatides/Woo; mit allen 27 Nachbarzellen von 30 mm 6,0 s für Edgar 2d-3d-AI, gleicher Befund). */
+     *  (Amanatides/Woo; mit allen 27 Nachbarzellen von 30 mm 6,0 s für Edgar Foto-Genesis, gleicher Befund). */
     static innen(p, nrm, i, pos, idx, gitter) {
         const M = Modellpruefungdurchstoss, z = M.ZELLE_M, d = [nrm[3 * i], nrm[3 * i + 1], nrm[3 * i + 2]], L = M.AUSSEN_M + M.OBEN_M;
         const s = [p.x - M.AUSSEN_M * d[0], p.y - M.AUSSEN_M * d[1], p.z - M.AUSSEN_M * d[2]], c = s.map((w) => Math.floor(w / z));

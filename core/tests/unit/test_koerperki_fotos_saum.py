@@ -7,7 +7,7 @@ Kunstglied (Zylinder 0,4 m, 41 Ringe × 16), ohne Figur und ohne Fotos.
 2. Am Rumpf (kein Glied) bleibt das Etikett je Punkt, die Kante liegt zwischen den Punkten.
 3. Das Saumband nimmt die Farbe von innen (nicht die Franse am Rand), etwas dunkler, mit Wulst nach außen.
 5. (Fassung 10, 02.11.2026, Edgar: „saum T-short und hose“) Am Rumpf mit einem um 12 mm verrauschten
-   Etikett wird der Bund nach `glaetten` glatt (Saummaß der Jobseite, `ai2d3d_saummass`) und ohne Löcher;
+   Etikett wird der Bund nach `glaetten` glatt (Saummaß der Jobseite, `fotogenesis_saummass`) und ohne Löcher;
    das ungeglättete Etikett franst aus (Gegenprobe im selben Test).
 6. (Fassung 11, 02.11.2026) Ein schräger Saum (atan 0,3 ≈ 17° gegen die Achse) wird mit gekippter
    Ebene geschnitten; Gegenprobe `KIPP_MAX = 0` → rot (`ergaenzung/kippschnitt_gegenprobe.py`).
@@ -23,7 +23,7 @@ import torch
 from django.conf import settings
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
-sys.path.insert(0, str(settings.TOOLS_ROOT / 'mesh3dai'))         # `Fotosaum` nutzt seit 01.11.2026 `Kostuemgpu` (Zusammenhang, Normalen)
+sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))         # `Fotosaum` nutzt seit 01.11.2026 `Kostuemgpu` (Zusammenhang, Normalen)
 
 from KoerperKI_Fotos.fotosaum import Fotosaum  # noqa: E402
 
@@ -132,7 +132,7 @@ class Fotosaumtest(unittest.TestCase):
         Grenze; Bund an der Nulllinie wie `Fotoschale.stueck`. Gemessen 02.11.2026 (Glättung 10 mm,
         Kotangens): geglättet 1,33 mm / 1,8 %, ohne Löcher; roh 4,99 mm / 42,7 %, 26 Löcher. Auf einem
         12-mm-Zylinder blieben geglättet 3,18 mm — zu grob für 10 mm Glättung."""
-        from core.tests.automated.ai2d3d_saummass import Ai2d3dsaummass
+        from core.tests.automated.fotogenesis_saummass import Fotogenesissaummass
         r, h, k = 0.15, 0.4, 0.008
         nu, nv = int(2 * math.pi * r / k), int(h / k)
         w, z = torch.meshgrid(torch.arange(nu) * 2 * math.pi / nu, torch.linspace(0, h, nv), indexing='ij')
@@ -147,8 +147,8 @@ class Fotosaumtest(unittest.TestCase):
         saum = Fotosaum(s, 'oberteil')
         for name, wert, glatt in (('geglättet', saum.glaetten(etikett), True), ('roh', etikett, False)):
             netz = saum.schneiden(wert - 0.5, d, {'ruhe': p}, torch.arange(len(p)))
-            erg = Ai2d3dsaummass.messen(netz['ruhe'].numpy(), netz['dreiecke'].numpy())
-            # Säume: der Bund und der obere Rand des Zylinders (glatt); Grenzen wie `test_ai2d3d_zeile2_saum`
+            erg = Fotogenesissaummass.messen(netz['ruhe'].numpy(), netz['dreiecke'].numpy())
+            # Säume: der Bund und der obere Rand des Zylinders (glatt); Grenzen wie `test_fotogenesis_zeile2_saum`
             glatt_ist = erg['loecher'] == 0 and all(x['zacken_mm'] <= 1.6 and x['verhaeltnis'] <= 1.025
                                                      for x in erg['saeume'])
             self.assertEqual(glatt_ist, glatt, '%s: %s' % (name, erg))

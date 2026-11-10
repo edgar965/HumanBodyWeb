@@ -138,7 +138,7 @@ export class Modellpruefung {
         }
         const nrm = M.normalen(koerper, lage), fingerPunkte = [];
         const haende = M.finger(lage, nrm, kn, fingerPunkte);
-        const gelenke = Modellpruefunggelenke.pruefen(koerper, lage);          // Klassen der Sitzung roomguest-f0 (2d-3d-AI)
+        const gelenke = Modellpruefunggelenke.pruefen(koerper, lage);          // Klassen der Sitzung roomguest-f0 (Foto-Genesis)
         const durchstoss = Modellpruefungdurchstoss.pruefen(koerper, lage, stoffe, nrm);
         const saeume = Modellpruefungsaum.pruefen(koerper, lage, stoffe);
         const gefaltet = Object.fromEntries(gebacken.map((b) => [b.userData.eigenGebacken, b.userData.gefaltet]).filter(([, v]) => v));

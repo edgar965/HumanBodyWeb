@@ -2,7 +2,7 @@
 u"""G9texturbasis — ein Bild der Daz-Bibliothek als UASTC (KTX2, basis_universal) mit allen Mip-Stufen, für /Charakter/ (19.10.2026, `Szenentexturwahl`).
 
 Edgar, 19.10.2026, nach dem KTX2-Versuch auf Mesh3D-AI („würde das auch was bringen für die Charakter seite?“ → „mach das“): auf /Charakter/ wählbar zwischen den
-vollen Bildern, dem S3TC-Block (`G9texturblock`, Weg C) und UASTC. Gemessen am Bildersatz von Damira0 (22 Bilder, 17 mit 4096 px, Mesh3D-AI, Probe 41): UASTC ist
+vollen Bildern, dem S3TC-Block (`G9texturblock`, Weg C) und UASTC. Gemessen am Bildersatz von Damira0 (22 Bilder, 17 mit 4096 px, Mesh-Genesis, Probe 41): UASTC ist
 fast so genau wie das Original (Gesicht von nah im Mittel 0,054 von 255) und hält die Seite höchstens 0,08 s an, braucht im Browser aber 4,4–5,1 s, bis alle Bilder
 auf der Karte sind (der Browser wandelt in Workern nach BC7). Kodiert wird mit `basisu` (BinomialLLC/basis_universal v2.50.0, Apache-2.0, selbst gebaut unter
 `tools/basisu_src/bin/basisu.exe`, nicht im Repo) — rund 45 s je 4096er-Bild auf sechs Kernen.
@@ -13,7 +13,7 @@ Texturobjekt (`Genesis9texturblock.setzen`). Fehlt `basisu`, bleibt es beim Bloc
 
 Datei `<schluessel>.g9kx`, Zahlen little-endian:  b'G9KX' · uint32 Kopflänge · Kopf (JSON: fassung, breite, hoehe, linear, vorschau {art, bytes}, ktx2) · Vorschau · KTX2
 - **Farbraum:** Farbbilder (Albedo) mit `-srgb`, alle anderen (Normalen, Rauheit, Deckkraft …) mit `-linear` (Mip-Stufen linear gefiltert); Normalenkarten nach dem
-  Dateinamen zusätzlich `-normal_map` — so wie im Versuch gemessen (`ProjektTemp/_wegwerf/mesh3dai_textur/ktx2_kodieren.py`). Welches Bild ein Farbbild ist, weiß
+  Dateinamen zusätzlich `-normal_map` — so wie im Versuch gemessen (`ProjektTemp/_wegwerf/meshgenesis_textur/ktx2_kodieren.py`). Welches Bild ein Farbbild ist, weiß
   nur der Browser; er schreibt es in die Adresse (`raum=lin`, `Texturweg.abfrage`).
 - **`-y_flip`:** die Stufen stehen wie beim Block auf dem Kopf (WebGL dreht komprimierte Daten nicht).
 - **Seiten als Zweierpotenz** (höchstens 4096) wie beim Block: S3TC/BC7 verlangen Vielfache von 4.

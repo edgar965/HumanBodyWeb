@@ -3,8 +3,8 @@
  * immer das ganze Video und immer mit Ton“): Kamera, Größe (Auswahl, Breite, Höhe), Physik, Proben je Pixel. Nicht die Länge (immer die ganze BVH, `Exportleisterender`) und nicht
  * Ordner und Datei (je Modell vorbelegt).
  *
- * Auf dem Server (`/api/ui-prefs/`, Schlüssel `exportleiste_render` in `AppSettings.ui_prefs`) wie `Mesh3daiansichtgedaechtnis`, nicht im `localStorage` — EIN Eintrag für alle
- * Exportleisten (Mesh3D-AI, 2D3D Kleider …). Geladen einmal beim Aufbau (`laden`), jede Änderung schickt den ganzen Eintrag (`merken`, mehrere kurz hintereinander als eine Anfrage).
+ * Auf dem Server (`/api/ui-prefs/`, Schlüssel `exportleiste_render` in `AppSettings.ui_prefs`) wie `Meshgenesisansichtgedaechtnis`, nicht im `localStorage` — EIN Eintrag für alle
+ * Exportleisten (Mesh-Genesis, 2D3D Kleider …). Geladen einmal beim Aufbau (`laden`), jede Änderung schickt den ganzen Eintrag (`merken`, mehrere kurz hintereinander als eine Anfrage).
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 

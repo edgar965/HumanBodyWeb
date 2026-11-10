@@ -1,0 +1,153 @@
+/* Seite „Mesh-Genesis“ (14.10.2026): Job, Proben, drei Bereiche (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes) und Kennzahlen. Zunächst mit Dummies für Ursula1. */
+@import url("meshgenesistestfaelle.css");
+
+/* Fester Block oben (Edgar, 14.10.2026: „mach diesen Bereich oben fest, wenn ich blättere, möchte ich den Bereich noch sehen“): bleibt unter der Kopfleiste der Seite (`.topbar`, sticky, 50 px) stehen. Der Grund muss deckend sein, sonst
+   scheinen die Zeilen darunter durch. Die Höhe der Leiste und des Blocks setzt `Meshgenesisseite` (`--meshgenesis-leiste`, `--meshgenesis-oben`), 50 px ist nur der Wert vor dem ersten Messen. */
+.meshgenesis-oben { position: sticky; top: var(--meshgenesis-leiste, 50px); z-index: 40; background: var(--bg-primary, #0f0f1a); padding: 4px 0 2px; }
+.meshgenesis-oben > .card { margin: 0 0 4px; padding: 6px 12px; }
+.meshgenesis-oben .meshgenesis-attrappe { padding: 4px 12px; font-size: 0.85rem; }
+.meshgenesis-oben .meshgenesis-chips { margin: 6px 0 4px; }
+.meshgenesis-oben .meshgenesis-probeninfo { min-height: 1.2em; }
+.meshgenesis-oben .meshgenesis-probenkopf h2 { font-size: 1.05rem; }
+.meshgenesis-attrappe { border-left: 4px solid var(--warning, #f0ad4e); }
+.meshgenesis-attrappe strong { color: var(--warning, #f0ad4e); }
+/* Seit 15.10.2026: dasselbe Band, wenn die Seite echte Daten zeigt (ein Trainingslauf ist fertig). Grün wie der Fehler 0 mm. */
+.meshgenesis-echt { border-left: 4px solid #2fb36b; }
+.meshgenesis-echt strong { color: #2fb36b; }
+.meshgenesis-oben .meshgenesis-echt { padding: 4px 12px; font-size: 0.85rem; }
+
+.meshgenesis-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Überschrift der Jobseite: „Mesh-Genesis › Ursula1“, der erste Teil führt zur Liste. Die Liste (`meshgenesis_liste.html`) zeigt ihre Zeilen als Verweis. */
+.meshgenesis-zurueckzurliste { color: inherit; text-decoration: none; }
+.meshgenesis-zurueckzurliste:hover { text-decoration: underline; }
+.meshgenesis-pfad { opacity: 0.6; }
+.meshgenesistabelle tbody tr[data-id] { cursor: pointer; }
+/* Reiter „Formtraining“ (18.10.2026): was gerade läuft, steht fett mit Akzentstrich; Probeläufe gedämpft. */
+.meshgenesis-jetzt ul { margin: 0 0 6px; padding-left: 1.2em; }
+.meshgenesisformtabelle tbody tr.meshgenesis-laeuft td { font-weight: 700; }
+.meshgenesisformtabelle tbody tr.meshgenesis-laeuft td:first-child { box-shadow: inset 4px 0 0 var(--accent, #e94560); }
+.meshgenesisformtabelle tbody tr.meshgenesis-probelauf td { opacity: 0.65; }
+.meshgenesis-zusammenfassung { display: flex; gap: 24px; flex-wrap: wrap; margin-left: auto; font-size: 0.9rem; }
+.meshgenesis-zusammenfassung b { font-variant-numeric: tabular-nums; }
+
+/* Statuskarte „Datensatz und Training“ (14.10.2026): echte Zahlen von der Platte, `meshgenesisstand.js`. */
+.meshgenesis-stand { margin: 8px 0; }
+.meshgenesis-standkopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.meshgenesis-standkopf h2 { margin: 0; font-size: 1.05rem; }
+.meshgenesis-standzeile { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0; }
+.meshgenesis-standbalken { width: clamp(140px, 22vw, 320px); accent-color: var(--accent, #e94560); }
+/* Die Seitenstile geben jeder Tabelle einen dunklen Grund (rgb 22,33,62) und der Kopfzeile Grau (136) — auf der Karte, die im hellen Theme weiß ist, stand dunkle Schrift auf dunklem Grund (gesehen 15.10.2026, Zellen unlesbar).
+   Darum Grund durchsichtig und Farbe geerbt: so gilt es in beiden Themes. `width: auto`, sonst zieht die Seite die Tabelle auf die ganze Kartenbreite (2.032 px bei acht Zahlenspalten). */
+.meshgenesis-standtabelle { width: auto; border-collapse: collapse; margin: 8px 0; font-size: 0.88rem; background: transparent; color: inherit; }
+.meshgenesis-standtabelle th, .meshgenesis-standtabelle td { padding: 3px 12px; border-bottom: 1px solid rgba(128, 128, 128, 0.3); text-align: left; background: transparent; color: inherit; }
+.meshgenesis-standtabelle th { font-weight: 600; }
+.meshgenesis-standtabelle td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.meshgenesis-stand pre { margin: 6px 0 0; font-size: 0.8rem; white-space: pre-wrap; }
+
+/* Tabelle „Wie gut?“ unter jedem Ergebnis (16.10.2026, `meshgenesisguete.js`): durchsichtig mit geerbter Farbe wie die Statuskarte — die Seitenstile legen sonst jeder Tabelle einen dunklen Grund unter. */
+.meshgenesis-guetetabelle { width: auto; border-collapse: collapse; margin: 4px 0 6px; font-size: 0.8rem; background: transparent; color: inherit; }
+.meshgenesis-guetetabelle th, .meshgenesis-guetetabelle td { padding: 1px 10px 1px 0; border-bottom: 1px solid rgba(128, 128, 128, 0.25); text-align: left; background: transparent; color: inherit; }
+.meshgenesis-guetetabelle th { font-weight: 600; }
+.meshgenesis-guetetabelle td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Proben: Kopf mit Knöpfen, darunter ein Kästchen je Probe (Farbe nach Aufteilung, Rand nach Fehler) */
+.meshgenesis-probenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.meshgenesis-probenkopf h2 { margin: 0; }
+.meshgenesis-probenknoepfe { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.meshgenesis-probenzaehler { min-width: 6em; text-align: center; font-variant-numeric: tabular-nums; }
+.meshgenesis-filter { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; }
+.meshgenesis-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 6px; }
+/* Hintergründe als halbdurchsichtiges Grau statt `--bg-secondary`: das war im hellen Theme dunkel, die Nummer darauf dunkel auf dunkel (gesehen 14.10.2026) — so gilt es in beiden Themes. */
+.meshgenesis-chip { min-width: 2.2em; padding: 3px 6px; border-radius: 4px; border: 2px solid transparent; background: rgba(128, 128, 128, 0.2); color: inherit; font-size: 0.8rem; cursor: pointer; font-variant-numeric: tabular-nums; }
+.meshgenesis-chip[data-aufteilung="pruefung"] { background: rgba(240, 173, 78, 0.38); }
+.meshgenesis-chip[data-fehler="mittel"] { border-bottom-color: #e0b341; }
+.meshgenesis-chip[data-fehler="hoch"] { border-bottom-color: #e5484d; }
+.meshgenesis-chip[aria-selected="true"] { border-color: var(--accent, #e94560); font-weight: 700; }
+.meshgenesis-probeninfo { font-size: 0.9rem; min-height: 1.4em; }
+.meshgenesis-marke { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.78rem; margin-left: 6px; background: rgba(128, 128, 128, 0.22); }
+.meshgenesis-marke.pruefung { background: rgba(240, 173, 78, 0.45); }
+/* Wege zum Rig einer Probe (Job UrsulaSpagat, `meshgenesiswegwahl.js`): Knöpfe in der Zeile der Probe. */
+.meshgenesis-wegwahl { display: inline-flex; vertical-align: middle; margin-left: 12px; }
+.meshgenesis-wegwahl-titel { margin-right: 2px; font-size: 0.85rem; opacity: 0.8; }
+
+/* Drei Bereiche nebeneinander, bei schmalem Fenster untereinander */
+.meshgenesis-bereiche { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .meshgenesis-bereiche { grid-template-columns: minmax(0, 1fr); } }
+.meshgenesis-bereich { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.meshgenesis-bereich h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+/* Der Hinweistext hat in den drei Spalten verschieden viele Zeilen — mit `min-height` allein (`3em` ohne die 24 px Innenabstand) säße das Feld der dritten Spalte 13 px höher (gemessen 14.10.2026: 429/429/410). Darum teilen sich die drei Karten die Zeilen
+   des Rasters (`subgrid`): Überschrift, Hinweis, Feld, Text und Knöpfe stehen in jeder Spalte auf derselben Höhe, egal wie breit das Fenster ist. */
+/* Sieben Zeilen (16.10.2026): seit der Tabelle „Wie gut?“ hat das Ergebnis sieben Teile — mit `span 6` fiel das siebte (Kästchen „Ziel als Geist“) in die letzte Zeile, auf die Download-Knöpfe (Edgar: „Formatierung?“).
+   Ein Subgrid legt keine Zeilen an, es stapelt Überzähliges in der letzten. Darum feste Zeilen für die Teile, die nicht jede Karte hat: Tabelle 5, Download 6, Geist 7 — die Download-Knöpfe stehen in allen drei Karten auf einer Höhe. */
+/* Acht Zeilen (22.10.2026): die Animationsleiste des Ergebnisses (`_meshgenesis_figurbewegung.html`) bekam keine eigene und lag auf dem Kästchen „Ziel als Geist“ — Edgars Klicks auf Play trafen das Kästchen
+   (client.log). Jetzt Zeile 4 direkt unter dem Feld; der Text darunter nimmt in Karten ohne Leiste die Zeilen 4–5, damit dort keine Lücke bleibt. */
+.meshgenesis-bereiche > .meshgenesis-bereich { display: grid; grid-row: span 8; grid-template-rows: subgrid; row-gap: 6px; }
+.meshgenesis-bereiche > .meshgenesis-bereich > .meshgenesis-figurbewegung { grid-row: 4; }
+.meshgenesis-bereiche > .meshgenesis-bereich > .meshgenesis-bereichsinfo { grid-row: 4 / span 2; }
+.meshgenesis-bereiche > .meshgenesis-bereich:has(> .meshgenesis-figurbewegung) > .meshgenesis-bereichsinfo { grid-row: 5; }
+.meshgenesis-bereiche > .meshgenesis-bereich > .meshgenesis-guete { grid-row: 6; }
+.meshgenesis-bereiche > .meshgenesis-bereich > .meshgenesis-download { grid-row: 7; }
+.meshgenesis-bereiche > .meshgenesis-bereich > .meshgenesis-geistwahl { grid-row: 8; }
+/* Vier Felder, wenn die Probe das Zwischenbild „Rig → A-Pose“ hat (17.10.2026); das verborgene Feld braucht `display: none` ausdrücklich — `display: grid` oben schlägt das Attribut `hidden`. */
+.meshgenesis-bereiche.meshgenesis-bereiche-vier { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .meshgenesis-bereiche.meshgenesis-bereiche-vier { grid-template-columns: minmax(0, 1fr); } }
+.meshgenesis-bereiche > .meshgenesis-bereich[hidden] { display: none; }
+.meshgenesis-bereich > .hb-hinweis { margin: 0; }
+.meshgenesis-nummer { display: inline-flex; align-items: center; justify-content: center; width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent, #e94560); color: #fff; font-size: 0.85rem; }
+/* Höhe nach dem Fenster, nicht nach der Breite: bei drei Spalten auf einem breiten Bildschirm wäre 3:4 so hoch, dass man scrollen muss, um eine Figur ganz zu sehen. */
+.meshgenesis-leinwand { position: relative; width: 100%; height: clamp(320px, 62vh, 760px); background: #1b1f27; border-radius: 6px; overflow: hidden; }
+.meshgenesis-leinwand canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.meshgenesis-leinwand .meshgenesis-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a6; font-size: 0.9rem; }
+.meshgenesis-bereichsinfo { font-size: 0.85rem; min-height: 3.2em; white-space: pre-line; }
+
+/* Zeilen unter dem ganzen Körper (Gesicht, Hände/Füße, Kleider, 14.10.2026): eine Karte je Zeile, darin drei Felder ohne eigene Karte. Niedriger als der ganze Körper, weil Ausschnitte weniger Höhe brauchen. */
+/* Name der Zeile und gleich daneben die Reihe der Ansichtsarten (Schaltknöpfe aus `schaltknoepfe.css`) — die erste Fassung war ein Auswahlfeld am rechten Rand und wurde übersehen. */
+/* Der Kopf der Zeile (Name und Ansichtsarten) bleibt unter dem festen Block hängen, solange die Zeile zu sehen ist: `background: inherit` nimmt den Grund der Karte (weiß), im ganzen Körper den der Seite. */
+.meshgenesis-zeilenkopf { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; margin: 0 0 6px; padding: 4px 0; position: sticky; top: calc(var(--meshgenesis-leiste, 50px) + var(--meshgenesis-oben, 0px)); z-index: 30; background: inherit; }
+.meshgenesis-zeilenkopf h2 { margin: 0; }
+.meshgenesis-ansichtwahl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.meshgenesis-ansichtname { font-size: 0.85rem; color: var(--text-muted, #8a93a6); }
+.meshgenesis-ansicht .schaltknopf, .meshgenesis-rigleiste .schaltknopf { padding: 5px 10px; }
+.meshgenesis-rigleiste { margin-left: 10px; padding-left: 12px; border-left: 1px solid var(--border, #3a4254); }
+/* Animationsleiste einer Zeile: Play, Regler (Tausendstel der Bewegung) und Zähler; die Breite des Zählers ist fest, damit der Regler beim Spielen nicht wandert. */
+.meshgenesis-animation { display: flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 12px; border-left: 1px solid var(--border, #3a4254); }
+.meshgenesis-play { padding: 5px 10px; min-width: 5.6em; }
+.meshgenesis-bildregler { width: clamp(110px, 12vw, 220px); accent-color: var(--accent, #e94560); }
+.meshgenesis-bildzaehler { font-size: 0.82rem; font-variant-numeric: tabular-nums; min-width: 17em; }
+.meshgenesis-koerperzeile > .meshgenesis-zeilenkopf { margin: 6px 0 8px; background: var(--bg-primary, #0f0f1a); }
+.meshgenesis-download { align-items: center; }
+.meshgenesis-teilzeile > h2 { margin: 0 0 4px; }
+.meshgenesis-teilzeile > .hb-hinweis { margin: 0 0 10px; }
+.meshgenesis-feld { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.meshgenesis-feld h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.meshgenesis-teilzeile .meshgenesis-leinwand { height: clamp(260px, 44vh, 520px); }
+.meshgenesis-teilzeile .meshgenesis-bereichsinfo { min-height: 4.6em; }
+.meshgenesis-bereichsknoepfe { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Kennzahlen */
+.meshgenesis-werte { display: grid; grid-template-columns: repeat(auto-fill, minmax(14em, 1fr)); gap: 8px 20px; margin: 6px 0; }
+.meshgenesis-wert { display: flex; flex-direction: column; }
+.meshgenesis-wert span { font-size: 0.78rem; color: var(--text-secondary, #aab); }
+.meshgenesis-wert b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+/* Testseite (16.10.2026, Reiter „Test“): zwei Felder — Mesh und Ausgabe. */
+.meshgenesis-bereiche.meshgenesis-bereiche-zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .meshgenesis-bereiche.meshgenesis-bereiche-zwei { grid-template-columns: minmax(0, 1fr); } }
+
+/* Wahl weiblich/männlich oben auf der Testseite (16.10.2026 abends). */
+.meshgenesis-test-einstellung { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 6px 0 10px; border-bottom: 1px solid var(--border, #3a4254); }
+.meshgenesis-test-einstellung label { font-weight: 600; }
+.meshgenesis-test-einstellung select { min-width: 9em; }
+.meshgenesis-test-figur { color: var(--text-muted, #8a93a6); }
+/* Kleider und Bestandteile eines Tests (17.10.2026 nachts, `Meshgenesistestkleider`). */
+.meshgenesis-kleider { margin-top: 12px; }
+.meshgenesis-kleider-titel { align-self: center; margin-right: 4px; font-weight: 600; }
+.meshgenesis-kleider-wahl { flex-wrap: nowrap; }
+
+/* Standardanimation der Ergebnisfigur (`_meshgenesis_figurbewegung.html`): die Regeln der Leiste stehen seit 31.10.2026 in figurbewegung.css (auch auf der Jobseite von Foto-Genesis). */
+/* Name und Kategorie je Stück in der Kleiderkarte der Testseite (22.10.2026, `Meshgenesistestkleidname`). */
+.meshgenesis-kleider-stueckname { width: 100%; min-width: 14em; }
+.meshgenesis-kleider-kategorie { min-width: 9em; }
+/* Datum und Dauer des Laufs im festen Block oben (22.10.2026, `Meshgenesislaufzeile`). */
+.meshgenesis-laufzeile { font-size: 0.88rem; margin-top: 4px; color: var(--text-muted, #8a93a6); }
+.meshgenesis-laufzeile b { color: var(--text-primary, inherit); font-weight: 600; }

@@ -42,7 +42,7 @@ export class Exportleistefigur {
     }
 
     /**
-     * Die Figur ganz gebaut, in der feinen Stufe. Auf Seiten mit Schnellanzeige (Mesh3D-AI) ist „grob" gewählt und die Figur bleibt im Käfig — gemessen am ersten Export
+     * Die Figur ganz gebaut, in der feinen Stufe. Auf Seiten mit Schnellanzeige (Mesh-Genesis) ist „grob" gewählt und die Figur bleibt im Käfig — gemessen am ersten Export
      * (31.10.2026, Test edgar): Körper 50.312 Dreiecke statt der feinen Stufe. Dann holt diese Figur allein die feine Stufe nach (`Genesis9haeppchen`, wie Strg+Alt+H), die Wahl der
      * Seite bleibt danach „grob". Die Quelle ruft das, bevor sie ihre Stücke an das Skelett der neuen Stufe bindet.
      */

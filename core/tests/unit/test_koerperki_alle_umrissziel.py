@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Tests für `KoerperKI_alle.umrissziel.Umrissziel` (24.10.2026, Besitzer 2d-3d-AI): Abstand zum Umriss, Haut, nah, Deckung — an einem Quadrat als Person.
+"""Tests für `KoerperKI_alle.umrissziel.Umrissziel` (24.10.2026, Besitzer Foto-Genesis): Abstand zum Umriss, Haut, nah, Deckung — an einem Quadrat als Person.
 
-WARUM: Das Einpassen der Figur in die Fotos (`KoerperKI_Fotos.Fotoeinpassung`) rechnet Umriss, Haut und Rand nur über diese Klasse, und Mesh3D-AI kann sie für gerenderte Netzansichten nehmen.
+WARUM: Das Einpassen der Figur in die Fotos (`KoerperKI_Fotos.Fotoeinpassung`) rechnet Umriss, Haut und Rand nur über diese Klasse, und Mesh-Genesis kann sie für gerenderte Netzansichten nehmen.
 Ein Abstandsfeld, das in Bildpunkten der kleinen Karte statt des ganzen Bildes misst, oder ein Rand, der nach außen nicht weiter wächst, ließe die Figur stumm aus dem Umriss laufen.
 """
 import sys

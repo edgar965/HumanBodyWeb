@@ -24,7 +24,7 @@ DREI FEHLALARM-KLASSEN sind ausgeschlossen, jede an einem echten Fall belegt
 
 Ohne diese drei Filter meldete der erste Lauf 59 Fälle, von denen vier echt
 waren. Dazu (18.10.2026) **`querySelector('#kennung')`**: wörtlich mit Raute
-gegriffen ist so gut wie `getElementById` — das Namensfeld der Mesh3D-AI-Testseite
+gegriffen ist so gut wie `getElementById` — das Namensfeld der Mesh-Genesis-Testseite
 galt sonst als stumm, obwohl es beim Speichern gelesen wird.
 """
 
@@ -136,8 +136,8 @@ class Bedienelemente:
                 continue
             literale.add(wert)
             if wert.startswith('#'):
-                # `querySelector('#mesh3dai-kleider-name')` greift das Element wie `getElementById` (18.10.2026: das Namensfeld der
-                # Mesh3D-AI-Testseite wird beim Speichern gelesen und galt als stumm).
+                # `querySelector('#meshgenesis-kleider-name')` greift das Element wie `getElementById` (18.10.2026: das Namensfeld der
+                # Mesh-Genesis-Testseite wird beim Speichern gelesen und galt als stumm).
                 literale.add(wert[1:])
             if wert.endswith('-'):
                 praefixe.add(wert.rstrip('-'))

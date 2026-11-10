@@ -1,0 +1,23 @@
+{% comment %}28.10.2026, Edgar: „sollen wir eine extra Zeile ganz oben machen mit den 3 Views, wo das Genesis Modell mit dieser Mesh Methode gerechnet wird? also Kopie der Zeile und das
+dritte Bild mit dem Mesh Modell anstelle von Genesis“ — `Fotogenesismeshzeile` (fotogenesismeshzeile.js): Foto · geometrische Figur · die Genesis-Figur aus `Genesis9.meshgenesis`
+(`genesis` in training_figur.json, `mesh_auf_genesis.py`). Nur mit gerechneter Figur eingebunden (fotogenesis.html).{% endcomment %}
+<div class="fotogenesis-zeile fotogenesis-meshzeile" id="fotogenesis-meshzeile">
+    <div class="fotogenesis-bereiche{% if daten.smplx %} fotogenesis-bereiche-vier{% endif %}">
+        <section class="card fotogenesis-bereich">
+            <h2><span class="fotogenesis-nummer">1</span> Fotos</h2>
+            <div class="fotogenesis-leinwand fotogenesis-fotofeld" data-feld="mesh-foto"></div>
+        </section>
+        <section class="card fotogenesis-bereich">
+            <h2><span class="fotogenesis-nummer">2</span> Geometrische Figur</h2>
+            <div class="fotogenesis-leinwand" data-feld="mesh-geometrie"></div>
+        </section>
+        <section class="card fotogenesis-bereich">
+            <h2><span class="fotogenesis-nummer">3</span> Genesis-Modell (Mesh-Methode)</h2>
+            <div class="fotogenesis-leinwand" data-feld="mesh-genesis"></div>
+            <p class="hb-hinweis" data-mesh-info></p>
+            {# Abspielleiste (31.10.2026, `Fotogenesisbewegung`): der Körper der Genesis-Figur in Bewegung #}
+            {% if daten.test.eigen %}{% url 'fotogenesis_standardanimation' job.id as bewegung_adresse %}{% include "_meshgenesis_figurbewegung.html" with adresse=bewegung_adresse %}{% endif %}
+        </section>
+        {% if daten.smplx %}{% include "_fotogenesis_smplxfeld.html" with feld="mesh-smplx" nummer=4 %}{% endif %}
+    </div>
+</div>

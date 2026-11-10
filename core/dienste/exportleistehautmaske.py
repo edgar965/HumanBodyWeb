@@ -12,7 +12,7 @@ Seit dem Abend des 31.10.2026 wird der Körper vor der Maske an gleichen Lagen v
 im Render alle Nägel weg (Messung dort).
 
 Welche Stücke decken, sagt die Seite (`stellung.haut_deckt`, die Knotennamen der Stücke, unter denen die Szene die Haut ausblendet — kein Haar ohne Kostüm); ohne Angabe decken
-alle Stücke mit deckendem Material (durchsichtige `MASK`/`BLEND` nie). Wie tief: mit der Tiefe der Kostümstücke von Mesh3D-AI (`TIEFE_M` = `Mesh3daikikleiderfeld.STOFF_TIEFE_M`:
+alle Stücke mit deckendem Material (durchsichtige `MASK`/`BLEND` nie). Wie tief: mit der Tiefe der Kostümstücke von Mesh-Genesis (`TIEFE_M` = `Meshgenesiskikleiderfeld.STOFF_TIEFE_M`:
 der Körper ragt dort Zentimeter durch das Stück) und an den UV-Nähten verschweißt wie `Meshfighautstueck.verschweissen` (sonst ist jede Naht ein lockerer Rand mit freiem
 Streifen). Die Szene rechnet Stücke ohne Kostüm mit 5 mm und unverschweißt: an Test edgar 3.517 verdeckte Punkte, alle im Saumband, kein Dreieck weg (Chrome, 31.10.2026,
 `Hautverdeckung.anwendenAsync`); mit dieser Regel waren Render (10 Bilder, 16:43, deckend Hose und Uhr) und .blend sauber (Workbench, Hüfte in Bild 1, 250, 500, 750, 1000 von drei Seiten,

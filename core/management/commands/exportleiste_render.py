@@ -4,7 +4,7 @@
 Wie `engine2d3dkleider_render`, nur ohne Auftrag: GLB, Stellung, BVH und die Wahl der Seite stehen in `arbeit/render/auftrag.json`. Stufen: Render-Figur (`Exportleisterender.figur`),
 Bewegung rechnen (`quelle.bewegung`: derselbe Retarget wie im Browser, bei 2D3D Kleider der des Auftrags) und auf die Länge schneiden → Figurcache (CPU) → Stoff und Strähnen (GPU) →
 Render (Mitsuba, Entrauscher) und Video mit Ton; danach die Warteschlange von „Neu rendern". Programme aus dem Rezept des Modells (`Exportleisterender.rezept`).
-Die GPU-Stufen laufen unter der Gpusperre (`mesh3dai_gpusperre.Gpusperre`), damit kein Render einem Trainingslauf die Karte wegnimmt. Das Video: `ergebnis/render_video.mp4`,
+Die GPU-Stufen laufen unter der Gpusperre (`meshgenesis_gpusperre.Gpusperre`), damit kein Render einem Trainingslauf die Karte wegnimmt. Das Video: `ergebnis/render_video.mp4`,
 als Lauf mit Nummer (`Engine2d3dKleiderrenderlaeufe`) und als Kopie `<Name>_render.mp4` im Ordner der Seite (nie überschrieben: `_2`, `_3` …).
 """
 
@@ -25,7 +25,7 @@ logger = logging.getLogger('core')
 class Command(BaseCommand):
     help = 'Rendert die Figur einer Exportleiste mit Bewegung und Ton als Video.'
     TOOLS = r'A:\3DTools'
-    GPUSPERRE = r'A:\3DTools\mesh3dai'
+    GPUSPERRE = r'A:\3DTools\meshgenesis'
     GPU_BEDARF_GB = 8
 
     def add_arguments(self, parser):
@@ -115,7 +115,7 @@ class Command(BaseCommand):
         if auftrag.get('ton'):
             befehl += ['--ton', str(auftrag['ton'])]
         sys.path.insert(0, self.GPUSPERRE)
-        from mesh3dai_gpusperre import Gpusperre
+        from meshgenesis_gpusperre import Gpusperre
         render.melden(schritt='Wartet auf die Grafikkarte (Gpusperre)')
         with Gpusperre('exportleiste_render_%s' % render.job.kennung, bedarf=self.GPU_BEDARF_GB):
             if not speicher:                           # die Stufe `--gpu` des allgemeinen Rezepts simuliert nichts

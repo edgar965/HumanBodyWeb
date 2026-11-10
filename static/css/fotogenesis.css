@@ -1,0 +1,170 @@
+/* Seiten „Foto-Genesis“ (24.10.2026): leere Kopie der Seiten von Mesh-Genesis — abgeschrieben aus `meshgenesis.css` (Stand 24.10.2026), nur was die leeren Seiten brauchen.
+   Eigene Datei und eigene Klassen (`fotogenesis-*`), damit sich Foto-Genesis ändern kann, ohne Mesh-Genesis mitzuziehen. */
+
+/* Fester Block oben (wie Mesh-Genesis): bleibt unter der Kopfleiste (`.topbar`, 50 px) stehen, deckender Grund. Mesh-Genesis misst die Höhe der Leiste per Skript;
+   die leere Seite hat keines, `--fotogenesis-leiste` bleibt bei 50 px. Die Zeilenköpfe hängen hier deshalb NICHT fest — ohne gemessene Blockhöhe lägen sie unter dem Block. */
+.fotogenesis-oben { position: sticky; top: var(--fotogenesis-leiste, 50px); z-index: 40; background: var(--bg-primary, #0f0f1a); padding: 4px 0 2px; }
+.fotogenesis-oben > .card { margin: 0 0 4px; padding: 6px 12px; }
+.fotogenesis-oben .fotogenesis-band { padding: 4px 12px; font-size: 0.85rem; }
+.fotogenesis-oben .fotogenesis-probenkopf h2 { font-size: 1.05rem; }
+.fotogenesis-band { border-left: 4px solid var(--text-muted, #8a93a6); }
+/* Feld „Körpergröße“ im Band oben (24.10.2026, `fotogenesiskoerpergroesse.js`) */
+.fotogenesis-groesse { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; flex-wrap: wrap; }
+.fotogenesis-groesse input { width: 5.5em; padding: 2px 6px; }
+.fotogenesis-groesse .hb-hinweis { margin: 0; }
+
+.fotogenesis-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fotogenesis-zurueckzurliste { color: inherit; text-decoration: none; }
+.fotogenesis-zurueckzurliste:hover { text-decoration: underline; }
+.fotogenesis-pfad { opacity: 0.6; }
+.fotogenesis-jetzt ul { margin: 0 0 6px; padding-left: 1.2em; }
+
+.fotogenesis-probenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.fotogenesis-probenkopf h2 { margin: 0; }
+.fotogenesis-probeninfo { font-size: 0.9rem; min-height: 1.4em; }
+.fotogenesis-standkopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.fotogenesis-standkopf h2 { margin: 0; font-size: 1.05rem; }
+
+/* Drei Felder nebeneinander, bei schmalem Fenster untereinander; die Testseite hat zwei. */
+.fotogenesis-bereiche { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .fotogenesis-bereiche { grid-template-columns: minmax(0, 1fr); } }
+.fotogenesis-bereiche.fotogenesis-bereiche-zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .fotogenesis-bereiche.fotogenesis-bereiche-zwei { grid-template-columns: minmax(0, 1fr); } }
+.fotogenesis-bereich { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.fotogenesis-bereich h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.fotogenesis-bereich > .hb-hinweis { margin: 0; }
+.fotogenesis-feld { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fotogenesis-feld h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.fotogenesis-nummer { display: inline-flex; align-items: center; justify-content: center; width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent, #e94560); color: #fff; font-size: 0.85rem; }
+.fotogenesis-leinwand { position: relative; width: 100%; height: clamp(320px, 62vh, 760px); background: var(--fotogenesis-grund, #1b1f27); border-radius: 6px; overflow: hidden; }
+.fotogenesis-leinwand .fotogenesis-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a6; font-size: 0.9rem; }
+.fotogenesis-teilzeile .fotogenesis-leinwand { height: clamp(260px, 44vh, 520px); }
+
+.fotogenesis-zeilenkopf { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; margin: 0 0 6px; padding: 4px 0; }
+.fotogenesis-zeilenkopf h2 { margin: 0; }
+.fotogenesis-koerperzeile > .fotogenesis-zeilenkopf { margin: 6px 0 8px; }
+
+/* Jobseite seit 24.10.2026 abends (Fotos · Netz · Genesis-Modell · Ergebnis): vier Felder, Bedienleiste im festen Block, Vergleichskarte. */
+.fotogenesis-band .btn { margin-left: 8px; }
+.fotogenesis-steuerung { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; }
+.fotogenesis-steuergruppe { display: flex; align-items: center; gap: 8px; }
+.fotogenesis-steuername { font-size: 0.85rem; color: var(--text-muted, #8a93a6); }
+.fotogenesis-steuerung .schaltknopf { padding: 4px 10px; }
+/* Leiste einer Zeile (04.11.2026, `Fotogenesiszeilenleiste`): Ansicht, Kleider, Rig in einer Reihe wie die Leiste der PSHuman-Eingabe (`.card` stellt sonst auf Spalte) */
+.fotogenesis-zeilenleiste { flex-direction: row; justify-content: center; padding: 6px 12px; margin-bottom: 8px; }
+.fotogenesis-bereiche.fotogenesis-bereiche-vier { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1300px) { .fotogenesis-bereiche.fotogenesis-bereiche-vier { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .fotogenesis-bereiche.fotogenesis-bereiche-vier { grid-template-columns: minmax(0, 1fr); } }.fotogenesis-leinwand canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+/* Texte im Feld (`Meshgenesisansicht.hinweis` trägt die Klasse von Mesh-Genesis). */
+.fotogenesis-leinwand .meshgenesis-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; text-align: center; color: #8a93a6; font-size: 0.9rem; }
+.fotogenesis-fotofeld { background: var(--fotogenesis-grund, rgb(25, 26, 46)); }
+.fotogenesis-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.fotogenesis-ergebnisfeld { display: flex; align-items: center; justify-content: center; background: var(--fotogenesis-grund, rgb(25, 26, 46)); }
+.fotogenesis-ergebnisfeld canvas.fotogenesis-rendering { position: static; width: auto; height: auto; max-width: 100%; max-height: 100%; }
+.fotogenesis-daumen { display: flex; gap: 4px; flex-wrap: wrap; }
+.fotogenesis-daumen button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px; background: transparent; border: 2px solid transparent; border-radius: 4px; color: inherit; font-size: 0.72rem; cursor: pointer; }
+.fotogenesis-daumen button[aria-pressed="true"] { border-color: var(--accent, #e94560); }
+.fotogenesis-daumen img { height: 64px; width: auto; display: block; }
+.fotogenesis-vergleich { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.fotogenesis-vergleichssumme { flex-basis: 100%; margin: 0; font-weight: 600; }
+.fotogenesis-vergleichsspalte { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.fotogenesis-vergleichsspalte figcaption { font-size: 0.82rem; max-width: 600px; }
+.fotogenesis-vergleichsbilder { display: flex; gap: 4px; }
+.fotogenesis-vergleichsbilder img, .fotogenesis-vergleichsbilder canvas { width: 192px; height: auto; display: block; border-radius: 3px; background: var(--fotogenesis-grund, rgb(25, 26, 46)); }
+
+/* Tabelle „Kleider und Bestandteile“ der Testseite: durchsichtig mit geerbter Farbe — die Seitenstile legen jeder Tabelle einen dunklen Grund unter (Mesh-Genesis, gesehen 17.10.2026). */
+.fotogenesis-kleider, .fotogenesis-testfaelle { margin-top: 12px; }
+.fotogenesis-kleider-tabelle { width: 100%; margin: 6px 0 10px; }
+.fotogenesis-kleider-tabelle, .fotogenesis-kleider-tabelle thead, .fotogenesis-kleider-tabelle tbody, .fotogenesis-kleider-tabelle tr,
+.fotogenesis-kleider-tabelle th, .fotogenesis-kleider-tabelle td { background: transparent; color: inherit; }
+.fotogenesis-kleider-tabelle th, .fotogenesis-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }
+
+/* Karte „Kopf (KopfKI)“ (24.10.2026): Messwerte des Kopfs und die drei Messbilder — die Bilder sind groß, ein Klick öffnet sie ganz. */
+.fotogenesis-urteil { font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #8a5a00; color: #fff; vertical-align: middle; }
+.fotogenesis-kopftabelle { margin: 6px 0; }
+.fotogenesis-kopftabelle, .fotogenesis-kopftabelle thead, .fotogenesis-kopftabelle tbody, .fotogenesis-kopftabelle tr, .fotogenesis-kopftabelle th, .fotogenesis-kopftabelle td { background: transparent; color: inherit; }
+.fotogenesis-kopftabelle th, .fotogenesis-kopftabelle td { padding: 4px 10px; border-bottom: 1px solid var(--border, #3a4254); }
+.fotogenesis-kopftabelle tr.fotogenesis-eigen td { font-weight: 700; }
+.fotogenesis-kopfbilder { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.fotogenesis-kopfbild { margin: 0; flex: 1 1 300px; max-width: 520px; }
+.fotogenesis-kopfbild img { width: 100%; height: auto; display: block; border-radius: 4px; }
+.fotogenesis-kopfbild figcaption { font-size: 0.82rem; margin-top: 4px; }
+.fotogenesis-kopfbild-breit { flex-basis: 100%; max-width: 1400px; }
+/* Foto Vorlage - Ergebnis (24.10.2026): je Foto eine Zeile, links Foto, rechts Ergebnis */
+.fotogenesis-kopfbild-zeile { flex: 0 0 100%; max-width: none; }
+.fotogenesis-kopfbild-zeile img { width: auto; max-width: min(100%, 900px); }
+/* Testzeile „Messpunkte des Körpers“ (24.10.2026, `Fotogenesismesspunkte`): drei Ansichten mit Punkten, daneben die Tabelle (so hoch wie die Ansichten, rollt) */
+.fotogenesis-messkarte { margin-top: 12px; }
+.fotogenesis-messkarte h2 { margin: 0 0 4px; }
+.fotogenesis-messkarte > .hb-hinweis { margin: 0 0 6px; }
+.fotogenesis-mess-warnung { color: #ffb84d; font-weight: 700; }
+.fotogenesis-messzeile { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(420px, 1.25fr); gap: 12px; align-items: start; }
+@media (max-width: 1400px) { .fotogenesis-messzeile { grid-template-columns: repeat(3, minmax(0, 1fr)); } .fotogenesis-messtabelle { grid-column: 1 / -1; } }
+/* Feld 4 der Kopfzeilen: die Geometrie des Trainings (27.10.2026) — vier Bilder in einer Reihe, die Tabelle darunter */
+.fotogenesis-messzeile:has(.fotogenesis-training) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fotogenesis-messzeile:has(.fotogenesis-training) .fotogenesis-messtabelle { grid-column: 1 / -1; }
+.fotogenesis-training [data-training-info] { margin: 0; align-self: stretch; }
+.fotogenesis-messansicht { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.fotogenesis-messansicht figcaption { align-self: stretch; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; }
+.fotogenesis-messansicht canvas { display: block; border-radius: 4px; background: #fff; }
+.fotogenesis-messtabelle { max-height: 680px; overflow-y: auto; font-size: 0.82rem; }
+.fotogenesis-messtabelle table { width: 100%; margin: 0; }
+.fotogenesis-messtabelle thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+.fotogenesis-messtabelle td, .fotogenesis-messtabelle th { padding: 2px 8px; }
+.fotogenesis-messtabelle td:nth-child(3), .fotogenesis-messtabelle td:nth-child(4) { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Die Karte ist weiß (gemessen: Grund rgb(255, 255, 255), Schrift rgb(33, 37, 41)) */
+.fotogenesis-messtabelle tr[data-nummern]:hover td { background: rgba(28, 126, 214, 0.12); }
+.fotogenesis-messtabelle tr.fotogenesis-mess-ueber td { background: rgba(224, 49, 49, 0.12); color: #a51d1d; font-weight: 600; }
+.fotogenesis-messtabelle tr.fotogenesis-mess-offen td { color: #6c757d; font-style: italic; }
+.fotogenesis-messtabelle tr.fotogenesis-mess-gruppe td { font-weight: 700; padding-top: 8px; color: inherit; }
+/* Ampel und Blöcke (26.10.2026, Seite aufgeräumt, Fotogenesisbloecke) */
+.fotogenesis-ampel { overflow-x: auto; }
+.fotogenesis-ampel td.fotogenesis-ampel-gruen { background: #d3f9d8; cursor: pointer; }
+.fotogenesis-ampel td.fotogenesis-ampel-rot { background: #ffe3e3; color: #c92a2a; font-weight: 600; cursor: pointer; }
+.fotogenesis-ampel td.fotogenesis-ampel-leer { color: #adb5bd; }
+.fotogenesis-fotowahl { display: inline-flex; gap: 4px; margin-left: 12px; vertical-align: middle; }
+/* eine Zeile je Bild im Block (27.10.2026, Fotogenesisbloecke._zeilen) */
+.fotogenesis-blockzeile { margin-top: 12px; padding-top: 8px; border-top: 1px solid #dee2e6; }
+.fotogenesis-fotoknopf { font-size: 0.8rem; padding: 2px 8px; border: 1px solid #adb5bd; border-radius: 4px; background: #fff; cursor: pointer; }
+.fotogenesis-fotoknopf.aktiv { background: #e03131; border-color: #e03131; color: #fff; }
+.fotogenesis-einzeln > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.fotogenesis-ergebnisfeld canvas.fotogenesis-rendering.fotogenesis-wiefoto { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; }
+
+/* PSHuman-Eingabe (03.11.2026, `fotogenesis_pshumaneingabe.html`, `fotogenesispshumaneingabe.js`): sechs Bildplätze nebeneinander, bei schmalem Fenster drei bzw. zwei. */
+.fotogenesis-pshumaneingabe-kopf { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.fotogenesis-pshumaneingabe-kopf h2 { margin: 0; font-size: 1.05rem; }
+.fotogenesis-pshumanvorschlag > summary { cursor: pointer; }
+.fotogenesis-pshumanvorschlag ul { margin: 4px 0 0; padding-left: 1.2em; font-size: 0.9rem; }
+.fotogenesis-pshumanplaetze { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1100px) { .fotogenesis-pshumanplaetze { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .fotogenesis-pshumanplaetze { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fotogenesis-pshumanplatz { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fotogenesis-pshumanplatz-bild { position: relative; aspect-ratio: 3 / 5; display: flex; align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--border, #3a4254); border-radius: 6px; overflow: hidden; }
+.fotogenesis-pshumanplatz-bild img { max-width: 100%; max-height: 100%; min-width: 0; object-fit: contain; flex: 1 1 0; }
+.fotogenesis-pshumanplatz-erfunden .fotogenesis-pshumanplatz-bild { border-style: dashed; }
+.fotogenesis-pshumanplatz-text { position: absolute; left: 4px; right: 4px; bottom: 6px; text-align: center; font-size: 0.8rem; color: var(--text-muted, #8a93a6); }
+.fotogenesis-pshumanplatz-knoepfe { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.fotogenesis-pshumanplatz .hb-hinweis { margin: 0; font-size: 0.8rem; }
+.fotogenesis-pshumaneingabe [hidden] { display: none !important; }
+/* Mit UP2You gehen alle Fotos des Jobs ein (05.11.2026) */
+.fotogenesis-up2youfotos { margin-bottom: 10px; }
+.fotogenesis-up2youfotos .hb-hinweis { margin: 0 0 4px; }
+.fotogenesis-up2youfotos-reihe { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.fotogenesis-up2youfotos-reihe img { width: 100%; height: 240px; object-fit: contain; border: 1px solid var(--border, #3a4254); border-radius: 4px; background: #fff; }
+.fotogenesis-umriss { width: 100%; height: 100%; }
+.fotogenesis-umriss-rahmen { fill: none; stroke: var(--border, #3a4254); stroke-width: 1; stroke-dasharray: 4 3; }
+.fotogenesis-umriss-boden { stroke: var(--border, #3a4254); stroke-width: 1; }
+.fotogenesis-umriss-rand > * { fill: var(--text-muted, #8a93a6); stroke: var(--text-muted, #8a93a6); }
+.fotogenesis-umriss-flaeche > * { fill: var(--bg-card, #1d2230); stroke: var(--bg-card, #1d2230); }
+.fotogenesis-pshumanplatz-bild img.fotogenesis-pshumanplatz-quadrat { width: 100%; height: 100%; max-height: none; object-fit: cover; }
+.fotogenesis-pshumanansicht { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+
+/* Regler „Haut angleichen“ unter dem Feld Genesis-Ergebnis (05.11.2026, Fotogenesishautangleich) */
+.fotogenesis-hautangleich { display: flex; flex-direction: column; gap: 6px; }
+.fotogenesis-hautangleich summary { cursor: pointer; font-weight: 600; }
+.fotogenesis-hautangleich .hb-hinweis { margin: 4px 0; }
+.fotogenesis-hautangleich-regler { display: flex; flex-direction: column; gap: 4px; }
+.fotogenesis-hautangleich-regler[hidden] { display: none; }
+.fotogenesis-hautangleich-regler label { display: grid; grid-template-columns: 11em minmax(0, 1fr) 3.5em; align-items: center; gap: 8px; font-size: 0.9rem; }
+.fotogenesis-hautangleich-regler output { text-align: right; font-variant-numeric: tabular-nums; }
+.fotogenesis-hautangleich-knoepfe { display: flex; gap: 8px; margin-top: 4px; }

@@ -1,0 +1,14 @@
+/* Knopf „Rechnen“, Fortschritt, Formular „Neuer Test“ und Auswahl zum Löschen auf Mesh-Genesis (23.10.2026) */
+.meshgenesis-rechnen { margin-bottom: 12px; }
+.meshgenesis-rechnen-kopf { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.meshgenesis-rechnen-balken { margin: 8px 0; height: 6px; }
+.meshgenesis-rechnen-balken .progress-fill-mini { display: block; height: 100%; }
+.meshgenesis-rechnen-schritte { margin: 4px 0 0; padding-left: 1.4em; color: inherit; }
+.meshgenesis-rechnen-schritte li { margin: 2px 0; }
+.meshgenesis-rechnen-fertig { color: var(--success, #3fb950); }
+.meshgenesis-rechnen-laeuft { font-weight: 600; }
+.meshgenesis-rechnen-fehler { color: var(--danger, #f85149); }
+.meshgenesis-rechnen-hinweis { list-style: none; margin-left: -1.4em; opacity: 0.8; font-style: italic; }
+.meshgenesis-testneu { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.meshgenesis-testneu h2, .meshgenesis-testneu > p { flex-basis: 100%; margin: 0; }
+td.meshgenesis-wahlzelle { cursor: default; width: 2.2em; text-align: center; }

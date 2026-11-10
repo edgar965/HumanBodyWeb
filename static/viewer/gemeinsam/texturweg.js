@@ -4,7 +4,7 @@ import { Genesis9texturbasis } from './genesis9texturbasis.js';
  * Texturweg — wie die Bilder der Genesis-Figuren auf die Grafikkarte kommen (19.10.2026).
  *
  * Edgar, nach der Untersuchung „ein Bildersatz kostet 1,7–2,8 s, weil 15 von 22 Bildern 4096² sind“: „mach alle 3, per Option einstellbar, default: A“
- * (Einstellungen → Mesh3D-AI, `Mesh3daitexturwahl`). Die SEITE wählt im Kopf — `<meta name="texturweg" content="klein" data-kante="1024">` —, wie bei `Schnellanzeige`;
+ * (Einstellungen → Mesh-Genesis, `Meshgenesistexturwahl`). Die SEITE wählt im Kopf — `<meta name="texturweg" content="klein" data-kante="1024">` —, wie bei `Schnellanzeige`;
  * ohne die Zeile (Charakter, Studio …) bleibt alles wie bisher.
  *
  *   klein        A  Adresse mit `kante=1024`: der Server liefert verkleinerte Kopien (`G9texturkopie`)
@@ -12,7 +12,7 @@ import { Genesis9texturbasis } from './genesis9texturbasis.js';
  *   komprimiert  C  Adresse mit `format=bc`: S3TC-Block mit Mip-Stufen (`G9texturblock`, `Genesis9texturblock`); ohne S3TC im Browser fällt `anmelden` auf A zurück
  *   uastc           Adresse mit `format=uastc` (und `raum=lin` für Bilder ohne Farbe): UASTC/KTX2 (`G9texturbasis`, `Genesis9texturbasis`), bis der Server es kodiert hat
  *                   der Block von C — nur /Charakter/ (Einstellungen → Charakter, `Szenentexturwahl`, 19.10.2026: „mach das“ nach dem KTX2-Versuch)
- * `data-rueckfall` sagt, was ohne S3TC gilt: fehlt es, 'klein' (Mesh3D-AI); /Charakter/ schreibt "" (volle Bilder wie bisher — verkleinert taugt dort nicht).
+ * `data-rueckfall` sagt, was ohne S3TC gilt: fehlt es, 'klein' (Mesh-Genesis); /Charakter/ schreibt "" (volle Bilder wie bisher — verkleinert taugt dort nicht).
  */
 export class Texturweg {
     static META = 'texturweg';

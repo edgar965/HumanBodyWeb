@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""G9texturblock — ein Bild der Daz-Bibliothek als Block für die Grafikkarte (S3TC), mit allen Mip-Stufen (19.10.2026, Weg C von `Mesh3daitexturwahl`).
+u"""G9texturblock — ein Bild der Daz-Bibliothek als Block für die Grafikkarte (S3TC), mit allen Mip-Stufen (19.10.2026, Weg C von `Meshgenesistexturwahl`).
 
 Ein 4096²-Bild als ImageBitmap kostet im Browser 53–92 ms `texSubImage2D` (einzeln), beim Laden bis 0,57 s; dazu `generateMipmap`. Als S3TC-Block (BC1: 8 Byte, BC3:
 16 Byte je 4 × 4 Pixel) geht es ohne Umwandlung auf die Karte, die Mip-Stufen liegen schon fertig darin. Ursprünglich war KTX2/Basis gemeint; dafür fehlt hier der

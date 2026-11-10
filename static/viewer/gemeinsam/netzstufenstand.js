@@ -32,7 +32,7 @@ export class Netzstufenstand {
 
     /**
      * Die Seite lädt noch, bevor sich eine Figur anmeldet (19.10.2026): zwischen Seitenaufbau und erster Figur stand rund 0,8 s „Netz: grob" ohne Sanduhr — als wäre
-     * alles da. Bis `seiteFertig` (die Seite hat ihre Figuren angestoßen, `Szenenaufbau.startsequenz`, `Mesh3daiseite`) oder spätestens `SEITE_MS` heißt es „lädt noch: Seite".
+     * alles da. Bis `seiteFertig` (die Seite hat ihre Figuren angestoßen, `Szenenaufbau.startsequenz`, `Meshgenesisseite`) oder spätestens `SEITE_MS` heißt es „lädt noch: Seite".
      */
     static SEITE_MS = 15000;
     static _seite = typeof document !== 'undefined';

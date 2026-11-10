@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Tests für `KoerperKI_alle.koerpermodell.Koerpermodell` (24.10.2026, Besitzer 2d-3d-AI) an einer echten gebauten Figur (`unit/_gebautefigur.py`) — im LongRunner (Genesis und Formmass2 ~5 s).
+"""Tests für `KoerperKI_alle.koerpermodell.Koerpermodell` (24.10.2026, Besitzer Foto-Genesis) an einer echten gebauten Figur (`unit/_gebautefigur.py`) — im LongRunner (Genesis und Formmass2 ~5 s).
 
 WARUM: Das Einpassen in die Fotos (`KoerperKI_Fotos.Fotoeinpassung`) bewegt Körperregler über diese Klasse, linear um die gebaute Figur. Zugesagt ist: an den Reglern der Figur IST es die Figur,
 die Häutung ist dieselbe wie in `Koerpernetz`, frei sind nur wirksame Körperregler — „den Kopf formt hier die KopfKI“ —, und die Näherung liegt nahe an der echten Formung.
 Im ersten EdgarTrip-Lauf (24.10.2026 14:26) waren 74 von 216 freien Reglern solche, die auch die Kopfform ändern (`uma:Face_headSize` 19 mm, `uma:Body_height` 48 mm, Alter, Kind; gemessen
-`ProjektTemp/_wegwerf/ai2d3d/kopfwirkung_probe.py`); Runde 1 setzte `uma:Face_headSize` auf +0,97, und die Figur wurde von 1,710 m auf 1,463 m kleiner (`figurgroesse_probe.py`).
+`ProjektTemp/_wegwerf/fotogenesis/kopfwirkung_probe.py`); Runde 1 setzte `uma:Face_headSize` auf +0,97, und die Figur wurde von 1,710 m auf 1,463 m kleiner (`figurgroesse_probe.py`).
 """
 import unittest
 

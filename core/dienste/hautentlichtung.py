@@ -4,7 +4,7 @@
 Edgar: „Würde sagen, Du machst das einstellbar, in % die Entlichtung ist, bei Einstellungen - 2d-3d-ai. Default voll entlichtete haut“. Die Haut-KI (`KoerperKI_alle.hautnetz.Hautnetz`) gibt
 je Texel eine Lichtkorrektur g aus (gelernt: Tripo-Haut ÷ wahre Haut, an den sechs Tripo-Jobs mit Wahrheit 0,70–1,59 je Kanal). 100 % = g ganz (Albedo, wie gelernt); 0 % = die gesehene Haut mit
 dem Licht des Eingangs, die erzeugte Haut mit demselben Licht wieder belichtet; dazwischen g^p. Gespeichert in `AppSettings.ui_prefs` (Formular als JSON an `/api/ui-prefs/`), gelesen beim
-Einsatz der Haut-KI (`mesh3dai/mesh3dai_hautki_einsatz.py`, `Hautkieinsatz`) — ein gerechneter Lauf bleibt, wie er ist.
+Einsatz der Haut-KI (`meshgenesis/meshgenesis_hautki_einsatz.py`, `Hautkieinsatz`) — ein gerechneter Lauf bleibt, wie er ist.
 """
 
 import logging

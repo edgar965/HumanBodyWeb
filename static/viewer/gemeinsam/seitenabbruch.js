@@ -4,7 +4,7 @@
  *
  * Gemessen (Chrome, Studio mit TechnoDance, 2,5 s nach dem Öffnen „Alle Jobs" geklickt): Das Studio stellt Dutzende Abrufe auf einmal; Chrome schickt
  * je Host sechs, der Rest wartet in Chromes Schlange und ging nach dem Klick noch 16 s lang zum Server (`django.log` 14:07:24–40: Retargets, Netze,
- * Texturen). Die neue Seite teilte sich den Server mit ihnen — `GET /mesh-3D-AI/` 12,9 s, bei Edgar 32,05 s (13:42:16–48, 204 Anfragen mit 64,9 s
+ * Texturen). Die neue Seite teilte sich den Server mit ihnen — `GET /mesh-genesis/` 12,9 s, bei Edgar 32,05 s (13:42:16–48, 204 Anfragen mit 64,9 s
  * Serverzeit daneben).
  *
  * Ab dem Ereignis `navigate` der Navigation API (ein anderes Dokument, kein Download, von keinem Zuhörer abgesagt) bricht `signal` ab, und Chrome

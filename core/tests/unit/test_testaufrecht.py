@@ -7,9 +7,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, r'A:\3DTools\mesh3dai')
+sys.path.insert(0, r'A:\3DTools\meshgenesis')
 
-from mesh3dai_testaufrecht import Testaufrecht  # noqa: E402
+from meshgenesis_testaufrecht import Testaufrecht  # noqa: E402
 
 
 class TestaufrechtTest(unittest.TestCase):
