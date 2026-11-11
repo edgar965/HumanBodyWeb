@@ -196,6 +196,7 @@ class AlletexturGiltTest(unittest.TestCase):
         self.assertFalse(Alletextur.gilt({'fotos': [{'winkel': 0}, {'winkel': None}]}))
         self.assertFalse(Alletextur.gilt({'fotos': fotos, 'pshuman': {'up2you': True}}))
         self.assertFalse(Alletextur.gilt({'fotos': fotos, 'pshuman': {'textur_alle_fotos': False}}))
+        self.assertTrue(Alletextur.gilt({'fotos': fotos, 'pshuman': {'textur_alle_fotos': True}}))
         self.assertTrue(Alletextur.gilt({'fotos': fotos, 'pshuman': {'textur_alle_fotos': None}}))
 
 

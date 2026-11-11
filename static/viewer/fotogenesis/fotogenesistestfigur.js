@@ -45,6 +45,9 @@ export class Fotogenesistestfigur {
             const antwort = await fetch(this.test.adresse);
             const daten = await antwort.json();
             if (!antwort.ok) throw new Error(daten.error || `HTTP ${antwort.status}`);
+            // A-Pose (10.11.2026, Edgar: „mach doch das pshuman mesh und die genesis ausgabe in allen jobs auf die A-Pose, damit man das besser vergleichen kann“): die Ruhelage von Genesis 9 —
+            // jede Drehung die Einheit, jedes Gelenk an seinem Ruhezentrum; Körper, Augen, Kleider und Rig folgen derselben Haltung
+            if (this.test.apose) Object.assign(daten, { dreh: daten.dreh.map(() => [0, 0, 0, 1]), ausgabe: daten.ruhezentren.map(p => [...p]) });
             const matrizen = Meshgenesishaeutung.ausDrehungen(daten.dreh, daten.ausgabe, daten.ruhezentren);
             const geschlecht = String(daten.figur_netz).split('/').filter(Boolean).pop();
             // Körper, Kleiderliste, Augäpfel und Stücke zugleich holen (08.11.2026, Ladezeit): vorher wartete jeder Abruf auf den vorigen
@@ -89,7 +92,7 @@ export class Fotogenesistestfigur {
                 if (zeile1.daten?.genesis) this.vorlage = new Fotogenesiszeile1(this.figur, [this.koerper.an, this.koerper.aus], Fotogenesistrainingfigur._feld(daten.zeile1_ursprung, Int32Array), netz);
             }
             this.text = (this.test.eigen ? `Genesis-Modell dieses Jobs (<Job>/figur/, ${daten.info?.name ?? ''}) in der Haltung aus den Fotos`
-                : `Ausgabe des Mesh-Genesis-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) in der Haltung aus dem Netz`) + (this.augen ? ', mit Augäpfeln' : '')
+                : `Ausgabe des Mesh-Genesis-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) ${this.test.apose ? 'in der A-Pose' : 'in der Haltung aus dem Netz'}`) + (this.augen ? ', mit Augäpfeln' : '')
                 + `${this.kleider ? `, ${this.kleider.namen.join(', ')}` : ''}.`;
             this.probe = daten;
         } catch (fehler) {

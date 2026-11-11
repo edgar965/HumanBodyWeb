@@ -21,6 +21,12 @@ class Fotogenesisseitendaten:
     #: PSHumans Endnetz — zusätzlich als eigenes Feld in jeder Zeile (`pshuman`,
     #: `_fotogenesis_pshumanfeld.html`); bleibt auch im Feld „Netz“
     PSHUMAN = 'pshuman'
+    #: dasselbe Netz in der A-Pose (10.11.2026, Edgar: „mach doch das pshuman mesh und die genesis ausgabe in allen jobs auf die A-Pose, damit man das besser vergleichen kann“) — das Feld
+    #: „PSHuman“ zeigt es, wo es gerechnet ist (`pshuman_port14/pshuman_apose.py`); im Feld „Netz“ bleibt das Netz in der Haltung des Fotos
+    PSHUMAN_APOSE = 'pshuman_apose'
+    #: PSHumans Netz mit der Farbe der LHM++-Gaussians (11.11.2026, Edgar: „übertrage die Farbe auf pshuman, mach eine extra Ansicht … zwischen pshuman und genesis“) — eigenes Feld
+    #: `_fotogenesis_lhmfeld.html`, nur wo die job.json es nennt (Probe `ProjektTemp/_wegwerf/recherche_mehrfoto/lhm_farbe.py`); nicht im Feld „Netz“
+    PSHUMAN_LHM = 'pshuman_lhm'
 
     @classmethod
     def fuer(cls, job):
@@ -30,12 +36,14 @@ class Fotogenesisseitendaten:
         return {
             'id': k, 'name': job['name'], 'art': job['art'], 'wahrheit': job['wahrheit'], 'hinweis': job['hinweis'], 'figur': job['figur'],
             'fotos': [{'nr': i, 'name': f['name'], 'winkel': f['winkel'], 'adresse': '/api/fotogenesis/%s/foto/%d/' % (k, i), 'frei': bool(f.get('frei'))} for i, f in enumerate(job['fotos'])],
-            'netze': [n for n in netze if n['art'] not in cls.STARTKOERPER],
+            'netze': [n for n in netze if n['art'] not in cls.STARTKOERPER and n['art'] not in (cls.PSHUMAN_APOSE, cls.PSHUMAN_LHM)],
             # 03.11.2026: PSHumans Startkörper, seit 04.11. Feld 2 der Zeile mit den Genesis-Feldern — oder None
             'smplx': next((n for art in cls.STARTKOERPER for n in netze if n['art'] == art), None),
             # 04.11.2026, Edgar: „das ergebnis sollte doch auch ein Mesh sein, das ich im 3d View rotieren
             # kann?“ — „pshuman als zusätzliches Feld / View“: PSHumans Netz — oder None
-            'pshuman': next((n for n in netze if n['art'] == cls.PSHUMAN), None),
+            'pshuman': next((n for art in (cls.PSHUMAN_APOSE, cls.PSHUMAN) for n in netze if n['art'] == art), None),
+            # 11.11.2026: dasselbe Netz mit der Farbe von LHM++ (Feld zwischen PSHuman und Genesis-Ergebnis) — oder None
+            'pshuman_lhm': next((n for n in netze if n['art'] == cls.PSHUMAN_LHM), None),
             # 04.11.2026: dritte Zeile, drei Wege PSHuman-Netz → Genesis (`Fotogenesisgenesiszeile`) — oder None
             'genesiszeile': cls._genesiszeile(job),
             'genesis': {'job': paar['kennung'], 'name': paar['name'], 'seite': '/mesh-genesis/%s/' % paar['kennung'],

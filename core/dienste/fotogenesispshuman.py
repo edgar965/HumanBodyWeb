@@ -31,12 +31,14 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
   dichte         Edgar 04.11.2026: „die Auflösung im pshuman mesh ist ja nicht so gut wie im Foto“, „mach beides, einstellbar ganz oben beim Job“: Punkte je Körperhöhe des Netzes
                  (`pshuman_port14/poissontorch.py`): 480 = so viele wie bisher, 960 = viermal so viele Punkte; die Glättung hängt seit 05.11.2026 an der Körperhöhe, die Form bleibt
   fototextur     Textur aus den Fotos in voller Auflösung statt Punktfarben (`pshuman_port14/fototextur.py`); erfundene Ansichten bleiben bei 768 Pixeln
+  textur_alle_fotos  `pshuman_port14/alletextur.py`, Häkchen seit 10.11.2026, Vorgabe an (Edgar: „der alltextur button per default aktiviert“): Die Textur kommt aus allen Fotos des Jobs;
+                 aus = Textur nur aus dem Vorderfoto, die übrigen Fotos färben dann nur in Mesh-Genesis die Haut (Schritt „fotohaut“)
   up2you         Edgar 05.11.2026: „machst du den edgar alle job mit Up2you?“: UP2You rechnet aus allen Fotos des Jobs sechs Ansichten in A-Pose und daraus das Netz, statt PSHumans Diffusion (`pshuman_port14/up2youlauf.py`)
   hand_ersatz    Edgar 05.11.2026 zu Edgar 1: „die Hände sind kaputt“: PSHumans `replace_hand` setzt die Hand der eingepassten Genesis-Figur ins Netz, wo MediaPipe sie meldet (`pshuman_port14/handersatz.py`, `genesishand.py`, `MediapipeTorch/handpunkte.py`), seit 07.11.2026 statt der Hand des SMPL-X; UP2You nimmt die Hand seines SMPL-X (`up2youlauf.py`)
   haut_ki        Edgar 05.11.2026: „Sollten wir im UI oben beim Job eine Checkbox machen - Haut KI?“, seit 06.11.2026 Vorgabe aus (`Hautohneki`, Messung dort): Aus schreibt der Schritt „Haut“ von Mesh-Genesis die Kacheln ohne Netz (`meshgenesis/meshgenesis_haut_ohneki.py`, liest diese Wahl selbst); PSHuman rechnet deshalb nicht neu
   keine_kleider  Edgar 06.11.2026 zu n2: „mach n2 mit: keine Kleider“: In der Kostüm-Erkennung wird alles außer Haar zu Haut (`meshgenesis/meshgenesis_kostuem_ohnekleider.py`, liest diese Wahl selbst); PSHuman rechnet deshalb nicht neu
 
-    POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, hand_ersatz, up2you, haut_ki, keine_kleider, anzahl, dichte}   → {ok, pshuman}
+    POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, anzahl, dichte}   → {ok, pshuman}
 """
 
 import json
@@ -49,9 +51,10 @@ __all__ = ['Fotogenesispshuman']
 
 class Fotogenesispshuman:
     FELD = 'pshuman'
-    VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'fototextur': False, 'hand_ersatz': False, 'up2you': False, 'haut_ki': False, 'keine_kleider': False}  # noqa: RUF012 — nur gelesen
-    WEGE = (('zeile1', 'Netz als Zeile 1'), ('drehteller', 'Drehteller'), ('vae_bildweise', 'VAE bildweise'),
-            ('fototextur', 'Textur aus den Fotos'), ('hand_ersatz', 'Hände ersetzen'), ('up2you', 'Ansichten aus UP2You'), ('haut_ki', 'Haut-KI'), ('keine_kleider', 'Keine Kleider'))
+    VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'fototextur': False, 'textur_alle_fotos': True, 'hand_ersatz': False, 'up2you': False, 'haut_ki': False,  # noqa: RUF012 — nur gelesen
+               'keine_kleider': False}
+    WEGE = (('zeile1', 'Netz als Zeile 1'), ('drehteller', 'Drehteller'), ('vae_bildweise', 'VAE bildweise'), ('fototextur', 'Textur aus den Fotos'),
+            ('textur_alle_fotos', 'Textur aus allen Fotos'), ('hand_ersatz', 'Hände ersetzen'), ('up2you', 'Ansichten aus UP2You'), ('haut_ki', 'Haut-KI'), ('keine_kleider', 'Keine Kleider'))
     ANZAHL = (1, 2, 3, 4, 5, 6)
     DICHTEN = ((480, 'normal'), (960, 'dicht'))
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
@@ -63,6 +66,8 @@ class Fotogenesispshuman:
         'up2you': 'UP2You rechnet aus allen Fotos des Jobs sechs Ansichten in A-Pose und daraus das Netz, statt PSHumans Diffusion. Die Fotos zeigen eine andere Haltung, darum gilt „Textur aus den Fotos“ hier nicht: Die Farbe kommt aus den Ansichten (768 Pixel).',
         'hand_ersatz': 'Im PSHuman-Netz sind die Finger oft verschmolzen. An: Wo MediaPipe eine Hand meldet, kommt die Hand der Genesis-Figur ins Netz, Finger und Handgelenk wie im Foto. Mit UP2You: die Hand aus dessen SMPL-X.',
         'fototextur': 'Das PSHuman-Netz bekommt eine Textur aus den Fotos in voller Auflösung statt Farben je Punkt. Ansichten ohne Foto bleiben so scharf wie PSHuman sie erfindet (768 Pixel).',
+        'textur_alle_fotos': 'An (Vorgabe): Das PSHuman-Netz bekommt seine Textur auch aus den übrigen Fotos des Jobs, Rücken und Seiten also aus echten Fotos statt aus den erfundenen Ansichten. '
+                             'Aus: Textur nur aus dem Vorderfoto, die übrigen Fotos färben dann nur in Mesh-Genesis die Haut (Schritt „fotohaut“). Wirkt beim nächsten „Job rechnen“.',
         'vae_bildweise': 'Eigene Zutat (diffusers enable_vae_slicing): der VAE-Dekoder der Diffusion rechnet '
                          'die 14 Bilder einzeln statt auf einmal — gemessen bitgleich, 2,1 s statt 120 s, '
                          '+1,9 GB statt +27,6 GB Grafikspeicher.',

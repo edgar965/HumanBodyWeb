@@ -56,7 +56,9 @@ export class Fotogenesisgenesiszeile {
         if (g.ergebnis) {
             // `Fotogenesistestfigur` setzt `Meshgenesisflaechennetz.nachLaden` für sich allein — den Ruf der Figur im Feld „Genesis-Modell“ (vorher gebaut) nicht verlieren
             const vorher = Meshgenesisflaechennetz.nachLaden;
-            ergebnis = new Fotogenesistestfigur({ kennung: g.test, adresse: g.ergebnis });
+            // in der A-Pose, wenn das Feld „PSHuman“ sie zeigt (10.11.2026, Edgar: „damit man das besser vergleichen kann“; `pshuman_port14/pshuman_apose.py`). Wo das Netz in der A-Pose
+            // zerreißt (verwachsene Glieder, Robe mit Stab), zeigen beide Felder die Haltung des Fotos — sonst wären sie nicht vergleichbar
+            ergebnis = new Fotogenesistestfigur({ kennung: g.test, adresse: g.ergebnis, apose: seite.daten.pshuman?.art === 'pshuman_apose' });
             const eigen = Meshgenesisflaechennetz.nachLaden;
             Meshgenesisflaechennetz.nachLaden = () => { vorher?.(); eigen?.(); neu(); };
         }

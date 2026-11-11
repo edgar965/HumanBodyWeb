@@ -88,9 +88,10 @@ export class Fotogenesisseite {
         this.meshzeile = Fotogenesismeshzeile.aufbauen(this);
         this.smplx = Fotogenesissmplx.aufbauen(this);             // 03.11.2026: PSHumans SMPL-X in jeder Zeile (nur PSHuman-Jobs), seit 04.11. Feld 3
         this.pshuman = Fotogenesissmplx.aufbauen(this, 'pshuman');   // 04.11.2026: Feld 2 jeder Zeile, PSHumans Endnetz (nur PSHuman-Jobs)
+        this.pshumanLhm = Fotogenesissmplx.aufbauen(this, 'pshuman_lhm');   // 11.11.2026: dasselbe Netz mit LHM++-Farbe, Feld zwischen PSHuman und Genesis-Ergebnis (nur mit Netz)
         this.genesiszeile = Fotogenesisgenesiszeile.aufbauen(this);  // 04.11.2026: dritte Zeile, drei Wege vom PSHuman-Netz zum Genesis-Modell (nach `genesis` gebaut, s. dort)
         Meshgenesisansicht.koppeln([this.netzfeld, this.trainingfeld, this.genesisfeld, ...(this.meshzeile?.felder ?? []), ...(this.smplx?.felder ?? []),
-                                 ...(this.pshuman?.felder ?? []), ...(this.genesiszeile?.felder ?? [])].filter(Boolean));
+                                 ...(this.pshuman?.felder ?? []), ...(this.pshumanLhm?.felder ?? []), ...(this.genesiszeile?.felder ?? [])].filter(Boolean));
         // Größe wie die Person im Foto (27.10.2026, `_rand`): ist das neue Foto geladen, die Kameras nachstellen
         this.fotos.gross.addEventListener('load', () => this._kameras());
         // Die Figur wird im Hintergrund gebaut; ist sie da (oder eine feinere Netzstufe), zeigt das Feld sie neu und der Vergleich rechnet nach.
@@ -119,6 +120,7 @@ export class Fotogenesisseite {
         this._netzZeigen(true);
         this.smplx?.zeigen(true);
         this.pshuman?.zeigen(true);
+        this.pshumanLhm?.zeigen(true);
         this.genesiszeile?.zeigen(true);
         if (this.genesis) this.genesis.bereit.then(() => this._genesisZeigen(true));
         else {
@@ -156,7 +158,7 @@ export class Fotogenesisseite {
             this._netzZeigen(false);
             this._genesisZeigen(was !== 'modus' && was !== 'rig');
         }
-        if (was !== 'netz') for (const z of [this.smplx, this.pshuman, this.genesiszeile]) z?.zeigen(was === 'foto' || was === 'ausschnitt');
+        if (was !== 'netz') for (const z of [this.smplx, this.pshuman, this.pshumanLhm, this.genesiszeile]) z?.zeigen(was === 'foto' || was === 'ausschnitt');
     }
 
     _netzZeigen(neuStellen) {
