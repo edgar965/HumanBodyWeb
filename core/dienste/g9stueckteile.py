@@ -17,7 +17,8 @@ Die Punkte liegen wie im Browser: Meter, Y oben, Fuesse auf dem Boden.
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
@@ -66,7 +67,7 @@ class G9stueckteile:
         zusatz, knochen = cls.zusatz(kennung, eintrag,
                                      G9lagenanfrage._namen(rumpf.get('stil')),
                                      rumpf.get('regler_stueck'))
-        hoch = np.array([0.0, formung.boden(), 0.0])
+        hoch = Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
         # Ein Stück mit Hauttiefe (Scham aus einer .blend, `Blendimportscham`) liegt bis 25 mm HINTER der Figurfläche und hängt
         # starr am Becken: Folgen (drei nächste Hautpunkte) und Heben über die Haut schöben einzelne Punkte im Schritt bis 46 mm
         # weg (gemessen 08.10.2026, Kantenmaximum im Browser) — seine Lage ist die gespeicherte Ruhelage der Figur des Imports.
@@ -145,7 +146,7 @@ class G9stueckteile:
         return netze, innen, aussen, hoch
 
     #: Fehler der Brücke über Mulden lassen das Stück, wie es war (mit Log) — die Antwort geht nicht verloren.
-    MULDE_FEHLER = (ValueError, IndexError, RuntimeError, MemoryError, np.linalg.LinAlgError)
+    MULDE_FEHLER = (ValueError, IndexError, RuntimeError, MemoryError, torch.linalg.LinAlgError)
 
     @classmethod
     def _mulde(cls, formung, stufen, regler):
@@ -179,7 +180,7 @@ class G9stueckteile:
         stufe = passform.netzstufe(stufen) if passform is not None else folger.netzstufe(stufen)
         roh = kaefig
         if not stufe.stufen:
-            roh = np.array(kaefig, dtype=np.float64, copy=True)
+            roh = Torchfeld.feld(kaefig, dtype=torch.float64, copy=True)
             roh[stufe.ursprung] = punkte
         netz['normalen'] = stufe.normalen(roh, punkte)
         if netz.get('bindung') is not None:
@@ -212,8 +213,8 @@ class G9stueckteile:
                 logger.warning('GarmentCode: getragenes Daz-Stück %s nicht rechenbar: %s',
                                kennung, fehler)
                 continue
-            punkte = [np.asarray(netz['punkte'], dtype=np.float64) for _f, lage, netz in netze
+            punkte = [Torchfeld.feld(netz['punkte'], dtype=torch.float64) for _f, lage, netz in netze
                       if lage is None and len(netz['punkte'])]
             if punkte:
-                ergebnis.append((kennung, np.vstack(punkte)))
+                ergebnis.append((kennung, Torchfeld.vstack(punkte)))
         return ergebnis

@@ -16,7 +16,8 @@ import json
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from .meshgenesisformtraining import Meshgenesisformtraining
@@ -76,7 +77,7 @@ class Meshgenesisergebnisfigur:
             lauf = Meshgenesisformtraining.ordner() / info['lauf']['name']
             liste = Meshgenesisformvariante.liste(lauf)
             if liste:
-                with np.load(lauf / Meshgenesisformvariante.VORHERSAGEN) as z:
+                with Npztorch.lesen(lauf / Meshgenesisformvariante.VORHERSAGEN) as z:
                     vektor = Meshgenesisformvariantefigur.vektor(z, job['ordner'], str(int(nr)), info['proben'])
                 if vektor is not None and len(vektor) == len(liste):
                     regler = Meshgenesisformvariantefigur.regler(vektor, liste)

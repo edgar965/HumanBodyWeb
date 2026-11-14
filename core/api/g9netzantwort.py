@@ -6,7 +6,7 @@ Breiten aus `Netzantwort.TYPEN`, Hautgewichte kompakt (uint16/uint8).
 Aus `g9figur.py` herausgeloest (18.09.2026 nachts, die Datei stand bei 304
 Zeilen); `G9figur._netzantwort` zeigt weiter hierher.
 """
-import numpy as np
+import torch
 
 from ..daten.netzantwort import Netzantwort
 
@@ -30,12 +30,18 @@ class G9netzantwort:
             antwort['stoff'] = {'frei': Netzantwort.feld(netz['stoff']['frei'], 'frei'),
                                 'kaefig': Netzantwort.feld(netz['stoff']['kaefig'],
                                                            'kaefig')}
+        if netz.get('glaettung') is not None:
+            # Anliegende Kleidung (12.11.2026): Lage des Kaefigs fuer die Glaettung je Bild
+            # (`Stoffglaettung` im Browser).
+            antwort['glaettung'] = {'kaefig': Netzantwort.feld(netz['glaettung']['kaefig'], 'kaefig')}
         if netz.get('bindung') is not None:
             # Oberflaechenbindung (`G9oberflaechenbindung`, 21.09.2026): je Punkt
             # drei Koerperpunkte (als float32 — der Shader liest Attribute als
             # Gleitkomma, -1 = ungebunden), Baryzentrik, Abstand, Mischung.
+            # `dreieck` sind NUMMERN und gehen `genau`: auf 16 Bit gekuerzt (`Netzkurz`) trafen sie im Browser
+            # andere Koerperpunkte, und der Shader schob den Stoff schon in der Ruhelage (12.11.2026, Olesia1).
             b = netz['bindung']
-            antwort['bindung'] = {art: Netzantwort.feld(b[art], art, typ=np.float32)
+            antwort['bindung'] = {art: Netzantwort.feld(b[art], art, typ=torch.float32, genau=art == 'dreieck')
                                   for art in ('dreieck', 'bary', 'abstand', 'mischung')}
             # Die Stufe des KOERPERS (nicht des Stuecks: Nieten bleiben Kaefig).
             antwort['bindung']['stufen'] = int(b.get('stufen') or 0)

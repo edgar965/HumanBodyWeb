@@ -27,6 +27,7 @@ from ..daten.gelenknamen import Gelenknamen
 from .bvh_projektion import Bvhprojektion
 from .keypoints_quellen import Keypointsquellen
 from .skelettzeichner import Skelettzeichner
+import torch
 
 logger = logging.getLogger('core')
 
@@ -117,7 +118,6 @@ class Skelettfilm:
 
     def _schreiben(self, ziel, punkte, verbindungen, breite, hoehe):
         import cv2
-        import numpy as np
 
         film = cv2.VideoCapture(str(self.video))
         bildrate = film.get(cv2.CAP_PROP_FPS) or (self.job.fps or self.VORGABE_FPS)
@@ -130,7 +130,7 @@ class Skelettfilm:
         )
         schreiber = cv2.VideoWriter(str(ziel), cv2.VideoWriter_fourcc(*'mp4v'), bildrate, (breite, hoehe))
         for nummer in range(anzahl):
-            bild = self._bild(film, breite, hoehe, np)
+            bild = self._bild(film, breite, hoehe)
             zeichner.zeichnen(bild, punkte[self.zuordnen(nummer, anzahl, len(punkte))])
             schreiber.write(bild)
         schreiber.release()
@@ -138,13 +138,13 @@ class Skelettfilm:
             film.release()
         return ziel
 
-    def _bild(self, film, breite, hoehe, np):
+    def _bild(self, film, breite, hoehe):
         """Das Videobild — oder Schwarz (Rig-Modus und am Dateiende)."""
         if film is not None:
             gelesen, bild = film.read()
             if gelesen:
                 return bild
-        return np.zeros((hoehe, breite, 3), dtype=np.uint8)
+        return torch.zeros((hoehe, breite, 3), dtype=torch.uint8).numpy()      # cpu gewollt: cv2 malt und schreibt das Bild im Arbeitsspeicher
 
     @staticmethod
     def zuordnen(nummer, videobilder, punktbilder):

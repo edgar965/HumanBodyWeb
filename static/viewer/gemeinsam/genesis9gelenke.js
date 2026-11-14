@@ -2,6 +2,7 @@ import { Dazachsen } from './dazachsen.js';
 import { Genesis9drehknochen } from './genesis9drehknochen.js';
 import { Gelenkformeln } from './gelenkformeln.js';
 import { Genesis9felder } from './genesis9felder.js';
+import { Dqhaut } from './dqhaut.js';
 
 /**
  * Genesis9gelenke — Daz' Gelenkkorrekturen (JCMs) in der BEWEGUNG einer
@@ -53,6 +54,8 @@ export class Genesis9gelenke {
      */
     static takt(inst) {
         if (!Genesis9gelenke.passt(inst)) return null;
+        // Später gebundene Netze (GarmentCode-Stücke) bekommen dieselbe Häutung wie der Körper (`Dqhaut`, 12.11.2026) — nur, wenn die Gruppe gewachsen ist.
+        if (inst.group && inst._dqKinder !== inst.group.children.length) Dqhaut.figur(inst);
         const bekannt = Genesis9gelenke._figuren.get(inst);
         if (!(bekannt && bekannt.skelett === inst.skelett && bekannt.stufen === inst.stufen)
             && !Dazachsen.bewegt(inst.skelett)) return null;
@@ -106,6 +109,8 @@ export class Genesis9gelenke {
         for (const [schluessel, netz] of Object.entries(inst.clothMeshes || {})) {
             const [kennung, nummer] = schluessel.split('/');
             const eigene = stuecke.get(kennung)?.teile?.[Number(nummer)];
+            // Starr gebundene Stücke (12.11.2026, `Starrbindung`) behalten ihre Form — eine Gelenkkorrektur verformte sie (wie Mesh-3D: starre Objekte bekommen keine Felder).
+            if (netz?.userData?.starrbindung) continue;
             if (eigene && Object.keys(eigene).length) {
                 Genesis9felder.anwenden(netz, Genesis9gelenke.GRUPPE, eigene, werte);
             }
@@ -154,3 +159,5 @@ export class Genesis9gelenke {
         Genesis9gelenke._figuren.delete(inst);
     }
 }
+
+if (typeof window !== 'undefined') window.__genesis9gelenke = Genesis9gelenke;      // für Proben im Tab (Werte der Gelenkkorrekturen, Felder je Stück)

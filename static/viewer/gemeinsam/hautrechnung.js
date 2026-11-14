@@ -34,10 +34,12 @@ export class Hautrechnung {
         const hoehe = new Float32Array(n).fill(-Infinity);
         const rand = new Float32Array(n).fill(Infinity);
         const normalen = Hautmaskegeometrie.normalen(pos, index);
-        const maske = Hautmaske.verdeckt(pos, index, stoffe, { ersatz, hoehe, rand, normalen });
+        // Je Punkt die Tiefe, bis zu der die Haut unter dem deckenden Stück nachgibt (`Bauart`, 12.11.2026) — das tiefste Stück gewinnt.
+        const nachgeben = new Float32Array(n);
+        const maske = Hautmaske.verdeckt(pos, index, stoffe, { ersatz, hoehe, rand, normalen, nachgeben });
         // Die eigenen Ruhenormalen des Körpers gelten auch für den Einzug — nicht ein zweites Mal gerechnet (270 ms).
         const einzug = Hauteinzugrechnung.rechnen(pos, maske, index,
-                                                  { kanten: Saumschnitt.kanten(stoffe), hautnormalen: normalen });
+                                                  { kanten: Saumschnitt.kanten(stoffe), hautnormalen: normalen, nachgeben });
         return { maske, ersatz, hoehe, rand, normalen, einzug, randabstaende: stoffe.map((s) => s.randabstand || null),
                  ms: Math.round(performance.now() - t0) };
     }

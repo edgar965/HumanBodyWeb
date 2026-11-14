@@ -9,7 +9,9 @@ Die Kappe (Punkte ueber der Sohle, ab `VORFUSS_AB` nach vorn) wird deshalb (1) g
 ausblendend — und (2) aus der KONVEXEN HUELLE der Hautpunkte des Vorfusses gehoben (`HUELLE_ABSTAND`): Die Huelle ueberbrueckt die Zehenluecken und
 ist glatt. Weil sie die Haut enthaelt, steht die Kappe damit auch ueberall mindestens so weit von der Haut ab. Die Sohle bleibt, wie sie ist.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsalt import Zufallsalt
 from Genesis9.kollision import G9kollision
 
 __all__ = ['G9hbschuhhuelle']
@@ -39,13 +41,13 @@ class G9hbschuhhuelle:
 
     @classmethod
     def runden(cls, traeger, punkte):
-        p = np.array(punkte, dtype=np.float64, copy=True)
+        p = Torchfeld.feld(punkte, dtype=torch.float64, copy=True)
         if not len(p):
             return p
         haut, normalen, _baum = traeger.koerperflaeche()
-        gewicht = np.clip((p[:, 2] - cls.VORFUSS_AB) / cls.UEBERGANG, 0.0, 1.0)
+        gewicht = Torchfeld.clip((p[:, 2] - cls.VORFUSS_AB) / cls.UEBERGANG, 0.0, 1.0)
         for seite in (1.0, -1.0):
-            wahl = np.where((p[:, 0] * seite > 0.0) & (p[:, 1] > cls.KAPPE_AB) & (gewicht > 0.0))[0]
+            wahl = torch.nonzero((p[:, 0] * seite > 0.0) & (p[:, 1] > cls.KAPPE_AB) & (gewicht > 0.0), as_tuple=True)[0]
             huelle = cls.huelle(haut, seite)
             if len(wahl) <= cls.NACHBARN or huelle is None:
                 continue
@@ -59,7 +61,7 @@ class G9hbschuhhuelle:
     def glaetten(cls, punkte, gewicht):
         u"""Laplace-Glaettung: je Durchgang ein Schritt zum Mittel der naechsten `NACHBARN`, mit dem Gewicht (0 = unberuehrt) skaliert."""
         _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=cls.NACHBARN)
-        aus = np.array(punkte, dtype=np.float64, copy=True)
+        aus = Torchfeld.feld(punkte, dtype=torch.float64, copy=True)
         for _ in range(cls.DURCHGAENGE):
             aus += (cls.SCHRITT * gewicht)[:, None] * (aus[nachbar].mean(axis=1) - aus)
         return aus
@@ -67,22 +69,23 @@ class G9hbschuhhuelle:
     @classmethod
     def huelle(cls, haut, seite):
         u"""(Stichpunkte (K, 3), Aussennormalen (K, 3)) der konvexen Huelle der Hautpunkte des Vorfusses dieser Seite, None ohne genug Punkte."""
-        from scipy.spatial import ConvexHull, QhullError
+        from KoerperKI_alle.kartenhuelle import ConvexHull
+        from KoerperKI_alle.kartenhuelle import QhullError
         wahl = (haut[:, 0] * seite > cls.SEITE_AB) & (haut[:, 2] > cls.HUELLE_AB) & (haut[:, 1] < cls.FUSS_BIS)
         if int(wahl.sum()) < 50:
             return None
-        punkte = np.asarray(haut)[wahl]
+        punkte = Torchfeld.feld(haut)[wahl]
         try:
             huelle = ConvexHull(punkte)
         except QhullError:
             return None
         ecken = punkte[huelle.simplices]                                   # (m, 3, 3)
         a, b, c = ecken[:, 0], ecken[:, 1], ecken[:, 2]
-        flaeche = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
-        je = np.clip(np.ceil(flaeche / cls.RASTER ** 2), 1, 400).astype(np.int64)
-        welche = np.repeat(np.arange(len(a)), je)
-        zufall = np.random.RandomState(0)
-        r1 = np.sqrt(zufall.rand(len(welche)))[:, None]
+        flaeche = 0.5 * Torchfeld.linalg_norm(Torchfeld.cross(b - a, c - a), dim=1)
+        je = Torchfeld.astype(Torchfeld.clip(Torchfeld.ceil(flaeche / cls.RASTER ** 2), 1, 400), torch.int64)
+        welche = Torchfeld.repeat_interleave(Torchfeld.arange(len(a)), je)
+        zufall = Zufallsalt(0)
+        r1 = Torchfeld.sqrt(zufall.rand(len(welche)))[:, None]
         r2 = zufall.rand(len(welche))[:, None]
         stich = (1.0 - r1) * a[welche] + r1 * (1.0 - r2) * b[welche] + r1 * r2 * c[welche]
         return stich, huelle.equations[welche, :3]

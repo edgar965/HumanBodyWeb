@@ -16,7 +16,8 @@ Hier wird der Ton aller Texel OHNE Netzfarbe (Hand, Handgelenk, Lücken im Unter
 Kein Ton ohne Bezug: fehlt die Hand oder der Unterarm (Aufträge ohne Arme), bleibt das Bild, wie es ist.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Standhandangleich']
 
@@ -33,12 +34,12 @@ class Standhandangleich:
 
     @staticmethod
     def _linear(c):
-        return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+        return torch.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
     @staticmethod
     def _srgb(c):
-        c = np.clip(c, 0.0, 1.0)
-        return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+        c = Torchfeld.clip(c, 0.0, 1.0)
+        return torch.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
 
     @classmethod
     def flaechen(cls, masken, hd=None):
@@ -52,29 +53,29 @@ class Standhandangleich:
     @classmethod
     def faktor(cls, lin, masken, hd=None):
         """`(H, W, 3)` Faktor (linear) für die Daz-Haut, 1 sonst — oder None, wenn eine der beiden Flächen fehlt. `lin`: die Kachel linear (H, W, 3); `masken`: (H, W, 3) Hand-, Unterarmgewicht, belegt."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         daz, bezug = cls.flaechen(masken, hd)
         if int(daz.sum()) < cls.MINDEST or int(bezug.sum()) < cls.MINDEST:
             return None
-        gross = np.clip(lin[bezug].mean(axis=0) / np.maximum(lin[daz].mean(axis=0), 1e-6), *cls.GRENZEN)
+        gross = Torchfeld.clip(lin[bezug].mean(axis=0) / Torchfeld.maximum(lin[daz].mean(axis=0), 1e-6), *cls.GRENZEN)
         # Tiefpass je Fläche, nur über ihre Texel (normierte Faltung) — auf einem Viertel der Kante gerechnet (Zehntelsekunden statt Sekunden).
         schritt = 4
         sigma = cls.SIGMA_PX / schritt
 
         def tief(m):
-            w = m[::schritt, ::schritt].astype(np.float64)
+            w = Torchfeld.astype(m[::schritt, ::schritt], torch.float64)
             nenner = ndimage.gaussian_filter(w, sigma)
             kanaele = [ndimage.gaussian_filter(lin[::schritt, ::schritt, c] * w, sigma) for c in range(3)]
-            return np.stack(kanaele, axis=-1) / np.maximum(nenner, 1e-9)[..., None], nenner
+            return Torchfeld.stack(kanaele, axis=-1) / Torchfeld.maximum(nenner, 1e-9)[..., None], nenner
 
         farbe_b, gewicht_b = tief(bezug)
         farbe_d, gewicht_d = tief(daz)
-        ort = np.clip(farbe_b / np.maximum(farbe_d, 1e-6), *cls.GRENZEN)
-        trauen = np.clip(np.minimum(gewicht_b, gewicht_d) / cls.ORT_AB, 0.0, 1.0)[..., None]
+        ort = Torchfeld.clip(farbe_b / Torchfeld.maximum(farbe_d, 1e-6), *cls.GRENZEN)
+        trauen = Torchfeld.clip(Torchfeld.minimum(gewicht_b, gewicht_d) / cls.ORT_AB, 0.0, 1.0)[..., None]
         klein = trauen * ort + (1.0 - trauen) * gross
-        f = np.stack([ndimage.zoom(klein[..., c], schritt, order=1)[:lin.shape[0], :lin.shape[1]] for c in range(3)], axis=-1)
-        weich = ndimage.gaussian_filter(daz.astype(np.float64), 3.0)[..., None]
+        f = Torchfeld.stack([ndimage.zoom(klein[..., c], schritt, order=1)[:lin.shape[0], :lin.shape[1]] for c in range(3)], axis=-1)
+        weich = ndimage.gaussian_filter(Torchfeld.astype(daz, torch.float64), 3.0)[..., None]
         return 1.0 + (f - 1.0) * weich
 
     #: Breite des Streifens (Texel) beiderseits der Grenze zwischen Netzfarbe und Daz-Haut, der neu eingemalt wird, und der Abstand zum Inselrand, den er hält.
@@ -86,32 +87,32 @@ class Standhandangleich:
         """Die Grenze zwischen Netzfarbe und Daz-Haut ohne ihre dunkle Kontur: der Streifen `NAHT_PX` beiderseits der Grenze (innerhalb der Inseln, `INSELRAND_PX` vom Rand weg) wird aus der Umgebung
         eingemalt (Telea, wie `G9texturbacken.luecken_malen`). Am Handgelenk lief dort ein dunkler Ring um die Hand — die Kontur der HD-Schicht, die als Naht an der Hand stand. `srgb8`: (H, W, 3) uint8."""
         import cv2
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         grenze = ndimage.binary_dilation(hd, iterations=cls.NAHT_PX) & ndimage.binary_dilation(~hd, iterations=cls.NAHT_PX)
         innen = ndimage.binary_erosion(belegt, iterations=cls.INSELRAND_PX)
-        maske = (grenze & innen).astype(np.uint8)
+        maske = Torchfeld.astype(grenze & innen, torch.uint8)
         if int(maske.sum()) < 50:
             return srgb8
         # Das Weiß außerhalb der Inseln darf nicht in die Naht ziehen: dort steht für die Rechnung die nächste Farbe der Insel.
         _abstand, (iy, ix) = ndimage.distance_transform_edt(~belegt, return_indices=True)
-        grund = np.where(belegt[..., None], srgb8, srgb8[iy, ix])
-        neu = cv2.inpaint(np.ascontiguousarray(grund), maske, 4, cv2.INPAINT_TELEA)
-        return np.where(maske[..., None] > 0, neu, srgb8)
+        grund = torch.where(belegt[..., None], srgb8, srgb8[iy, ix])
+        neu = cv2.inpaint(Torchfeld.roh(Torchfeld.feld(grund)), maske, 4, cv2.INPAINT_TELEA)
+        return torch.where(maske[..., None] > 0, neu, srgb8)
 
     @classmethod
     def anwenden(cls, bild, masken, hd=None):
         """PIL-Bild der Armkachel (sRGB) → PIL-Bild mit der Daz-Haut im Ton der Netzfarbe und ohne dunkle Naht an der Grenze; das Bild selbst, wenn es nichts anzugleichen gibt. `masken` (und `hd`, Bool) haben die Größe des Bilds (sonst wird nichts getan)."""
         from PIL import Image
 
-        arr = np.asarray(bild.convert('RGB'), dtype=np.float64) / 255.0
+        arr = Torchfeld.feld(bild.convert('RGB'), dtype=torch.float64) / 255.0
         if masken is None or masken.shape[:2] != arr.shape[:2]:
             return bild
         lin = cls._linear(arr)
         f = cls.faktor(lin, masken, hd)
         if f is None:
             return bild
-        aus = np.rint(cls._srgb(lin * f) * 255.0).astype(np.uint8)
+        aus = Torchfeld.astype(Torchfeld.round(cls._srgb(lin * f) * 255.0), torch.uint8)
         if hd is not None and hd.shape == arr.shape[:2]:
             aus = cls.naht(aus, masken[..., 2] > 0.5, hd)
         return Image.fromarray(aus, 'RGB')

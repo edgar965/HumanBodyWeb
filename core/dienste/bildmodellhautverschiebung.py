@@ -30,7 +30,8 @@ import logging
 import os
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .hbdreiecksuche import Hbdreiecksuche
 
@@ -97,28 +98,28 @@ class Bildmodellhautverschiebung:
         netz = charakterdaten().netzdaten(self.GESCHLECHT)
         if getattr(netz, 'uv_loops', None) is None or netz.faces is None:
             raise ValueError('HumanBody-Netz ohne UV-Ecken (uv_loops.npy) — keine Verschiebungskacheln')
-        flaechen = np.asarray(netz.faces, dtype=np.int64)                  # (F, 4)
-        uv_ecken = np.asarray(netz.uv_loops, dtype=np.float64)             # (F, 4, 2)
+        flaechen = Torchfeld.feld(netz.faces, dtype=torch.int64)                  # (F, 4)
+        uv_ecken = Torchfeld.feld(netz.uv_loops, dtype=torch.float64)             # (F, 4, 2)
         hb = Hbtraeger.laden(self.GESCHLECHT, None, {}, {})
         paar = G9aufhumanbody.paarung_holen(self.GESCHLECHT, None)
         basis = G9basisnetz.holen()
-        ursprung = np.asarray(basis.netzstufe(0).ursprung, dtype=np.int64)
+        ursprung = Torchfeld.feld(basis.netzstufe(0).ursprung, dtype=torch.int64)
         zahl = len(basis.punkte)
-        summe = np.zeros((zahl, 3))
-        anzahl = np.zeros(zahl)
-        np.add.at(summe, ursprung, np.asarray(paar['skaliert'], dtype=np.float64))
-        np.add.at(anzahl, ursprung, 1.0)
-        lage = summe / np.maximum(anzahl, 1.0)[:, None]
+        summe = torch.zeros((zahl, 3), dtype=torch.float64, device='cuda')
+        anzahl = torch.zeros(zahl, dtype=torch.float64, device='cuda')
+        Torchfeld.add_at(summe, ursprung, Torchfeld.feld(paar['skaliert'], dtype=torch.float64))
+        Torchfeld.add_at(anzahl, ursprung, 1.0)
+        lage = summe / Torchfeld.maximum(anzahl, 1.0)[:, None]
         # Quads als zwei Dreiecke, je Ecke ihre UV — Nähte bleiben je Insel richtig.
-        ecken = np.concatenate([flaechen[:, [0, 1, 2]], flaechen[:, [0, 2, 3]]])
-        uvs = np.concatenate([uv_ecken[:, [0, 1, 2]], uv_ecken[:, [0, 2, 3]]])
-        teil = np.full(zahl, -1, dtype=np.int64)
+        ecken = Torchfeld.cat([flaechen[:, [0, 1, 2]], flaechen[:, [0, 2, 3]]])
+        uvs = Torchfeld.cat([uv_ecken[:, [0, 1, 2]], uv_ecken[:, [0, 2, 3]]])
+        teil = Torchfeld.full(zahl, -1, dtype=torch.int64)
         suchen = []
         for nr, (_name, (g9_idx, hb_idx)) in enumerate(paar['segmente'].items()):
-            kaefig = ursprung[np.asarray(g9_idx, dtype=np.int64)]
+            kaefig = ursprung[Torchfeld.feld(g9_idx, dtype=torch.int64)]
             frei = teil[kaefig] < 0
             teil[kaefig[frei]] = nr
-            drin = np.isin(ecken, np.asarray(hb_idx, dtype=np.int64)).any(axis=1)
+            drin = torch.isin(ecken, Torchfeld.feld(Torchfeld.feld(hb_idx, dtype=torch.int64))).any(axis=1)
             suchen.append(Hbdreiecksuche(hb['punkte'], ecken[drin], uvs[drin]) if drin.sum() >= 4 else None)
         self._netz = {'lage': lage, 'teil': teil, 'suchen': suchen}
         return self._netz
@@ -130,10 +131,10 @@ class Bildmodellhautverschiebung:
         ihre Lage in HumanBody-Lage, die UV des nächsten HumanBody-Oberflächenpunkts und der Abstand dorthin (m)."""
         d = self._vorbereiten()
         drin, ecken, anteile = abtastung.stellen(nummer)
-        pos = np.einsum('nk,nkc->nc', anteile, d['lage'][ecken])
+        pos = Torchfeld.einsum('nk,nkc->nc', anteile, d['lage'][ecken])
         teil = d['teil'][ecken[:, 0]]
-        uv = np.zeros((len(pos), 2))
-        abstand = np.zeros(len(pos))
+        uv = torch.zeros((len(pos), 2), dtype=torch.float64, device='cuda')
+        abstand = torch.zeros(len(pos), dtype=torch.float64, device='cuda')
         for nr, suche in enumerate(d['suchen']):
             m = teil == nr
             if not m.any() or suche is None:
@@ -144,11 +145,11 @@ class Bildmodellhautverschiebung:
     def kachel(self, abtastung, nummer, feld):
         """`((S, S) float 0..1, mittlerer Abstand Texel → HumanBody-Fläche in m)` — Kachel `nummer`."""
         from humanbody_core.hautverschiebung import Hautverschiebung
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         drin, _pos, uv, abstand = self.texel(abtastung, nummer)
         s = abtastung.seite
-        bild = np.full((s, s), self.MITTE, dtype=np.float64)
+        bild = Torchfeld.full((s, s), self.MITTE, dtype=torch.float64)
         bild[drin] = Hautverschiebung.abtasten(feld, uv)
         weg, (iy, ix) = ndimage.distance_transform_edt(~drin, return_indices=True)
         nah = (~drin) & (weg <= self.RAND_PX)
@@ -172,9 +173,9 @@ class Bildmodellhautverschiebung:
             bild, abstand = self.kachel(abtastung, nummer, feld)
             abstaende.append(abstand)
             pfad = os.path.join(str(ordner), '%s_%d.png' % (self.PRAEFIX, nummer))
-            Image.fromarray(np.clip(bild * 255.0 + 0.5, 0, 255).astype(np.uint8), 'L').save(pfad, 'PNG')
+            Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(bild * 255.0 + 0.5, 0, 255), torch.uint8)), 'L').save(pfad, 'PNG')
             aus[nummer] = pfad
-        bericht = dict(werte, abstand_mm=round(1000.0 * float(np.mean(abstaende)) if abstaende else 0.0, 2),
+        bericht = dict(werte, abstand_mm=round(1000.0 * float(Torchfeld.mean(abstaende)) if abstaende else 0.0, 2),
                        dauer_s=round(time.time() - start, 1))
         logger.info('Hautverschiebung: %d Kacheln, %s', len(aus), bericht)
         return aus, bericht

@@ -24,7 +24,8 @@ Ein fehlendes Vorschaubild darf einen fertigen Lauf nie nachträglich rot machen
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshicon']
 
@@ -85,11 +86,11 @@ class Meshicon:
         geladen = trimesh.load(glb_pfad, process=False)
         szene_tm = geladen if isinstance(geladen, trimesh.Scene) else trimesh.Scene(geladen)
         if matrix is not None:
-            szene_tm.apply_transform(np.asarray(matrix, dtype=np.float64))
+            szene_tm.apply_transform(Torchfeld.feld(matrix, dtype=torch.float64))
         tief, hoch = szene_tm.bounds
         mitte = (tief + hoch) / 2.0
-        spanne = float(np.max(hoch - tief))
-        if not np.isfinite(spanne) or spanne <= 0:
+        spanne = float(Torchfeld.amax(hoch - tief))
+        if not Torchfeld.isfinite(spanne) or spanne <= 0:
             raise ValueError('Netz ohne Ausdehnung')
 
         szene = pyrender.Scene.from_trimesh_scene(
@@ -98,8 +99,8 @@ class Meshicon:
         # nach +Z (dieselbe Konvention wie `mesh_fototextur.ACHSEN`).
         halb = spanne * cls.RAND / 2.0
         kamera = pyrender.OrthographicCamera(xmag=halb, ymag=halb)
-        lage = np.eye(4)
-        lage[:3, 3] = [mitte[0], mitte[1], hoch[2] + spanne]
+        lage = torch.eye(4, dtype=torch.float64, device='cuda')
+        lage[:3, 3] = Torchfeld.feld([mitte[0], mitte[1], hoch[2] + spanne])
         szene.add(kamera, pose=lage)
         szene.add(pyrender.DirectionalLight(color=[1.0, 1.0, 1.0], intensity=cls.LICHT), pose=lage)
 

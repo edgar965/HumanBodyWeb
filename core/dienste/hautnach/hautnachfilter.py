@@ -9,7 +9,8 @@ Die Felder bleiben auf der GPU (`wp.array`); die Aufrufer holen sie erst am Ende
 Rand gespiegelt (`mode='reflect'`: d c b a | a b c d | d c b a).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 __all__ = ['Hautnachfilter']
@@ -77,9 +78,9 @@ class Hautnachfilter:
     def kern(sigma):
         """Der Gauß-Kern wie `scipy.ndimage.gaussian_filter1d` ihn baut (Halbbreite `int(4σ + 0,5)`, Summe 1)."""
         radius = int(4.0 * float(sigma) + 0.5)
-        x = np.arange(-radius, radius + 1, dtype=np.float64)
-        k = np.exp(-0.5 / (float(sigma) ** 2) * x * x)
-        return (k / k.sum()).astype(np.float32), radius
+        x = torch.arange(-radius, radius + 1, dtype=torch.float64, device='cuda')
+        k = Torchfeld.exp(-0.5 / (float(sigma) ** 2) * x * x)
+        return Torchfeld.astype(k / k.sum(), torch.float32), radius
 
     def gauss(self, feld, sigma):
         """`feld`: `wp.array2d(float32)`; gibt ein neues Feld zurück."""
@@ -99,4 +100,4 @@ class Hautnachfilter:
 
     def feld(self, a, dtype=wp.float32):
         """Ein numpy-Feld auf die GPU."""
-        return wp.array(np.ascontiguousarray(a), dtype=dtype, device=self.geraet)
+        return wp.array(Torchfeld.feld(a), dtype=dtype, device=self.geraet)

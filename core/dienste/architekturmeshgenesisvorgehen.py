@@ -9,7 +9,8 @@ Abstand zur nächsten Trainingspose (`Meshgenesisdaten.proben`, `Meshgenesisverg
 
 from pathlib import Path
 
-import numpy as np
+import math
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Architekturmeshgenesisvorgehen']
 
@@ -124,11 +125,11 @@ class Architekturmeshgenesisvorgehen:
             p = [x for x in daten['proben'] if x['gruppe'] == g and x['kennzahlen'].get('naechste_pose_mm') is not None]
             if not p:
                 continue
-            netz = np.array([x['kennzahlen']['mittel_mm'] for x in p])
-            nn = np.array([x['kennzahlen']['naechste_pose_mm'] for x in p])
-            r = float(np.corrcoef(netz, nn)[0, 1]) if len(p) > 2 else None
+            netz = Torchfeld.feld([x['kennzahlen']['mittel_mm'] for x in p], copy=True)
+            nn = Torchfeld.feld([x['kennzahlen']['naechste_pose_mm'] for x in p], copy=True)
+            r = float(Torchfeld.corrcoef(netz, nn)[0, 1]) if len(p) > 2 else None
             gruppen.append({'name': name, 'proben': len(p), 'netz': round(float(netz.mean()), 1), 'naechste': round(float(nn.mean()), 1),
-                            'mittlere': round(float(np.mean([x['kennzahlen'].get('mittlere_pose_mm', np.nan) for x in p])), 1),
+                            'mittlere': round(float(Torchfeld.mean([x['kennzahlen'].get('mittlere_pose_mm', math.nan) for x in p])), 1),
                             'korrelation': None if r is None else round(r, 2), 'besser': int((netz < nn).sum())})
         pruef = sorted(({'nr': x['id'], 'name': x['name'], 'netz': x['kennzahlen']['mittel_mm'], 'naechste': x['kennzahlen'].get('naechste_pose_mm'),
                          'naechste_nr': x['kennzahlen'].get('naechste_pose_nr'), 'mittlere': x['kennzahlen'].get('mittlere_pose_mm')}

@@ -10,12 +10,13 @@ Normale unverändert und der Bericht nennt die Texel und den Grund — nichts wi
     bericht = {'gerechnet': {Material: Texel}, 'ungerechnet': {Material: {'texel': n, 'grund': Text}}}
 """
 
-import numpy as np
+import torch
 import warp as wp
 
 from ..closure import Hautclosure
 from . import hautglanzkernel as glanz_kern, hautkontextkernel as kern
 from .hautkontext import Hautkontext
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hautglanz']
 
@@ -38,12 +39,12 @@ class Hautglanz:
             return welt
         g = self.geraet
         if lack:                                                 # mit Coat weicht das Mittel an jedem Texel von `N` ab (seine Normale ist `sd->N`)
-            idx = np.arange(ctx.n, dtype=np.int32)
+            idx = torch.arange(ctx.n, dtype=torch.int32, device='cuda')
         else:
             ng, n_glatt, _u, _v, rueck = ctx.geometrie()
             maske = wp.zeros(ctx.n, dtype=wp.int32, device=g)
             wp.launch(glanz_kern.korrektur_noetig, dim=ctx.n, inputs=[welt, ng, n_glatt, rueck, maske], device=g)
-            idx = np.flatnonzero(maske.numpy()).astype(np.int32)
+            idx = Torchfeld.astype(torch.flatten(maske.numpy()).nonzero()[:, 0], torch.int32)
         if not len(idx):
             return welt
         grund = Hautclosure.grund(graph.spec)

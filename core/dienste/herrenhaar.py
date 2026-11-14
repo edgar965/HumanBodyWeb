@@ -18,7 +18,10 @@ Es sind ANNAHMEN über „normales" Haar (Wirbel, Wuchsrichtung, Spreizung der H
 
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 from .haarband import Haarband
 from .haarkappe import Haarkappe
@@ -78,93 +81,93 @@ class Herrenhaar:
     @classmethod
     def spreizung(cls, rgb):
         """0,25 … 0,7: wie stark die Helligkeiten der Strähnen streuen — grau (unbunt, mittelhell) meliert stark, dunkles braunes Haar kaum."""
-        c = np.asarray(rgb[:3], dtype=np.float64)
+        c = Torchfeld.feld(rgb[:3], dtype=torch.float64)
         sat = (c.max() - c.min()) / max(float(c.max()), 1e-6)
         grau = 1.0 - min(sat / 0.35, 1.0)
-        return float(np.clip(0.25 + 0.45 * grau * min(float(c.max()) / 0.25, 1.0), 0.25, 0.7))
+        return float(Torchfeld.clip(0.25 + 0.45 * grau * min(float(c.max()) / 0.25, 1.0), 0.25, 0.7))
 
     @classmethod
     def farben(cls, rgb):
         """`(kappe, [(rgb, anteil) je Gruppe])` — die Strähnenfarben im Mittel (nach Anteilen) gleich der Haarfarbe `rgb` abzüglich der Kappe, die Kappe `KAPPE_ANTEIL` davon."""
-        rgb = np.clip(np.asarray(rgb[:3], dtype=np.float64) * cls.HELL, 0.0, 1.0)
+        rgb = Torchfeld.clip(Torchfeld.feld(rgb[:3], dtype=torch.float64) * cls.HELL, 0.0, 1.0)
         s = cls.spreizung(rgb)
-        faktoren = np.array([1.0 + d * s for d, _a in cls.GRUPPEN])
-        anteile = np.array([a for _d, a in cls.GRUPPEN])
+        faktoren = Torchfeld.feld([1.0 + d * s for d, _a in cls.GRUPPEN], copy=True)
+        anteile = Torchfeld.feld([a for _d, a in cls.GRUPPEN], copy=True)
         faktoren = faktoren / float((faktoren * anteile).sum() / anteile.sum())      # Mittel nach Anteilen = 1
         kappe = rgb * cls.KAPPE_ANTEIL
         # sichtbar sind Strähnen und Kappe etwa im Verhältnis 70 : 30 — die Strähnen tragen den Rest, damit das Mittel stimmt
         sicht = 0.7
-        streifen = np.clip((rgb - (1.0 - sicht) * kappe) / sicht, 0.0, 1.0)
-        return kappe, [(np.clip(streifen * f, 0.0, 1.0), float(a)) for f, a in zip(faktoren, anteile)]
+        streifen = Torchfeld.clip((rgb - (1.0 - sicht) * kappe) / sicht, 0.0, 1.0)
+        return kappe, [(Torchfeld.clip(streifen * f, 0.0, 1.0), float(a)) for f, a in zip(faktoren, anteile)]
 
     # ------------------------------------------------------------------ Kopf
 
     def _hautkarte(self, klemme):
         """Radius der Haut je Richtungsfeld (m), lückenlos — der Höhenstand, über dem die Strähnen liegen."""
-        p = np.asarray(self.netz['punkte'], dtype=np.float64)
+        p = Torchfeld.feld(self.netz['punkte'], dtype=torch.float64)
         v = p - klemme.mitte
-        r = np.linalg.norm(v, axis=1)
+        r = Torchfeld.linalg_norm(v, dim=1)
         nah = r < Haarkappe.REICHWEITE
         hoehe, breite = klemme.roh.shape
-        karte = np.full((hoehe, breite), np.nan)
-        zeile = np.clip(((np.degrees(np.arcsin(np.clip(v[nah, 1] / r[nah], -1.0, 1.0))) + 90.0) * hoehe / 180.0).astype(int), 0, hoehe - 1)
-        spalte = np.clip((np.degrees(np.arctan2(v[nah, 0], v[nah, 2])) % 360.0 * breite / 360.0).astype(int), 0, breite - 1)
-        np.fmax.at(karte, (zeile, spalte), r[nah])
+        karte = Torchfeld.full((hoehe, breite), math.nan)
+        zeile = Torchfeld.clip(Torchfeld.astype((Torchfeld.degrees(Torchfeld.arcsin(Torchfeld.clip(v[nah, 1] / r[nah], -1.0, 1.0))) + 90.0) * hoehe / 180.0, torch.int64), 0, hoehe - 1)
+        spalte = Torchfeld.clip(Torchfeld.astype(Torchfeld.degrees(Torchfeld.arctan2(v[nah, 0], v[nah, 2])) % 360.0 * breite / 360.0, torch.int64), 0, breite - 1)
+        Torchfeld.fmax_at(karte, (zeile, spalte), r[nah])
         return Haarkappe._fuellen(karte, sigma=0.8)                        # noqa: SLF001 — dieselbe Füllung wie die Hülle
 
     def _wurzeln(self, schnitt, zufall):
         """Wurzeln auf den Dreiecken der Kopfhaut (nach Fläche): `(punkt (N, 3), ecke (N,))` — `ecke` ist der Eckpunkt (Index in die Reihen von `schnitt`) mit dem größten Anteil, von dem Haut und Gewichte kommen."""
         haut_p = schnitt[0].reshape(-1, 3, 3)
-        flaeche = 0.5 * np.linalg.norm(np.cross(haut_p[:, 1] - haut_p[:, 0], haut_p[:, 2] - haut_p[:, 0]), axis=1)
+        flaeche = 0.5 * Torchfeld.linalg_norm(Torchfeld.cross(haut_p[:, 1] - haut_p[:, 0], haut_p[:, 2] - haut_p[:, 0]), dim=1)
         n = int(min(self.HOECHSTENS, round(float(flaeche.sum()) * 1.0e4 * self.DICHTE_CM2)))
         wahl = zufall.choice(len(flaeche), size=n, p=flaeche / flaeche.sum())
         w = zufall.dirichlet((1.0, 1.0, 1.0), size=n)
         punkt = (haut_p[wahl] * w[:, :, None]).sum(axis=1)
-        return punkt, 3 * wahl + np.argmax(w, axis=1)
+        return punkt, 3 * wahl + Torchfeld.argmax(w, dim=1)
 
     def _bis_zur_linie(self, punkt, u0, t, r0, dicke, lauf):
         """Die Länge jeder Strähne so weit kürzen, dass ihre Spitze noch über der Haarlinie liegt (Halbierungssuche, 6 Schritte): Haar hängt nicht über die Linie hinaus — am Nacken und an den Koteletten standen sonst
         lange Fransen unter der Kappe."""
-        unten, oben = np.zeros(len(lauf)), np.ones(len(lauf))
+        unten, oben = torch.zeros(len(lauf), dtype=torch.float64, device='cuda'), torch.ones(len(lauf), dtype=torch.float64, device='cuda')
         for _ in range(6):
             mitte = 0.5 * (unten + oben)
-            winkel = (lauf * mitte / np.maximum(r0 + 0.5 * dicke, 1e-3))[:, None]
-            spitze = self.kappe._lage()[0].mitte + (u0 * np.cos(winkel) + t * np.sin(winkel)) * (r0 + 0.5 * dicke)[:, None]   # noqa: SLF001
+            winkel = (lauf * mitte / Torchfeld.maximum(r0 + 0.5 * dicke, 1e-3))[:, None]
+            spitze = self.kappe._lage()[0].mitte + (u0 * Torchfeld.cos(winkel) + t * Torchfeld.sin(winkel)) * (r0 + 0.5 * dicke)[:, None]   # noqa: SLF001
             drin = self.kappe.dicke_bei(spitze)[1] > self.LINIE_ABSTAND
-            unten, oben = np.where(drin, mitte, unten), np.where(drin, oben, mitte)
+            unten, oben = torch.where(drin, mitte, unten), torch.where(drin, oben, mitte)
         return lauf * unten
 
     def _strahlen(self, klemme, karte, huelle, punkt, zufall):
         """Alle Strähnen: `(reihen (S, K, 3), aussen (S, K, 3), breite (S, K), behalten (N,))` — `behalten` sagt, welche Wurzeln eine Strähne tragen (Haarlinie, Dichte)."""
         dicke, grad, v, r0 = self.kappe.dicke_bei(punkt)
         u0 = v / r0[:, None]
-        el = np.degrees(np.arcsin(np.clip(u0[:, 1], -1.0, 1.0)))                                    # Höhenwinkel der Wurzel am Kopf: danach richtet sich die Länge
+        el = Torchfeld.degrees(Torchfeld.arcsin(Torchfeld.clip(u0[:, 1], -1.0, 1.0)))                                    # Höhenwinkel der Wurzel am Kopf: danach richtet sich die Länge
         rau = Haarwuchs.rauschen(u0, self.SAMEN + 31)
         grad = grad + self.LINIE_GRAD * Haarwuchs.rauschen(u0, self.SAMEN + 32)
         rand = Haarkappe._weich(grad / Haarkappe.RAND_GRAD)                 # noqa: SLF001 — 0 an der Linie, 1 ab `RAND_GRAD` Grad darüber
         behalten = (grad > 0.0) & (zufall.random(len(punkt)) < 0.6 + 0.4 * rand)
         k = self.PUNKTE
-        tau = np.linspace(0.0, 1.0, k)[None, :]
+        tau = torch.linspace(0.0, 1.0, k, dtype=torch.float64, device='cuda')[None, :]
         innen = zufall.random(len(punkt)) < self.INNEN
-        spitze = dicke * np.where(innen, zufall.uniform(*self.SPITZE_INNEN, len(punkt)), zufall.uniform(*self.SPITZE_AUSSEN, len(punkt)))
+        spitze = dicke * torch.where(innen, zufall.uniform(*self.SPITZE_INNEN, len(punkt)), zufall.uniform(*self.SPITZE_AUSSEN, len(punkt)))
         # Die gewählte Länge (`Haarlaenge`) ist die mittlere: ±15 % nach Rauschfeld und ±15 % nach Zufall; ganz an der Haarlinie 80 % davon (die Dichte läuft dort ohnehin aus, `behalten`).
         lauf = self.laenge.laenge(el) * (0.85 + 0.30 * (rau + 1.0) / 2.0) * zufall.uniform(0.85, 1.15, len(punkt)) * (0.8 + 0.2 * rand)
         t = Haarwuchs.laufrichtung(u0, self.SAMEN)
         lauf = self._bis_zur_linie(punkt, u0, t, r0, dicke, lauf)
-        winkel = lauf[:, None] * tau / np.maximum(r0 + 0.5 * dicke, 1e-3)[:, None]                  # Bogen entlang der Kugel um den Kopfmittelpunkt
-        richtung = u0[:, None, :] * np.cos(winkel)[..., None] + t[:, None, :] * np.sin(winkel)[..., None]
+        winkel = lauf[:, None] * tau / Torchfeld.maximum(r0 + 0.5 * dicke, 1e-3)[:, None]                  # Bogen entlang der Kugel um den Kopfmittelpunkt
+        richtung = u0[:, None, :] * Torchfeld.cos(winkel)[..., None] + t[:, None, :] * Torchfeld.sin(winkel)[..., None]
         flach = richtung.reshape(-1, 3)
-        eins = np.ones(len(flach))
+        eins = torch.ones(len(flach), dtype=torch.float64, device='cuda')
         haut_r = klemme._grenze_je_punkt(flach, eins, karte).reshape(len(punkt), k)               # noqa: SLF001
-        haut_w = klemme._grenze_je_punkt(u0, np.ones(len(u0)), karte)                              # noqa: SLF001
+        haut_w = klemme._grenze_je_punkt(u0, torch.ones(len(u0), dtype=torch.float64, device='cuda'), karte)                              # noqa: SLF001
         grund = haut_r + (r0 - haut_w)[:, None]                                                    # die Wurzel liegt genau auf der Haut des Netzes
         radius = grund + spitze[:, None] * (1.0 - (1.0 - tau) ** 2)
-        radius = np.minimum(radius, klemme._grenze_je_punkt(flach, eins, huelle).reshape(len(punkt), k) + self.UEBER_HUELLE_M)   # noqa: SLF001
+        radius = Torchfeld.minimum(radius, klemme._grenze_je_punkt(flach, eins, huelle).reshape(len(punkt), k) + self.UEBER_HUELLE_M)   # noqa: SLF001
         kappe = Haarkappe.RAND_DICKE + (dicke - Haarkappe.RAND_DICKE) * self.KAPPE_DICKE                 # die Kappe darunter: die Strähnen liegen immer darüber, sonst verschwänden sie in ihr
-        radius = np.maximum(radius, grund + (kappe + self.ABSTAND_M)[:, None] * np.minimum(tau * 3.0, 1.0))
+        radius = Torchfeld.maximum(radius, grund + (kappe + self.ABSTAND_M)[:, None] * Torchfeld.minimum(tau * 3.0, 1.0))
         radius[:, 0] = r0
         reihen = klemme.mitte + richtung * radius[..., None]
-        breite = self.BREITE_M[0] + (self.BREITE_M[1] - self.BREITE_M[0]) * tau * np.ones((len(punkt), 1))
+        breite = self.BREITE_M[0] + (self.BREITE_M[1] - self.BREITE_M[0]) * tau * torch.ones((len(punkt), 1), dtype=torch.float64, device='cuda')
         return reihen, richtung, breite, behalten, u0, rau
 
     # ------------------------------------------------------------------ Teile
@@ -175,7 +178,7 @@ class Herrenhaar:
         if schnitt is None:
             return None
         klemme, huelle, _linie = self.kappe._lage()                                             # noqa: SLF001
-        zufall = np.random.default_rng(self.SAMEN)
+        zufall = Zufallsstrom.default_rng(self.SAMEN)
         karte = self._hautkarte(klemme)
         punkt, ecke = self._wurzeln(schnitt, zufall)
         reihen, aussen, breite, behalten, u0, rau = self._strahlen(klemme, karte, huelle, punkt, zufall)
@@ -186,25 +189,25 @@ class Herrenhaar:
         teile = []
         kappe = self.kappe.teil(kappenfarbe, anteil=self.KAPPE_DICKE)
         if kappe is not None:
-            kappe['dreiecke'] = np.asarray(kappe['dreiecke'], dtype=np.int64).reshape(-1, 3)
+            kappe['dreiecke'] = Torchfeld.feld(kappe['dreiecke'], dtype=torch.int64).reshape(-1, 3)
             teile.append(kappe)
         # Gruppe je Strähne: ein Rauschfeld mit etwas Zufall, nach Rang auf die Anteile verteilt — Strähnen derselben Gegend gleichen sich, wie Locken unterschiedlich hell
         wert = self.GRUPPE_RAUSCHEN * rau + (1.0 - self.GRUPPE_RAUSCHEN) * zufall.uniform(-1.0, 1.0, len(rau))
-        rang = np.argsort(np.argsort(wert)) / max(len(wert) - 1, 1)
-        grenzen = np.cumsum([a for _c, a in gruppen]) / sum(a for _c, a in gruppen)
-        gruppe = np.minimum(np.searchsorted(grenzen, rang, side='left'), len(gruppen) - 1)
+        rang = torch.argsort(torch.argsort(wert, stable=True), stable=True) / max(len(wert) - 1, 1)
+        grenzen = Torchfeld.cumsum([a for _c, a in gruppen]) / sum(a for _c, a in gruppen)
+        gruppe = Torchfeld.minimum(Torchfeld.searchsorted(grenzen, rang, side='left'), len(gruppen) - 1)
         haut = self.netz['haut']
         index, gewicht = schnitt[2], schnitt[3]
         k = self.PUNKTE
         for g, (farbe, _anteil) in enumerate(gruppen):
-            wahl = np.flatnonzero(gruppe == g)
+            wahl = torch.flatten(gruppe == g).nonzero()[:, 0]
             if not len(wahl):
                 continue
             punkte, dreiecke = Haarband.roehren(reihen[wahl], aussen[wahl], breite[wahl])
             je = ecke[wahl][Haarband.eckpunkte(len(wahl), k, 3)]
             teile.append({'art': 'haar', 'sorte': '%s_%d' % (self.SORTE, g), 'punkte': punkte, 'dreiecke': dreiecke, 'farbe': tuple(float(c) for c in farbe),
                           'haut': {'knochen': haut['knochen'], 'index': index[je], 'gewicht': gewicht[je]}, 'uv': None, 'normalen': None, 'gruppen': [],
-                          'toenung': np.ones(3), 'textur': []})
+                          'toenung': torch.ones(3, dtype=torch.float64, device='cuda'), 'textur': []})
         logger.info('Herrenhaar: %d Strähnen (%d Dreiecke) in %d Gruppen, Spreizung %.2f, Kappe %s', len(reihen), len(reihen) * 6 * (k - 1), len(teile) - (1 if kappe else 0), self.spreizung(rgb),
                     'ja' if kappe is not None else 'nein')
         return teile

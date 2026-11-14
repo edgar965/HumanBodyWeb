@@ -10,7 +10,9 @@ Rig-Punkten; diese zwei braucht sie vom Server, weil sie den ganzen Trainingssat
 Alle Abstände in mm, Mittel über die Rig-Punkte der Zeile, im ausgerichteten Rahmen des Datensatzes (wie der Fehler des Netzes).
 """
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshgenesisvergleich']
 
@@ -19,18 +21,18 @@ class Meshgenesisvergleich:
     def __init__(self, training):
         """`training`: `{nr: Soll-Rig (138, 3) in m}` der Proben der Gruppe „training“."""
         self.nummern = list(training)
-        self.rig = np.stack([training[n] for n in self.nummern]) if training else np.zeros((0, 0, 3))
+        self.rig = Torchfeld.stack([training[n] for n in self.nummern]) if training else torch.zeros((0, 0, 3), dtype=torch.float64, device='cuda')
         self.mittel = self.rig.mean(axis=0) if training else None
 
     def werte(self, nr, soll, indizes):
         """`{mittlere_pose_mm, naechste_pose_mm, naechste_pose_nr}` für die Rig-Punkte `indizes`; leer ohne Trainingsproben."""
         if self.mittel is None:
             return {}
-        abstand = 1000.0 * np.linalg.norm(self.rig[:, indizes] - soll[None, indizes], axis=-1).mean(axis=1)
+        abstand = 1000.0 * Torchfeld.linalg_norm(self.rig[:, indizes] - soll[None, indizes], dim=-1).mean(axis=1)
         if nr in self.nummern:
-            abstand[self.nummern.index(nr)] = np.inf
-        if not np.isfinite(abstand).any():
+            abstand[self.nummern.index(nr)] = math.inf
+        if not Torchfeld.isfinite(abstand).any():
             return {}
-        i = int(np.argmin(abstand))
-        basis = 1000.0 * np.linalg.norm(self.mittel[indizes] - soll[indizes], axis=-1).mean()
+        i = int(Torchfeld.argmin(abstand))
+        basis = 1000.0 * Torchfeld.linalg_norm(self.mittel[indizes] - soll[indizes], dim=-1).mean()
         return {'mittlere_pose_mm': round(float(basis), 1), 'naechste_pose_mm': round(float(abstand[i]), 1), 'naechste_pose_nr': int(self.nummern[i])}

@@ -20,7 +20,8 @@ Daumenwurzel sind im Ton der Umgebung, das weiße Loch im Daumen ist zu; 1,5 s S
 Treffer des Strahls auf dem Original — ob es falsche Treffer sind (Abstand der Figur zum Original dort), ist nicht geprüft.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportfarbangleich']
 
@@ -45,17 +46,17 @@ class Blendimportfarbangleich:
     @classmethod
     def stopfen(cls, ersatz):
         """Die Ersatzkachel (H, W, 3) uint8 mit gestopften Löchern (nächster nicht weißer Pixel); die Eingabe bleibt, wie sie ist."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        helligkeit = ersatz.min(axis=2)
+        helligkeit = Torchfeld.amin(ersatz, dim=2)
         weiss = helligkeit >= cls.WEISS
         # Achter-Nachbarschaft: eine Kerbe, die nur diagonal am Hintergrund hängt, ist kein Loch (mit Vierer-Nachbarschaft fraß die Füllung
         # Zacken in den Inselrand, gesehen an Asian 1004).
-        marke, anzahl = ndimage.label(weiss, structure=np.ones((3, 3)))
+        marke, anzahl = ndimage.label(weiss, structure=torch.ones((3, 3), dtype=torch.float64, device='cuda'))
         if anzahl == 0:
             return ersatz
-        klein = np.flatnonzero(np.bincount(marke.ravel())[1:] <= cls.TASCHE_MAX) + 1
-        tasche = np.isin(marke, klein)
+        klein = torch.flatten(Torchfeld.bincount(marke.ravel())[1:] <= cls.TASCHE_MAX).nonzero()[:, 0] + 1
+        tasche = torch.isin(marke, Torchfeld.feld(klein))
         if not tasche.any():
             return ersatz
         # Um ein Loch liegt ein heller Hof (JPEG der Ersatzkachel: 237–250 in Haut von 115–135, bis 6 Pixel vom Weiß, gemessen an Asian
@@ -63,7 +64,7 @@ class Blendimportfarbangleich:
         hell = helligkeit >= cls.HELL
         loch = (tasche | (ndimage.binary_dilation(tasche, iterations=cls.HOF_PX) & hell)) & ~(weiss & ~tasche)
         zeile, spalte = ndimage.distance_transform_edt(hell | loch, return_distances=False, return_indices=True)
-        neu = ersatz.copy()
+        neu = Torchfeld.kopie(ersatz)
         neu[loch] = ersatz[zeile[loch], spalte[loch]]
         return neu
 
@@ -72,17 +73,17 @@ class Blendimportfarbangleich:
         """`(Anteil gültig, Mittel der gültigen)` je `faktor × faktor`-Block: `(h, w)` und `(h, w, 3)` Gleitkomma."""
         hoehe, breite = gueltig.shape
         h, w = hoehe // faktor, breite // faktor
-        anteil = np.zeros((h, w), dtype=np.float32)
-        summe = np.zeros((h, w, 3), dtype=np.float32)
+        anteil = torch.zeros((h, w), dtype=torch.float32, device='cuda')
+        summe = torch.zeros((h, w, 3), dtype=torch.float32, device='cuda')
         schritt = faktor * max(1, 256 // faktor)
         for a in range(0, hoehe, schritt):
             b = min(a + schritt, hoehe)
-            m = gueltig[a:b].astype(np.float32)
+            m = Torchfeld.astype(gueltig[a:b], torch.float32)
             zeilen = slice(a // faktor, b // faktor)
             anteil[zeilen] = m.reshape(-1, faktor, w, faktor).mean(axis=(1, 3))
-            gewichtet = farbe[a:b].astype(np.float32) * m[..., None]
+            gewichtet = Torchfeld.astype(farbe[a:b], torch.float32) * m[..., None]
             summe[zeilen] = gewichtet.reshape(-1, faktor, w, faktor, 3).mean(axis=(1, 3))
-        mittel = np.where(anteil[..., None] > 0, summe / np.maximum(anteil[..., None], 1e-6), 0.0)
+        mittel = torch.where(anteil[..., None] > 0, summe / Torchfeld.maximum(anteil[..., None], 1e-6), 0.0)
         return anteil, mittel
 
     @classmethod
@@ -90,21 +91,21 @@ class Blendimportfarbangleich:
         """Der Versatz Gebackenes − Ersatz auf dem Raster der Ersatzkachel: `(h, w, 3)` Gleitkomma.
 
         `ersatz` (h, w, 3) uint8 auf dem groben Raster, `farbe` (H, W, 3) und `gueltig` (H, W) auf dem der Kachel (H = Vielfaches von h)."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         h, w = ersatz.shape[:2]
         faktor = farbe.shape[0] // h
         anteil, gebacken = cls._bloecke(farbe, gueltig, faktor)
-        ok = (ersatz.min(axis=2) < cls.WEISS) & (anteil > 0)
-        gewicht = np.where(ok, anteil, 0.0).astype(np.float32)
-        unterschied = np.where(ok[..., None], gebacken - ersatz.astype(np.float32), 0.0)
-        ergebnis = np.zeros((h, w, 3), dtype=np.float32)
+        ok = (Torchfeld.amin(ersatz, dim=2) < cls.WEISS) & (anteil > 0)
+        gewicht = Torchfeld.astype(torch.where(ok, anteil, 0.0), torch.float32)
+        unterschied = torch.where(ok[..., None], gebacken - Torchfeld.astype(ersatz, torch.float32), 0.0)
+        ergebnis = torch.zeros((h, w, 3), dtype=torch.float32, device='cuda')
         # Von grob nach fein überblenden: wo der feine Maßstab genug Fläche sieht, gilt er, sonst der gröbere.
         for sigma in sorted(cls.SIGMA, reverse=True):
             g = ndimage.gaussian_filter(gewicht, sigma)
-            anteil_ok = np.clip(g / cls.MIN_GEWICHT, 0.0, 1.0)
-            d = np.stack([ndimage.gaussian_filter(unterschied[..., k] * gewicht, sigma) for k in range(3)], axis=-1)
-            d = d / np.maximum(g[..., None], 1e-6)
+            anteil_ok = Torchfeld.clip(g / cls.MIN_GEWICHT, 0.0, 1.0)
+            d = Torchfeld.stack([ndimage.gaussian_filter(unterschied[..., k] * gewicht, sigma) for k in range(3)], axis=-1)
+            d = d / Torchfeld.maximum(g[..., None], 1e-6)
             ergebnis = ergebnis * (1.0 - anteil_ok[..., None]) + d * anteil_ok[..., None]
         return ergebnis
 
@@ -112,16 +113,16 @@ class Blendimportfarbangleich:
     def _hoch(versatz, zeilen, breite, faktor):
         """Der grobe Versatz für die Bildzeilen `zeilen` (slice) auf dem feinen Raster, bilinear."""
         h, w = versatz.shape[:2]
-        y = np.arange(zeilen.start, zeilen.stop)
-        fy = np.clip((y + 0.5) / faktor - 0.5, 0, h - 1)
-        y0 = np.floor(fy).astype(int)
-        y1 = np.minimum(y0 + 1, h - 1)
-        wy = (fy - y0).astype(np.float32)[:, None, None]
+        y = Torchfeld.arange(zeilen.start, zeilen.stop)
+        fy = Torchfeld.clip((y + 0.5) / faktor - 0.5, 0, h - 1)
+        y0 = Torchfeld.astype(Torchfeld.floor(fy), torch.int64)
+        y1 = Torchfeld.minimum(y0 + 1, h - 1)
+        wy = Torchfeld.astype(fy - y0, torch.float32)[:, None, None]
         quer = versatz[y0] * (1 - wy) + versatz[y1] * wy                       # (Zeilen, w, 3)
-        fx = np.clip((np.arange(breite) + 0.5) / faktor - 0.5, 0, w - 1)
-        x0 = np.floor(fx).astype(int)
-        x1 = np.minimum(x0 + 1, w - 1)
-        wx = (fx - x0).astype(np.float32)[None, :, None]
+        fx = Torchfeld.clip((Torchfeld.arange(breite) + 0.5) / faktor - 0.5, 0, w - 1)
+        x0 = Torchfeld.astype(Torchfeld.floor(fx), torch.int64)
+        x1 = Torchfeld.minimum(x0 + 1, w - 1)
+        wx = Torchfeld.astype(fx - x0, torch.float32)[None, :, None]
         return quer[:, x0] * (1 - wx) + quer[:, x1] * wx
 
     @classmethod
@@ -133,20 +134,20 @@ class Blendimportfarbangleich:
         from PIL import Image
 
         hoehe, breite = farbe.shape[:2]
-        grob = cls.stopfen(np.asarray(ersatz.convert('RGB')))
+        grob = cls.stopfen(Torchfeld.feld(ersatz.convert('RGB')))
         faktor = max(1, hoehe // cls.GROB_PX)
         while hoehe % faktor or breite % faktor:
             faktor -= 1
         if grob.shape[:2] != (hoehe // faktor, breite // faktor):
-            grob = np.asarray(Image.fromarray(grob).resize((breite // faktor, hoehe // faktor), Image.LANCZOS))
+            grob = Torchfeld.feld(Image.fromarray(grob).resize((breite // faktor, hoehe // faktor), Image.LANCZOS))
         versatz = cls.versatz(grob, farbe, ~ungueltig)
-        voll = np.asarray(Image.fromarray(grob).resize((breite, hoehe), Image.LANCZOS)).copy()
+        voll = Torchfeld.kopie(Torchfeld.feld(Image.fromarray(grob).resize((breite, hoehe), Image.LANCZOS)))
         for a in range(0, hoehe, cls.STREIFEN):
             zeilen = slice(a, min(a + cls.STREIFEN, hoehe))
             stueck = voll[zeilen]
-            stelle = ungueltig[zeilen] & (stueck.min(axis=2) < cls.WEISS)
+            stelle = ungueltig[zeilen] & (Torchfeld.amin(stueck, dim=2) < cls.WEISS)
             if not stelle.any():
                 continue
             d = cls._hoch(versatz, zeilen, breite, faktor)
-            stueck[stelle] = np.clip(stueck[stelle].astype(np.float32) + d[stelle], 0, 255).astype(np.uint8)
+            stueck[stelle] = Torchfeld.astype(Torchfeld.clip(Torchfeld.astype(stueck[stelle], torch.float32) + d[stelle], 0, 255), torch.uint8)
         return voll

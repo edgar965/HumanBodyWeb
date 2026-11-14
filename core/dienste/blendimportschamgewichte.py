@@ -22,7 +22,9 @@ Haut. Bei `scham = objekt` entfällt die Nachformung (`Blendimportlauf._nachform
 Genesis9 prüfbar (`test_blendimport_schamgewichte.py`).
 """
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportschamgewichte']
 
@@ -49,10 +51,10 @@ class Blendimportschamgewichte:
     def __init__(self, punkte, dreiecke, index, gewicht, knochen):
         """`punkte`/`dreiecke`: die Haut der Figur (Ruhelage); `index`/`gewicht` `(N, 4)`: ihre Gewichte (`netzstufe(1).haut`);
         `knochen`: die Namen, auf die `index` zeigt."""
-        self.punkte = np.asarray(punkte, dtype=np.float64)
-        self.dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        self.index = np.asarray(index, dtype=np.int64)
-        self.gewicht = np.asarray(gewicht, dtype=np.float64)
+        self.punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        self.index = Torchfeld.feld(index, dtype=torch.int64)
+        self.gewicht = Torchfeld.feld(gewicht, dtype=torch.float64)
         self.knochen = list(knochen)
         self.normalen = self.punktnormalen(self.punkte, self.dreiecke)
         self.bericht = {}
@@ -63,17 +65,17 @@ class Blendimportschamgewichte:
     def punktnormalen(punkte, dreiecke):
         """Flächengewichtete Punktnormalen (auf Länge 1)."""
         a, b, c = (punkte[dreiecke[:, i]] for i in range(3))
-        flaeche = np.cross(b - a, c - a)
-        summe = np.zeros_like(punkte)
+        flaeche = Torchfeld.cross(b - a, c - a)
+        summe = torch.zeros_like(punkte)
         for i in range(3):
-            np.add.at(summe, dreiecke[:, i], flaeche)
-        laenge = np.linalg.norm(summe, axis=1, keepdims=True)
-        return summe / np.maximum(laenge, 1e-12)
+            Torchfeld.add_at(summe, dreiecke[:, i], flaeche)
+        laenge = Torchfeld.linalg_norm(summe, dim=1, keepdim=True)
+        return summe / Torchfeld.maximum(laenge, 1e-12)
 
     def verdecker(self, p):
         """`(nachbar (m, NACHBARN), kosten (m, NACHBARN))`: je Stückpunkt die Hautpunkte, die ihn verdecken. Wo keiner in Frage
         kommt, sind es die im Raum nächsten (Kosten = Abstand) — `bericht['ohne_verdecker']` zählt sie."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         baum = cKDTree(self.punkte)
         k = min(self.KANDIDATEN, len(self.punkte))
@@ -81,55 +83,55 @@ class Blendimportschamgewichte:
         c, n = self.punkte[kand], self.normalen[kand]
         v = p[:, None, :] - c
         tiefe = (v * n).sum(-1)                         # > 0: vor der Haut, < 0: dahinter
-        quer = np.linalg.norm(v - tiefe[..., None] * n, axis=-1)
-        kosten = quer + self.TIEFE_FAKTOR * np.abs(tiefe)
+        quer = Torchfeld.linalg_norm(v - tiefe[..., None] * n, dim=-1)
+        kosten = quer + self.TIEFE_FAKTOR * Torchfeld.abs(tiefe)
         gilt = (abstand <= self.SUCHE_M) & (tiefe <= self.DAVOR_M) & (tiefe >= -self.DAHINTER_M)
-        kosten = np.where(gilt, kosten, np.inf)
+        kosten = torch.where(gilt, kosten, math.inf)
         ohne = ~gilt.any(axis=1)
         kosten[ohne] = abstand[ohne]
-        wahl = np.argsort(kosten, axis=1)[:, :self.NACHBARN]
+        wahl = torch.argsort(kosten, dim=1, stable=True)[:, :self.NACHBARN]
         self.bericht['ohne_verdecker'] = int(ohne.sum())
-        return np.take_along_axis(kand, wahl, axis=1), np.take_along_axis(kosten, wahl, axis=1)
+        return Torchfeld.take_along_dim(kand, wahl, dim=1), Torchfeld.take_along_dim(kosten, wahl, dim=1)
 
     def dicht(self, nachbar, kosten):
         """Dichte Gewichte `(m, Knochen)` aus den gewählten Hautpunkten (Mischung nach Kehrwert der Kosten)."""
-        anteil = 1.0 / np.maximum(kosten, 1e-3)
+        anteil = 1.0 / Torchfeld.maximum(kosten, 1e-3)
         anteil /= anteil.sum(axis=1, keepdims=True)
-        dicht = np.zeros((len(nachbar), len(self.knochen)))
-        zeilen = np.arange(len(nachbar))
+        dicht = torch.zeros((len(nachbar), len(self.knochen)), dtype=torch.float64, device='cuda')
+        zeilen = Torchfeld.arange(len(nachbar))
         for k in range(nachbar.shape[1]):
             for j in range(self.index.shape[1]):
-                np.add.at(dicht, (zeilen, self.index[nachbar[:, k], j]), anteil[:, k] * self.gewicht[nachbar[:, k], j])
+                Torchfeld.add_at(dicht, (zeilen, self.index[nachbar[:, k], j]), anteil[:, k] * self.gewicht[nachbar[:, k], j])
         return dicht
 
     def glaetten(self, dicht, dreiecke):
         """Jeder Punkt rückt zu `GLAETTEN_ANTEIL` ins Mittel seiner Netznachbarn (Gewichte der Haut sind glatt, die Wahl der
         besten Hautpunkte springt dagegen)."""
         n = len(dicht)
-        a = np.concatenate([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
-        b = np.concatenate([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0], dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
+        a = Torchfeld.cat([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
+        b = Torchfeld.cat([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0], dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
         for _ in range(self.GLAETTEN):
-            summe, zahl = np.zeros_like(dicht), np.zeros(n)
-            np.add.at(summe, a, dicht[b])
-            np.add.at(zahl, a, 1.0)
-            mittel = np.where(zahl[:, None] > 0, summe / np.maximum(zahl[:, None], 1.0), dicht)
+            summe, zahl = torch.zeros_like(dicht), torch.zeros(n, dtype=torch.float64, device='cuda')
+            Torchfeld.add_at(summe, a, dicht[b])
+            Torchfeld.add_at(zahl, a, 1.0)
+            mittel = torch.where(zahl[:, None] > 0, summe / Torchfeld.maximum(zahl[:, None], 1.0), dicht)
             dicht = (1.0 - self.GLAETTEN_ANTEIL) * dicht + self.GLAETTEN_ANTEIL * mittel
         return dicht
 
     def kuerzen(self, dicht):
         """Nur die stärksten `KNOCHEN_JE_PUNKT` Knochen je Punkt bleiben; die Zeilen summieren wieder zu 1."""
         if dicht.shape[1] > self.KNOCHEN_JE_PUNKT:
-            schwach = np.argsort(dicht, axis=1)[:, :-self.KNOCHEN_JE_PUNKT]
-            np.put_along_axis(dicht, schwach, 0.0, axis=1)
-        return dicht / np.maximum(dicht.sum(axis=1, keepdims=True), 1e-12)
+            schwach = torch.argsort(dicht, dim=1, stable=True)[:, :-self.KNOCHEN_JE_PUNKT]
+            Torchfeld.put_along_axis(dicht, schwach, 0.0, axis=1)
+        return dicht / Torchfeld.maximum(dicht.sum(axis=1, keepdims=True), 1e-12)
 
     def haut_dicht(self, punkte):
         """Dichte Gewichte `(len(punkte), Knochen)` der Hautpunkte `punkte` (Nummern der Figur)."""
-        punkte = np.asarray(punkte, dtype=np.int64)
-        dicht = np.zeros((len(punkte), len(self.knochen)))
-        zeilen = np.arange(len(punkte))
+        punkte = Torchfeld.feld(punkte, dtype=torch.int64)
+        dicht = torch.zeros((len(punkte), len(self.knochen)), dtype=torch.float64, device='cuda')
+        zeilen = Torchfeld.arange(len(punkte))
         for j in range(self.index.shape[1]):
-            np.add.at(dicht, (zeilen, self.index[punkte, j]), self.gewicht[punkte, j])
+            Torchfeld.add_at(dicht, (zeilen, self.index[punkte, j]), self.gewicht[punkte, j])
         return dicht
 
     def an_ring(self, dicht, p, dreiecke, lage, ring_punkte):
@@ -137,35 +139,35 @@ class Blendimportschamgewichte:
         des Rings zwischen den Hautpunkten A und B bekommt `(1 − t)·A + t·B`, ein Punkt auf einer Ecke deren Gewichte — der Rand folgt
         jeder Haltung wie die Haut und der Spalt bleibt zu (Daz: Randpunkte des Geografts SIND Punkte des Körpers). Ins Innere läuft
         das über `RING_BAND_M` (Weg über das Netz) in die Gewichte des Stücks aus. `lage` (k, 3), `ring_punkte` (k,)."""
-        from scipy import sparse
-        from scipy.sparse import csgraph
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+        from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
-        lage = np.asarray(lage, dtype=np.float64)
-        seg = np.roll(lage, -1, axis=0) - lage
+        lage = Torchfeld.feld(lage, dtype=torch.float64)
+        seg = torch.roll(lage, -1, dims=0) - lage
         v = p[:, None, :] - lage[None]
-        t = np.clip((v * seg[None]).sum(-1) / np.maximum((seg ** 2).sum(-1), 1e-18)[None], 0.0, 1.0)
-        abstand = np.linalg.norm(p[:, None, :] - (lage[None] + t[..., None] * seg[None]), axis=-1)
+        t = Torchfeld.clip((v * seg[None]).sum(-1) / Torchfeld.maximum((seg ** 2).sum(-1), 1e-18)[None], 0.0, 1.0)
+        abstand = Torchfeld.linalg_norm(p[:, None, :] - (lage[None] + t[..., None] * seg[None]), dim=-1)
         j = abstand.argmin(axis=1)
-        zeile = np.arange(len(p))
+        zeile = Torchfeld.arange(len(p))
         t, nah = t[zeile, j], abstand[zeile, j]
         haut = self.haut_dicht(ring_punkte)
-        am_ring = np.flatnonzero(nah < self.RING_TOL_M)
+        am_ring = torch.flatten(nah < self.RING_TOL_M).nonzero()[:, 0]
         rand = (1.0 - t[am_ring])[:, None] * haut[j[am_ring]] + t[am_ring][:, None] * haut[(j[am_ring] + 1) % len(lage)]
         # Weg über das Netz, Punkte gleicher Lage (UV-Nähte des Stücks) gelten als einer
-        _, rep = np.unique(np.round(p / 1e-7).astype(np.int64), axis=0, return_inverse=True)
+        _, rep = Torchfeld.unique(Torchfeld.astype(Torchfeld.round(p / 1e-7), torch.int64), axis=0, return_inverse=True)
         rep = rep.ravel()
-        pa = np.concatenate([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
-        pb = np.concatenate([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
+        pa = Torchfeld.cat([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
+        pb = Torchfeld.cat([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
         n = int(rep.max()) + 1
-        lange = np.maximum(np.linalg.norm(p[pa] - p[pb], axis=1), 1e-9)
+        lange = Torchfeld.maximum(Torchfeld.linalg_norm(p[pa] - p[pb], dim=1), 1e-9)
         weg, _, quelle = csgraph.dijkstra(sparse.csr_matrix((lange, (rep[pa], rep[pb])), shape=(n, n)), directed=False,
-                                          indices=np.unique(rep[am_ring]), min_only=True, return_predecessors=True)
-        rand_je_lage = np.zeros((n, dicht.shape[1]))
+                                          indices=Torchfeld.unique(rep[am_ring]), min_only=True, return_predecessors=True)
+        rand_je_lage = torch.zeros((n, dicht.shape[1]), dtype=torch.float64, device='cuda')
         rand_je_lage[rep[am_ring]] = rand
-        s = np.clip(weg[rep] / self.RING_BAND_M, 0.0, 1.0)
+        s = Torchfeld.clip(weg[rep] / self.RING_BAND_M, 0.0, 1.0)
         s = s * s * (3.0 - 2.0 * s)
-        erreicht = np.isfinite(weg[rep])
-        neu = dicht.copy()
+        erreicht = Torchfeld.isfinite(weg[rep])
+        neu = Torchfeld.kopie(dicht)
         neu[erreicht] = ((1.0 - s[erreicht, None]) * rand_je_lage[quelle[rep[erreicht]]] + s[erreicht, None] * dicht[erreicht])
         self.bericht['ring'] = {'punkte': int(len(am_ring)), 'band': int((erreicht & (s < 1.0)).sum())}
         return neu
@@ -177,18 +179,18 @@ class Blendimportschamgewichte:
         `G9mbstuecke.gewichte`, wie es `G9dsonschreiber` liest). `ring`: `(lage, ring_punkte)` des Hautlochs — der Rand des Stücks
         trägt dann die Gewichte der Haut auf diesem Ring (`an_ring`). `dicht` `(N, len(knochen))`: Gewichte, die das Stück selbst mitbringt
         (Daz-Geograft, `Dazgeograftgewichte`, seit 28.10.2026) — dann keine Verdecker, nur der Ring."""
-        p = np.asarray(p, dtype=np.float64)
-        dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        p = Torchfeld.feld(p, dtype=torch.float64)
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         if dicht is None:
             nachbar, kosten = self.verdecker(p)
             dicht = self.glaetten(self.dicht(nachbar, kosten), dreiecke)
-        dicht = self.kuerzen(np.asarray(dicht, dtype=np.float64))
+        dicht = self.kuerzen(Torchfeld.feld(dicht, dtype=torch.float64))
         if ring is not None:
             dicht = self.kuerzen(self.an_ring(dicht, p, dreiecke, *ring))
         self.bericht['punkte'] = int(len(p))
         aus = {}
         for spalte, name in enumerate(self.knochen):
-            wo = np.nonzero(dicht[:, spalte] > 1e-4)[0]
+            wo = torch.nonzero(dicht[:, spalte] > 1e-4, as_tuple=True)[0]
             if len(wo):
                 aus[name] = [[int(i), round(float(dicht[i, spalte]), 5)] for i in wo]
         return aus

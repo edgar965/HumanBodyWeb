@@ -91,6 +91,8 @@ export class Genesis9netz {
                                     stueck: daten.stoff.stueck || null, nummer: daten.stoff.nummer ?? null,
                                     misch: Stoffmischung.lesen(daten.stoff.misch) };
         }
+        // Anliegende Kleidung: Lage des Käfigs für die Glättung je Bild (`Genesis9glaettung`, 12.11.2026).
+        if (daten.glaettung?.kaefig) netz.userData.glaettung = { kaefig: base64ToFloat32(daten.glaettung.kaefig), stufen: daten.stufen || 0 };
         return netz;
     }
 

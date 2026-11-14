@@ -13,7 +13,8 @@ Punkte), wird dort nichts geschnitten: die Grenze gilt. Der Rand liegt dann dort
 Rand des Stücks sind dieselbe Linie.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportschamtiefe']
 
@@ -34,8 +35,8 @@ class Blendimportschamtiefe:
 
         `ruhe`: Punkte des Originals; `innen`: Maske der Punkte, deren Lage in der Vorderansicht im Schnittbereich liegt; `z_saat`: z der Saat;
         `flaeche`: Haut der Figur (trimesh)."""
-        hinten = cls._grenze(ruhe, innen, float(np.min(z_saat)) - zugabe_mm / 1000.0, -1, flaeche)
-        vorn = cls._grenze(ruhe, innen, float(np.max(z_saat)) + zugabe_mm / 1000.0, 1, flaeche)
+        hinten = cls._grenze(ruhe, innen, float(Torchfeld.amin(z_saat)) - zugabe_mm / 1000.0, -1, flaeche)
+        vorn = cls._grenze(ruhe, innen, float(Torchfeld.amax(z_saat)) + zugabe_mm / 1000.0, 1, flaeche)
         return hinten, vorn
 
     @classmethod
@@ -46,9 +47,9 @@ class Blendimportschamtiefe:
         z, flach, erste = start, 0, start
         for _ in range(int(cls.MAX_MM / cls.SCHRITT_MM) + 1):
             lo, hi = sorted((z, z - richtung * schritt))                 # die Scheibe innen an der Grenze: dort liegt der Rand des Stücks
-            scheibe = np.flatnonzero(innen & (ruhe[:, 2] >= lo) & (ruhe[:, 2] < hi))
+            scheibe = torch.flatten(innen & (ruhe[:, 2] >= lo) & (ruhe[:, 2] < hi)).nonzero()[:, 0]
             leer = len(scheibe) < cls.MINDEST
-            if leer or float(np.median(trimesh.proximity.closest_point(flaeche, ruhe[scheibe])[1])) * 1000.0 <= cls.FLACH_MM:
+            if leer or float(Torchfeld.median(trimesh.proximity.closest_point(flaeche, ruhe[scheibe])[1])) * 1000.0 <= cls.FLACH_MM:
                 if flach == 0:
                     erste = z
                 flach += 1

@@ -13,14 +13,16 @@ GELESEN beim Aufruf, nichts von Hand:
 import json
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Architekturmeshgenesisvorstufe']
 
 
 def _mittel(werte):
     w = [v for v in werte if v is not None]
-    return round(float(np.mean(w)), 1) if w else None
+    return round(float(Torchfeld.mean(w)), 1) if w else None
 
 
 class Architekturmeshgenesisvorstufe:
@@ -50,10 +52,10 @@ class Architekturmeshgenesisvorstufe:
     def _fehler(lauf):
         """{Probe: mm} aus `vorhersagen.npz` (alle Gruppen) oder None, wenn der Lauf fehlt."""
         datei = Path(lauf) / 'vorhersagen.npz'
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
         aus = {}
-        with np.load(datei) as z:
+        with Npztorch.lesen(datei) as z:
             for g in ('training', 'pruefung', 'spagat'):
                 if g + '_nr' in z.files and g + '_fehler_mm' in z.files:
                     aus.update({int(n): float(f) for n, f in zip(z[g + '_nr'], z[g + '_fehler_mm'], strict=False)})
@@ -86,7 +88,7 @@ class Architekturmeshgenesisvorstufe:
         mittel = {'proben': len(pruef), 'rig': _mittel(z['rig'] for z in pruef), 'alt': _mittel(z['alt'] for z in pruef),
                   'netze': [_mittel(z['netze'][i] for z in pruef) for i in range(len(spalten))],
                   'besser': [sum(1 for z in pruef if z['rig'] is not None and z['netze'][i] is not None and z['rig'] < z['netze'][i]) for i in range(len(spalten))]}
-        schritte = [{'schritt': s, 'text': t, 'min': round(min(dauer[s]), 1), 'max': round(max(dauer[s]), 1), 'mittel': round(float(np.mean(dauer[s])), 1), 'auftraege': len(dauer[s])}
+        schritte = [{'schritt': s, 'text': t, 'min': round(min(dauer[s]), 1), 'max': round(max(dauer[s]), 1), 'mittel': round(float(Torchfeld.mean(dauer[s])), 1), 'auftraege': len(dauer[s])}
                     for s, t in cls.SCHRITTE if dauer.get(s)]
         return {'zeilen': zeilen, 'spalten': [{'lauf': s['lauf'], 'text': s['text']} for s in spalten], 'mittel': mittel, 'schritte': schritte,
                 'gesamt_s': round(sum(s['mittel'] for s in schritte)) if schritte else None}

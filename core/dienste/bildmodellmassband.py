@@ -18,7 +18,8 @@ hoehe_cm}`; Werte in cm. Läuft im Schritt „vorschau" nach `Bildmodellmasse`.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.wrapperpfad import Wrapperpfad
 
@@ -66,7 +67,7 @@ class Bildmodellmassband:
 
             koerper = Smplxkoerper.laden('neutral', Baum.SMPLX)
         v = koerper.formen(betas)
-        v = v - np.array([0.0, float(v[:, 1].min()), 0.0])
+        v = v - Torchfeld.feld([0.0, float(v[:, 1].min()), 0.0], copy=True)
         if hoehe_cm:
             v = v * (hoehe_cm / 100.0 / max(1e-6, float(v[:, 1].max())))
         return G9massband.smplx(v, koerper.weights, koerper.J_regressor @ v).messen()
@@ -87,7 +88,7 @@ class Bildmodellmassband:
         je_bild = {}
         for b in bilder:
             v = koerper.formen(b['gvhmr']['betas'])
-            v = v - np.array([0.0, float(v[:, 1].min()), 0.0])
+            v = v - Torchfeld.feld([0.0, float(v[:, 1].min()), 0.0], copy=True)
             if hoehe:
                 v = v * (hoehe / 100.0 / max(1e-6, float(v[:, 1].max())))
             gelenke = koerper.J_regressor @ v
@@ -103,7 +104,7 @@ class Bildmodellmassband:
             if paare:
                 w = sum(g for g, _ in paare)
                 median[k] = round(float(sum(g * v for g, v in paare) / w) if w > 0
-                                  else float(np.median([v for _, v in paare])), 2)
+                                  else float(Torchfeld.median([v for _, v in paare])), 2)
         median['bilder'] = len(je_bild)
         return median, je_bild
 
@@ -117,7 +118,7 @@ class Bildmodellmassband:
             return None
         p, _, gelenke = self.ziel_laden()
         namen = list(gelenke.keys())
-        g = np.array([gelenke[n] for n in namen], float)
+        g = Torchfeld.feld([gelenke[n] for n in namen], dtype=torch.float64, copy=True)
         return G9massband.genesis(p, G9haut.holen(), g, namen).messen()
 
     def modell(self):

@@ -22,7 +22,7 @@ import logging
 import shutil
 import time
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.utils import timezone
 from Genesis9.rezeptumgebung import Rezeptumgebung
 
@@ -151,7 +151,7 @@ class Begutachtungsrunde:
         ansichten = Haltungsansichten.bauen(modell, bau, referenzen, z.get('haltung_foto'), self.ablage.arbeit('runden') / ('runde_%04d' % runde),
                                             je_foto=Iterationsoptionenfoto.haltung_je_foto(self.job))
         teile = ansichten.teile
-        z['modell_hoehe'] = round(float(max(float(np.asarray(t['punkte'])[:, 1].max()) for t in teile)), 4)
+        z['modell_hoehe'] = round(float(max(float(Torchfeld.feld(t['punkte'])[:, 1].max()) for t in teile)), 4)
         # Note in der Auflösungsstufe, Befund auf 128 × 192, Renders mindestens in Prüfbreite (Edgar 02.10.2026).
         breite = self.stufe.breite(z)
         groesse = Aufloesungsstufe.groesse(max(breite, int(self.o.get('tafelbreite') or 384)))

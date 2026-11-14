@@ -49,7 +49,8 @@ nächsten Nachbarn. Der Antwortvorrat merkt die GANZE Mischung unter ihrem Rumpf
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.http import HttpResponse
 from Genesis9.garderobe import G9garderobe
 from Genesis9.kleidfarbe import G9kleidfarbe
@@ -158,8 +159,8 @@ class G9kleidmischbau:
             if alt.get('stoff'):
                 quelle, versatz = f.stoff_misch(punkte, behalten)
                 teil['stoff'] = dict(alt['stoff'], misch={
-                    'quelle': Netzantwort.feld(quelle, 'quelle', typ=np.uint32),
-                    'versatz': Netzantwort.feld(versatz, 'versatz', typ=np.float32)})
+                    'quelle': Netzantwort.feld(quelle, 'quelle', typ=torch.uint32),
+                    'versatz': Netzantwort.feld(versatz, 'versatz', typ=torch.float32)})
             eintraege = cls._fremd(fremd, farben, behalten, reihenfolge)
             if eintraege:
                 teil['fremd'] = eintraege
@@ -173,7 +174,7 @@ class G9kleidmischbau:
         je = {}
         for f in flaechen:
             je.setdefault(f.stueck, []).append(G9kleidfarbe.farben(je_stueck[f.stueck][1][f.nummer]))
-        return {stueck: np.vstack(liste) for stueck, liste in je.items()}
+        return {stueck: Torchfeld.vstack(liste) for stueck, liste in je.items()}
 
     @staticmethod
     def _fremd(fremd, farben, behalten, reihenfolge):
@@ -183,12 +184,12 @@ class G9kleidmischbau:
         sich die Textur-Regler."""
         eintraege = []
         for stueck, nummer, gewicht, deckung in fremd:
-            farbe = np.einsum('nk,nkj->nj', gewicht[behalten], farben[stueck][nummer[behalten]])
-            byte = np.clip(farbe * 255.0 + 0.5, 0, 255).astype(np.uint8)
-            deck = np.clip(deckung[behalten] * 255.0 + 0.5, 0, 255).astype(np.uint8)
+            farbe = Torchfeld.einsum('nk,nkj->nj', gewicht[behalten], farben[stueck][nummer[behalten]])
+            byte = Torchfeld.astype(Torchfeld.clip(farbe * 255.0 + 0.5, 0, 255), torch.uint8)
+            deck = Torchfeld.astype(Torchfeld.clip(deckung[behalten] * 255.0 + 0.5, 0, 255), torch.uint8)
             eintraege.append({'rang': reihenfolge.index(stueck), 'sorte': stueck,
-                              'farbe': Netzantwort.feld(byte, 'farbe', typ=np.uint8),
-                              'deckung': Netzantwort.feld(deck, 'deckung', typ=np.uint8)})
+                              'farbe': Netzantwort.feld(byte, 'farbe', typ=torch.uint8),
+                              'deckung': Netzantwort.feld(deck, 'deckung', typ=torch.uint8)})
         return eintraege
 
     @staticmethod

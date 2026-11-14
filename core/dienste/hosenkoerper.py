@@ -19,7 +19,9 @@ zweireihiges Karo), Breiten nach Augenmaß aus `vergleich/hose_streifen.png`. Dr
     gebaut = Hosenkoerper(koerper_punkte, koerper_dreiecke).bauen(ymin, ymax)       # {punkte, dreiecke, uv, quelle}; uv v nach oben (Daz), `Standmodellglb._uv` dreht
     bild = Hosenkoerper.textur(gebaut)                                              # PIL-Bild RGB"""
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hosenkoerper']
 
@@ -49,10 +51,10 @@ class Hosenkoerper:
     BUND_UNTER_HOSE = 0.035   # der Bund liegt so weit unter dem oberen Rand der GC-Hose (die ragte als Beutel über den Gürtel)
 
     def __init__(self, punkte, dreiecke):
-        self.p = np.asarray(punkte, dtype=np.float64)
-        d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        self.p = Torchfeld.feld(punkte, dtype=torch.float64)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         # UV-Nähte verdoppeln die Punkte: ohne Verschweißen nach Lage zerfällt der Körper in Inseln (Beine, Rumpf), und Glätten und Zusammenhang arbeiten an jeder Naht gegeneinander
-        _schluessel, erste, inv = np.unique(np.round(self.p * 1e5).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+        _schluessel, erste, inv = Torchfeld.unique(Torchfeld.astype(Torchfeld.round(self.p * 1e5), torch.int64), axis=0, return_index=True, return_inverse=True)
         d = inv.reshape(-1)[d]
         self.d = d[(d[:, 0] != d[:, 1]) & (d[:, 1] != d[:, 2]) & (d[:, 0] != d[:, 2])]
         self.pw = self.p[erste]                      # verschweißte Punkte; `erste[i]`: ein Originalpunkt dazu (Haut und UV sind an beiden Seiten einer Naht gleich)
@@ -62,48 +64,48 @@ class Hosenkoerper:
 
     def _auswahl(self, ymin, ymax):
         """(Punkte, Dreiecke, quelle) — Körperdreiecke im Höhenband, größte zusammenhängende Fläche."""
-        from scipy import sparse
-        from scipy.sparse.csgraph import connected_components
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+        from KoerperKI_alle.kartengraph import connected_components
         mitte = self.pw[self.d].mean(axis=1)
-        wahl = (mitte[:, 1] >= ymin - self.RAND) & (mitte[:, 1] <= ymax + self.RAND) & (np.abs(mitte[:, 0]) <= self.BREITE_X)
+        wahl = (mitte[:, 1] >= ymin - self.RAND) & (mitte[:, 1] <= ymax + self.RAND) & (Torchfeld.abs(mitte[:, 0]) <= self.BREITE_X)
         d = self.d[wahl]
-        nummern, neu = np.unique(d.ravel(), return_inverse=True)
+        nummern, neu = Torchfeld.unique(d.ravel(), return_inverse=True)
         d = neu.reshape(-1, 3)
         n = len(nummern)
-        kanten = np.vstack([d[:, [0, 1]], d[:, [1, 2]]])
-        _zahl, teil = connected_components(sparse.coo_matrix((np.ones(len(kanten)), (kanten[:, 0], kanten[:, 1])), shape=(n, n)), directed=False)
-        groesster = np.argmax(np.bincount(teil[d[:, 0]]))
+        kanten = Torchfeld.vstack([d[:, [0, 1]], d[:, [1, 2]]])
+        _zahl, teil = connected_components(sparse.coo_matrix((torch.ones(len(kanten), dtype=torch.float64, device='cuda'), (kanten[:, 0], kanten[:, 1])), shape=(n, n)), directed=False)
+        groesster = Torchfeld.argmax(Torchfeld.bincount(teil[d[:, 0]]))
         d = d[teil[d[:, 0]] == groesster]
-        nummern2, neu2 = np.unique(d.ravel(), return_inverse=True)
+        nummern2, neu2 = Torchfeld.unique(d.ravel(), return_inverse=True)
         gewaehlt = nummern[nummern2]
-        return self.pw[gewaehlt].copy(), neu2.reshape(-1, 3), self.erste[gewaehlt]
+        return Torchfeld.kopie(self.pw[gewaehlt]), neu2.reshape(-1, 3), self.erste[gewaehlt]
 
     @staticmethod
     def _nachbarn(d, n):
-        from scipy import sparse
-        kanten = np.vstack([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]])
-        kanten = np.vstack([kanten, kanten[:, ::-1]])
-        a = sparse.coo_matrix((np.ones(len(kanten)), (kanten[:, 0], kanten[:, 1])), shape=(n, n)).tocsr()
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+        kanten = Torchfeld.vstack([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]])
+        kanten = Torchfeld.vstack([kanten, Torchfeld.umgekehrt(kanten, 1)])
+        a = sparse.coo_matrix((torch.ones(len(kanten), dtype=torch.float64, device='cuda'), (kanten[:, 0], kanten[:, 1])), shape=(n, n)).tocsr()
         a.data[:] = 1.0
-        grad = np.asarray(a.sum(axis=1)).ravel()
-        return sparse.diags(1.0 / np.maximum(grad, 1.0)) @ a
+        grad = Torchfeld.feld(a.sum(axis=1)).ravel()
+        return sparse.diags(1.0 / Torchfeld.maximum(grad, 1.0)) @ a
 
     @staticmethod
     def _rand(d, n):
         """Boolesche Reihe: Punkt auf einer Randkante (Bund, Saum)."""
-        k = np.sort(np.vstack([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), axis=1)
-        eindeutig, zahl = np.unique(k, axis=0, return_counts=True)
-        r = np.zeros(n, dtype=bool)
+        k = torch.sort(Torchfeld.vstack([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), dim=1, stable=True).values
+        eindeutig, zahl = Torchfeld.unique(k, axis=0, return_counts=True)
+        r = torch.zeros(n, dtype=torch.bool, device='cuda')
         r[eindeutig[zahl == 1].ravel()] = True
         return r
 
     @staticmethod
     def _normalen(p, d):
-        f = np.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
-        n = np.zeros_like(p)
+        f = Torchfeld.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
+        n = torch.zeros_like(p)
         for k in range(3):
-            np.add.at(n, d[:, k], f)
-        return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+            Torchfeld.add_at(n, d[:, k], f)
+        return n / Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-12)
 
     @classmethod
     def _glaetten(cls, p, matrix, gewicht, schritte, lam=0.5, mu=-0.53):
@@ -114,7 +116,7 @@ class Hosenkoerper:
 
     @staticmethod
     def _weich(x):
-        x = np.clip(x, 0.0, 1.0)
+        x = Torchfeld.clip(x, 0.0, 1.0)
         return x * x * (3.0 - 2.0 * x)
 
     def _ausserhalb(self, p, matrix, glatt=8, runden=4, mindest=None):
@@ -126,7 +128,7 @@ class Hosenkoerper:
         hat zu jedem Körperpunkt Abstand. Hier zählt die Lage zur Fläche: Ist `(p − nächster Körperpunkt) · Körpernormale` kleiner als `MINDEST`, wird der Punkt entlang der
         Normale herausgeschoben. Das Schiebemaß wird zuerst über die Hose geglättet (`glatt` Schritte), damit keine Zacken entstehen; in der letzten Runde hart, damit es hält.
         """
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
         mindest = self.MINDEST if mindest is None else mindest
         if getattr(self, '_kn', None) is None:
             kn = self._normalen(self.pw, self.d)
@@ -137,12 +139,12 @@ class Hosenkoerper:
         for runde in range(runden):
             _dist, j = self._baum.query(p)
             t = ((p - self.pw[j]) * self._kn[j]).sum(axis=1)
-            fehl = np.maximum(mindest - t, 0.0)
+            fehl = Torchfeld.maximum(mindest - t, 0.0)
             if not (fehl > 1e-5).any():
                 break
             schub = self._kn[j] * fehl[:, None]
             if glatt and runde < runden - 1:
-                schub = self._glaetten(schub, matrix, np.ones(len(p)), glatt)
+                schub = self._glaetten(schub, matrix, torch.ones(len(p), dtype=torch.float64, device='cuda'), glatt)
             p = p + schub
         return p
 
@@ -153,29 +155,29 @@ class Hosenkoerper:
         from .hosenfalten import Hosenfalten
         p0, d, quelle = self._auswahl(ymin, ymax)
         n = len(p0)
-        p0[:, 1] = np.clip(p0[:, 1], ymin, ymax)
+        p0[:, 1] = Torchfeld.clip(p0[:, 1], ymin, ymax)
         rand = self._rand(d, n)
         matrix = self._nachbarn(d, n)
-        mitte = p0[np.abs(p0[:, 0]) < 0.015]
+        mitte = p0[Torchfeld.abs(p0[:, 0]) < 0.015]
         yc = float(mitte[:, 1].min()) if len(mitte) else ymin + 0.78 * (ymax - ymin)       # Schritt: tiefster Punkt der Mittelebene
         beine = max(yc - ymin, 0.3)
         # 1. Glätten: überall leicht, vorn im Schritt stark (Körperrelief soll nicht im Stoff stehen)
         glatt, glatt_schritt = (self.GLAETTEN_ENG, self.GLAETTEN_SCHRITT_ENG) if eng else (self.GLAETTEN, self.GLAETTEN_SCHRITT)
         mindest = self.MINDEST_ENG if eng else self.MINDEST
-        gewicht = np.where(rand, 0.0, 1.0)
+        gewicht = torch.where(rand, 0.0, 1.0)
         p = self._glaetten(p0, matrix, gewicht, glatt)
-        vorn = (np.abs(p0[:, 0]) < self.SCHRITT_BREITE) & (p0[:, 1] > yc - 0.06) & (p0[:, 1] < yc + 0.18) & (p0[:, 2] > p0[:, 2].mean())
-        stark = np.where(rand, 0.0, 1.0) * self._weich(2.0 * (1.0 - np.abs(p0[:, 0]) / self.SCHRITT_BREITE)) * vorn
+        vorn = (Torchfeld.abs(p0[:, 0]) < self.SCHRITT_BREITE) & (p0[:, 1] > yc - 0.06) & (p0[:, 1] < yc + 0.18) & (p0[:, 2] > p0[:, 2].mean())
+        stark = torch.where(rand, 0.0, 1.0) * self._weich(2.0 * (1.0 - Torchfeld.abs(p0[:, 0]) / self.SCHRITT_BREITE)) * vorn
         p = self._glaetten(p, matrix, stark, glatt_schritt)
         # 2. Abstand zur Haut nach Höhe, entlang der Normalen der geglätteten Fläche
         s = (p[:, 1] - ymin) / beine
-        unten = np.interp(s, [a for a, _ in self.ABSTAND], [c for _, c in self.ABSTAND])
-        ueber = np.interp((p[:, 1] - yc) / max(ymax - yc, 0.05), [a for a, _ in self.ABSTAND_HUEFTE], [c for _, c in self.ABSTAND_HUEFTE])
-        abstand = np.where(p[:, 1] < yc, unten, ueber)
+        unten = Torchfeld.interp(s, [a for a, _ in self.ABSTAND], [c for _, c in self.ABSTAND])
+        ueber = Torchfeld.interp((p[:, 1] - yc) / max(ymax - yc, 0.05), [a for a, _ in self.ABSTAND_HUEFTE], [c for _, c in self.ABSTAND_HUEFTE])
+        abstand = torch.where(p[:, 1] < yc, unten, ueber)
         if eng:
-            abstand = np.full(len(p), self.ABSTAND_ENG)
+            abstand = Torchfeld.full(len(p), self.ABSTAND_ENG)
         nach = self._normalen(p, d)
-        aus = np.zeros_like(p)                                    # von der Beinachse (Mitte je Seite) weg
+        aus = torch.zeros_like(p)                                    # von der Beinachse (Mitte je Seite) weg
         for seite in (p[:, 0] >= 0.0, p[:, 0] < 0.0):
             aus[seite, 0] = p[seite, 0] - p[seite, 0].mean()
             aus[seite, 2] = p[seite, 2] - p[seite, 2].mean()
@@ -187,7 +189,7 @@ class Hosenkoerper:
         # 3. Drapierung
         if not eng:
             p = Hosenfalten.anwenden(p, d)
-        p[:, 1] = np.clip(p[:, 1], ymin, ymax)
+        p[:, 1] = Torchfeld.clip(p[:, 1], ymin, ymax)
         p = self._ausserhalb(p, matrix, glatt=0, mindest=mindest)          # die Falten dürfen nicht wieder in den Körper schneiden
         normalen = self._normalen(p, d) * (-1.0 if drehen else 1.0)      # vor dem Verdoppeln der Eckpunkte: an der Rückseite des Rings keine Schattennaht
         uv, d, herkunft = self._uv(p, d, ymin, ymax)
@@ -199,50 +201,50 @@ class Hosenkoerper:
     def _ringmitte(self, p):
         """(seite, cx, cz, r) je Punkt: Mitte und Radius des Beinrings als Mittel über ein Höhenfenster (`FENSTER`) derselben Seite — glatt über die Höhe (ein Band je Zentimeter
         erwischte je nach Netzreihe nur einen Teil des Rings: die Mitte sprang um Zentimeter, die Streifenlinie lief im Zickzack)."""
-        seite = np.where(p[:, 0] >= 0.0, 1.0, -1.0)
-        cx, cz, r = np.zeros(len(p)), np.zeros(len(p)), np.zeros(len(p))
+        seite = torch.where(p[:, 0] >= 0.0, 1.0, -1.0)
+        cx, cz, r = torch.zeros(len(p), dtype=torch.float64, device='cuda'), torch.zeros(len(p), dtype=torch.float64, device='cuda'), torch.zeros(len(p), dtype=torch.float64, device='cuda')
         for sg in (1.0, -1.0):
-            idx = np.flatnonzero(seite == sg)
+            idx = torch.flatten(seite == sg).nonzero()[:, 0]
             if len(idx) < 10:
                 continue
-            o = idx[np.argsort(p[idx, 1])]
+            o = idx[torch.argsort(p[idx, 1], stable=True)]
             y = p[o, 1]
-            lo, hi = np.searchsorted(y, y - self.FENSTER), np.searchsorted(y, y + self.FENSTER, side='right')
+            lo, hi = Torchfeld.searchsorted(y, y - self.FENSTER), Torchfeld.searchsorted(y, y + self.FENSTER, side='right')
 
             def mittel(werte):
-                c = np.concatenate([[0.0], np.cumsum(werte)])
+                c = Torchfeld.cat([[0.0], Torchfeld.cumsum(werte)])
                 return (c[hi] - c[lo]) / (hi - lo)
 
             mx, mz = mittel(p[o, 0]), mittel(p[o, 2])
-            cx[o], cz[o], r[o] = mx, mz, mittel(np.hypot(p[o, 0] - mx, p[o, 2] - mz))
+            cx[o], cz[o], r[o] = mx, mz, mittel(Torchfeld.hypot(p[o, 0] - mx, p[o, 2] - mz))
         return seite, cx, cz, r
 
     def _uv(self, p, d, ymin, ymax):
         """(uv, dreiecke, herkunft) — zylindrische UV je Bein; Dreiecke über die Rückseite des Rings (U 0/1) bekommen eigene Eckpunkte mit U + 1.
         `herkunft[i]` ist der Punkt, von dem Eckpunkt i abstammt (für Lage, Normale, Haut)."""
         seite, cx, cz, r = self._ringmitte(p)
-        winkel = np.where(r > 0.0, np.arctan2(p[:, 2] - cz, seite * (p[:, 0] - cx)), np.pi)
-        band = np.floor((p[:, 1] - ymin) / self.BAND).astype(np.int64)
-        ys = np.arange(band.max() + 1) * self.BAND + ymin + 0.5 * self.BAND
-        radius = np.array([r[(band == b) & (r > 0.0)].mean() if ((band == b) & (r > 0.0)).any() else np.nan for b in range(band.max() + 1)])
-        gut = ~np.isnan(radius)
+        winkel = torch.where(r > 0.0, Torchfeld.arctan2(p[:, 2] - cz, seite * (p[:, 0] - cx)), math.pi)
+        band = Torchfeld.astype(Torchfeld.floor((p[:, 1] - ymin) / self.BAND), torch.int64)
+        ys = Torchfeld.arange(band.max() + 1) * self.BAND + ymin + 0.5 * self.BAND
+        radius = Torchfeld.feld([r[(band == b) & (r > 0.0)].mean() if ((band == b) & (r > 0.0)).any() else math.nan for b in range(band.max() + 1)], copy=True)
+        gut = ~Torchfeld.isnan(radius)
         self.ring_y, self.ring_r = ys[gut], radius[gut]
-        u = winkel / (2.0 * np.pi) + 0.5
+        u = winkel / (2.0 * math.pi) + 0.5
         v = (p[:, 1] - ymin) / max(ymax - ymin, 1e-6)
         ecken_u = u[d]
-        ueber = (ecken_u.max(axis=1) - ecken_u.min(axis=1)) > 0.5
-        herkunft, neu_u, neu_v = [np.arange(len(p))], [u], [v]
-        d = d.copy()
+        ueber = (Torchfeld.amax(ecken_u, dim=1) - Torchfeld.amin(ecken_u, dim=1)) > 0.5
+        herkunft, neu_u, neu_v = [Torchfeld.arange(len(p))], [u], [v]
+        d = Torchfeld.kopie(d)
         n = len(p)
         for k in range(3):
-            zeile = np.flatnonzero(ueber & (ecken_u[:, k] < 0.5))
-            eindeutig, rueck = np.unique(d[zeile, k], return_inverse=True)
+            zeile = torch.flatten(ueber & (ecken_u[:, k] < 0.5)).nonzero()[:, 0]
+            eindeutig, rueck = Torchfeld.unique(d[zeile, k], return_inverse=True)
             d[zeile, k] = n + rueck
             herkunft.append(eindeutig)
             neu_u.append(u[eindeutig] + 1.0)
             neu_v.append(v[eindeutig])
             n += len(eindeutig)
-        return np.column_stack([np.concatenate(neu_u), np.concatenate(neu_v)]), d, np.concatenate(herkunft)
+        return Torchfeld.column_stack([Torchfeld.cat(neu_u), Torchfeld.cat(neu_v)]), d, Torchfeld.cat(herkunft)
 
     @classmethod
     def textur(cls, gebaut, breite=512, hoehe=1024, farbe=None):
@@ -253,10 +255,10 @@ class Hosenkoerper:
 
         from .hosenstreifen import Hosenstreifen
         ymin, ymax = gebaut['ymin'], gebaut['ymax']
-        y = ymin + (1.0 - (np.arange(hoehe) + 0.5) / hoehe) * (ymax - ymin)             # Zeile 0 = oben
-        r = np.interp(y, gebaut['ring_y'], gebaut['ring_r'])
-        u = ((np.arange(breite) + 0.5) / breite - 0.5)[None, :] * 2.0 * np.pi * r[:, None]
-        farbe, deckung = Hosenstreifen.muster(u, np.broadcast_to(y[:, None], u.shape), ymax, ymin)
-        grund = np.asarray(cls.WEISS)[None, None, :] * 0.98
+        y = ymin + (1.0 - (Torchfeld.arange(hoehe) + 0.5) / hoehe) * (ymax - ymin)             # Zeile 0 = oben
+        r = Torchfeld.interp(y, gebaut['ring_y'], gebaut['ring_r'])
+        u = ((Torchfeld.arange(breite) + 0.5) / breite - 0.5)[None, :] * 2.0 * math.pi * r[:, None]
+        farbe, deckung = Hosenstreifen.muster(u, Torchfeld.broadcast_to(y[:, None], u.shape), ymax, ymin)
+        grund = Torchfeld.feld(cls.WEISS)[None, None, :] * 0.98
         aus = grund * (1.0 - deckung[..., None]) + farbe * deckung[..., None]
-        return Image.fromarray(np.clip(np.rint(aus), 0, 255).astype(np.uint8), 'RGB')
+        return Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(Torchfeld.round(aus), 0, 255), torch.uint8)), 'RGB')

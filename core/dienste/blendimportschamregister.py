@@ -27,7 +27,8 @@ des Stücks lag bis 53 mm hinter dem Loch).
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -56,10 +57,10 @@ class Blendimportschamregister:
 
         `flaeche`: Haut der Figur (trimesh); `original`: alle Punkte des Originals; `schnitt`: Schnittwert je Originalpunkt
         (`Blendimportscham.schnittwerte`, negativ = im Stück); `stueck`: Punkte des Stücks."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         nah_am_stueck, _ = cKDTree(stueck).query(original)
-        band = np.flatnonzero((schnitt > 0.0) & (nah_am_stueck <= cls.BAND_MM / 1000.0))
+        band = torch.flatten((schnitt > 0.0) & (nah_am_stueck <= cls.BAND_MM / 1000.0)).nonzero()[:, 0]
         feld, umgebung = cls._schritt(flaeche, original[band], stueck)
         if umgebung.get('schub_median_mm', 0.0) > cls.MAX_SCHUB_MM:
             return stueck, {'aus': 'Figur und Original weichen am Becken im Median um %.0f mm voneinander ab (Grenze %.0f mm): das Stück passt '
@@ -75,9 +76,9 @@ class Blendimportschamregister:
         (sein nächster Punkt der Haut gehört zu einem Dreieck des Lochs, den Ring eingeschlossen).
 
         `haut`: `Blendimportschamloch`; `im_loch`: Maske der Dreiecke des Lochs."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        im_loch_punkt = np.zeros(len(haut.punkte), dtype=bool)
+        im_loch_punkt = torch.zeros(len(haut.punkte), dtype=torch.bool, device='cuda')
         im_loch_punkt[haut.dreiecke[im_loch].ravel()] = True
         nah = cKDTree(haut.punkte).query(punkte)[1]
         behalten = im_loch_punkt[nah][dreiecke].any(axis=1)
@@ -87,28 +88,28 @@ class Blendimportschamregister:
         behalten |= cls._innere_loecher(dreiecke, ~behalten)
         if behalten.all():
             return punkte, dreiecke, uv_ecken, 0
-        benutzt, neu = np.unique(dreiecke[behalten], return_inverse=True)
+        benutzt, neu = Torchfeld.unique(dreiecke[behalten], return_inverse=True)
         return punkte[benutzt], neu.reshape(-1, 3), uv_ecken[behalten], int((~behalten).sum())
 
     @staticmethod
     def _innere_loecher(dreiecke, entfernt):
         """Maske der `entfernt`en Dreiecke, die mit keinem Rand des Stücks zusammenhängen (zusammenhängend = gemeinsame Kante, nur unter entfernten Dreiecken): Löcher im Innern."""
-        from scipy import sparse
-        from scipy.sparse import csgraph
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+        from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
         n = len(dreiecke)
-        kanten = np.sort(np.concatenate([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), axis=1)
-        von = np.tile(np.arange(n), 3)
-        _roh, nummer, zaehl = np.unique(kanten, axis=0, return_inverse=True, return_counts=True)
-        nummer = np.asarray(nummer).reshape(-1)
-        am_rand = np.zeros(n, dtype=bool)
+        kanten = torch.sort(Torchfeld.cat([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), dim=1, stable=True).values
+        von = torch.tile(Torchfeld.arange(n), (3,))
+        _roh, nummer, zaehl = Torchfeld.unique(kanten, axis=0, return_inverse=True, return_counts=True)
+        nummer = Torchfeld.feld(nummer).reshape(-1)
+        am_rand = torch.zeros(n, dtype=torch.bool, device='cuda')
         am_rand[von[zaehl[nummer] == 1]] = True
-        ordnung = np.argsort(nummer, kind='stable')
+        ordnung = torch.argsort(nummer, stable=True)
         gleich = nummer[ordnung][1:] == nummer[ordnung][:-1]
         a, b = von[ordnung][:-1][gleich], von[ordnung][1:][gleich]
         beide = entfernt[a] & entfernt[b]
-        _zahl, gruppe = csgraph.connected_components(sparse.coo_matrix((np.ones(int(beide.sum())), (a[beide], b[beide])), shape=(n, n)), directed=False)
-        aussen = np.zeros(int(gruppe.max()) + 1, dtype=bool)
+        _zahl, gruppe = csgraph.connected_components(sparse.coo_matrix((torch.ones(int(beide.sum()), dtype=torch.float64, device='cuda'), (a[beide], b[beide])), shape=(n, n)), directed=False)
+        aussen = torch.zeros(int(gruppe.max()) + 1, dtype=torch.bool, device='cuda')
         aussen[gruppe[entfernt & am_rand]] = True
         return entfernt & ~aussen[gruppe]
 
@@ -121,15 +122,15 @@ class Blendimportschamregister:
         gut = abstand <= cls.AUSREISSER_M
         if int(gut.sum()) < cls.MINDEST:
             return stueck, 0.0
-        vektor = np.median((ziel - stuetz)[gut], axis=0)
-        return stueck + vektor, round(float(np.linalg.norm(vektor)) * 1000.0, 2)
+        vektor = Torchfeld.median((ziel - stuetz)[gut], axis=0)
+        return stueck + vektor, round(float(Torchfeld.linalg_norm(vektor)) * 1000.0, 2)
 
     @classmethod
     def _schritt(cls, flaeche, stuetz, stueck):
         """`(Punkte + Verschiebung, bericht)`: Vektoren der Stützpunkte zur Figurfläche, 1/d²-gewichtet auf alle Punkte des Stücks.
         Hier nur noch das Maß für die Grenze `MAX_SCHUB_MM` (Median der Verschiebung am Stück); verschoben wird es mit `_verschieben`."""
         import trimesh
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         if len(stuetz) < cls.MINDEST:
             return stueck, {'aus': 'nur %d Stützpunkte' % len(stuetz)}
@@ -143,6 +144,6 @@ class Blendimportschamregister:
         d, i = d.reshape(len(stueck), k), i.reshape(len(stueck), k)
         gewicht = 1.0 / (d + cls.EPS_M) ** 2
         schub = (gewicht[:, :, None] * vektor[i]).sum(axis=1) / gewicht.sum(axis=1)[:, None]
-        betrag = np.linalg.norm(schub, axis=1) * 1000.0
+        betrag = Torchfeld.linalg_norm(schub, dim=1) * 1000.0
         return stueck + schub, {'stuetz': int(len(stuetz)), 'ausreisser': int((~gut).sum()),
-                                'schub_median_mm': round(float(np.median(betrag)), 2), 'schub_max_mm': round(float(betrag.max()), 1)}
+                                'schub_median_mm': round(float(Torchfeld.median(betrag)), 2), 'schub_max_mm': round(float(betrag.max()), 1)}

@@ -24,6 +24,10 @@ from .meshgenesisflaechennetz import Meshgenesisflaechennetz
 from .meshgenesistest import Meshgenesistest
 from .meshgenesistestkikleider import Meshgenesistestkikleider
 from .meshgenesistestkleidspeichern import Meshgenesistestkleidspeichern
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +110,7 @@ class Meshgenesistestkleider:
             eintrag['quelle'] = 'mesh3d'
             for weg in ('a', 'b'):
                 # Eine Adresse nur, wo ein Anzeigenetz liegt — „Haut a“ ist die Figur selbst und hat keins (`meshgenesis_kleider_haut.py`).
-                if isinstance(eintrag.get(weg), dict) and not eintrag[weg].get('fehler') and (ordner / weg / st['id'] / 'anzeige' / 'netz.npz').is_file():
+                if isinstance(eintrag.get(weg), dict) and not eintrag[weg].get('fehler') and Npztorch.da(ordner / weg / st['id'] / 'anzeige' / 'netz.npz'):
                     eintrag[weg] = dict(eintrag[weg], netz='/api/meshgenesis/test/%s/kleid/%s/%s/%s' % (kennung, geschlecht, weg, st['id']))
             stuecke.append(eintrag)
         stuecke += ki_zeilen
@@ -188,7 +192,7 @@ class Meshgenesistestkleider:
         ordner = cls.ordner(kennung, geschlecht)
         if ordner is None or weg not in cls.WEGE or not cls.ID.match(str(stueck)):
             return None
-        if not (ordner / weg / stueck / 'anzeige' / 'netz.npz').is_file():
+        if not Npztorch.da(ordner / weg / stueck / 'anzeige' / 'netz.npz'):
             return None
         return '_test/%s/kleider_%s/%s/%s' % (kennung, geschlecht, weg, stueck)
 

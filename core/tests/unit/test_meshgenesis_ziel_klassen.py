@@ -22,6 +22,10 @@ from meshgenesis_kostuemarten import Kostuemarten  # noqa: E402
 from meshgenesis_meshanliegend import Meshgenesismeshanliegend  # noqa: E402
 from meshgenesis_meshklassen import Meshgenesismeshklassen  # noqa: E402
 from meshgenesis_meshziel import Meshgenesismeshziel  # noqa: E402
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class Kunstziel:
@@ -113,8 +117,7 @@ class TeileRigTest(unittest.TestCase):
 
     def _kette(self, ordner):
         kopf, fuss = G9koerperteile.NUMMER['kopf'], G9koerperteile.NUMMER['l_fuss']
-        np.savez(Path(ordner) / 'figur.npz', kaefig_posiert=np.array([[0.0, 1.7, 0.0], [0.0, 0.1, 0.0]]), teil=np.array([kopf, fuss]), m=np.eye(4), rahmen=np.array('M'),
-                 faktor=np.array(1.0), zu_glb=np.eye(4))
+        Npztorch.speichern(Path(ordner) / 'figur.npz', kaefig_posiert=np.array([[0.0, 1.7, 0.0], [0.0, 0.1, 0.0]]), teil=np.array([kopf, fuss]), m=np.eye(4), rahmen=np.array('M'), faktor=np.array(1.0), zu_glb=np.eye(4))
         return Path(ordner)
 
     def test_weg_rig_nimmt_den_kaefig(self):
@@ -146,7 +149,7 @@ class TeileRigTest(unittest.TestCase):
         with Pruefablage.ordner() as o:
             kette = Path(o) / 'vorstufe' / '0001'
             (kette / 'mia').mkdir(parents=True)
-            np.savez(kette / 'mia' / 'mia.npz', namen=np.array(namen), gelenke=oben[::-1])
+            Npztorch.speichern(kette / 'mia' / 'mia.npz', namen=np.array(namen), gelenke=oben[::-1])
             (kette / 'kette.json').write_text('{"weg": "rig"}', encoding='utf-8')
             with mock.patch.object(Meshgenesisfotogelenke, 'ansichten', return_value=sicht) as ansichten:
                 m = Miagelenke(kette)

@@ -21,6 +21,10 @@ from core.dienste.meshgenesisformvariantefigur import Meshgenesisformvariantefig
 from core.dienste.meshgenesisformvariantentabelle import Meshgenesisformvariantentabelle
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 FERTIG = '2026.10.17.15.43_vorstufe_form78_v3'
 PROBE = '2026.10.18.19.00_vorstufe_form2_probe'
@@ -36,7 +40,7 @@ class FormvarianteTest(SimpleTestCase):
     @staticmethod
     def _wolke(datei):
         datei.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(datei, punkte=np.zeros((4, 3), np.float32), farbe=np.full((4, 3), 0.5, np.float32))
+        Npztorch.speichern(datei, punkte=np.zeros((4, 3), np.float32), farbe=np.full((4, 3), 0.5, np.float32))
 
     def _ablage(self, o):
         """Form001 mit drei Trainingsproben; Lauf FERTIG (apose_v4, eine Wolke) und der jüngere Probelauf PROBE (apose_v9, Wolken 0,1,2, k1 von Probe 2 durchgefallen)."""
@@ -54,7 +58,7 @@ class FormvarianteTest(SimpleTestCase):
             lauf = wurzel / '_vorstufe' / 'laeufe' / name
             self._schreiben(lauf / 'lauf_ergebnis.json', dict(eingabe, epochen=2, formkopf=3, je_figur={'Form001': {'training': {'form_mm': 31.1, 'proben': 3}}}))
             self._schreiben(lauf / 'formregler_liste.json', {'regler': LISTE})
-            np.savez(lauf / 'formen_vorhersagen.npz', Form001_training_form=zeilen, Form001_soll_form=np.array([0.5, 0.005, -2.0], np.float32))
+            Npztorch.speichern(lauf / 'formen_vorhersagen.npz', Form001_training_form=zeilen, Form001_soll_form=np.array([0.5, 0.005, -2.0], np.float32))
         return override_settings(OBJECTS_ROOT=Path(o) / '3DObjects', TOOLS_ROOT=Path(o))
 
     def test_1_finden_nur_direkte_unterordner(self):

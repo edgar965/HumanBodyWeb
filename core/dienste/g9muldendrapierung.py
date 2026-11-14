@@ -20,7 +20,8 @@ auslaufen lassen; die Ausbreitung des Reglers wirkt in der Anforderung selbst (w
 import logging
 import threading
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.drapierer import G9drapierer
 from Genesis9.drapierung import G9drapierung
 from Genesis9.muldenhindernis import G9muldenhindernis
@@ -70,14 +71,14 @@ class G9muldendrapierung:
     def anwenden(self, punkte, flaechen, normalen, regler):
         u"""`(punkte (N, 3), bilanz)`: der Stoff mit `flaechen` (Dreiecke oder Vierecke) und seinen Normalen über die Brücke drapiert. Zeigen die Normalen
         überwiegend nach innen (gegen die waagrechte Hubrichtung der Punkte unter der Brücke), werden sie umgedreht — sonst höbe der Löser nach innen."""
-        punkte = np.asarray(punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         dreiecke = G9hbstoffkorrektur.dreiecke(flaechen, len(punkte))
         if not len(punkte) or not len(dreiecke) or normalen is None:
             return punkte, {'gehoben': 0}
-        normalen = np.asarray(normalen, dtype=np.float64)
+        normalen = Torchfeld.feld(normalen, dtype=torch.float64)
         hub, richtung = self.hindernis._hub(punkte)
         unter = hub > self.hindernis.MINDEST_M
-        if unter.any() and float(np.median((normalen[unter] * richtung[unter]).sum(axis=1))) < 0.0:
+        if unter.any() and float(Torchfeld.median((normalen[unter] * richtung[unter]).sum(axis=1))) < 0.0:
             normalen = -normalen
         abstand, ausbreitung, _glaettung = G9drapierung.bruecke(regler)
         rand = min(self.RAND_M, self.RAND_ANTEIL * ausbreitung)
@@ -88,9 +89,9 @@ class G9muldendrapierung:
         Browserpunkten: gemessen 25.10.2026 (`ProjektTemp/_wegwerf/dazeigen/mulde_profil.py`, Basic Wear T Shirt auf DamiraAlt, Stufe 1) hatte das Browsernetz
         83.347 Punkte, der Löser brauchte 23 `spsolve` zu je 0,6 s = 18,2 s. Die Unterteilung danach glättet, Kollision und Bindung rechnen auf dem Ergebnis."""
         from Genesis9.netzteilung import G9netzteilung
-        punkte = np.asarray(punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         vierecke, dreiecke = G9netzteilung.ecken(folger.polys)
-        flaechen = np.vstack([dreiecke.reshape(-1, 3), vierecke.reshape(-1, 4)[:, [0, 1, 2]], vierecke.reshape(-1, 4)[:, [0, 2, 3]]])
+        flaechen = Torchfeld.vstack([dreiecke.reshape(-1, 3), vierecke.reshape(-1, 4)[:, [0, 1, 2]], vierecke.reshape(-1, 4)[:, [0, 2, 3]]])
         return self.anwenden(punkte, flaechen, G9netzteilung.normalen(punkte, folger.polys), regler)
 
     # ------------------------------------------------------------------ Figur
@@ -108,10 +109,10 @@ class G9muldendrapierung:
         haut, normalen, _baum = G9koerpernetz(formung, stufen=stufen).koerperflaeche()
         bereich_k, ort_k = cls.kaefigwerte()
         stufe = G9basisnetz.holen().netzstufe(stufen)
-        bereich = stufe.skalar(bereich_k.astype(np.float64)) > 0.5
-        ort = np.clip(stufe.skalar(ort_k), 0.0, 1.0)
-        haut = np.asarray(haut, dtype=np.float64)
-        aus = (haut, np.asarray(normalen, dtype=np.float64), bereich, ort, G9querschnitthuelle.raster(haut[bereich]))
+        bereich = stufe.skalar(Torchfeld.astype(bereich_k, torch.float64)) > 0.5
+        ort = Torchfeld.clip(stufe.skalar(ort_k), 0.0, 1.0)
+        haut = Torchfeld.feld(haut, dtype=torch.float64)
+        aus = (haut, Torchfeld.feld(normalen, dtype=torch.float64), bereich, ort, G9querschnitthuelle.raster(haut[bereich]))
         with cls._schloss:
             if len(cls._raster) >= cls.VORRAT:
                 cls._raster.pop(next(iter(cls._raster)))
@@ -128,7 +129,7 @@ class G9muldendrapierung:
 
     @staticmethod
     def _glatt(a, b, x):
-        t = np.clip((x - a) / (b - a), 0.0, 1.0)
+        t = Torchfeld.clip((x - a) / (b - a), 0.0, 1.0)
         return t * t * (3.0 - 2.0 * t)
 
     @classmethod
@@ -137,36 +138,36 @@ class G9muldendrapierung:
         from Genesis9.haut import G9haut
         from Genesis9.koerperteile import G9koerperteile
         k = G9koerperkoordinaten
-        p = np.asarray(G9basisnetz.holen().punkte, dtype=np.float64)
+        p = Torchfeld.feld(G9basisnetz.holen().punkte, dtype=torch.float64)
         teil = G9koerperteile.genesis_punkte(G9haut.holen())
-        je_teil = np.array([k.nummer(k.TEIL_KETTE.get(t, 'keine')) for t in G9koerperteile.TEILE] + [0], dtype=np.int64)
+        je_teil = Torchfeld.feld([k.nummer(k.TEIL_KETTE.get(t, 'keine')) for t in G9koerperteile.TEILE] + [0], dtype=torch.int64, copy=True)
         kette = je_teil[teil]                                         # Teil −1 → letzte Zeile = keine
         rumpf = kette == k.nummer('rumpf')
         gelenk = k.gelenke()
-        mitte = rumpf & (np.abs(p[:, 0]) < k.SCHRITT_BREITE_M)
+        mitte = rumpf & (Torchfeld.abs(p[:, 0]) < k.SCHRITT_BREITE_M)
         y0, y1 = float(gelenk[k.HALS][1]), float(p[mitte, 1].min())
         hoehe = (y0 - p[:, 1]) / (y0 - y1)
-        armanteil = np.full(len(p), k.OHNE)
+        armanteil = Torchfeld.full(len(p), k.OHNE)
         for name in ('arm_links', 'arm_rechts'):
             a, b, c = (gelenk[g] for g in k.GLIEDER[name])
             seite = (p[:, 0] > 0) if name.endswith('links') else (p[:, 0] <= 0)
-            nah = rumpf & seite & (hoehe < 0.5) & (np.linalg.norm(p - a, axis=1) < k.SCHULTER_M)
+            nah = rumpf & seite & (hoehe < 0.5) & (Torchfeld.linalg_norm(p - a, dim=1) < k.SCHULTER_M)
             armanteil[nah] = cls._glied(p[nah], a, b, c)
         bein = (kette == k.nummer('bein_links')) | (kette == k.nummer('bein_rechts'))
         bereich = rumpf | (bein & (hoehe < 1.0))
         ort = cls._glatt(cls.OBEN_AB, cls.OBEN_VOLL, hoehe) * (1.0 - cls._glatt(cls.ACHSEL[0], cls.ACHSEL[1], armanteil))
         logger.info('Brücke über Mulden: Bereich %d von %d Käfigpunkten, Halsansatz y %.4f, Schritt y %.4f', int(bereich.sum()), len(p), y0, y1)
-        return bereich, np.where(bereich, ort, 0.0)
+        return bereich, torch.where(bereich, ort, 0.0)
 
     @staticmethod
     def _glied(p, a, b, c):
         u"""Anteil entlang a → b → c wie `G9koerperkoordinaten.glied` (numpy, ohne Winkel)."""
-        l1, l2 = float(np.linalg.norm(b - a)), float(np.linalg.norm(c - b))
+        l1, l2 = float(Torchfeld.linalg_norm(b - a)), float(Torchfeld.linalg_norm(c - b))
 
         def stueck(s, e):
             d = e - s
             u = (p - s) @ d / (d @ d)
-            return u, np.linalg.norm(p - (s + np.clip(u, 0.0, 1.0)[:, None] * d), axis=1)
+            return u, Torchfeld.linalg_norm(p - (s + Torchfeld.clip(u, 0.0, 1.0)[:, None] * d), dim=1)
         u1, d1 = stueck(a, b)
         u2, d2 = stueck(b, c)
-        return np.where(d1 <= d2, np.minimum(u1, 1.0) * l1, l1 + np.maximum(u2, 0.0) * l2) / (l1 + l2)
+        return torch.where(d1 <= d2, Torchfeld.minimum(u1, 1.0) * l1, l1 + Torchfeld.maximum(u2, 0.0) * l2) / (l1 + l2)

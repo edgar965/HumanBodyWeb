@@ -23,7 +23,8 @@ import json
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .bildmodellhautverschiebung import Bildmodellhautverschiebung
 
@@ -93,15 +94,15 @@ class G9hautfalten:
     def hoehe_und_mass(self, traeger, abtastung, nummer, quelle):
         """`(drin, hoehe (S, S) m, kante_x (S, S) m, kante_y (S, S) m)` einer Kachel; außerhalb der Inseln bis `RAND_PX` fortgesetzt."""
         from humanbody_core.hautverschiebung import Hautverschiebung
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         drin, pos, uv, _abstand = traeger.texel(abtastung, nummer)
         s = abtastung.seite
-        hoehe = np.zeros((s, s))
+        hoehe = torch.zeros((s, s), dtype=torch.float64, device='cuda')
         hoehe[drin] = (Hautverschiebung.abtasten(quelle, uv) - Hautverschiebung.MITTE) * Hautverschiebung.STAERKE
-        lage = np.zeros((s, s, 3))
+        lage = torch.zeros((s, s, 3), dtype=torch.float64, device='cuda')
         lage[drin] = pos
-        uvbild = np.zeros((s, s, 2))
+        uvbild = torch.zeros((s, s, 2), dtype=torch.float64, device='cuda')
         uvbild[drin] = uv
         weg, (iy, ix) = ndimage.distance_transform_edt(~drin, return_indices=True)
         nah = (~drin) & (weg <= self.RAND_PX)
@@ -120,15 +121,15 @@ class G9hautfalten:
 
     def _naht(self, uvbild, drin, hoehe, kante_x, kante_y):
         u"""(S, S) bool — Texel an einer Naht der Übertragung (siehe `UV_SPRUNG`)."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        sprung = np.zeros(drin.shape, dtype=bool)
+        sprung = torch.zeros(drin.shape, dtype=torch.bool, device='cuda')
         for achse in (0, 1):
-            d = np.linalg.norm(np.diff(uvbild, axis=achse), axis=2)
-            beide = np.logical_and(np.take(drin, np.arange(1, drin.shape[achse]), axis=achse), np.take(drin, np.arange(0, drin.shape[achse] - 1), axis=achse))
+            d = Torchfeld.linalg_norm(Torchfeld.diff(uvbild, dim=achse), dim=2)
+            beide = Torchfeld.logical_and(Torchfeld.take(drin, Torchfeld.arange(1, drin.shape[achse]), axis=achse), Torchfeld.take(drin, Torchfeld.arange(0, drin.shape[achse] - 1), axis=achse))
             if not beide.any():
                 continue
-            grenze = self.UV_SPRUNG * max(float(np.median(d[beide])), 1e-9)
+            grenze = self.UV_SPRUNG * max(float(Torchfeld.median(d[beide])), 1e-9)
             stelle = beide & (d > grenze)
             if achse == 0:
                 sprung[1:] |= stelle
@@ -136,60 +137,60 @@ class G9hautfalten:
             else:
                 sprung[:, 1:] |= stelle
                 sprung[:, :-1] |= stelle
-        steigung_y, steigung_x = np.gradient(hoehe)
-        steil = np.hypot(steigung_x / np.maximum(kante_x, 1e-6), steigung_y / np.maximum(kante_y, 1e-6)) > self.SPRUNG_STEIGUNG
+        steigung_y, steigung_x = Torchfeld.gradient(hoehe)
+        steil = Torchfeld.hypot(steigung_x / Torchfeld.maximum(kante_x, 1e-6), steigung_y / Torchfeld.maximum(kante_y, 1e-6)) > self.SPRUNG_STEIGUNG
         return ndimage.binary_dilation((sprung | steil) & drin, iterations=self.NAHT_PX)
 
     @staticmethod
     def _kante(lage, drin, achse):
         """(S, S) Meter je Pixel entlang `achse` — aus den Nachbartexeln, wo beide in der Insel liegen, sonst vom nächsten gültigen."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        zu = np.take(lage, np.arange(2, lage.shape[achse]), axis=achse)
-        von = np.take(lage, np.arange(0, lage.shape[achse] - 2), axis=achse)
-        mass = np.linalg.norm(zu - von, axis=2) / 2.0
-        gut = np.take(drin, np.arange(2, lage.shape[achse]), axis=achse) & np.take(drin, np.arange(0, lage.shape[achse] - 2), axis=achse)
-        gut &= np.take(drin, np.arange(1, lage.shape[achse] - 1), axis=achse)
-        voll = np.zeros(drin.shape)
-        gueltig = np.zeros(drin.shape, dtype=bool)
+        zu = Torchfeld.take(lage, Torchfeld.arange(2, lage.shape[achse]), axis=achse)
+        von = Torchfeld.take(lage, Torchfeld.arange(0, lage.shape[achse] - 2), axis=achse)
+        mass = Torchfeld.linalg_norm(zu - von, dim=2) / 2.0
+        gut = Torchfeld.take(drin, Torchfeld.arange(2, lage.shape[achse]), axis=achse) & Torchfeld.take(drin, Torchfeld.arange(0, lage.shape[achse] - 2), axis=achse)
+        gut &= Torchfeld.take(drin, Torchfeld.arange(1, lage.shape[achse] - 1), axis=achse)
+        voll = torch.zeros(drin.shape, dtype=torch.float64, device='cuda')
+        gueltig = torch.zeros(drin.shape, dtype=torch.bool, device='cuda')
         innen = [slice(None), slice(None)]
         innen[achse] = slice(1, -1)
         voll[tuple(innen)] = mass
         gueltig[tuple(innen)] = gut & (mass > 1e-6)
         if not gueltig.any():
-            return np.full(drin.shape, 1e-3)
+            return Torchfeld.full(drin.shape, 1e-3)
         _w, (iy, ix) = ndimage.distance_transform_edt(~gueltig, return_indices=True)
         return voll[iy, ix]
 
     def normalen(self, hoehe, kante_x, kante_y):
         """(S, S, 3) uint8 — Tangentenraum, OpenGL (Y = +v = im Bild nach oben), flach = (128, 128, 255)."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         glatt = ndimage.gaussian_filter(hoehe, self.GLAETTUNG_PX)
-        steigung_y, steigung_x = np.gradient(glatt)               # Meter Höhe je Pixel
-        sx = np.clip(steigung_x / np.maximum(kante_x, 1e-6), -self.STEIGUNG_MAX, self.STEIGUNG_MAX)
-        sy = np.clip(steigung_y / np.maximum(kante_y, 1e-6), -self.STEIGUNG_MAX, self.STEIGUNG_MAX)
+        steigung_y, steigung_x = Torchfeld.gradient(glatt)               # Meter Höhe je Pixel
+        sx = Torchfeld.clip(steigung_x / Torchfeld.maximum(kante_x, 1e-6), -self.STEIGUNG_MAX, self.STEIGUNG_MAX)
+        sy = Torchfeld.clip(steigung_y / Torchfeld.maximum(kante_y, 1e-6), -self.STEIGUNG_MAX, self.STEIGUNG_MAX)
         naht = getattr(self, 'naht', None)
         if naht is not None and naht.shape == sx.shape:
             sx[naht] = 0.0
             sy[naht] = 0.0
         # Bildzeilen laufen nach unten, v nach oben: dh/dv = −sy → n_y = −dh/dv = +sy.
-        n = np.dstack([-sx, sy, np.ones_like(sx)])
-        n /= np.linalg.norm(n, axis=2, keepdims=True)
-        return np.clip((n * 0.5 + 0.5) * 255.0 + 0.5, 0, 255).astype(np.uint8), np.hypot(sx, sy)
+        n = Torchfeld.dstack([-sx, sy, torch.ones_like(sx)])
+        n /= Torchfeld.linalg_norm(n, dim=2, keepdim=True)
+        return Torchfeld.astype(Torchfeld.clip((n * 0.5 + 0.5) * 255.0 + 0.5, 0, 255), torch.uint8), Torchfeld.hypot(sx, sy)
 
     def hoehle(self, hoehe, kante_x, drin):
         u"""(S, S) uint8 — die Furchentiefe für den Alpha-Kanal (siehe `HOEHLE_SIGMA_M`): wie weit der Texel unter seiner Umgebung liegt, `HOEHLE_VOLL_M` = 255."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        mass = float(np.median(kante_x[drin])) if drin.any() else 1e-3
+        mass = float(Torchfeld.median(kante_x[drin])) if drin.any() else 1e-3
         glatt = ndimage.gaussian_filter(hoehe, self.GLAETTUNG_PX)
         umgebung = ndimage.gaussian_filter(hoehe, max(1.0, self.HOEHLE_SIGMA_M / max(mass, 1e-6)))
-        tiefe = np.clip((umgebung - glatt) / self.HOEHLE_VOLL_M, 0.0, 1.0)
+        tiefe = Torchfeld.clip((umgebung - glatt) / self.HOEHLE_VOLL_M, 0.0, 1.0)
         naht = getattr(self, 'naht', None)
         if naht is not None and naht.shape == tiefe.shape:
             tiefe[ndimage.binary_dilation(naht, iterations=self.NAHT_PX)] = 0.0     # an der Naht keine Furche
-        return (tiefe * 255.0 + 0.5).astype(np.uint8)
+        return Torchfeld.astype(tiefe * 255.0 + 0.5, torch.uint8)
 
     def bauen(self):
         """Alle Kacheln dieses Geschlechts in die Ablage; → die Liste (`{kachel: {steigung_p99, steigung_mittel}}`, `sekunden`)."""
@@ -206,9 +207,9 @@ class G9hautfalten:
             gueltig, hoehe, kx, ky = self.hoehe_und_mass(traeger, abtastung, nummer, quelle)
             bild, steigung = self.normalen(hoehe, kx, ky)
             drin = abtastung.stellen(nummer)[0]
-            bild = np.dstack([bild, self.hoehle(hoehe, kx, drin)])          # RGBA: Normale + Furchentiefe
+            bild = Torchfeld.dstack([bild, self.hoehle(hoehe, kx, drin)])          # RGBA: Normale + Furchentiefe
             bild[~gueltig] = (128, 128, 255, 0)
-            p99 = float(np.percentile(steigung[drin], 99)) if drin.any() else 0.0
+            p99 = float(Torchfeld.percentile(steigung[drin], 99)) if drin.any() else 0.0
             logger.info('Hautfalten %s Kachel %d: Steigung p99 %.3f, Mittel %.4f, Naht %.1f %% (%.1f s)', self.geschlecht, nummer, p99,
                         float(steigung[drin].mean()) if drin.any() else 0.0, float(self.naht[drin].mean() * 100) if drin.any() else 0.0,
                         time.perf_counter() - t0)

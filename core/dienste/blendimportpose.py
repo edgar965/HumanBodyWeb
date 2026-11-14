@@ -14,7 +14,9 @@ zur Senkrechten, gemessen am Bauplan 30.09.2026) und Kontrollbilder (`arbeit/pos
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.utils import timezone
 
 from .engine2d3dkleiderposebilder import Engine2d3dKleiderposebilder
@@ -107,23 +109,23 @@ class Blendimportpose:
         unabhängig davon, wie das Bild gedreht ist; in der Bildebene gemessen (Verkürzung nach vorn oder hinten sieht sie nicht)."""
         e = sam['drehungen'].get(str(grad)) or {}
         index = Engine2d3dKleiderposegelenke.index(sam['namen'])
-        k2 = np.asarray(e['k2'], dtype=np.float64)
+        k2 = Torchfeld.feld(e['k2'], dtype=torch.float64)
 
         def p(name):
             return k2[index[name]]
 
         achse = (p('left-shoulder') + p('right-shoulder')) / 2.0 - (p('left-hip') + p('right-hip')) / 2.0
-        laenge = float(np.linalg.norm(achse))
+        laenge = float(Torchfeld.linalg_norm(achse))
         if laenge < 1e-6:
             return None
 
         def winkel(vektor, bezug):
-            c = float(np.dot(vektor, bezug) / (np.linalg.norm(vektor) * np.linalg.norm(bezug) + 1e-12))
-            return round(float(np.degrees(np.arccos(max(-1.0, min(1.0, c))))), 1)
+            c = float(Torchfeld.dot(vektor, bezug) / (Torchfeld.linalg_norm(vektor) * Torchfeld.linalg_norm(bezug) + 1e-12))
+            return round(float(Torchfeld.degrees(Torchfeld.arccos(max(-1.0, min(1.0, c))))), 1)
 
         runter = -achse
         return {
-            'rumpf_neigung_grad': winkel(achse, np.array([0.0, -1.0])),
+            'rumpf_neigung_grad': winkel(achse, Torchfeld.feld([0.0, -1.0], copy=True)),
             'oberarm_links_grad': winkel(p('left-elbow') - p('left-shoulder'), runter),
             'oberarm_rechts_grad': winkel(p('right-elbow') - p('right-shoulder'), runter),
             'unterarm_links_grad': winkel(p('left-wrist') - p('left-elbow'), runter),
@@ -152,7 +154,7 @@ class Blendimportpose:
     def _veraltet(cls, ablage, pose, einstellungen, glb):
         if not pose or pose.get('aus') or not pose.get('datei'):
             return 'noch nicht gerechnet'
-        if not (ablage.arbeit(cls.ORDNER) / pose['datei']).is_file():
+        if not Npztorch.da(ablage.arbeit(cls.ORDNER) / pose['datei']):          # Name aus stand.json, Datei seit 13.11.2026 .pt
             return 'Landmarken-Datei fehlt'
         if (pose.get('optionen') or {}).get('pose_drehung') != str(cls.drehung(einstellungen)):
             return 'Drehung seit dem Lauf geändert'

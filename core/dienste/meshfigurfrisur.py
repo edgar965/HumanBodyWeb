@@ -28,7 +28,9 @@ import logging
 import re
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .haarklemme import Haarklemme
 
@@ -115,14 +117,14 @@ class Meshfigurfrisur:
 
         kopf = figur[G9koerperteile.genesis_punkte(G9haut.holen()) == 0]
         scheitel = float(kopf[:, 1].max())
-        self.mitte = np.array([float(kopf[:, 0].mean()), scheitel - self.MITTE_UNTER_SCHEITEL_M,
-                               0.5 * float(kopf[:, 2].min() + kopf[:, 2].max())])
+        self.mitte = Torchfeld.feld([float(kopf[:, 0].mean()), scheitel - self.MITTE_UNTER_SCHEITEL_M,
+                               0.5 * float(kopf[:, 2].min() + kopf[:, 2].max())], copy=True)
         huelle = Haarhuelle(self.mitte)
-        with np.load(self.ablage.arbeit('haar_maske.npz')) as d:
+        with Npztorch.lesen(self.ablage.arbeit('haar_maske.npz')) as d:
             geschuetzt = d['geschuetzt']
         gesicht = None
         if len(geschuetzt) == len(flaechen) and geschuetzt.any():
-            gesicht = ~np.isnan(huelle.karte(Haarhuelle.proben(punkte, flaechen[geschuetzt], 20000)))
+            gesicht = ~Torchfeld.isnan(huelle.karte(Haarhuelle.proben(punkte, flaechen[geschuetzt], 20000)))
             feld, _r = huelle.felder(punkte[flaechen].mean(axis=1))
             haar = haar & ~gesicht.reshape(-1)[feld]
         ziel = huelle.karte(Haarhuelle.proben(punkte, flaechen[haar], self.PROBEN))
@@ -255,9 +257,9 @@ class Meshfigurfrisur:
 
         self.lauf.melden(0.96, 'Haarkarten aus der Schale')
         try:
-            wahl = np.where(haar)[0]
-            farben = scan.farben(wahl, np.tile((1 / 3, 1 / 3, 1 / 3), (len(wahl), 1)))
-            karten = Haarkarten(punkte, scan.flaechen[wahl], np.asarray(farben, dtype=np.float64), figur,
+            wahl = torch.nonzero(haar, as_tuple=True)[0]
+            farben = scan.farben(wahl, torch.tile((1 / 3, 1 / 3, 1 / 3), (len(wahl), 1)))
+            karten = Haarkarten(punkte, scan.flaechen[wahl], Torchfeld.feld(farben, dtype=torch.float64), figur,
                                 self.mitte)
             return {'datei': 'haarkarten.glb', **karten.schreiben(self.ablage.ergebnis('haarkarten.glb'))}
         except Exception as fehler:  # noqa: BLE001 — Option C darf A und das Modell nie verhindern

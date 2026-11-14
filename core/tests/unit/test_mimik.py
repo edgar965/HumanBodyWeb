@@ -36,6 +36,10 @@ from humanbody_core.mimik.mblab_ausdruecke import MblabAusdruecke
 
 from ._pruefablage import Pruefablage
 from ._studiovorlage import Studiovorlage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'studio'
 MIMIK = settings.BASE_DIR / 'static' / 'mimik'
@@ -90,7 +94,7 @@ class KunstSkelett:
             json.dump({'bone_count': 3, 'bones': bones}, f)
         with open(haut, 'w', encoding='utf-8') as f:
             json.dump(gewichte, f)
-        np.save(punkte, netz)
+        Npztorch.speichern_npy(punkte, netz)
         return Knochendeltas(skelett, haut, punkte), netz
 
 

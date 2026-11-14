@@ -24,6 +24,10 @@ from pathlib import Path
 
 from django.conf import settings
 from django.utils.timezone import template_localtime
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -179,16 +183,16 @@ class Meshfigurspeichern:
         kacheln = self._bilder()
         for name in list(kacheln.values()) + list(self.BILDER):
             quelle = self.ablage.ergebnis(name)
-            if quelle.is_file():
-                shutil.copy2(quelle, ziel / name)
+            if Npztorch.da(quelle):
+                Npztorch.kopieren(quelle, ziel / name)
                 dateien.append(name)
         rest = (self.job.ergebnis.get('rest') or {}).get('regler')
         if rest:
             kennung = rest[len(G9eigenmorphe.PRAEFIX) :]
             for endung in ('.npz', '.json'):
                 quelle = G9eigenmorphe.ordner() / (kennung + endung)
-                if quelle.is_file():
-                    shutil.copy2(quelle, ziel / ('eigenmorph_' + kennung + endung))
+                if Npztorch.da(quelle):
+                    Npztorch.kopieren(quelle, ziel / ('eigenmorph_' + kennung + endung))
                     dateien.append('eigenmorph_' + kennung + endung)
         modell = '%s.json' % self.zielordner().name
         (ziel / modell).write_text(

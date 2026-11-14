@@ -28,7 +28,8 @@ geschrieben.
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 
 from .lippenrand import Lippenrand
@@ -75,7 +76,7 @@ class Lippenmaske:
         cls._saum[schluessel] = None
         datei = cls.ordner() / cls.DATEI.get(geschlecht, '')
         if uvs is not None and datei.is_file():
-            roh = cls.aus_uvs(np.asarray(uvs), cls.maske(datei))
+            roh = cls.aus_uvs(Torchfeld.feld(uvs), cls.maske(datei))
             aus = cls.beschnitten(roh, len(uvs), geschlecht, unterteiler)
             logger.info(
                 'Lippenmaske (%s): %d Punkte aus %s (roh %d)', geschlecht, len(aus), datei.name, len(roh)
@@ -96,7 +97,7 @@ class Lippenmaske:
         from PIL import Image
 
         with Image.open(datei) as bild:
-            return np.asarray(bild.convert('L'))
+            return Torchfeld.feld(bild.convert('L'))
 
     @classmethod
     def aus_uvs(cls, uvs, maske):
@@ -106,9 +107,9 @@ class Lippenmaske:
         nächsten Pixel, an den Rändern geklemmt.
         """
         hoehe, breite = maske.shape[:2]
-        u = np.clip(np.rint(uvs[:, 0] * (breite - 1)).astype(int), 0, breite - 1)
-        w = np.clip(np.rint((1 - uvs[:, 1]) * (hoehe - 1)).astype(int), 0, hoehe - 1)
-        return np.flatnonzero(maske[w, u] > cls.SCHWELLE)
+        u = Torchfeld.clip(Torchfeld.astype(Torchfeld.round(uvs[:, 0] * (breite - 1)), torch.int64), 0, breite - 1)
+        w = Torchfeld.clip(Torchfeld.astype(Torchfeld.round((1 - uvs[:, 1]) * (hoehe - 1)), torch.int64), 0, hoehe - 1)
+        return torch.flatten(maske[w, u] > cls.SCHWELLE).nonzero()[:, 0]
 
     @classmethod
     def lippen(cls, geschlecht, uvs, unterteiler=None):
@@ -143,12 +144,12 @@ class Lippenmaske:
                 anzahl,
             )
             return roh.tolist()
-        saum = np.flatnonzero(np.abs(abstand) < cls.SAUM_MM)
+        saum = torch.flatten(Torchfeld.abs(abstand) < cls.SAUM_MM).nonzero()[:, 0]
         cls._saum[(geschlecht, anzahl)] = {
             'punkte': saum.tolist(),
-            'abstand': np.round(abstand[saum], 2).tolist(),
+            'abstand': Torchfeld.round(abstand[saum], 2).tolist(),
         }
-        return np.flatnonzero(abstand > 0).tolist()
+        return torch.flatten(abstand > 0).nonzero()[:, 0].tolist()
 
     @classmethod
     def basispunkte(cls, geschlecht, unterteiler=None):

@@ -15,7 +15,8 @@ Prozess gebaut (`_vorrat`).
 import json
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Koerperanhaenge']
 
@@ -64,7 +65,7 @@ class Koerperanhaenge:
             Brauenfarbe().anwenden(netz, haarfarbe)
         aus = []
         for a in netz['anhaenge']:
-            dreiecke = np.asarray(a['dreiecke'], dtype=np.int64).reshape(-1, 3)
+            dreiecke = Torchfeld.feld(a['dreiecke'], dtype=torch.int64).reshape(-1, 3)
             stuecke, gruppen, ab = [], [], 0
             for g in a.get('gruppen') or []:
                 anzahl = int(g.get('index_anzahl') or 0) // 3
@@ -82,9 +83,9 @@ class Koerperanhaenge:
                     g['bilder'] = dict(b, albedo=cls._einfarbig(b.get('farbe')), farbe=[1.0, 1.0, 1.0])
             textur = Kleidermodellbau._textur(gruppen, {g['name']: g.get('bilder') or {} for g in gruppen},
                                               cls.TOENUNG)
-            aus.append({'punkte': np.asarray(a['punkte'], dtype=np.float64), 'dreiecke': np.concatenate(stuecke),
-                        'farbe': np.asarray(Kleidermodellbau.HAUT), 'haut': a.get('haut'), 'art': 'koerper',
-                        'sorte': 'anhang_%s' % a.get('schluessel'), 'uv': np.asarray(a['uv'], dtype=np.float64)
+            aus.append({'punkte': Torchfeld.feld(a['punkte'], dtype=torch.float64), 'dreiecke': Torchfeld.cat(stuecke),
+                        'farbe': Torchfeld.feld(Kleidermodellbau.HAUT), 'haut': a.get('haut'), 'art': 'koerper',
+                        'sorte': 'anhang_%s' % a.get('schluessel'), 'uv': Torchfeld.feld(a['uv'], dtype=torch.float64)
                         .reshape(-1, 2), 'normalen': a.get('normalen'), 'gruppen': gruppen, 'textur': textur,
                         'toenung': cls.TOENUNG})
         return aus

@@ -16,7 +16,8 @@ Die Lage ist die der Bühne: Meter, Y oben, Füße auf 0 (`Meshfigurfrisurstueck
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .haarparameter import Haarparameter
 
@@ -53,7 +54,7 @@ class Genesishaarbau:
         kanaele = {k: k.split(Haarparameter.MORPH, 1)[1] for k in namen}
         teilpunkte = stueck.teilpunkte()
         self._laengen[kennung] = [len(p) for p in teilpunkte]
-        grund = np.vstack(teilpunkte)
+        grund = Torchfeld.vstack(teilpunkte)
         deltas = {}
         for schluessel, kanal in kanaele.items():
             try:
@@ -74,7 +75,7 @@ class Genesishaarbau:
         aus = {}
         for achse, _anzeige, _methode in G9haarachsen.KANAELE:
             neu = G9haarachsen.anwenden(kennung, stueck.teile, kaefige, {achse: 1.0})
-            aus['%s.%s%s' % (kennung, Haarparameter.ACHSE, achse)] = np.vstack(neu) - grund
+            aus['%s.%s%s' % (kennung, Haarparameter.ACHSE, achse)] = Torchfeld.vstack(neu) - grund
         return aus
 
     def dreiecke(self, kennung):
@@ -84,11 +85,11 @@ class Genesishaarbau:
         versatz, alle = 0, []
         for (folger, _lage), anzahl in zip(self.stueck(kennung).teile, self._laengen[kennung],
                                            strict=True):
-            dreiecke = np.asarray(getattr(folger, 'dreiecke', None), dtype=np.int64)
-            if dreiecke.size:
+            dreiecke = Torchfeld.feld(getattr(folger, 'dreiecke', None), dtype=torch.int64)
+            if Torchfeld.groesse(dreiecke):
                 alle.append(dreiecke.reshape(-1, dreiecke.shape[-1]) + versatz)
             versatz += anzahl
-        return np.vstack(alle) if alle else None
+        return Torchfeld.vstack(alle) if alle else None
 
     def punkte(self, werte):
         """(N, 3) der getragenen Frisur in der Lage der Bühne — oder None, wenn keine an ist."""
@@ -96,7 +97,7 @@ class Genesishaarbau:
         if not kennung:
             return None, None
         grund, deltas = self._deltas(kennung)
-        punkte = grund.copy()
+        punkte = Torchfeld.kopie(grund)
         for schluessel, delta in deltas.items():
             wert = float((werte or {}).get(schluessel, 0.0) or 0.0)
             if abs(wert) > 1e-6:

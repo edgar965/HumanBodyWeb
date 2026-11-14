@@ -25,7 +25,9 @@ Schamlippen — das Bild des Originals sitzt dann als Farbe auf einer weichen Mu
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -65,8 +67,8 @@ class Blendimportnachformung:
         r = cls.REGIONEN[region]
         unten, oben = sohle + r['hoehe'][0] * hoehe, sohle + r['hoehe'][1] * hoehe
         breit = r['breite_m'] * hoehe / 1.75
-        return ((punkte[:, 1] > unten) & (punkte[:, 1] < oben) & (np.abs(punkte[:, 0]) < breit)
-                & (punkte[:, 2] > float(np.median(punkte[:, 2]))))
+        return ((punkte[:, 1] > unten) & (punkte[:, 1] < oben) & (Torchfeld.abs(punkte[:, 0]) < breit)
+                & (punkte[:, 2] > float(Torchfeld.median(punkte[:, 2]))))
 
     @classmethod
     def verschiebung(cls, flaeche, original, maske):
@@ -74,23 +76,23 @@ class Blendimportnachformung:
         alles außerhalb der Maske bleiben 0."""
         import trimesh
 
-        aus = np.zeros((len(flaeche), 3))
+        aus = torch.zeros((len(flaeche), 3), dtype=torch.float64, device='cuda')
         if not maske.any():
             return aus
         nah, _abstand, _dreieck = trimesh.proximity.closest_point(original, flaeche[maske])
-        aus[np.flatnonzero(maske)] = nah - flaeche[maske]
-        aus[np.linalg.norm(aus, axis=1) > cls.AUSREISSER_M] = 0.0
+        aus[torch.flatten(maske).nonzero()[:, 0]] = nah - flaeche[maske]
+        aus[Torchfeld.linalg_norm(aus, dim=1) > cls.AUSREISSER_M] = 0.0
         return aus
 
     @classmethod
     def zusammenfuehren(cls, nummern, deltas, zusatz):
         """`(nummern, deltas)` des bisherigen Eigenmorphs plus das Zusatzfeld `zusatz` (N, 3) — dicht addiert, kleine Reste weg."""
-        dicht = np.zeros((len(zusatz), 3))
+        dicht = torch.zeros((len(zusatz), 3), dtype=torch.float64, device='cuda')
         if nummern is not None and len(nummern):
-            dicht[np.asarray(nummern, dtype=np.int64)] = np.asarray(deltas, dtype=np.float64)
+            dicht[Torchfeld.feld(nummern, dtype=torch.int64)] = Torchfeld.feld(deltas, dtype=torch.float64)
         dicht += zusatz
-        neu = np.flatnonzero(np.linalg.norm(dicht, axis=1) > cls.MINDESTENS)
-        return neu.astype(np.int32), dicht[neu].astype(np.float32)
+        neu = torch.flatten(Torchfeld.linalg_norm(dicht, dim=1) > cls.MINDESTENS).nonzero()[:, 0]
+        return Torchfeld.astype(neu, torch.int32), Torchfeld.astype(dicht[neu], torch.float32)
 
     # ----------------------------------------------------------------- Lauf
 
@@ -99,7 +101,7 @@ class Blendimportnachformung:
         import trimesh
 
         name = next(r['name'] for r in self.rollen if r['rolle'] == 'koerper')
-        with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
+        with Npztorch.lesen(self.ablage.export(self.inventar[name]['datei'])) as d:
             punkte, dreiecke = d['punkte'], d['dreiecke']
         return trimesh.Trimesh(lage.ruhelage(punkte), dreiecke, process=False)
 
@@ -108,7 +110,7 @@ class Blendimportnachformung:
         import trimesh
 
         d = trimesh.proximity.closest_point(original, flaeche[maske])[1] * 1000.0
-        return {'median_mm': round(float(np.median(d)), 2), 'p90_mm': round(float(np.percentile(d, 90)), 2),
+        return {'median_mm': round(float(Torchfeld.median(d)), 2), 'p90_mm': round(float(Torchfeld.percentile(d, 90)), 2),
                 'max_mm': round(float(d.max()), 1)}
 
     def formen(self):
@@ -128,14 +130,14 @@ class Blendimportnachformung:
         original = self.original(lage)
         stufe = G9basisnetz.holen().netzstufe(1)
         anzahl = len(G9basisnetz.holen().punkte)
-        kaefig0 = np.asarray(G9reglerableitung.lage(G9formung(self.job.stellung()))[0], dtype=np.float64)
+        kaefig0 = Torchfeld.feld(G9reglerableitung.lage(G9formung(self.job.stellung()))[0], dtype=torch.float64)
         sohle = float(original.vertices[:, 1].min())
         hoehe = float(original.vertices[:, 1].max()) - sohle
         felder, bericht = {}, {}
         for region in self.REGIONEN:
-            zusatz = np.zeros_like(kaefig0)
+            zusatz = torch.zeros_like(kaefig0)
             for durchgang in range(self.DURCHGAENGE + 1):
-                flaeche = np.asarray(stufe.punkte(kaefig0 + zusatz), dtype=np.float64)
+                flaeche = Torchfeld.feld(stufe.punkte(kaefig0 + zusatz), dtype=torch.float64)
                 maske = self.kasten(flaeche, region, sohle, hoehe)
                 if not maske.any():
                     bericht[region] = {'aus': 'kein Flächenpunkt im Kasten'}
@@ -146,10 +148,10 @@ class Blendimportnachformung:
                     bericht[region]['nachher'] = self.abstaende(flaeche, original, maske)
                     break
                 rest = self.verschiebung(flaeche, original, maske)[:anzahl]
-                feld = G9restmorph.glaetten(rest, (np.linalg.norm(rest, axis=1) > 0).astype(float), *self.GLAETTEN)
+                feld = G9restmorph.glaetten(rest, Torchfeld.astype(Torchfeld.linalg_norm(rest, dim=1) > 0, torch.float64), *self.GLAETTEN)
                 zusatz = zusatz + self.ENTSPANNUNG * feld
             felder[region] = zusatz
-            bericht[region]['zusatz_max_mm'] = round(float(np.linalg.norm(zusatz, axis=1).max()) * 1000.0, 1)
+            bericht[region]['zusatz_max_mm'] = round(float(Torchfeld.linalg_norm(zusatz, dim=1).max()) * 1000.0, 1)
             self.melden(0.95, 'Nachformung %s' % region)
         kennung = reglername[len(G9eigenmorphe.PRAEFIX):]
         regler = {}

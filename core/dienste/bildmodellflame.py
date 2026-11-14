@@ -20,7 +20,9 @@ import logging
 import os
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.utils import timezone
 
 logger = logging.getLogger('core')
@@ -83,10 +85,10 @@ class Bildmodellflame:
         aus = {'stand': timezone.now().isoformat(), 'dauer_s': round(float(dauer_s), 1)}
         g = eintrag.get('gesichtsschaetzung') or {}
         pfad = self._netzpfad(eintrag)
-        if g.get('fehler') or not pfad.is_file():
+        if g.get('fehler') or not Npztorch.da(pfad):
             aus['fehler'] = str(g.get('fehler') or 'PyMAF-X hat keinen FLAME-Kopf abgelegt')[:400]
             return aus
-        punkte = np.load(pfad)
+        punkte = Npztorch.lesen(pfad)
         aus.update(netz=pfad.name, punkte=int(punkte.shape[0]), dreiecke=self.DREIECKE,
                    confidence=g.get('confidence'), expression=g.get('expression'))
         return aus
@@ -96,8 +98,8 @@ class Bildmodellflame:
     def dreiecke(self):
         """Die Dreiecke des FLAME-Kopfs (uint32, FLAME-Nummern) — aus dem SMPL-X-Netz, abgelegt."""
         pfad = self.ablage.schaetzung() / self.DREIECKE
-        if pfad.is_file():
-            return np.load(pfad)
+        if Npztorch.da(pfad):
+            return Npztorch.lesen(pfad)
         from Genesis9.zielnetz import G9zielnetz
         from SMPL.xkoerper import Smplxkoerper
 
@@ -108,12 +110,12 @@ class Bildmodellflame:
 
             koerper = Smplxkoerper.laden('neutral', Baum.SMPLX)
         nummern = G9zielnetz.flame_nummern()
-        umkehr = np.full(len(koerper.v_template), -1, dtype=np.int64)
-        umkehr[nummern] = np.arange(len(nummern))
-        f = umkehr[np.asarray(koerper.faces, dtype=np.int64)]
-        aus = f[(f >= 0).all(axis=1)].astype(np.uint32)
+        umkehr = Torchfeld.full(len(koerper.v_template), -1, dtype=torch.int64)
+        umkehr[nummern] = Torchfeld.arange(len(nummern))
+        f = umkehr[Torchfeld.feld(koerper.faces, dtype=torch.int64)]
+        aus = Torchfeld.astype(f[(f >= 0).all(axis=1)], torch.uint32)
         pfad.parent.mkdir(parents=True, exist_ok=True)
-        np.save(pfad, aus)
+        Npztorch.speichern_npy(pfad, aus)
         return aus
 
     # ------------------------------------------------------------ Standbild
@@ -125,7 +127,7 @@ class Bildmodellflame:
         g = eintrag.get(self.FELD) or {}
         stamm = os.path.splitext(eintrag.get('datei') or '')[0]
         try:
-            punkte = np.load(self.ablage.schaetzung() / os.path.basename(g['netz']))
+            punkte = Npztorch.lesen(self.ablage.schaetzung() / os.path.basename(g['netz']))
             s = eintrag.get('gesichtsschaetzung') or {}
             seitig = float(s.get('image_width') or 3) / float(s.get('image_height') or 4)
             breite, hoehe = int(round(self.HOEHE * seitig)), self.HOEHE
@@ -149,14 +151,14 @@ class Bildmodellflame:
         g = (eintrag or {}).get(self.FELD) or {}
         if not g.get('netz'):
             raise FileNotFoundError(g.get('fehler') or 'FLAME für dieses Bild noch nicht gerechnet')
-        punkte = np.load(self.ablage.schaetzung() / os.path.basename(g['netz']))
+        punkte = Npztorch.lesen(self.ablage.schaetzung() / os.path.basename(g['netz']))
         return {
             'ok': True, 'datei': eintrag.get('datei'), 'anzahl': int(punkte.shape[0]),
-            'punkte': self._b64(punkte, np.float32), 'dreiecke': self._b64(self.dreiecke(), np.uint32),
+            'punkte': self._b64(punkte, torch.float32), 'dreiecke': self._b64(self.dreiecke(), torch.uint32),
             'hoehe_cm': round(float(punkte[:, 1].max() - punkte[:, 1].min()) * 100.0, 1),
             'confidence': g.get('confidence'), 'stand': g.get('stand'),
         }
 
     @staticmethod
     def _b64(feld, art):
-        return base64.b64encode(np.ascontiguousarray(feld, dtype=art).tobytes()).decode('ascii')
+        return base64.b64encode(Torchfeld.als_bytes(Torchfeld.feld(feld, dtype=art))).decode('ascii')

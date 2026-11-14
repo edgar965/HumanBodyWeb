@@ -15,7 +15,8 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -161,10 +162,10 @@ class Meshfigurvorschau:
         if eintrag is None:
             return {'fehler': 'Referenz %s nicht im Katalog' % name}
         ref, _ = Bildmodelltestfall.kaefig(eintrag['regler'])
-        mod = np.asarray(punkte, float)
+        mod = Torchfeld.feld(punkte, dtype=torch.float64)
         # Gemessen wird die ganze Haut samt Zehen (Bereich 6 seit 27.09.2026) — ohne Finger und Innenräume.
-        haut = np.isin(G9netzbereiche.bereiche(), (0, 1, 5, 6))
-        mm = lambda a: round(float(np.sqrt((a[haut] ** 2).mean())) * 1000.0, 2)  # noqa: E731
+        haut = torch.isin(G9netzbereiche.bereiche(), Torchfeld.feld((0, 1, 5, 6)))
+        mm = lambda a: round(float(Torchfeld.sqrt((a[haut] ** 2).mean())) * 1000.0, 2)  # noqa: E731
         punkt, flaeche, s = self._vergleich(mod, ref, haut)
         e_regler = self.job.ergebnis.get('regler') or {}
         nur, _ = Bildmodelltestfall.kaefig(dict(e_regler.get('stellung') or {}))
@@ -180,7 +181,7 @@ class Meshfigurvorschau:
                 'referenz': round(float(ref[:, 1].max()) * 100, 1),
                 'modell': round(float(mod[:, 1].max()) * 100, 1),
             },
-            'punkt_mm': mm(np.linalg.norm(mod - ref, axis=1)),
+            'punkt_mm': mm(Torchfeld.linalg_norm(mod - ref, dim=1)),
             'procrustes_massstab': round(float(s), 4),
             'punkt_ausgerichtet_mm': mm(punkt),
             'flaeche_ausgerichtet_mm': mm(flaeche),
@@ -201,7 +202,7 @@ class Meshfigurvorschau:
         r, s, t = G9zielnetz.procrustes(mod[haut], ref[haut])
         ausgerichtet = s * mod @ r.T + t
         return (
-            np.linalg.norm(ausgerichtet - ref, axis=1),
+            Torchfeld.linalg_norm(ausgerichtet - ref, dim=1),
             Bildmodelltestfall.flaechenabstand(ausgerichtet, ref),
             s,
         )
@@ -217,5 +218,5 @@ class Meshfigurvorschau:
         for i, name in enumerate(G9koerperteile.TEILE):
             drin = haut & (teil == i)
             if drin.any():
-                aus[name] = round(float(np.sqrt((abstand[drin] ** 2).mean())) * 1000.0, 2)
+                aus[name] = round(float(Torchfeld.sqrt((abstand[drin] ** 2).mean())) * 1000.0, 2)
         return aus

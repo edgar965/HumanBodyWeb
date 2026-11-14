@@ -12,7 +12,7 @@ Zwei Teile, beide auf der gemeinsamen Fläche von `Kostuembild`:
 Bildauswahl gemittelt (Regler „Gewicht" auf der Seite).
 """
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 from .iterationsnote import Iterationsnote
 
 __all__ = ['Kostuemnote']
@@ -41,8 +41,8 @@ class Kostuemnote:
                     continue
                 fa = vorlage.farbe[ys, xs][ma].mean(axis=0)
                 fb = render.farbe[ys, xs][mb].mean(axis=0)
-                diffs.append(float(np.abs(fa - fb).mean()))
+                diffs.append(float(Torchfeld.abs(fa - fb).mean()))
         # Ohne ein einziges gemeinsames Feld ist die Farbe unbekannt — dann zählt sie wie „ganz daneben".
-        return float(np.mean(diffs)) if diffs else 1.0
+        return float(Torchfeld.mean(diffs)) if diffs else 1.0
 
     gesamt = classmethod(Iterationsnote.gesamt.__func__)          # dieselbe Rechnung wie `Iterationsnote.gesamt` (bis 08.11.2026 eine Kopie hier)

@@ -36,6 +36,10 @@ from Genesis9.netzstufe import G9netzstufe
 from Genesis9.stueckfelder import G9stueckfelder
 from humanbody_core.skeleton.formats.g9_zuordnung import DEF_ZU_G9, G9zuordnung
 from humanbody_core.skeleton.formats.genesis9 import SkeletonGenesis9
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 TEMP = Path(settings.BASE_DIR) / 'ProjektTemp'
 
@@ -103,7 +107,7 @@ class KaltstartZehenGlanzTest(SimpleTestCase):
                                    return_value=Path(wurzel)):
                 a = G9netzstufe._teilungabgelegt('probe', polys, ['m0', 'm1'], uvs,
                                                  ueber)
-                self.assertEqual(len(list(Path(wurzel).glob('naht_probe_*.npz'))), 1)
+                self.assertEqual(len(list(Npztorch.glob(Path(wurzel), 'naht_probe_*.npz'))), 1)
                 with mock.patch.object(netzstufe.G9netzteilung, 'teilen',
                                        side_effect=AssertionError('geteilt')):
                     b = G9netzstufe._teilungabgelegt('probe', polys, ['m0', 'm1'],

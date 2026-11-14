@@ -37,8 +37,15 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
   hand_ersatz    Edgar 05.11.2026 zu Edgar 1: „die Hände sind kaputt“: PSHumans `replace_hand` setzt die Hand der eingepassten Genesis-Figur ins Netz, wo MediaPipe sie meldet (`pshuman_port14/handersatz.py`, `genesishand.py`, `MediapipeTorch/handpunkte.py`), seit 07.11.2026 statt der Hand des SMPL-X; UP2You nimmt die Hand seines SMPL-X (`up2youlauf.py`)
   haut_ki        Edgar 05.11.2026: „Sollten wir im UI oben beim Job eine Checkbox machen - Haut KI?“, seit 06.11.2026 Vorgabe aus (`Hautohneki`, Messung dort): Aus schreibt der Schritt „Haut“ von Mesh-Genesis die Kacheln ohne Netz (`meshgenesis/meshgenesis_haut_ohneki.py`, liest diese Wahl selbst); PSHuman rechnet deshalb nicht neu
   keine_kleider  Edgar 06.11.2026 zu n2: „mach n2 mit: keine Kleider“: In der Kostüm-Erkennung wird alles außer Haar zu Haut (`meshgenesis/meshgenesis_kostuem_ohnekleider.py`, liest diese Wahl selbst); PSHuman rechnet deshalb nicht neu
+  kleider_getrennt  Edgar 11.11.2026: „lösche nicht die alte Pipeline, kannst du eine Checkbox oben machen - ‚Kleider Getrennt‘ für die Neue Pipleine?“: die neue Pipeline (Konzept
+                 `Docu/konzepte/2026-11-11_teile-getrennt-bauen-konzept.md`), Vorgabe aus. Schritt 1: längliche Requisiten kommen aus PSHuman heraus und werden getrennt aus dem Foto gebaut
+                 (`pshuman_port14/requisitmaske.py`, `profilkoerper.py`); PSHuman rechnet beim Umschalten neu (`lauf.fassung`)
+  genesis_zuerst  Edgar 12.11.2026: „mach den Umbau“ (Konzept `Docu/konzepte/2026-11-12_genesis-zuerst-konzept.md`, Abschnitt 9: „Der neue Weg hängt an einem Häkchen am Job, wie
+                 ‚Kleider getrennt‘“), Vorgabe aus. „Genesis rechnen“ gibt es an den neuen Test weiter (`Fotogenesisgenesisstart`, `einstellung.json` → `genesis_zuerst`): Körper nur über Regler,
+                 Kleider, Haar und Requisit aus der Garderobe (`Meshgenesisrechenlauf.GENESIS_ZUERST`). PSHuman rechnet deshalb nicht neu.
 
-    POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, anzahl, dichte}   → {ok, pshuman}
+    POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, kleider_getrennt, genesis_zuerst, anzahl,
+                                            dichte}   → {ok, pshuman}
 """
 
 import json
@@ -52,12 +59,19 @@ __all__ = ['Fotogenesispshuman']
 class Fotogenesispshuman:
     FELD = 'pshuman'
     VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'fototextur': False, 'textur_alle_fotos': True, 'hand_ersatz': False, 'up2you': False, 'haut_ki': False,  # noqa: RUF012 — nur gelesen
-               'keine_kleider': False}
+               'keine_kleider': False, 'kleider_getrennt': False, 'genesis_zuerst': False}
     WEGE = (('zeile1', 'Netz als Zeile 1'), ('drehteller', 'Drehteller'), ('vae_bildweise', 'VAE bildweise'), ('fototextur', 'Textur aus den Fotos'),
-            ('textur_alle_fotos', 'Textur aus allen Fotos'), ('hand_ersatz', 'Hände ersetzen'), ('up2you', 'Ansichten aus UP2You'), ('haut_ki', 'Haut-KI'), ('keine_kleider', 'Keine Kleider'))
+            ('textur_alle_fotos', 'Textur aus allen Fotos'), ('hand_ersatz', 'Hände ersetzen'), ('up2you', 'Ansichten aus UP2You'), ('haut_ki', 'Haut-KI'), ('keine_kleider', 'Keine Kleider'),
+            ('kleider_getrennt', 'Kleider getrennt'), ('genesis_zuerst', 'Genesis zuerst'))
     ANZAHL = (1, 2, 3, 4, 5, 6)
     DICHTEN = ((480, 'normal'), (960, 'dicht'))
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
+        'genesis_zuerst': 'Neuer Weg: Das Ergebnis ist eine Genesis-Figur aus der Bibliothek. Der Körper kommt nur aus den Genesis-Reglern (ohne freie Verschiebung), Kleider, Haar, Bart und '
+                          'Requisit sind Stücke der Garderobe, gewählt nach den Körperstellen, die das Netz bedeckt, mit Länge, Weite und Farbe aus dem Netz. Aus dem Netz geschnittene Stücke '
+                          'kommen nicht ins Ergebnis; was die Garderobe nicht hat, fehlt. Aus (Vorgabe): der bisherige Weg. Wirkt beim nächsten „Genesis rechnen“, PSHuman rechnet nicht neu.',
+        'kleider_getrennt': 'Neue Pipeline: Teile werden getrennt gebaut statt aus dem PSHuman-Netz geschnitten. Bisher: Stab, Zauberstab und Schwert kommen aus PSHuman heraus und werden '
+                            'aus dem Foto neu gebaut, in der Tiefe durch die Faust, die sie hält. Robe, Rock und Haar folgen. Aus (Vorgabe): der bisherige Weg. '
+                            'Wirkt beim nächsten „Job rechnen“, PSHuman rechnet dann neu.',
         'keine_kleider': 'Die Person im Foto trägt nichts: Die Kostüm-Erkennung wertet alles außer Haar als Haut, die Figur bekommt keine Kleider und keine Stücke, nur das Haar. '
                          'Aus (Vorgabe): Die Bilderkennung entscheidet. Wirkt in Mesh-Genesis ab dem nächsten Lauf.',
         'haut_ki': 'Aus (Vorgabe): Die gesehene Haut kommt unverändert aus dem Netz, mit dem Licht des Fotos. '

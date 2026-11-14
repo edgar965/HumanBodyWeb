@@ -15,6 +15,10 @@ from pathlib import Path
 from django.conf import settings
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
 sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))
@@ -26,7 +30,7 @@ class Gebautefigur:
 
     @classmethod
     def da(cls):
-        return all((cls.QUELLE / d).is_file() for d in cls.DATEIEN)
+        return all(Npztorch.da(cls.QUELLE / d) for d in cls.DATEIEN)
 
     @classmethod
     def kopieren(cls):
@@ -34,7 +38,7 @@ class Gebautefigur:
         ziel = Path(tempfile.mkdtemp(prefix='gebautefigur_', dir=Pruefablage.wurzel()))
         for d in cls.DATEIEN:
             (ziel / d).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(cls.QUELLE / d, ziel / d)
+            Npztorch.kopieren(cls.QUELLE / d, ziel / d)
         return ziel, json.loads((ziel / 'modell.json').read_text(encoding='utf-8'))['figur']['regler']
 
     @staticmethod

@@ -19,7 +19,8 @@ DER WEG
 
 EINHEITEN: MakeHuman rechnet in Dezimetern; `Mhformung`-Deltas gehen mit 0,1 in Meter. Das Skelett-Mass (`Mhrigmass`) rechnet in dm und rechnet selbst um.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.feldputz import G9feldputz
 from Genesis9.kollision import G9kollision
@@ -66,11 +67,11 @@ class Mhklonuebertragung:
         self.formung = Mhformung({'gender': self.GESCHLECHT})
         roh = self.formung.punkte()
         mh = Mhbasisnetz.holen()
-        alle = np.arange(len(mh.punkte))
+        alle = Torchfeld.arange(len(mh.punkte))
         g9 = G9formung({})
         stufe = G9basisnetz.holen().netzstufe(0)
-        grund = g9.punkte() - np.array([0.0, g9.boden(), 0.0])
-        flaeche = (np.asarray(stufe.punkte(grund), dtype=np.float64), np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3))
+        grund = g9.punkte() - Torchfeld.feld([0.0, g9.boden(), 0.0], copy=True)
+        flaeche = (Torchfeld.feld(stufe.punkte(grund), dtype=torch.float64), Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).reshape(-1, 3))
         self.koerper = mh._punktnummern(('koerper',))
         self.klon = Mhkopfklon(mh.punkte_am_boden(alle, roh), self.koerper, Mhskelett(self.formung).bauen()['knochen'], Mhhaut.roh(),
                                g9.skelett().bauen()['knochen'], flaeche, mh.vierecke(('koerper',)))
@@ -85,24 +86,24 @@ class Mhklonuebertragung:
         haut = klon_p[self.koerper]
         n_klon = self._normalen(klon_p)[self.koerper]
         netz = G9basisnetz.holen()
-        kaefig = np.asarray(netz.punkte, dtype=np.float64) - np.array([0.0, g9.boden(), 0.0])
+        kaefig = Torchfeld.feld(netz.punkte, dtype=torch.float64) - Torchfeld.feld([0.0, g9.boden(), 0.0], copy=True)
         n_kaefig = netz.normalen()
         abstand, nr = G9kollision.naechste(G9kollision.baum(haut), kaefig, k=self.KANDIDATEN)
-        abstand, nr = np.asarray(abstand, dtype=np.float64), np.asarray(nr)
-        einig = np.einsum('ik,ijk->ij', n_kaefig, n_klon[nr]) > self.EINIG
-        w = np.where(einig, 1.0 / np.maximum(abstand, 1e-4), 0.0)
+        abstand, nr = Torchfeld.feld(abstand, dtype=torch.float64), Torchfeld.feld(nr)
+        einig = Torchfeld.einsum('ik,ijk->ij', n_kaefig, n_klon[nr]) > self.EINIG
+        w = torch.where(einig, 1.0 / Torchfeld.maximum(abstand, 1e-4), 0.0)
         summe = w.sum(axis=1)
         self._ungueltig = (summe <= 0) | (abstand[:, 0] > self.LUECKE_M)
         self._kand = nr
-        self._gewicht = w / np.maximum(summe, 1e-12)[:, None]
+        self._gewicht = w / Torchfeld.maximum(summe, 1e-12)[:, None]
 
     def _normalen(self, punkte):
         q = self.vierecke
-        n = np.cross(punkte[q[:, 2]] - punkte[q[:, 0]], punkte[q[:, 3]] - punkte[q[:, 1]])
-        aus = np.zeros_like(punkte)
+        n = Torchfeld.cross(punkte[q[:, 2]] - punkte[q[:, 0]], punkte[q[:, 3]] - punkte[q[:, 1]])
+        aus = torch.zeros_like(punkte)
         for ecke in range(4):
-            np.add.at(aus, q[:, ecke], n)
-        laenge = np.linalg.norm(aus, axis=1, keepdims=True)
+            Torchfeld.add_at(aus, q[:, ecke], n)
+        laenge = Torchfeld.linalg_norm(aus, dim=1, keepdim=True)
         laenge[laenge < 1e-12] = 1.0
         return aus / laenge
 
@@ -114,8 +115,8 @@ class Mhklonuebertragung:
         if self._w is None:
             self._w = klon.anteile()
         w, glieder = self._w
-        delta = np.asarray(delta, dtype=np.float64)
-        aus = w[:, -1:] * (klon.rumpf(delta) - klon.rumpf(np.zeros((1, 3))))
+        delta = Torchfeld.feld(delta, dtype=torch.float64)
+        aus = w[:, -1:] * (klon.rumpf(delta) - klon.rumpf(torch.zeros((1, 3), dtype=torch.float64, device='cuda')))
         for i, glied in enumerate(glieder[:-1]):
             if not (w[:, i] > 0).any():
                 continue
@@ -140,12 +141,12 @@ class Mhklonuebertragung:
         u"""(25182, 3) Kaefigfeld aus einem hm08-Delta (M, 3) in Metern."""
         self.vorbereiten()
         klon_delta = self.abbilden(delta_m)[self.koerper]
-        feld = np.einsum('ik,ikj->ij', self._gewicht, klon_delta[self._kand])
+        feld = Torchfeld.einsum('ik,ikj->ij', self._gewicht, klon_delta[self._kand])
         putz = self.putz()
         feld = putz.fuellen(feld, self._ungueltig)
         feld = feld[self.nachbarn()].mean(axis=1)
         feld, _zacken = putz.putzen(feld)
-        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
+        feld[Torchfeld.linalg_norm(feld, dim=1) < self.NULL_M] = 0.0
         return feld
 
     def ungueltig(self):

@@ -20,7 +20,8 @@ Läuft im Schritt „vorschau", Ergebnis in `ergebnis.proportionen`.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.utils import timezone
 
 logger = logging.getLogger('core')
@@ -47,8 +48,8 @@ class Bildmodellproportionen:
 
         f = G9formung(self.stellung)
         p, _, _ = G9reglerableitung.lage(f)
-        gelenke = {e['name']: np.asarray(e['kopf'], float) for e in f.skelett().gelenkknochen()}
-        return np.asarray(p, float), gelenke
+        gelenke = {e['name']: Torchfeld.feld(e['kopf'], dtype=torch.float64) for e in f.skelett().gelenkknochen()}
+        return Torchfeld.feld(p, dtype=torch.float64), gelenke
 
     def alle(self, melder=None, nur=None):
         """`nur`: nur diese Ansicht rendern (Knopf „Bild neu" je Zeile, `Bildmodellzeilenbild`),
@@ -63,7 +64,7 @@ class Bildmodellproportionen:
         ziel = pr.messen(ziel_p, ziel_g, ok)
         modell = pr.messen(modell_p, modell_g)
         # Ungepaarte Zielpunkte fürs Bild aus dem Modell.
-        bild_p = np.where(ok[:, None], ziel_p, modell_p)
+        bild_p = torch.where(ok[:, None], ziel_p, modell_p)
         bilder = {'ziel': G9proportionenbild(bild_p), 'modell': G9proportionenbild(modell_p)}
         befunde = {'ziel': ziel, 'modell': modell}
         ordner = self.ablage.ergebnis()

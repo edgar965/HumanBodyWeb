@@ -19,7 +19,9 @@ Nicht für Haar und Augen (starr am Kopf, `Blendimportlage.kopf_starr`): ihre Bi
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -39,10 +41,10 @@ class Blendimporthaltung:
         """`(theta, rg, tg, frei, knochen, reihenfolge)` aus dem Auftrag; None, wenn der Auftrag keine Haltung führt."""
         arbeit = self.lage.ablage.arbeit
         try:
-            with np.load(arbeit('zustand.npz')) as z:
-                theta, rg, tg = (np.asarray(z[k], dtype=np.float64) for k in ('theta', 'rg', 'tg'))
-            with np.load(arbeit('genesis_ende.npz')) as g:
-                frei = np.asarray(g['frei'], dtype=np.int64)
+            with Npztorch.lesen(arbeit('zustand.npz')) as z:
+                theta, rg, tg = (Torchfeld.feld(z[k], dtype=torch.float64) for k in ('theta', 'rg', 'tg'))
+            with Npztorch.lesen(arbeit('genesis_ende.npz')) as g:
+                frei = Torchfeld.feld(g['frei'], dtype=torch.int64)
                 knochen = [str(k) for k in g['knochen']]
                 reihenfolge = [str(r) for r in g['reihenfolge']]
         except (OSError, KeyError) as fehler:
@@ -53,7 +55,7 @@ class Blendimporthaltung:
     def drehung(self, griff=None):
         """`{knochen: {'rotation/x': Grad, …}}` der Haltung; `griff` (`Blendimportfuss.griff()`): die Drehung des Fußes im Stück."""
         from Genesis9.knochenmatrizen import G9knochenmatrizen
-        from scipy.spatial.transform import Rotation
+        from KoerperKI_alle.drehung import Drehung as Rotation
 
         theta, _, _, frei, knochen, reihenfolge = self._bereit['haltung']
         aus = {}
@@ -79,7 +81,7 @@ class Blendimporthaltung:
         if self._bereit is not None:
             return self._bereit or None
         from Genesis9.formung import G9formung
-        from scipy.spatial.transform import Rotation
+        from KoerperKI_alle.drehung import Drehung as Rotation
 
         haltung = self._lesen()
         if haltung is None:
@@ -91,14 +93,14 @@ class Blendimporthaltung:
         self._bereit.update(regler=regler, boden=ruhe.boden(), r=Rotation.from_rotvec(haltung[1]).as_matrix(), tg=haltung[2])
         figur = G9formung.aus_abfrage(dict(regler), self.drehung())
         self._pose[()] = figur
-        x = self.abbilden(figur.punkte() - np.array([0.0, self._bereit['boden'], 0.0]))
-        d = np.linalg.norm(x - self.lage.kaefig_posiert, axis=1) * 1000.0
-        self._bereit['probe'] = {'median_mm': round(float(np.median(d)), 3), 'p99_mm': round(float(np.percentile(d, 99)), 2)}
+        x = self.abbilden(figur.punkte() - Torchfeld.feld([0.0, self._bereit['boden'], 0.0], copy=True))
+        d = Torchfeld.linalg_norm(x - self.lage.kaefig_posiert, dim=1) * 1000.0
+        self._bereit['probe'] = {'median_mm': round(float(Torchfeld.median(d)), 3), 'p99_mm': round(float(Torchfeld.percentile(d, 99)), 2)}
         return self._bereit
 
     def abbilden(self, p):
         """Punkte der Figur in der Haltung (Füße 0 der Ruhe) → Lage des Netzes."""
-        return np.asarray(p, dtype=np.float64) @ self._bereit['r'].T + self._bereit['tg']
+        return Torchfeld.feld(p, dtype=torch.float64) @ self._bereit['r'].T + self._bereit['tg']
 
     def figur(self, griff=None):
         """Die Figur in der Haltung; mit `griff` mit zurückgenommener Fußdrehung (je Fußdrehung einmal gebaut)."""
@@ -121,20 +123,20 @@ class Blendimporthaltung:
 
         folger = G9gcfigurbau.folger(stueck)
         folger._projektion = None
-        gestellt = self.abbilden(folger.punkte_zu(self.figur(griff)) - np.array([0.0, self._bereit['boden'], 0.0]))
+        gestellt = self.abbilden(folger.punkte_zu(self.figur(griff)) - Torchfeld.feld([0.0, self._bereit['boden'], 0.0], copy=True))
         if len(gestellt) != len(original):
             return {'fehler': 'Punktzahl %d gegen %d' % (len(gestellt), len(original))}
-        abstand = np.linalg.norm(gestellt - original, axis=1) * 1000.0
+        abstand = Torchfeld.linalg_norm(gestellt - original, dim=1) * 1000.0
         self.letzte = {'gestellt': gestellt, 'abstand_mm': abstand}                      # für den Kontaktbogen (`Blendimportbogen`)
         _, nah = self.lage.entposen().baum.query(original)
         teil = self.lage.teil[nah]
         namen = {v: k for k, v in G9koerperteile.NUMMER.items()}
         teile = []
-        for t in np.argsort(-np.bincount(teil, minlength=len(namen)))[:4]:
+        for t in Torchfeld.liste(torch.argsort(-Torchfeld.bincount(teil, minlength=len(namen)), stable=True)[:4]):
             m = teil == t
             if m.sum() >= 0.02 * len(teil):
-                teile.append({'teil': namen.get(int(t), str(t)), 'punkte': int(m.sum()), 'median_mm': round(float(np.median(abstand[m])), 1),
-                              'p90_mm': round(float(np.percentile(abstand[m], 90)), 1)})
-        return {'median_mm': round(float(np.median(abstand)), 1), 'p90_mm': round(float(np.percentile(abstand, 90)), 1),
-                'p99_mm': round(float(np.percentile(abstand, 99)), 1), 'max_mm': round(float(abstand.max()), 1),
+                teile.append({'teil': namen.get(int(t), str(t)), 'punkte': int(m.sum()), 'median_mm': round(float(Torchfeld.median(abstand[m])), 1),
+                              'p90_mm': round(float(Torchfeld.percentile(abstand[m], 90)), 1)})
+        return {'median_mm': round(float(Torchfeld.median(abstand)), 1), 'p90_mm': round(float(Torchfeld.percentile(abstand, 90)), 1),
+                'p99_mm': round(float(Torchfeld.percentile(abstand, 99)), 1), 'max_mm': round(float(abstand.max()), 1),
                 'ueber_10': round(float((abstand > 10).mean()), 4), 'ueber_25': round(float((abstand > 25).mean()), 4), 'teile': teile}

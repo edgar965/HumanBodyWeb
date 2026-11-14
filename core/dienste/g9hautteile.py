@@ -32,7 +32,8 @@ import json
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .g9hautfalten import G9hautfalten
 
@@ -90,9 +91,9 @@ class G9hautteile(G9hautfalten):
         """(Teil je Käfigpunkt (N,) int64 — Index in `TEILE`, vor dem Umteilen der Inseln; {Teil: Punkte im Merkmal des Formreglers})."""
         from Genesis9.eigenregler import G9eigenregler
         from Genesis9.reglerregionen import G9reglerregionen
-        region = np.asarray(G9reglerregionen.holen())
+        region = Torchfeld.feld(G9reglerregionen.holen())
         nummer = {t: i for i, t in enumerate(cls.TEILE)}
-        aus = np.zeros(len(region), dtype=np.int64)
+        aus = torch.zeros(len(region), dtype=torch.int64, device='cuda')
         links = punkte[:, 0] > 0
         for i, ort in enumerate(G9reglerregionen.ORTE):
             teil, m = cls.ORT_TEIL[ort], region == i
@@ -103,7 +104,7 @@ class G9hautteile(G9hautfalten):
                 aus[m & ~links] = nummer[teil + '_rechts']
         zahl = {}
         for teil, regler in cls.MERKMAL:                       # aufsteigender Vorrang: die spätere Zeile überschreibt
-            merkmal = np.asarray(G9eigenregler.morph(G9eigenregler.PRAEFIX + regler).merkmal, dtype=np.int64)
+            merkmal = Torchfeld.feld(G9eigenregler.morph(G9eigenregler.PRAEFIX + regler).merkmal, dtype=torch.int64)
             aus[merkmal] = nummer[teil]
             zahl[teil] = int(len(merkmal))
         return aus, zahl
@@ -111,7 +112,7 @@ class G9hautteile(G9hautfalten):
     @staticmethod
     def kanten(torch, g, ecken, punkte):
         """(von, nach, Länge) — jede Kante des Netzes in beiden Richtungen, auf dem Gerät."""
-        e = torch.as_tensor(np.asarray(ecken), device=g)
+        e = torch.as_tensor(Torchfeld.feld(ecken), device=g)
         k = torch.cat([e[:, [0, 1]], e[:, [1, 2]], e[:, [2, 0]]])
         k = torch.unique(torch.sort(k, dim=1).values, dim=0)
         k = k[k[:, 0] != k[:, 1]]
@@ -208,7 +209,7 @@ class G9hautteile(G9hautfalten):
         t0 = time.perf_counter()
         torch, g = self.geraet()
         abtastung = G9texturabtastung.holen(self.SEITE)
-        punkte = np.asarray(G9basisnetz.holen().punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(G9basisnetz.holen().punkte, dtype=torch.float64)
         von, nach, laenge = self.kanten(torch, g, abtastung.ecken, punkte)
         roh, merkmale = self.punktteile(punkte)
         teil, umgeteilt, inseln = self.inseln(torch, torch.as_tensor(roh, device=g), von, nach)

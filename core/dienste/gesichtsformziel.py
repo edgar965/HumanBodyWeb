@@ -20,7 +20,10 @@ wo sie sein sollen.
 import json
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -66,20 +69,20 @@ class Gesichtsformziel:
         arbeit = self.ablage.arbeit()
         with open(arbeit / 'auftrag.json', encoding='utf-8') as f:
             auftrag = json.load(f)
-        with np.load(arbeit / 'scan_lage.npz') as d:
+        with Npztorch.lesen(arbeit / 'scan_lage.npz') as d:
             matrix = d['matrix']
         with Meshto3dpfad():
             from meshfigur_scan import Meshfigurscan
 
-            if auftrag.get('kopfnetz') and (arbeit / 'kopf_lage.npz').is_file():
-                with np.load(arbeit / 'kopf_lage.npz') as d:
+            if auftrag.get('kopfnetz') and Npztorch.da(arbeit / 'kopf_lage.npz'):
+                with Npztorch.lesen(arbeit / 'kopf_lage.npz') as d:
                     matrix = matrix @ d['matrix_roh']
                 scan = Meshfigurscan.laden(auftrag['kopfnetz'])
             else:
                 scan = Meshfigurscan.laden(auftrag['netz'])
         scan.anwenden(matrix)
-        with np.load(arbeit / 'landmarken.npz') as d:
-            gesicht = np.asarray(d['gesicht'], dtype=np.float64)
+        with Npztorch.lesen(arbeit / 'landmarken.npz') as d:
+            gesicht = Torchfeld.feld(d['gesicht'], dtype=torch.float64)
         return scan, gesicht
 
     def lage(self):
@@ -92,26 +95,26 @@ class Gesichtsformziel:
         from Genesis9.haut import G9haut
         from Genesis9.koerperteile import G9koerperteile
 
-        with np.load(self.ablage.arbeit('genesis_ende.npz')) as d:
-            ruhe = np.asarray(d['punkte'], dtype=np.float64)
-        welt = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
+        with Npztorch.lesen(self.ablage.arbeit('genesis_ende.npz')) as d:
+            ruhe = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+        welt = Torchfeld.astype(Npztorch.lesen(self.ablage.arbeit('posiert.npy')), torch.float64)
         kopf = G9koerperteile.genesis_punkte(G9haut.holen()) == 0
         a, b = ruhe[kopf], welt[kopf]
         ma, mb = a.mean(0), b.mean(0)
-        u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))
-        r = (u @ np.diag([1.0, 1.0, np.sign(np.linalg.det(u @ vt))]) @ vt).T
+        u, _, vt = Torchfeld.linalg_svd(Torchfeld.feld((a - ma).T @ (b - mb)))
+        r = (u @ Torchfeld.diag(Torchfeld.feld([1.0, 1.0, Torchfeld.sign(Torchfeld.linalg_det(u @ vt))])) @ vt).T
         return r, mb - r @ ma
 
     def vorhanden(self):
         namen = ('landmarken.npz', 'scan_lage.npz', 'genesis_ende.npz', 'posiert.npy')
-        return all(self.ablage.arbeit(n).is_file() for n in namen)
+        return all(Npztorch.da(self.ablage.arbeit(n)) for n in namen)
 
     def ziel(self, lagen, rahmen):
         """`{'schnitte': [...] (Meter, NaN = keine Vorgabe), 'punkte': {nr: (x', y')}}` im Rahmen `rahmen` der
         Figur (Ruhelage) — das Netz wird mit `lage` dorthin gelegt."""
-        stand = [self.ablage.arbeit(n).stat().st_mtime_ns for n in ('landmarken.npz', 'posiert.npy')]
-        schluessel = (self.job.kennung, repr(sorted((k, tuple(v)) for k, v in lagen.items())),
-                      tuple(np.round(rahmen.ursprung, 5)), tuple(stand))
+        stand = [Npztorch.stat(self.ablage.arbeit(n)).st_mtime_ns for n in ('landmarken.npz', 'posiert.npy')]
+        schluessel = (self.job.kennung, repr(sorted((k, tuple(Torchfeld.liste(v))) for k, v in lagen.items())),
+                      tuple(Torchfeld.round(rahmen.ursprung, 5).tolist()), tuple(stand))
         if schluessel in self._vorrat:
             return self._vorrat[schluessel]
         from Genesis9.gesichtsrahmen import G9gesichtsrahmen
@@ -119,16 +122,16 @@ class Gesichtsformziel:
 
         scan, gesicht = self.laden()
         r, t = self.lage()
-        scan.punkte = (np.asarray(scan.punkte, dtype=np.float64) - t) @ r
+        scan.punkte = (Torchfeld.feld(scan.punkte, dtype=torch.float64) - t) @ r
         gesicht = (gesicht - t) @ r
         profile = G9gesichtsschnitte(rahmen).profile(scan.punkte, scan.flaechen[scan.gueltig], lagen)
         # `profile` rechnete auf den gültigen Flächen — die Flächennummern zurück auf das ganze Netz.
-        gueltig = np.flatnonzero(scan.gueltig)
+        gueltig = torch.flatten(scan.gueltig).nonzero()[:, 0]
         for p in profile:
-            p['flaeche'] = np.where(p['flaeche'] >= 0, gueltig[np.maximum(p['flaeche'], 0)], -1)
+            p['flaeche'] = torch.where(p['flaeche'] >= 0, gueltig[Torchfeld.maximum(p['flaeche'], 0)], -1)
         self._ohne_vorgabe(scan, rahmen, profile, gesicht)
         punkte = {j: rahmen.hinein(gesicht[j])[:2] for k in G9gesichtsrahmen.KONTUREN
-                  for j in G9gesichtsrahmen.KONTUREN[k] if np.isfinite(gesicht[j]).all()}
+                  for j in G9gesichtsrahmen.KONTUREN[k] if Torchfeld.isfinite(gesicht[j]).all()}
         aus = {'schnitte': profile, 'punkte': punkte}
         if len(self._vorrat) > 4:
             self._vorrat.clear()
@@ -151,29 +154,29 @@ class Gesichtsformziel:
         mund = kontur('mund')
         for p in profile:
             achse = 1 if p['art'] == 'waagerecht' else 0
-            xy = np.zeros((len(p['u']), 2))
+            xy = torch.zeros((len(p['u']), 2), dtype=torch.float64, device='cuda')
             xy[:, achse], xy[:, 1 - achse] = p['lage'], p['u']
             weg = ~self._haut(farben[id(p)], ton)
             for kontur in augen:
-                if np.isfinite(kontur).all():
-                    abstand = np.linalg.norm(xy[:, None, :] - kontur[None, :, :], axis=2).min(axis=1)
+                if Torchfeld.isfinite(kontur).all():
+                    abstand = Torchfeld.amin(Torchfeld.linalg_norm(xy[:, None, :] - kontur[None, :, :], dim=2), dim=1)
                     nah = abstand < self.AUGE_RAND
                     weg |= G9gesichtsrahmen.innen(kontur, xy) | nah
-            if np.isfinite(mund).all():
+            if Torchfeld.isfinite(mund).all():
                 weg |= G9gesichtsrahmen.innen(mund, xy)
-            p['z'] = np.where(weg, np.nan, p['z'])
+            p['z'] = torch.where(weg, math.nan, p['z'])
 
     @staticmethod
     def _farben(scan, p):
         """(n, 3) Farbe des Netzes an den Schnittpunkten (NaN ohne Treffer)."""
         import trimesh
 
-        aus = np.full((len(p['u']), 3), np.nan)
+        aus = Torchfeld.full((len(p['u']), 3), math.nan)
         ok = p['flaeche'] >= 0
         if ok.any():
             ecken = scan.punkte[scan.flaechen[p['flaeche'][ok]]]
-            bary = np.clip(trimesh.triangles.points_to_barycentric(ecken, p['punkt'][ok]), 0, 1)
-            bary /= np.maximum(bary.sum(axis=1, keepdims=True), 1e-9)
+            bary = Torchfeld.clip(trimesh.triangles.points_to_barycentric(ecken, p['punkt'][ok]), 0, 1)
+            bary /= Torchfeld.maximum(bary.sum(axis=1, keepdims=True), 1e-9)
             aus[ok] = scan.farben(p['flaeche'][ok], bary)
         return aus
 
@@ -181,17 +184,17 @@ class Gesichtsformziel:
         """Median-Helligkeit (Y) der Haut um die Nase — Bezug für „zu dunkel/zu hell"."""
         werte = []
         for p in profile:
-            nah = (np.abs(p['u']) < self.TONFENSTER) & (abs(p['lage']) < self.TONFENSTER)
+            nah = (Torchfeld.abs(p['u']) < self.TONFENSTER) & (Torchfeld.abs(p['lage']) < self.TONFENSTER)
             f = farben[id(p)][nah]
-            f = f[np.isfinite(f).all(axis=1)]
+            f = f[Torchfeld.isfinite(f).all(axis=1)]
             if len(f):
                 werte.append(f[self._ist_haut(f)])
-        alle = np.concatenate(werte) if werte else np.zeros((0, 3))
-        return float(np.median(self._hell(alle))) if len(alle) else None
+        alle = Torchfeld.cat(werte) if werte else torch.zeros((0, 3), dtype=torch.float64, device='cuda')
+        return float(Torchfeld.median(self._hell(alle))) if len(alle) else None
 
     def _haut(self, farben, ton):
-        ok = np.isfinite(farben).all(axis=1)
-        aus = np.zeros(len(farben), dtype=bool)
+        ok = Torchfeld.isfinite(farben).all(axis=1)
+        aus = torch.zeros(len(farben), dtype=torch.bool, device='cuda')
         f = farben[ok]
         haut = self._ist_haut(f)
         if ton:
@@ -202,7 +205,7 @@ class Gesichtsformziel:
 
     @staticmethod
     def _hell(f):
-        f = np.asarray(f, dtype=np.float64)
+        f = Torchfeld.feld(f, dtype=torch.float64)
         return 0.299 * f[:, 0] + 0.587 * f[:, 1] + 0.114 * f[:, 2]
 
     @staticmethod

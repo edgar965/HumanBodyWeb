@@ -16,7 +16,8 @@ Gehört der Körper-Regler nicht zum aktuellen Lauf des Imports (der Import wurd
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftnachformung']
 
@@ -109,12 +110,12 @@ class Dazgeograftnachformung:
 
         grund = Dazgeografthaut.grundfigur({k: v for k, v in regler.items() if '_unterkleid' not in k})
         if loch_maske is not None:
-            maske = np.asarray(loch_maske, dtype=bool)
+            maske = Torchfeld.feld(loch_maske, dtype=torch.bool)
         else:
             maske, _bericht = Dazgeografthaut.loch(grund, Dazgeograftquelle('frau').versteckt)
         haut = Blendimportschamloch(grund['punkte'], grund['dreiecke'])
         ring = [int(x) for x in haut.ringpunkte(haut.ring(maske))]
-        innen = np.zeros(len(grund['punkte']), dtype=bool)
-        innen[np.unique(np.asarray(grund['dreiecke'])[np.flatnonzero(maske)])] = True
+        innen = torch.zeros(len(grund['punkte']), dtype=torch.bool, device='cuda')
+        innen[Torchfeld.unique(Torchfeld.feld(grund['dreiecke'])[torch.flatten(maske).nonzero()[:, 0]])] = True
         innen[ring] = False
         return innen

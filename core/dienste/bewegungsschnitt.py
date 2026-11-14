@@ -12,7 +12,8 @@ Bis dahin hatten `exportleiste_render` und `engine2d3dkleider_render` je eine Ko
 """
 import json
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Bewegungsschnitt']
 
@@ -24,31 +25,31 @@ class Bewegungsschnitt:
     def zeiten(cls, d):
         """Zeitpunkt jedes Bildes der Bewegung in Sekunden (`times`; ohne passende Zeiten i / 30)."""
         anzahl = int(d.get('frame_count') or len(d.get('times') or []))
-        t = np.asarray(d.get('times') or [], dtype=np.float64)
-        return t if anzahl and len(t) == anzahl else np.arange(anzahl) / cls.FPS
+        t = Torchfeld.feld(d.get('times') or [], dtype=torch.float64)
+        return t if anzahl and len(t) == anzahl else Torchfeld.arange(anzahl) / cls.FPS
 
     @classmethod
     def bilder(cls, d, sekunden):
         t = cls.zeiten(d)
-        ende = int(np.floor(t[-1] * cls.FPS + 1e-6)) + 1 if len(t) else 0
+        ende = int(Torchfeld.floor(t[-1] * cls.FPS + 1e-6)) + 1 if len(t) else 0
         return max(2, int(round(min(float(sekunden) * cls.FPS, ende))))     # erst klemmen: `sekunden` darf unendlich sein (bis zum Ende)
 
     @classmethod
     def auswahl(cls, d, n):
         """(n,) Nummer des Bildes der Bewegung, das dem Zeitpunkt i / 30 am nächsten liegt."""
         t = cls.zeiten(d)
-        soll = np.arange(n) / cls.FPS
-        j = np.clip(np.searchsorted(t, soll), 0, len(t) - 1)
-        vor = np.clip(j - 1, 0, len(t) - 1)
-        return np.where(np.abs(t[vor] - soll) <= np.abs(t[j] - soll), vor, j)
+        soll = Torchfeld.arange(n) / cls.FPS
+        j = Torchfeld.clip(Torchfeld.searchsorted(t, soll), 0, len(t) - 1)
+        vor = Torchfeld.clip(j - 1, 0, len(t) - 1)
+        return torch.where(Torchfeld.abs(t[vor] - soll) <= Torchfeld.abs(t[j] - soll), vor, j)
 
     @classmethod
     def schreiben(cls, d, ziel, n):
         j = cls.auswahl(d, n)
 
         def nehmen(werte, breite):
-            a = np.asarray(werte, dtype=np.float64).reshape(-1, breite)
-            return a[np.minimum(j, len(a) - 1)].reshape(-1).tolist() if len(a) else []
+            a = Torchfeld.feld(werte, dtype=torch.float64).reshape(-1, breite)
+            return a[Torchfeld.minimum(j, len(a) - 1)].reshape(-1).tolist() if len(a) else []
 
         neu = dict(d, tracks={k: nehmen(v, 4) for k, v in (d.get('tracks') or {}).items()})
         if d.get('position_track'):

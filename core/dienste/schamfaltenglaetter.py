@@ -12,7 +12,8 @@ HIER: Punkt für Punkt. Jeder Punkt an einer Falte (Ecken der beiden Dreiecke) p
 Dreiecken (alle Kanten zu deren Nachbardreiecken) sinkt. Punkte, die weniger als `RING_ABSTAND_M` vom Ring liegen, bleiben stehen, und kein Punkt entfernt sich mehr als `MAX_SCHRITT_M` von seiner
 Ausgangslage. Mehrere Durchgänge, bis nichts mehr besser wird.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Schamfaltenglaetter']
 
@@ -28,15 +29,15 @@ class Schamfaltenglaetter:
     @classmethod
     def glaetten(cls, punkte, dreiecke, ring):
         """`(neue Punkte, bericht)`; `bericht`: `{vorher, nachher, bewegt, max_mm}` (Zahl der Falten, bewegte Punkte, größter Weg). `ring`: `(K, 3)` Lage der Ringecken."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        p = np.array(punkte, dtype=np.float64)
-        d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        start = p.copy()
-        frei = cKDTree(np.asarray(ring, dtype=np.float64)).query(p)[0] >= cls.RING_ABSTAND_M
+        p = Torchfeld.feld(punkte, dtype=torch.float64, copy=True)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        start = Torchfeld.kopie(p)
+        frei = cKDTree(Torchfeld.feld(ring, dtype=torch.float64)).query(p)[0] >= cls.RING_ABSTAND_M
         flaechen_am_punkt, nachbar_flaechen, nachbarn = cls._netz(d, len(p))
         n = cls._normalen(p, d)
-        grenze = np.cos(np.radians(cls.GRENZE_GRAD))
+        grenze = Torchfeld.cos(Torchfeld.radians(cls.GRENZE_GRAD))
         vorher = cls._zaehlen(n, nachbar_flaechen, range(len(d)), grenze) // 2          # jede Kante steht bei beiden Dreiecken
         for _durchgang in range(cls.DURCHGAENGE):
             geaendert = 0
@@ -44,7 +45,7 @@ class Schamfaltenglaetter:
                 geaendert += cls._versuchen(p, start, n, d, v, flaechen_am_punkt[v], nachbar_flaechen, nachbarn[v], grenze)
             if not geaendert:
                 break
-        weg = np.linalg.norm(p - start, axis=1)
+        weg = Torchfeld.linalg_norm(p - start, dim=1)
         nachher = cls._zaehlen(cls._normalen(p, d), nachbar_flaechen, range(len(d)), grenze) // 2
         return p, {'vorher': int(vorher), 'nachher': int(nachher), 'bewegt': int((weg > 0).sum()), 'max_mm': round(float(weg.max()) * 1000.0, 2)}
 
@@ -55,15 +56,15 @@ class Schamfaltenglaetter:
         if not vorher:
             return 0
         mittel = p[nachbarn].mean(axis=0)
-        alt = p[v].copy()
+        alt = Torchfeld.kopie(p[v])
         for anteil in cls.ANTEILE:
             weg = alt + anteil * (mittel - alt) - start[v]
-            laenge = float(np.linalg.norm(weg))
+            laenge = float(Torchfeld.linalg_norm(weg))
             if laenge > cls.MAX_SCHRITT_M:
                 weg *= cls.MAX_SCHRITT_M / laenge
             p[v] = start[v] + weg
             neu = cls._normalen(p, d[flaechen])
-            alt_n = n[flaechen].copy()
+            alt_n = Torchfeld.kopie(n[flaechen])
             n[flaechen] = neu
             if cls._zaehlen(n, nachbar_flaechen, flaechen, grenze) < vorher:
                 return 1
@@ -93,14 +94,14 @@ class Schamfaltenglaetter:
     def _normalen(punkte, dreiecke):
         """Einheitsnormalen der Dreiecke (entartete: Nullvektor)."""
         ecken = punkte[dreiecke]
-        n = np.cross(ecken[:, 1] - ecken[:, 0], ecken[:, 2] - ecken[:, 0])
-        laenge = np.linalg.norm(n, axis=1, keepdims=True)
-        return np.where(laenge > 1e-30, n / np.maximum(laenge, 1e-30), 0.0)
+        n = Torchfeld.cross(ecken[:, 1] - ecken[:, 0], ecken[:, 2] - ecken[:, 0])
+        laenge = Torchfeld.linalg_norm(n, dim=1, keepdim=True)
+        return torch.where(laenge > 1e-30, n / Torchfeld.maximum(laenge, 1e-30), 0.0)
 
     @classmethod
     def _zaehlen(cls, n, nachbar_flaechen, flaechen, grenze=None):
         """Zahl der Falten an den Kanten der `flaechen` zu ihren Nachbardreiecken (Kante zwischen zwei Dreiecken der Menge zählt doppelt — vorher wie nachher gleich)."""
-        grenze = np.cos(np.radians(cls.GRENZE_GRAD)) if grenze is None else grenze
+        grenze = Torchfeld.cos(Torchfeld.radians(cls.GRENZE_GRAD)) if grenze is None else grenze
         return sum(int(n[f] @ n[g] < grenze) for f in flaechen for g in nachbar_flaechen[f])
 
     @classmethod

@@ -18,6 +18,10 @@ from django.conf import settings
 
 from ..daten.wrapperpfad import Wrapperpfad
 from ..pipeline_process import PipelineProzess, PipelineStille
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -46,7 +50,7 @@ class Blendimportbegriffe:
         s = self.s
         # Eine Datei eines früheren Laufs darf nie stehen bleiben, wenn dieser scheitert: `_uebertragen` stempelte sie sonst auf das neue Netz (`artefakte-benennen.md`).
         for ordner in {s.ordner(), s._arbeit}:
-            (ordner / self.DATEI).unlink(missing_ok=True)
+            Npztorch.loeschen(ordner / self.DATEI)
         try:
             auftrag = s.ordner() / 'sam3_auftrag.json'
             auftrag.write_text(json.dumps({

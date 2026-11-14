@@ -16,7 +16,7 @@ entsteht — beim Schätzer (Foto → Zielnetz) oder bei den Reglern
 
 import logging
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellbildtypen import Bildmodellbildtypen
@@ -57,7 +57,7 @@ class Bildmodellmasse:
             gueltig = [w[k] for w in werte if w.get(k) is not None]
             if not gueltig:
                 continue
-            aus[k] = round(float(np.median(gueltig)), 4)
+            aus[k] = round(float(Torchfeld.median(gueltig)), 4)
             aus[k + '_bilder'] = len(gueltig)
             if self.hoehe_cm():
                 aus[k + '_cm'] = round(aus[k] * float(self.hoehe_cm()), 1)

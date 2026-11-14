@@ -18,9 +18,14 @@ Geschützt bleibt in jedem Fall, was die Haarmaske selbst schützt: das Innere d
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .engine2d3dkleidersegmentierungsoptionen import Engine2d3dKleidersegmentierungsoptionen
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -57,30 +62,30 @@ class Sapienshaar:
             return {'quelle': wahl, 'verwendet': False, 'grund': str(grund)}
         stimmen = Sapienszuordnung.stimmen(klassen, einstellungen)
         sapiens, gesehen = Sapiensmaske.haar_aus(stimmen, haarmaske.nachbarn(), **{k: v for k, v in Sapiensmaske.aus_optionen(einstellungen).items() if k != 'nah_m'})
-        alt = np.asarray(maske['haar'], dtype=bool)
-        erlaubt = ~np.asarray(maske['geschuetzt'], dtype=bool) & ~np.asarray(maske['bart'], dtype=bool) & ~np.asarray(maske['unten'], dtype=bool)
+        alt = Torchfeld.feld(maske['haar'], dtype=torch.bool)
+        erlaubt = ~Torchfeld.feld(maske['geschuetzt'], dtype=torch.bool) & ~Torchfeld.feld(maske['bart'], dtype=torch.bool) & ~Torchfeld.feld(maske['unten'], dtype=torch.bool)
         sapiens = sapiens & erlaubt                                 # geschützte Zonen sind auch für Sapiens kein Haar
         # „sapiens": wo Sapiens die Fläche sieht, entscheidet es; sonst die Farbe. „beide": die Vereinigung.
-        neu = np.where(gesehen, sapiens, alt) if wahl == 'sapiens' else (alt | sapiens)
-        cm2 = np.asarray(haarmaske.inhalt, dtype=np.float64) * 1e4
+        neu = torch.where(gesehen, sapiens, alt) if wahl == 'sapiens' else (alt | sapiens)
+        cm2 = Torchfeld.feld(haarmaske.inhalt, dtype=torch.float64) * 1e4
         hut = self.kopfbedeckung(neu & gesehen, klassen, cm2)
-        hut = self.ausbreiten(hut, neu & ~gesehen, haarmaske.nachbarn(), np.asarray(haarmaske.mitte)[:, 1])
+        hut = self.ausbreiten(hut, neu & ~gesehen, haarmaske.nachbarn(), Torchfeld.feld(haarmaske.mitte)[:, 1])
         # Kopfschmuck, den SAM 3 als Bestandteil der Gruppe „kopf" nennt (Hut, Helm, Krone): seine Rück- und Innenseiten sieht Sapiens nicht, sie hängen aber an ihm — sie sind kein Haar.
         kopf = self.kopf_anker(haarmaske, anzahl_flaechen)
         if kopf.any():
             # Kandidaten: alles in der Haarmaske, was Sapiens NICHT eindeutig als Haar sieht (stärkste Klasse `Hair` mit genug Pixeln) — die Farbregel nennt auch Hutflächen Haar, und das Glätten der Stimmen lässt
             # ungesehene Flächen neben gesehenen als „gesehen" gelten (Spiralballerina: von 899 Haar-Objekt-Flächen berührten 379 den Kopfschmuck, 277 sind klares `Hair`).
             nr = Sapienszuordnung.NAMEN.index('Hair')
-            klar_haar = (np.asarray(klassen).argmax(axis=1) == nr) & (np.asarray(klassen)[:, nr] >= Sapiensmaske.MIN_STIMMEN)
-            hut = hut | (self.ausbreiten(kopf, neu & ~klar_haar, haarmaske.nachbarn(), np.asarray(haarmaske.mitte)[:, 1]) & ~kopf)
+            klar_haar = (Torchfeld.feld(klassen).argmax(axis=1) == nr) & (Torchfeld.feld(klassen)[:, nr] >= Sapiensmaske.MIN_STIMMEN)
+            hut = hut | (self.ausbreiten(kopf, neu & ~klar_haar, haarmaske.nachbarn(), Torchfeld.feld(haarmaske.mitte)[:, 1]) & ~kopf)
         maske['kopfbedeckung'] = hut                                 # steht in `haar_maske.npz`; der Schritt „kleidung" macht daraus Zubehör
         neu = neu & ~hut
         # Das Haar, das Sapiens selbst sieht (ohne Farbe, ohne die ungesehenen Nachbarn): das Ziel der Frisurwahl bei `frisur_ziel = sapiens` (14.10.2026, Edgar: „nimm das Sapienshaar als Ziel für Edgar1970").
         maske['haar_sapiens'] = sapiens & ~hut
         # Ein Bart, der unter die Schnittebene des Kopfes hängt (Zauberer: bis zur Brust), ist weder Hals noch Kleidung — er kommt NUR ins Haar-Objekt (`Meshfigurhaar.objekt`), nicht in die Frisurwahl.
         # Er hängt an der Maske VOR dem Abzug des Fremden (der Bart ist für Sapiens `Face_Neck`).
-        bart = self.langer_bart(klassen, np.asarray(maske['unten'], dtype=bool) & ~np.asarray(maske['haut'], dtype=bool),
-                                neu | np.asarray(maske['bart'], dtype=bool) | np.asarray(maske['geschuetzt'], dtype=bool), haarmaske.nachbarn(), cm2)
+        bart = self.langer_bart(klassen, Torchfeld.feld(maske['unten'], dtype=torch.bool) & ~Torchfeld.feld(maske['haut'], dtype=torch.bool),
+                                neu | Torchfeld.feld(maske['bart'], dtype=torch.bool) | Torchfeld.feld(maske['geschuetzt'], dtype=torch.bool), haarmaske.nachbarn(), cm2)
         # Was ein Foto SIEHT und als Haut, Oberteil, Hose oder Fuß liest, ist kein Haar — auch wenn die Farbe es dazurechnete (14.10.2026, Edgar2009/Edgar1970: die Farbmaske hielt Ohr, Wange, Hals und dunkle
         # Kleidung für Haar, 6.204 statt 2.159 cm² am Jungen von 1970; die Frisurwahl nahm daraufhin eine lange Frisur). Hut und Zubehör bleiben, wie sie sind: er ist für Sapiens `Apparel`, nie `Hair`.
         fremd = Sapiensmaske.fremd_aus(stimmen, haarmaske.nachbarn(), **{k: v for k, v in Sapiensmaske.aus_optionen(einstellungen).items() if k != 'nah_m'})
@@ -89,7 +94,7 @@ class Sapienshaar:
         # Ungesehene Haarflächen (kein Foto sieht sie: Innenseiten, Rückseiten) entscheidet nicht die Farbe, sondern die nächste GESEHENE Fläche — wie bei der Kleidungsmaske (`Sapiensmaske._von_sichtbaren`):
         # Hängt eine ungesehene „Haarfläche" dicht (`nah_m`) an Haut, Hemd oder Hose, ist sie das auch (Edgar1970: 1.462 cm² dunkler Stoff blieben sonst Haar, die Farbe kann Haar und dunkle Kleidung
         # eines Schwarzweißfotos nicht trennen). Weiter weg gilt die Farbe.
-        neu, nah_entschieden = self.nah_entscheiden(neu, gesehen, sapiens, np.asarray(haarmaske.mitte, dtype=np.float64),
+        neu, nah_entschieden = self.nah_entscheiden(neu, gesehen, sapiens, Torchfeld.feld(haarmaske.mitte, dtype=torch.float64),
                                                     Sapiensmaske.aus_optionen(einstellungen).get('nah_m', Sapiensmaske.NAH_M))
         maske['haar'] = neu
         maske['langer_bart'] = bart
@@ -104,17 +109,17 @@ class Sapienshaar:
     def nah_entscheiden(neu, gesehen, sapiens, mitte, nah_m):
         """`(neu, Zahl der geänderten Flächen)` — jede UNGESEHENE Fläche der Haarmaske (`neu`), die höchstens `nah_m` (Meter, Flächenmitten) von einer gesehenen liegt, nimmt deren Urteil (`sapiens`: Haar ja/nein);
         weiter weg und alles Gesehene bleibt. Ohne gesehene Flächen oder ohne ungesehene Haarflächen: unverändert."""
-        neu = np.asarray(neu, dtype=bool).copy()
-        gesehen = np.asarray(gesehen, dtype=bool)
-        rest = np.flatnonzero(neu & ~gesehen)
+        neu = Torchfeld.kopie(Torchfeld.feld(neu, dtype=torch.bool))
+        gesehen = Torchfeld.feld(gesehen, dtype=torch.bool)
+        rest = torch.flatten(neu & ~gesehen).nonzero()[:, 0]
         if not len(rest) or not gesehen.any():
             return neu, 0
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        quelle = np.flatnonzero(gesehen)
+        quelle = torch.flatten(gesehen).nonzero()[:, 0]
         abstand, nah = cKDTree(mitte[quelle]).query(mitte[rest])
         dicht = abstand <= float(nah_m)
-        urteil = np.asarray(sapiens, dtype=bool)[quelle[nah[dicht]]]
+        urteil = Torchfeld.feld(sapiens, dtype=torch.bool)[quelle[nah[dicht]]]
         geaendert = int((neu[rest[dicht]] != urteil).sum())
         neu[rest[dicht]] = urteil
         return neu, geaendert
@@ -129,10 +134,10 @@ class Sapienshaar:
         (Hutkegel und Krempe 125.597 + 34.238 Flächen), Sapiens nennt sie zu 88 % `Apparel`; das Haar-Objekt war ein Hut mit Strähnen, und die Kopfhaut bekam die Hutfarbe (graue Kappe). Ohne Hut: alles False."""
         from Kleidung.sapienszuordnung import Sapienszuordnung
 
-        klassen = np.asarray(klassen, dtype=np.float32)
+        klassen = Torchfeld.feld(klassen, dtype=torch.float32)
         apparel, haar = klassen[:, Sapienszuordnung.NAMEN.index('Apparel')], klassen[:, Sapienszuordnung.NAMEN.index('Hair')]
-        hut = np.asarray(kandidaten, dtype=bool) & (apparel > cls.HUT_VERHAELTNIS * haar)
-        return hut if float(np.asarray(cm2)[hut].sum()) >= cls.HUT_MIN_CM2 else np.zeros_like(hut)
+        hut = Torchfeld.feld(kandidaten, dtype=torch.bool) & (apparel > cls.HUT_VERHAELTNIS * haar)
+        return hut if float(Torchfeld.feld(cm2)[hut].sum()) >= cls.HUT_MIN_CM2 else torch.zeros_like(hut)
 
     #: Hutflächen, die Sapiens nicht sieht (Rückseite, Innenseite der Krempe), hängen an gesehenen — gerechnet wird ab dieser Höhe: das 2. Perzentil der Hutflächen minus 2 cm (die Krempe).
     HUT_KREMPE_PROZENT = 2.0
@@ -142,34 +147,34 @@ class Sapienshaar:
     def ausbreiten(cls, hut, kandidaten, nachbarn, hoehe):
         """(F,) bool — `hut` plus die zusammenhängenden `kandidaten` (Haarflächen, die Sapiens NICHT sieht) oberhalb der Krempe. Zauberer (12.10.2026): ohne das blieben 44.889 Hutflächen (974 cm²,
         61 % ohne jede Sapiens-Stimme) als Punktwolke im Haar-Objekt. Haar, das Sapiens SIEHT, bleibt Haar; unter der Krempe ändert sich nichts (die Haare und der Bart sind dort). Ohne Hut: unverändert."""
-        from scipy.sparse.csgraph import connected_components
+        from KoerperKI_alle.kartengraph import connected_components
 
-        hut = np.asarray(hut, dtype=bool)
+        hut = Torchfeld.feld(hut, dtype=torch.bool)
         if not hut.any():
             return hut
-        hoehe = np.asarray(hoehe, dtype=np.float64)
-        grenze = float(np.percentile(hoehe[hut], cls.HUT_KREMPE_PROZENT)) - cls.HUT_KREMPE_PUFFER_M
-        frei = hut | (np.asarray(kandidaten, dtype=bool) & (hoehe >= grenze))
-        ids = np.flatnonzero(frei)
+        hoehe = Torchfeld.feld(hoehe, dtype=torch.float64)
+        grenze = float(Torchfeld.percentile(hoehe[hut], cls.HUT_KREMPE_PROZENT)) - cls.HUT_KREMPE_PUFFER_M
+        frei = hut | (Torchfeld.feld(kandidaten, dtype=torch.bool) & (hoehe >= grenze))
+        ids = torch.flatten(frei).nonzero()[:, 0]
         _, komponente = connected_components(nachbarn[ids][:, ids], directed=False)
-        mit_hut = np.unique(komponente[hut[ids]])
-        aus = np.zeros(len(hut), dtype=bool)
-        aus[ids[np.isin(komponente, mit_hut)]] = True
+        mit_hut = Torchfeld.unique(komponente[hut[ids]])
+        aus = torch.zeros(len(hut), dtype=torch.bool, device='cuda')
+        aus[ids[torch.isin(komponente, Torchfeld.feld(mit_hut))]] = True
         return aus
 
     def kopf_anker(self, haarmaske, anzahl_flaechen):
         """(F,) bool — die Flächen der Bestandteile der Gruppe „kopf" (SAM 3, `Kleidung/bestandteile.py`; Spiralballerina: 2.695 Flächen Kopfschmuck), wenn der Schritt „segmentierung" sie für DIESES Netz abgelegt hat —
         sonst alles False und es bleibt bei den Sapiens-Stimmen. Der Anker ist der Begriff, nicht ein Gegenstand: jede Zeile der Gruppe „kopf" im Vorrat (`Kleidung/begriffsvorrat.json`) zählt."""
-        aus = np.zeros(anzahl_flaechen, dtype=bool)
+        aus = torch.zeros(anzahl_flaechen, dtype=torch.bool, device='cuda')
         datei = Path(self.ablage.arbeit('teile_flaechen.npz'))
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return aus
         from Kleidung.bestandteile import Bestandteile
 
         daten = Bestandteile.laden(datei, anzahl_flaechen)
         if daten is None:
             return aus
-        for teil in Bestandteile.zerlegen(daten, haarmaske.flaechen, np.asarray(haarmaske.inhalt, dtype=np.float64) * 1e4):
+        for teil in Bestandteile.zerlegen(daten, haarmaske.flaechen, Torchfeld.feld(haarmaske.inhalt, dtype=torch.float64) * 1e4):
             if teil['gruppe'] == 'kopf':
                 aus |= teil['maske']
         return aus
@@ -182,23 +187,23 @@ class Sapienshaar:
         """(F,) bool — die `kandidaten` (Flächen unter der Schnittebene des Kopfes, nicht Haut), die Sapiens (Mehrheit der Stimmen) als `Face_Neck` sieht und die über solche Flächen mit dem `anker` (Haar, Bart, inneres Gesicht
         über der Schnittebene) zusammenhängen. Unter dem Halsansatz gibt es keinen Hals mehr: `Face_Neck` unter der Ebene, das nicht Haut ist, ist ein Bart. Zauberer (12.10.2026): 13.206 Flächen / 279 cm² von y 132 bis 156 cm,
         vorher in keinem Objekt (nicht Haar — unter der Ebene —, nicht Kleidung — Sapiens sagt Gesicht); Edgar (Stoppelbart): nichts. Ohne ausreichend Fläche: alles False."""
-        from scipy.sparse.csgraph import connected_components
+        from KoerperKI_alle.kartengraph import connected_components
 
         from Kleidung.sapienszuordnung import Sapienszuordnung
 
-        klassen = np.asarray(klassen, dtype=np.float32)
+        klassen = Torchfeld.feld(klassen, dtype=torch.float32)
         gesehen = klassen.sum(axis=1) > 0
         hals = gesehen & (klassen.argmax(axis=1) == Sapienszuordnung.NAMEN.index('Face_Neck'))
-        anker = np.asarray(anker, dtype=bool)
-        kandidat = np.asarray(kandidaten, dtype=bool) & hals
-        ids = np.flatnonzero(kandidat | anker)
-        aus = np.zeros(len(kandidat), dtype=bool)
+        anker = Torchfeld.feld(anker, dtype=torch.bool)
+        kandidat = Torchfeld.feld(kandidaten, dtype=torch.bool) & hals
+        ids = torch.flatten(kandidat | anker).nonzero()[:, 0]
+        aus = torch.zeros(len(kandidat), dtype=torch.bool, device='cuda')
         if not kandidat.any() or not anker.any():
             return aus
         _, komponente = connected_components(nachbarn[ids][:, ids], directed=False)
-        mit_anker = np.unique(komponente[anker[ids]])
-        aus[ids[np.isin(komponente, mit_anker) & kandidat[ids]]] = True
-        return aus if float(np.asarray(cm2)[aus].sum()) >= cls.BART_MIN_CM2 else np.zeros_like(aus)
+        mit_anker = Torchfeld.unique(komponente[anker[ids]])
+        aus[ids[torch.isin(komponente, Torchfeld.feld(mit_anker)) & kandidat[ids]]] = True
+        return aus if float(Torchfeld.feld(cm2)[aus].sum()) >= cls.BART_MIN_CM2 else torch.zeros_like(aus)
 
     @staticmethod
     def _zahlen(wahl, cm2):

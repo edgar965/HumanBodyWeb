@@ -41,7 +41,8 @@ Nullpunkt liegt dann auf jeder Stufe dort, wo die Schleife liegt.
 import logging
 from collections import deque
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class Lippenrand:
         if basis is None or unterteiler is None:
             return basis
         fein = unterteiler.subdivide(basis[:, None])[:, 0]
-        return np.clip(fein, cls.AUSSEN, cls.INNEN)
+        return Torchfeld.clip(fein, cls.AUSSEN, cls.INNEN)
 
     @classmethod
     def basis(cls, geschlecht):
@@ -102,15 +103,15 @@ class Lippenrand:
         if fehlt or not datei.is_file():
             logger.warning('Lippenrand (%s): Netz, UVs oder Lipmap fehlen', geschlecht)
             return None
-        haut = np.asarray(netz.faces)[np.asarray(netz.face_materials) == 0]
-        maske = cls.maskenwerte(np.asarray(netz.uvs), Lippenmaske.maske(datei))
+        haut = Torchfeld.feld(netz.faces)[Torchfeld.feld(netz.face_materials) == 0]
+        maske = cls.maskenwerte(Torchfeld.feld(netz.uvs), Lippenmaske.maske(datei))
         feld = cls.feld(punkte, haut, maske)
         if feld is not None:
             logger.info(
                 'Lippenrand (%s): %d Punkte innen, %d im Saum',
                 geschlecht,
                 int((feld > 0).sum()),
-                int((np.abs(feld) < 6).sum()),
+                int((Torchfeld.abs(feld) < 6).sum()),
             )
         return feld
 
@@ -118,8 +119,8 @@ class Lippenrand:
     def maskenwerte(uvs, maske):
         """Der Lipmap-Wert (0..255) je Punkt — Bildzeile 0 ist oben, v = 1 auch."""
         hoehe, breite = maske.shape[:2]
-        u = np.clip(np.rint(uvs[:, 0] * (breite - 1)).astype(int), 0, breite - 1)
-        w = np.clip(np.rint((1 - uvs[:, 1]) * (hoehe - 1)).astype(int), 0, hoehe - 1)
+        u = Torchfeld.clip(Torchfeld.astype(Torchfeld.round(uvs[:, 0] * (breite - 1)), torch.int64), 0, breite - 1)
+        w = Torchfeld.clip(Torchfeld.astype(Torchfeld.round((1 - uvs[:, 1]) * (hoehe - 1)), torch.int64), 0, hoehe - 1)
         return maske[w, u]
 
     # ------------------------------------------------------------------ Feld
@@ -128,9 +129,9 @@ class Lippenrand:
     def feld(cls, punkte, quads, maske):
         """Vorzeichenabstand (mm) je Punkt aus Punkten (N, 3), Hautvierecken
         (F, 4) und Lipmap-Wert je Punkt (N) — oder None."""
-        p = np.asarray(punkte, dtype=float)
-        q = np.asarray(quads, dtype=np.int64)
-        maske = np.asarray(maske)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        q = Torchfeld.feld(quads, dtype=torch.int64)
+        maske = Torchfeld.feld(maske)
         normalen = cls.flaechennormalen(p, q)
         kanten = cls.kanten(q)
         knick = cls.knick(kanten, normalen)
@@ -141,7 +142,7 @@ class Lippenrand:
         if len(mund) < 10:
             logger.warning('Lippenrand: keine Mundöffnung (%d Punkte)', len(mund))
             return None
-        zm = float(np.median(p[sorted(mund), 2]))
+        zm = float(Torchfeld.median(p[sorted(mund), 2]))
         stufe = cls.ringe(nachbarn, mund, vorn)
         schleifen = cls.schleifen(kanten, stufe)
         rand = cls.randschleifen(schleifen, p, knick, maske, zm)
@@ -155,14 +156,14 @@ class Lippenrand:
             rand[0],
             rand[1],
         )
-        haut = np.zeros(len(p), dtype=bool)
+        haut = torch.zeros(len(p), dtype=torch.bool, device='cuda')
         haut[q.ravel()] = True
         return cls.abstaende(p, schleifen, stufe, rand, zm, vorn, haut & umriss, mund)
 
     @staticmethod
     def flaechennormalen(p, q):
-        n = np.cross(p[q[:, 2]] - p[q[:, 0]], p[q[:, 3]] - p[q[:, 1]])
-        return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+        n = Torchfeld.cross(p[q[:, 2]] - p[q[:, 0]], p[q[:, 3]] - p[q[:, 1]])
+        return n / Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-12)
 
     @staticmethod
     def kanten(q):
@@ -180,17 +181,17 @@ class Lippenrand:
         aus = {}
         for kante, fl in kanten.items():
             if len(fl) == 2:
-                c = float(np.clip(np.dot(normalen[fl[0]], normalen[fl[1]]), -1.0, 1.0))
-                aus[kante] = float(np.degrees(np.arccos(c)))
+                c = float(Torchfeld.clip(Torchfeld.dot(normalen[fl[0]], normalen[fl[1]]), -1.0, 1.0))
+                aus[kante] = float(Torchfeld.degrees(Torchfeld.arccos(c)))
         return aus
 
     @classmethod
     def vorn(cls, anzahl, q, normalen):
         """Ob die Punktnormale (Summe der Flächennormalen) nach vorn (−y) zeigt."""
-        summe = np.zeros((anzahl, 3))
+        summe = torch.zeros((anzahl, 3), dtype=torch.float64, device='cuda')
         for i in range(4):
-            np.add.at(summe, q[:, i], normalen)
-        return -summe[:, 1] > cls.VORN * np.linalg.norm(summe, axis=1)
+            Torchfeld.add_at(summe, q[:, i], normalen)
+        return -summe[:, 1] > cls.VORN * Torchfeld.linalg_norm(summe, dim=1)
 
     @staticmethod
     def nachbarn(anzahl, kanten):
@@ -205,13 +206,13 @@ class Lippenrand:
     def mundoeffnung(nachbarn, vorn, umriss):
         """Der Saum der Mundöffnung: vordere Punkte im Umriss der Maske mit
         einem verborgenen Nachbarn (Innenseite der Lippe)."""
-        return set(int(i) for i in np.flatnonzero(vorn & umriss) if any(not vorn[j] for j in nachbarn[i]))
+        return set(int(i) for i in Torchfeld.liste(torch.flatten(vorn & umriss).nonzero()[:, 0]) if any(not vorn[j] for j in nachbarn[i]))
 
     @classmethod
     def ringe(cls, nachbarn, mund, vorn):
         """Schleifenstufe je Punkt: 0 = Mundöffnung, 1.. nach außen, −1 keine.
         Breitensuche nur durch vordere Punkte."""
-        stufe = np.full(len(nachbarn), -1)
+        stufe = Torchfeld.full(len(nachbarn), -1)
         start = sorted(mund)
         stufe[start] = 0
         schlange = deque(start)
@@ -245,7 +246,7 @@ class Lippenrand:
             winkel = [knick[k] for k in seitlich if k in knick]
             punkte = sorted(set(i for kante in seitlich for i in kante))
             aus.append(
-                (float(np.mean(winkel)) if winkel else 0.0, float(np.mean(maske[punkte])) if punkte else 0.0)
+                (float(Torchfeld.mean(winkel)) if winkel else 0.0, float(Torchfeld.mean(maske[punkte])) if punkte else 0.0)
             )
         return aus
 
@@ -285,22 +286,22 @@ class Lippenrand:
         ]
         A = p[[s[0] for s in segmente]]
         AB = p[[s[1] for s in segmente]] - A
-        L2 = np.maximum((AB * AB).sum(axis=1), 1e-12)
-        feld = np.full(len(p), cls.AUSSEN)
-        for i in np.flatnonzero(stufe >= 0):
+        L2 = Torchfeld.maximum((AB * AB).sum(axis=1), 1e-12)
+        feld = Torchfeld.full(len(p), cls.AUSSEN)
+        for i in Torchfeld.liste(torch.flatten(stufe >= 0).nonzero()[:, 0]):
             grenze = rand[0] if oben[i] else rand[1]
             if stufe[i] == grenze:
                 feld[i] = 0.0
                 continue
-            t = np.clip(((p[i] - A) * AB).sum(axis=1) / L2, 0.0, 1.0)
-            d = 1000.0 * float(np.linalg.norm(A + t[:, None] * AB - p[i], axis=1).min())
+            t = Torchfeld.clip(((p[i] - A) * AB).sum(axis=1) / L2, 0.0, 1.0)
+            d = 1000.0 * float(Torchfeld.linalg_norm(A + t[:, None] * AB - p[i], dim=1).min())
             feld[i] = min(d, cls.INNEN) if stufe[i] < grenze else max(-d, cls.AUSSEN)
         # Verborgene Punkte der Mundhöhle: innen, damit die Lippen an der
         # Mundlinie geschlossen sind — nicht der Nacken (HOEHLE).
         mundpunkte = sorted(mund)
-        xc = float(np.abs(p[mundpunkte, 0]).max()) + 0.005
-        tiefe = float(np.median(-p[mundpunkte, 1]))
-        nah = (np.abs(p[:, 0]) <= xc) & (np.abs(p[:, 2] - zm) <= 0.015)
+        xc = float(Torchfeld.abs(p[mundpunkte, 0]).max()) + 0.005
+        tiefe = float(Torchfeld.median(-p[mundpunkte, 1]))
+        nah = (Torchfeld.abs(p[:, 0]) <= xc) & (Torchfeld.abs(p[:, 2] - zm) <= 0.015)
         dahinter = (-p[:, 1] >= tiefe - cls.HOEHLE) & (-p[:, 1] <= tiefe)
         hoehle = haut & (~vorn) & nah & dahinter & (stufe < 0)
         feld[hoehle] = cls.INNEN

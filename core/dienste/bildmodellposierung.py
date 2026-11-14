@@ -19,7 +19,10 @@ hoehe}, wickel: {…}}` oder None (kein GVHMR, Kopfbild, Bildgröße passt nicht
 import logging
 import os
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -30,7 +33,7 @@ class Bildmodellposierung:
     KAEFIG = '%s_kaefig_kamera.npy'
     LANDMARKEN = '%s_landmarken_kamera.npz'
     #: OpenGL-Sicht (GVHMR-Ablage) → OpenCV (Runner): y und z negiert.
-    SPIEGEL = np.array([1.0, -1.0, -1.0])
+    SPIEGEL = Torchfeld.feld([1.0, -1.0, -1.0], copy=True)
     TOLERANZ_PX = 2
 
     def __init__(self, job, ablage, modell):
@@ -88,7 +91,7 @@ class Bildmodellposierung:
         k = g.get('kamera') or {}
         ordner = self.ordner()
         pfad = ordner / os.path.basename(k.get('netz') or '')
-        if not (g.get('betas') and k.get('netz') and k.get('fx') and pfad.is_file()):
+        if not (g.get('betas') and k.get('netz') and k.get('fx') and Npztorch.da(pfad)):
             return None
         if b.get('kategorie') == 'kopf':
             return None    # GVHMR erfindet auf einem Kopfausschnitt einen Körper (Damira 18daz3d_z5)
@@ -101,20 +104,20 @@ class Bildmodellposierung:
                            self.job.kennung, b.get('datei'), k.get('breite'), k.get('hoehe'),
                            b['breite'], b['hoehe'])
             return None
-        dreiecke = np.load(ordner / os.path.basename(g.get('dreiecke') or 'smplx_dreiecke.npy'))
-        dreiecke = dreiecke.astype(np.int64)
-        posiert = np.load(pfad).astype(np.float64) * self.SPIEGEL
+        dreiecke = Npztorch.lesen(ordner / os.path.basename(g.get('dreiecke') or 'smplx_dreiecke.npy'))
+        dreiecke = Torchfeld.astype(dreiecke, torch.int64)
+        posiert = Torchfeld.astype(Npztorch.lesen(pfad), torch.float64) * self.SPIEGEL
         bindung, hoehe_s = self._binden(k.get('betas') or g['betas'], dreiecke)
         kaefig = bindung['kaefig'].anwenden(posiert, dreiecke, hoehe_s)
         landmarken = {}
         for name, wickel in bindung['landmarken'].items():
             werte = wickel['wickel'].anwenden(posiert, dreiecke, hoehe_s)
-            voll = np.full((wickel['anzahl'], 3), np.nan)
+            voll = Torchfeld.full((wickel['anzahl'], 3), math.nan)
             voll[wickel['gueltig']] = werte
             landmarken[name] = voll
         stamm = os.path.splitext(b['datei'])[0]
-        np.save(ordner / (self.KAEFIG % stamm), kaefig.astype(np.float32))
-        np.savez(ordner / (self.LANDMARKEN % stamm), **landmarken)
+        Npztorch.speichern_npy(ordner / (self.KAEFIG % stamm), Torchfeld.astype(kaefig, torch.float32))  # npz geprüft: Leser `bildlage.py` über Npztorch
+        Npztorch.speichern(ordner / (self.LANDMARKEN % stamm), **landmarken, komprimiert=False)  # npz geprüft: Leser über Npztorch
         return {
             'posiert': str(ordner / (self.KAEFIG % stamm)),
             'landmarken': str(ordner / (self.LANDMARKEN % stamm)),
@@ -142,8 +145,8 @@ class Bildmodellposierung:
             if not feld.startswith('lm_'):
                 continue
             name = feld[3:]
-            w = np.asarray(werte, dtype=np.float64)
-            gueltig = np.isfinite(w).all(1)
+            w = Torchfeld.feld(werte, dtype=torch.float64)
+            gueltig = Torchfeld.isfinite(w).all(1)
             if not gueltig.any():
                 continue
             aus['landmarken'][name] = {

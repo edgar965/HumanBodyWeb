@@ -21,7 +21,8 @@ rechnet, überschreibt das Stück unter demselben Namen (Fassung in `bilanz.json
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -66,7 +67,7 @@ class Herrenhaarstueck:
             if textur.get('albedo'):
                 from PIL import Image
                 with Image.open(textur['albedo']) as bild:
-                    return [float(c) / 255.0 for c in np.asarray(bild.convert('RGB'), dtype=np.float64).reshape(-1, 3).mean(axis=0)]
+                    return [float(c) / 255.0 for c in Torchfeld.liste(Torchfeld.feld(bild.convert('RGB'), dtype=torch.float64).reshape(-1, 3).mean(axis=0))]
         return [float(c) for c in teil['farbe'][:3]]
 
     @classmethod
@@ -75,25 +76,25 @@ class Herrenhaarstueck:
         punkte, flaechen, flaechen_uv, felder = [], [], [], []
         versatz = 0
         for nummer, teil in enumerate(teile):
-            p = np.asarray(teil['punkte'], dtype=np.float64).reshape(-1, 3)
-            d = np.asarray(teil['dreiecke'], dtype=np.int64).reshape(-1, 3) + versatz
+            p = Torchfeld.feld(teil['punkte'], dtype=torch.float64).reshape(-1, 3)
+            d = Torchfeld.feld(teil['dreiecke'], dtype=torch.int64).reshape(-1, 3) + versatz
             punkte.append(p)
             flaechen.extend(d.tolist())
             flaechen_uv.extend([[nummer, nummer, nummer]] * len(d))
             felder.append(cls._farbe(teil))
             versatz += len(p)
         n = len(teile)
-        uvs = np.array([[(i + 0.5) / n, 0.5] for i in range(n)])
-        netz = {'punkte': np.vstack(punkte), 'uvs': uvs, 'flaechen': flaechen, 'flaechen_uv': flaechen_uv, 'farbe': (1.0, 1.0, 1.0), 'bild': None}
-        return netz['punkte'], netz, np.array(felder)
+        uvs = Torchfeld.feld([[(i + 0.5) / n, 0.5] for i in range(n)], copy=True)
+        netz = {'punkte': Torchfeld.vstack(punkte), 'uvs': uvs, 'flaechen': flaechen, 'flaechen_uv': flaechen_uv, 'farbe': (1.0, 1.0, 1.0), 'bild': None}
+        return netz['punkte'], netz, Torchfeld.feld(felder, copy=True)
 
     @classmethod
     def bild(cls, felder, pfad):
         """Das Farbfeldbild (G Felder nebeneinander, sRGB) nach `pfad` schreiben."""
         from PIL import Image
-        farben = (np.clip(np.asarray(felder), 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
-        pixel = np.repeat(farben[None, :, :], cls.FELD_PX, axis=0)
-        pixel = np.repeat(pixel, cls.FELD_PX, axis=1)
+        farben = Torchfeld.astype(Torchfeld.clip(Torchfeld.feld(felder), 0.0, 1.0) * 255.0 + 0.5, torch.uint8)
+        pixel = Torchfeld.repeat_interleave(farben[None, :, :], cls.FELD_PX, dim=0)
+        pixel = Torchfeld.repeat_interleave(pixel, cls.FELD_PX, dim=1)
         Image.fromarray(pixel).save(pfad)
         return pfad
 

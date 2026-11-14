@@ -21,7 +21,9 @@ Die Scham (Einstellung `scham` = `objekt`): der Teil des Körpers, den die Figur
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .blendimportbilder import Blendimportbilder
 from .blendimportfinger import Blendimportfinger
@@ -76,14 +78,14 @@ class Blendimportstuecke:
         """Das Netz einer Rolle; eine Rolle mit mehreren Netzen (`namen`: beide Augen) wird zu EINEM zusammengelegt."""
         teile = []
         for name in rolle.get('namen') or [rolle['name']]:
-            with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
+            with Npztorch.lesen(self.ablage.export(self.inventar[name]['datei'])) as d:
                 teile.append({k: d[k] for k in d.files})
         if len(teile) == 1:
             return teile[0]
-        anfang = np.cumsum([0] + [len(t['punkte']) for t in teile[:-1]])
-        return {'punkte': np.concatenate([t['punkte'] for t in teile]),
-                'dreiecke': np.concatenate([t['dreiecke'] + int(a) for t, a in zip(teile, anfang, strict=True)]),
-                'uv_ecken': np.concatenate([t['uv_ecken'] for t in teile])}
+        anfang = Torchfeld.cumsum([0] + [len(t['punkte']) for t in teile[:-1]])
+        return {'punkte': Torchfeld.cat([t['punkte'] for t in teile]),
+                'dreiecke': Torchfeld.cat([t['dreiecke'] + int(a) for t, a in zip(teile, anfang, strict=True)]),
+                'uv_ecken': Torchfeld.cat([t['uv_ecken'] for t in teile])}
 
     def fuss(self):
         """Die Absatzhaltung der Füße (`Blendimportfuss`), einmal je Lauf — None ohne Körper."""
@@ -94,7 +96,7 @@ class Blendimportstuecke:
             d = self._netz(koerper)
             _, teile = self.lage.koerper_ruhelage(d['punkte'], d['dreiecke'], mit_teilen=True)
             schuhe = [self.lage.ins_netz(self._netz(r)['punkte']) for r in self.rollen if r.get('ordner') == 'shoes']
-            self._fuss = Blendimportfuss(self.lage, self.lage.ins_netz(d['punkte']), teile, np.concatenate(schuhe) if schuhe else None)
+            self._fuss = Blendimportfuss(self.lage, self.lage.ins_netz(d['punkte']), teile, Torchfeld.cat(schuhe) if schuhe else None)
         return self._fuss
 
     def pruefung(self):
@@ -179,10 +181,10 @@ class Blendimportstuecke:
         d = Blendimportscham(self.lage, self._netz(rolle), materialien).bauen(ordner, kennung, flaeche)
         if 'aus' in d:
             return None, d
-        np.save(self.ablage.arbeit('scham_punkte.npy'), d['punkte'])        # der Schritt „haut" füllt die Kachel darum mit Originalfarbe
+        Npztorch.speichern_npy(self.ablage.arbeit('scham_punkte.npy'), d['punkte'])        # der Schritt „haut" füllt die Kachel darum mit Originalfarbe
         material = Blendimportschamrauheit.anwenden(self.material(kennung, d['quelle'], ordner), d['quelle'])    # Rauheit der Haut als Zahl
         netz = G9objleser.lesen(str(self.obj(ordner, d['punkte'], d['dreiecke'], d['uv_ecken'], material)))
-        roh = np.asarray(netz['punkte'], dtype=np.float64)
+        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
         kategorie = self.AUGEN_KATEGORIE
         # `wicklung=False`: die Fläche liegt teils HINTER der Haut — die Abstimmung gegen die Haut drehte sie um.
         # Gewichte: die der Hautpunkte der FIGUR dieses Imports, die das Stück verdecken (`Blendimportschamgewichte`) — die der drei
@@ -192,13 +194,13 @@ class Blendimportstuecke:
         haut = Blendimportschamgewichte.fuer_figur(figur)
         loch = d.get('loch')
         # Verschweißt (`Blendimportschamnaht`): der Rand trägt die Gewichte der Haut auf dem Ring des Lochs, sonst folgte er einer Haltung anders.
-        gewichte = haut.gewichte(roh, np.asarray(netz['flaechen'], dtype=np.int64),
+        gewichte = haut.gewichte(roh, Torchfeld.feld(netz['flaechen'], dtype=torch.int64),
                                  ring=(loch['ring'], loch['ring_punkte']) if loch else None)
         d['bericht']['gewichte'] = haut.bericht
         bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, kategorie, material, heben=False, wicklung=False,
                                          gewichte=gewichte)
         # Der Penis bekommt die Höhe jedes Punkts über der Haut mit (`Blendimportschamhoehe`): daran erkennen seine Regler den Anbau.
-        hoehe = np.round(d['hoehe_mm'], 1).tolist() if self.anatomie == 'penis' and len(d['hoehe_mm']) == bilanz['punkte'] else None
+        hoehe = Torchfeld.round(d['hoehe_mm'], 1).tolist() if self.anatomie == 'penis' and len(d['hoehe_mm']) == bilanz['punkte'] else None
         G9stueckersatz.schreiben(bilanz['duf'], [], haut_tiefe_mm=Blendimportscham.HAUT_TIEFE_MM, anatomie=self.anatomie,
                                  eigene_gewichte=True, loch=self.loch_angabe(loch), hoehe_mm=hoehe)
         bericht = dict(d['bericht'], stueck=bilanz['stueck'], name=anzeige, flaechen=bilanz['flaechen'], kategorie=list(kategorie),
@@ -242,7 +244,7 @@ class Blendimportstuecke:
             material['shininess'] = self.AUGEN_GLANZ
         obj = self.obj(ordner, punkte, d['dreiecke'], d['uv_ecken'], material)
         netz = G9objleser.lesen(str(obj))
-        roh = np.asarray(netz['punkte'], dtype=np.float64)
+        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
         if haar:
             kategorie, art, knochen = self.HAAR_KATEGORIE, 'Hair', 'head'
         elif auge:

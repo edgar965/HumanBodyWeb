@@ -5,10 +5,11 @@ Eingabe sind die Daten, die `blendexport.py` ohnehin liefert (`punkte`, `dreieck
 (`koerper_ruhe.npy`, Blender-Achsen) — dieselben, die `blendbacken.py` dem Körper in Blender setzt. Normalen, Tangenten und Attribute am Treffer liefert `graph/Hautbackenschattung`.
 """
 
-import numpy as np
+import torch
 import warp as wp
 
 from .hautbackenflaeche import Hautbackenflaeche
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hautbackenquelle']
 
@@ -18,6 +19,6 @@ class Hautbackenquelle:
         self.flaeche = Hautbackenflaeche(punkte, dreiecke, uv_ecken)
         self.geraet = geraet
         wp.init()
-        self.mesh = wp.Mesh(points=wp.array(self.flaeche.punkte.astype(np.float32), dtype=wp.vec3, device=geraet),
+        self.mesh = wp.Mesh(points=wp.array(Torchfeld.astype(self.flaeche.punkte, torch.float32), dtype=wp.vec3, device=geraet),
                             indices=wp.array(self.flaeche.dreiecke.reshape(-1), dtype=wp.int32, device=geraet))
         self.uv = wp.array(self.flaeche.uv_ecken.reshape(-1, 2), dtype=wp.vec2, device=geraet)

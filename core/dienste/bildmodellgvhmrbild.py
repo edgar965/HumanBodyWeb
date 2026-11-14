@@ -11,7 +11,8 @@ erbt es von dort; nur Dreiecke, Normalen und das Rig sind eigene.
 Ablage: `ergebnis/gvhmr_<stamm>.png` (der Datei-Endpunkt liefert `ergebnis/`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.vorschaubild import G9vorschaubild
 
 __all__ = ['Bildmodellgvhmrbild']
@@ -25,8 +26,8 @@ class Bildmodellgvhmrbild(G9vorschaubild):
 
     def __init__(self, punkte, dreiecke, gelenke=None, eltern=None):
         super().__init__(punkte)
-        self.dreiecke = np.asarray(dreiecke, dtype=np.uint32).reshape(-1, 3)
-        self.gelenke = None if gelenke is None else np.asarray(gelenke, dtype=np.float32).reshape(-1, 3)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.uint32).reshape(-1, 3)
+        self.gelenke = None if gelenke is None else Torchfeld.feld(gelenke, dtype=torch.float32).reshape(-1, 3)
         self.eltern = list(eltern or [])
 
     def _dreiecke(self):
@@ -36,7 +37,7 @@ class Bildmodellgvhmrbild(G9vorschaubild):
         import trimesh
 
         netz = trimesh.Trimesh(self.punkte, self.dreiecke, process=False)
-        return np.asarray(netz.vertex_normals, np.float32)
+        return Torchfeld.feld(netz.vertex_normals, dtype=torch.float32)
 
     def _mesh(self, pyrender):
         if self._netz is None:
@@ -67,7 +68,7 @@ class Bildmodellgvhmrbild(G9vorschaubild):
             if not auswahl:
                 continue
             kugel = trimesh.creation.icosphere(subdivisions=1, radius=radius)
-            posen = np.tile(np.eye(4), (len(auswahl), 1, 1))
+            posen = torch.tile(torch.eye(4, dtype=torch.float64, device='cuda'), (len(auswahl), 1, 1))
             posen[:, :3, 3] = g[auswahl]
             material = pyrender.MetallicRoughnessMaterial(baseColorFactor=self.GELENK, metallicFactor=0.0)
             teile.append(pyrender.Mesh.from_trimesh(kugel, material=material, poses=posen))
@@ -78,7 +79,7 @@ class Bildmodellgvhmrbild(G9vorschaubild):
                 striche.append(g[e])
         if striche:
             material = pyrender.MetallicRoughnessMaterial(baseColorFactor=self.KNOCHEN, metallicFactor=0.0)
-            linien = pyrender.Primitive(positions=np.asarray(striche, np.float32), mode=1, material=material)
+            linien = pyrender.Primitive(positions=Torchfeld.roh(Torchfeld.feld(striche, dtype=torch.float32)), mode=1, material=material)
             teile.append(pyrender.Mesh([linien]))
         return teile
 
@@ -91,22 +92,22 @@ class Bildmodellgvhmrbild(G9vorschaubild):
         szene = pyrender.Scene(bg_color=self.hintergrund, ambient_light=(0.35, 0.35, 0.35))
         szene.add(self._mesh(pyrender))
         lage = self._kamera(grad, ausschnitt)
-        zur_kamera = lage[:3, 3] - np.array([0.0, float(self.punkte[:, 1].mean()), 0.0])
-        zur_kamera = zur_kamera / max(1e-6, np.linalg.norm(zur_kamera))
-        versatz = np.eye(4)
+        zur_kamera = lage[:3, 3] - Torchfeld.feld([0.0, float(self.punkte[:, 1].mean()), 0.0], copy=True)
+        zur_kamera = zur_kamera / max(1e-6, Torchfeld.linalg_norm(zur_kamera))
+        versatz = torch.eye(4, dtype=torch.float64, device='cuda')
         versatz[:3, 3] = zur_kamera * 0.12
         for teil in self._rig(pyrender):
             szene.add(teil, pose=versatz)
-        kamera = pyrender.PerspectiveCamera(yfov=np.deg2rad(self.YFOV), aspectRatio=breite / hoehe)
+        kamera = pyrender.PerspectiveCamera(yfov=Torchfeld.roh(Torchfeld.radians(self.YFOV)), aspectRatio=breite / hoehe)
         szene.add(kamera, pose=lage)
-        licht = self._blick(lage[:3, 3] + np.array([0.6, 1.2, 0.0]), lage[:3, 3] - lage[:3, 2])
-        szene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=3.0), pose=licht)
+        licht = self._blick(lage[:3, 3] + Torchfeld.feld([0.6, 1.2, 0.0], copy=True), lage[:3, 3] - lage[:3, 2])
+        szene.add(pyrender.DirectionalLight(color=Torchfeld.roh(torch.ones(3, dtype=torch.float64, device='cuda')), intensity=3.0), pose=licht)
         werk = pyrender.OffscreenRenderer(breite, hoehe)
         try:
             farbe, _ = werk.render(szene, flags=pyrender.RenderFlags.RGBA)
         finally:
             werk.delete()
-        return np.asarray(farbe)
+        return Torchfeld.feld(farbe)
 
     # ------------------------------------------------------ Fotokamera
 
@@ -130,23 +131,23 @@ class Bildmodellgvhmrbild(G9vorschaubild):
         if self.gelenke is not None and len(self.gelenke) >= 2:
             # Jede Kugel ein Stück zur Kamera (Ursprung) — je Gelenk in seine Blickrichtung.
             richtung = -self.gelenke
-            laenge = np.maximum(1e-6, np.linalg.norm(richtung, axis=1, keepdims=True))
-            vorn = (self.gelenke + richtung / laenge * self.ZUR_KAMERA).astype(np.float32)
+            laenge = Torchfeld.maximum(1e-6, Torchfeld.linalg_norm(richtung, dim=1, keepdim=True))
+            vorn = Torchfeld.astype(self.gelenke + richtung / laenge * self.ZUR_KAMERA, torch.float32)
             for teil in self._rig(pyrender, vorn):
                 szene.add(teil)
         szene.add(pyrender.IntrinsicsCamera(
             fx=kamera['fx'] * faktor, fy=kamera['fy'] * faktor,
             cx=kamera['cx'] * faktor, cy=kamera['cy'] * faktor, znear=0.05, zfar=50.0,
-        ), pose=np.eye(4))
-        licht = np.eye(4)
+        ), pose=torch.eye(4, dtype=torch.float64, device='cuda'))
+        licht = torch.eye(4, dtype=torch.float64, device='cuda')
         licht[:3, 3] = [0.6, 1.2, 0.0]
-        szene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=3.0), pose=licht)
+        szene.add(pyrender.DirectionalLight(color=Torchfeld.roh(torch.ones(3, dtype=torch.float64, device='cuda')), intensity=3.0), pose=licht)
         werk = pyrender.OffscreenRenderer(breite_px, hoehe_px)
         try:
             farbe, _ = werk.render(szene, flags=pyrender.RenderFlags.RGBA)
         finally:
             werk.delete()
-        return np.asarray(farbe), breite_px, hoehe_px
+        return Torchfeld.feld(farbe), breite_px, hoehe_px
 
     def speichern_kamera(self, pfad, kamera, hoehe=640):
         """`bild_kamera` als PNG; gibt `(breite_px, hoehe_px)`."""

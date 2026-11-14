@@ -24,7 +24,9 @@ Messung, keine Schätzung.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .bildmodellspeichern import Bildmodellspeichern
 from .bildmodellumriss import Bildmodellumriss
@@ -77,8 +79,8 @@ class Bildmodellanpassung:
         kopf = None
         if s.get('kopf'):
             pfad = self.ablage.schaetzung() / s['kopf']
-            if pfad.is_file():
-                kopf = np.load(pfad)
+            if Npztorch.da(pfad):
+                kopf = Npztorch.lesen(pfad)
         if melder:
             melder(0.2, 'SMPL-X-Zielnetz')
         zielnetz = G9zielnetz.aus(betas, kopf, symmetrisch=self.optionen.get('symmetrie', 'an') == 'an')
@@ -104,13 +106,7 @@ class Bildmodellanpassung:
         punkte, gewicht = paarung.zielpunkte(zielnetz, hoehe)
         gelenke = paarung.zielgelenke(zielnetz, hoehe)
         self.ablage.ergebnis().mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(
-            self.ablage.ergebnis() / self.ZIEL,
-            punkte=punkte.astype(np.float32),
-            gewicht=gewicht.astype(np.float32),
-            gelenknamen=np.array(list(gelenke)),
-            gelenke=np.array([gelenke[k] for k in gelenke], dtype=np.float32),
-        )
+        Npztorch.speichern(self.ablage.ergebnis() / self.ZIEL, punkte=Torchfeld.astype(punkte, torch.float32), gewicht=Torchfeld.astype(gewicht, torch.float32), gelenknamen=Torchfeld.feld(list(gelenke), copy=True), gelenke=Torchfeld.feld([gelenke[k] for k in gelenke], dtype=torch.float32, copy=True), komprimiert=True)
         g = gewicht > 0
         self.job.ergebnis['ziel'] = {
             **zielnetz.steckbrief(),
@@ -130,11 +126,11 @@ class Bildmodellanpassung:
         geformt = self.ablage.ergebnis() / Bildmodellzielproportionen.DATEI
         if not roh and geformt.is_file():
             pfad = geformt
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             raise RuntimeError('Zielnetz fehlt — Schritt „ziel" zuerst')
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             gelenke = {str(n): d['gelenke'][i] for i, n in enumerate(d['gelenknamen'])}
-            return d['punkte'].astype(float), d['gewicht'].astype(float), gelenke
+            return Torchfeld.astype(d['punkte'], torch.float64), Torchfeld.astype(d['gewicht'], torch.float64), gelenke
 
     # ----------------------------------------------------------- Anpassen
 
@@ -191,7 +187,7 @@ class Bildmodellanpassung:
                 satz, grund, e, punkte, gewicht, fest, melder)
             if kopf:
                 e = kopf.pop('ergebnis')
-        np.save(self.ablage.ergebnis() / 'rest.npy', e['rest'].astype(np.float32))
+        Npztorch.speichern_npy(self.ablage.ergebnis() / 'rest.npy', Torchfeld.astype(e['rest'], torch.float32))
         self.job.ergebnis['anpassung'] = {
             'regler': e['regler'],
             'verlauf': e['verlauf'],
@@ -242,7 +238,7 @@ class Bildmodellanpassung:
             self._sichern('ergebnis')
             return
         punkte, gewicht, _ = self._ziel_laden()
-        rest = np.load(self.ablage.ergebnis() / 'rest.npy').astype(float)
+        rest = Torchfeld.astype(Npztorch.lesen(self.ablage.ergebnis() / 'rest.npy'), torch.float64)
         if melder:
             melder(0.3, 'Restmorph glätten')
         name = '%s %s' % (self.job.name, self.job.kennung[-8:].replace('.', ''))
@@ -258,7 +254,7 @@ class Bildmodellanpassung:
         p, _, _ = G9reglerableitung.lage(G9formung(stellung))
         r = punkte - p
         g = gewicht > 0
-        zahlen['rms_mit_morph_mm'] = round(float(np.sqrt((r[g] ** 2).sum(1).mean())) * 1000, 2)
+        zahlen['rms_mit_morph_mm'] = round(float(Torchfeld.sqrt((r[g] ** 2).sum(1).mean())) * 1000, 2)
         self.job.ergebnis['rest'] = {'regler': regler, **zahlen}
         self._sichern('ergebnis')
 

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Hautbackenkachel — eine Kachel der Figur als Raster: welches Dreieck und welcher Schwerpunkt liegt am Abtastpunkt jedes Texels (Texelmitte plus Blenders Versatz), und was die Strahlen davon treffen."""
 
-import numpy as np
+import torch
 import warp as wp
 
 from . import hautbackenkernel as kern
 from .hautbackentangenten import Hautbackentangenten
 from .hautbackentreffer import Hautbackentreffer
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hautbackenkachel']
 
@@ -23,12 +24,12 @@ class Hautbackenkachel:
         self.figur, self.px, self.geraet = figur, px, geraet
         self.ids = wp.full((px, px), -1, dtype=wp.int32, device=geraet)
         self.bary = wp.zeros((px, px), dtype=wp.vec2, device=geraet)
-        self._pos = wp.array(figur.punkte.astype('float32'), dtype=wp.vec3, device=geraet)
+        self._pos = wp.array(Torchfeld.astype(figur.punkte, torch.float32), dtype=wp.vec3, device=geraet)
         self._nor = wp.array(Hautbackentangenten.punktnormalen(figur.punkte, figur.dreiecke), dtype=wp.vec3, device=geraet)
         self._tri = wp.array(figur.dreiecke, dtype=wp.vec3i, device=geraet)
         uv = figur.uv_ecken.reshape(-1, 2)
         self._uv = wp.array(uv, dtype=wp.vec2, device=geraet)
-        self._tri_uv = wp.array(np.arange(len(uv), dtype=np.int32).reshape(-1, 3), dtype=wp.vec3i, device=geraet)       # die UV stehen je Ecke hintereinander
+        self._tri_uv = wp.array(torch.arange(len(uv), dtype=torch.int32, device='cuda').reshape(-1, 3), dtype=wp.vec3i, device=geraet)       # die UV stehen je Ecke hintereinander
         self.rastern(*self.VERSATZ)
 
     def rastern(self, ox=0.0, oy=0.0):

@@ -21,7 +21,8 @@ DIE ZWEI FALLEN, DIE HIER STECKEN
   sonst zeigen die Normalen nach innen und die Fläche wird unsichtbar.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Materialgruppen:
@@ -41,11 +42,11 @@ class Materialgruppen:
     def aus_flaechen(cls, flaechen, materialien=None, namen=None):
         """Aus Vierecken ODER Dreiecken — mit erhaltener Umlaufrichtung."""
         if flaechen.ndim == 2 and flaechen.shape[1] == 4:
-            dreiecke = np.concatenate([flaechen[:, [0, 2, 1]], flaechen[:, [0, 3, 2]]], axis=0)
+            dreiecke = Torchfeld.cat([flaechen[:, [0, 2, 1]], flaechen[:, [0, 3, 2]]], axis=0)
             # Jedes Viereck liefert ZWEI Dreiecke — die Materialliste muss
             # mitwachsen, sonst passt sie nicht mehr zu den Dreiecken.
             if materialien is not None:
-                materialien = np.concatenate([materialien, materialien], axis=0)
+                materialien = Torchfeld.cat([materialien, materialien], axis=0)
         elif flaechen.shape[1] == 3:
             dreiecke = flaechen[:, [0, 2, 1]]
         else:
@@ -58,13 +59,13 @@ class Materialgruppen:
         """Die Dreiecke, nach Material gruppiert (stabil)."""
         if self.materialien is None:
             return self.dreiecke
-        return self.dreiecke[np.argsort(self.materialien, kind='stable')]
+        return self.dreiecke[torch.argsort(self.materialien, stable=True)]
 
     def bereiche(self):
         """`[{materialIndex, start, count}]` — leer ohne Materialangaben."""
         if self.materialien is None or not len(self.materialien):
             return []
-        folge = self.materialien[np.argsort(self.materialien, kind='stable')]
+        folge = self.materialien[torch.argsort(self.materialien, stable=True)]
         bereiche, anfang = [], 0
         for stelle in range(1, len(folge)):
             if folge[stelle] != folge[anfang]:

@@ -8,7 +8,8 @@ gegen die behaarte Haut darüber. Der Farbton stimmt (das Feld IST das Mittel de
 Hier bekommt jedes gefüllte Texel das Verhältnis „Farbe zu ihrem eigenen Tiefpass“ eines guten Texels aus der Nachbarschaft derselben UV-Insel — in zusammenhängenden Kacheln von `BLOCK_PX` Pixeln mit demselben Versatz, damit
 ein Härchen über mehrere Texel durchläuft. Die Farbe bleibt das Feld (Helligkeit und Ton der Umgebung), nur die Helligkeit schwankt wie in der Nachbarschaft. Wo keine passende Quelle in Reichweite liegt, bleibt das Texel glatt.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurtexeldetail']
 
@@ -36,45 +37,45 @@ class Meshfigurtexeldetail:
     @classmethod
     def versaetze(cls):
         """(V, 2) int — (dy, dx) auf einer Spirale von `NAHE_PX` bis `FERNE_PX`."""
-        k = np.arange(cls.VERSAETZE)
-        radius = cls.NAHE_PX + (cls.FERNE_PX - cls.NAHE_PX) * np.sqrt((k + 0.5) / cls.VERSAETZE)
+        k = Torchfeld.arange(cls.VERSAETZE)
+        radius = cls.NAHE_PX + (cls.FERNE_PX - cls.NAHE_PX) * Torchfeld.sqrt((k + 0.5) / cls.VERSAETZE)
         winkel = k * 2.399963229728653
-        return np.stack([np.round(radius * np.sin(winkel)), np.round(radius * np.cos(winkel))], axis=1).astype(np.int64)
+        return Torchfeld.astype(Torchfeld.stack([Torchfeld.round(radius * Torchfeld.sin(winkel)), Torchfeld.round(radius * Torchfeld.cos(winkel))], axis=1), torch.int64)
 
     def anwenden(self, drin, ziel, gut, farbe, fuellung):
         """Ändert `fuellung` (n, 3; Rohwerte 0..255) an den Texeln `ziel` (n,) bool; gibt die Zahl der Texel mit übertragener Zeichnung zurück.
         `drin` wählt die Texel der UV-Inseln im (S, S)-Bild, `gut` (n,) bool die echten, geprüften Hauttexel, `farbe` (n, 3) ihre Werte."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         s = self.seite
         if not (ziel.any() and gut.any()):
             return 0
-        bild = np.zeros((s, s, 3))
-        maske = np.zeros((s, s), dtype=bool)
+        bild = torch.zeros((s, s, 3), dtype=torch.float64, device='cuda')
+        maske = torch.zeros((s, s), dtype=torch.bool, device='cuda')
         bild[drin] = farbe
         maske[drin] = gut
         tief, stuetze = self.glatt(bild, maske, self.SIGMA_PX)
-        hell = np.array([0.299, 0.587, 0.114])
+        hell = Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
         quelle = maske & (stuetze > self.STUETZE_MIN)
-        verhaeltnis = np.ones((s, s), dtype=np.float32)
-        verhaeltnis[quelle] = np.clip((bild[quelle] @ hell) / np.maximum(tief[quelle] @ hell, 1.0), *self.GRENZEN)
-        inselmaske = np.zeros((s, s), dtype=bool)
+        verhaeltnis = torch.ones((s, s), dtype=torch.float32, device='cuda')
+        verhaeltnis[quelle] = Torchfeld.clip((bild[quelle] @ hell) / Torchfeld.maximum(tief[quelle] @ hell, 1.0), *self.GRENZEN)
+        inselmaske = torch.zeros((s, s), dtype=torch.bool, device='cuda')
         inselmaske[drin] = True
         insel, _ = ndimage.label(inselmaske)
-        ziel_bild = np.zeros((s, s), dtype=bool)
+        ziel_bild = torch.zeros((s, s), dtype=torch.bool, device='cuda')
         ziel_bild[drin] = ziel
-        zy, zx = np.nonzero(ziel_bild)
+        zy, zx = torch.nonzero(ziel_bild, as_tuple=True)
         eigene = insel[zy, zx]
         v_alle = self.versaetze()
         # Weiche Überlagerung statt harter Kacheln: jede Stützstelle (Raster `BLOCK_PX`) liefert die Zeichnung ihrer Quelle, die vier nächsten Stützstellen gehen mit weichen Gewichten ein; die Summe wird durch die Wurzel der
         # Gewichtsquadrate geteilt, sodass die Streuung der Zeichnung erhalten bleibt (unabhängige Quellen).
         fy, fx = zy / self.BLOCK_PX, zx / self.BLOCK_PX
-        y0, x0 = np.floor(fy).astype(np.int64), np.floor(fx).astype(np.int64)
+        y0, x0 = Torchfeld.astype(Torchfeld.floor(fy), torch.int64), Torchfeld.astype(Torchfeld.floor(fx), torch.int64)
         ty, tx = fy - y0, fx - x0
-        wy = np.stack([1.0 - ty * ty * (3.0 - 2.0 * ty), ty * ty * (3.0 - 2.0 * ty)])
-        wx = np.stack([1.0 - tx * tx * (3.0 - 2.0 * tx), tx * tx * (3.0 - 2.0 * tx)])
-        summe = np.zeros(len(zy))
-        quadrate = np.zeros(len(zy))
+        wy = Torchfeld.stack([1.0 - ty * ty * (3.0 - 2.0 * ty), ty * ty * (3.0 - 2.0 * ty)])
+        wx = Torchfeld.stack([1.0 - tx * tx * (3.0 - 2.0 * tx), tx * tx * (3.0 - 2.0 * tx)])
+        summe = torch.zeros(len(zy), dtype=torch.float64, device='cuda')
+        quadrate = torch.zeros(len(zy), dtype=torch.float64, device='cuda')
         for salz in range(self.SCHICHTEN):
             for dy in (0, 1):
                 for dx in (0, 1):
@@ -82,19 +83,19 @@ class Meshfigurtexeldetail:
                     v = v_alle[k]
                     qy, qx = zy + v[:, 0], zx + v[:, 1]
                     innen = (qy >= 0) & (qy < s) & (qx >= 0) & (qx < s)
-                    ok = np.zeros(len(zy), dtype=bool)
+                    ok = torch.zeros(len(zy), dtype=torch.bool, device='cuda')
                     ok[innen] = quelle[qy[innen], qx[innen]] & (insel[qy[innen], qx[innen]] == eigene[innen])
-                    gewicht = np.where(ok, wy[dy] * wx[dx], 0.0)
-                    abweichung = np.zeros(len(zy))
+                    gewicht = torch.where(ok, wy[dy] * wx[dx], 0.0)
+                    abweichung = torch.zeros(len(zy), dtype=torch.float64, device='cuda')
                     abweichung[ok] = verhaeltnis[qy[ok], qx[ok]] - 1.0
                     summe += gewicht * abweichung
                     quadrate += gewicht * gewicht
-            if float(np.mean(quadrate >= self.ABDECKUNG_MIN)) >= 0.999:
+            if float(Torchfeld.mean(quadrate >= self.ABDECKUNG_MIN)) >= 0.999:
                 break
         gefunden = quadrate >= 1e-4
         if not gefunden.any():
             return 0
-        faktor = np.ones((s, s), dtype=np.float32)
-        faktor[zy[gefunden], zx[gefunden]] = np.clip(1.0 + summe[gefunden] / np.sqrt(quadrate[gefunden]), *self.GRENZEN)
-        fuellung[ziel] = np.clip(fuellung[ziel] * faktor[drin][ziel][:, None], 0.0, 255.0)
+        faktor = torch.ones((s, s), dtype=torch.float32, device='cuda')
+        faktor[zy[gefunden], zx[gefunden]] = Torchfeld.clip(1.0 + summe[gefunden] / Torchfeld.sqrt(quadrate[gefunden]), *self.GRENZEN)
+        fuellung[ziel] = Torchfeld.clip(fuellung[ziel] * faktor[drin][ziel][:, None], 0.0, 255.0)
         return int(gefunden.sum())

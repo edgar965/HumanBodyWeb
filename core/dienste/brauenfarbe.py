@@ -11,7 +11,8 @@ sind etwas dunkler als das Kopfhaar). Die getönten Bilder liegen je Farbe einma
 
 import hashlib
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Brauenfarbe']
 
@@ -23,7 +24,7 @@ class Brauenfarbe:
     @staticmethod
     def _rgb(hexfarbe):
         h = str(hexfarbe or '').lstrip('#')
-        return np.array([int(h[i:i + 2], 16) for i in (0, 2, 4)], dtype=np.float64) / 255.0 if len(h) == 6 else None
+        return Torchfeld.feld([int(h[i:i + 2], 16) for i in (0, 2, 4)], dtype=torch.float64, copy=True) / 255.0 if len(h) == 6 else None
 
     def _toenen(self, albedo, farbe, faktor):
         """→ Bildpfad in Bibliotheksform (`G9kleidtexturen.BILDPFAD` + komponiert/…) — `G9material.datei` nimmt
@@ -34,18 +35,18 @@ class Brauenfarbe:
         quelle = G9material.datei(albedo)
         if quelle is None:
             return albedo
-        kennung = hashlib.sha1(('%s|%s|%.3f' % (quelle, farbe.round(3).tolist(), faktor)).encode()).hexdigest()[:12]
+        kennung = hashlib.sha1(('%s|%s|%.3f' % (quelle, farbe.round(decimals=3).tolist(), faktor)).encode()).hexdigest()[:12]
         name = 'braue_%s.png' % kennung
         ordner = G9kleidtexturen.ordner() / G9kleidtexturen.KOMPONIERT
         ziel = ordner / name
         if not ziel.is_file():
             with Image.open(quelle) as roh:
-                bild = np.asarray(roh.convert('RGB'), dtype=np.float64) / 255.0
-            hell = bild @ np.array([0.299, 0.587, 0.114])
+                bild = Torchfeld.feld(roh.convert('RGB'), dtype=torch.float64) / 255.0
+            hell = bild @ Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
             rel = hell / max(float(hell.mean()), 1e-3)
-            neu = np.clip(rel[..., None] * farbe[None, None, :] * faktor, 0.0, 1.0)
+            neu = Torchfeld.clip(rel[..., None] * farbe[None, None, :] * faktor, 0.0, 1.0)
             ordner.mkdir(parents=True, exist_ok=True)
-            Image.fromarray((neu * 255).astype(np.uint8)).save(ziel)
+            Image.fromarray(Torchfeld.roh(Torchfeld.astype(neu * 255, torch.uint8))).save(ziel)
         return G9kleidtexturen.BILDPFAD + G9kleidtexturen.KOMPONIERT + '/' + name
 
     def anwenden(self, netz, hexfarbe):
@@ -64,6 +65,6 @@ class Brauenfarbe:
                     b['albedo'] = self._toenen(b['albedo'], farbe, faktor)
                     b['farbe'] = [1.0, 1.0, 1.0]
                 else:                           # Wimpern: nur Maske und Faktor (0, 0, 0) — der Faktor wird die Farbe
-                    b['farbe'] = [round(float(c), 4) for c in np.clip(farbe * faktor, 0.0, 1.0)]
+                    b['farbe'] = [round(float(c), 4) for c in Torchfeld.liste(Torchfeld.clip(farbe * faktor, 0.0, 1.0))]
                 zahl += 1
         return zahl

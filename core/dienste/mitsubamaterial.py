@@ -25,7 +25,8 @@ dann genau c — die Tönung im Rezept bleibt eine Farbe, kein Belichtungswert.
 import logging
 from collections import OrderedDict
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -48,21 +49,21 @@ class Mitsubamaterial:
 
     @staticmethod
     def linear(srgb):
-        c = np.clip(np.asarray(srgb, dtype=np.float64), 0.0, 1.0)
-        return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+        c = Torchfeld.clip(Torchfeld.feld(srgb, dtype=torch.float64), 0.0, 1.0)
+        return torch.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
     @staticmethod
     def srgb(linear):
-        c = np.clip(np.asarray(linear, dtype=np.float64), 0.0, 1.0)
-        return np.where(c <= 0.0031308, 12.92 * c, 1.055 * np.power(c, 1.0 / 2.4) - 0.055)
+        c = Torchfeld.clip(Torchfeld.feld(linear, dtype=torch.float64), 0.0, 1.0)
+        return torch.where(c <= 0.0031308, 12.92 * c, 1.055 * Torchfeld.power(c, 1.0 / 2.4) - 0.055)
 
     @classmethod
     def haar_sigma(cls, farbe_srgb):
         """Absorption σ_a je Kanal aus der Strähnenfarbe (Chiang et al. 2016, Gl. 9)."""
         b = cls.HAAR_BETA
         nenner = 5.969 - 0.215 * b + 2.532 * b ** 2 - 10.73 * b ** 3 + 5.574 * b ** 4 + 0.245 * b ** 5
-        c = np.clip(cls.linear(farbe_srgb), 1e-3, 0.999)
-        return (np.log(c) / nenner) ** 2
+        c = Torchfeld.clip(cls.linear(farbe_srgb), 1e-3, 0.999)
+        return (Torchfeld.log(c) / nenner) ** 2
 
     # -------------------------------------------------------------- Bilder
 
@@ -80,15 +81,15 @@ class Mitsubamaterial:
             return feld
         with Image.open(pfad) as roh:
             bild = roh.convert('RGB')
-            if max(bild.size) > kante:
+            if max(Torchfeld.groesse(bild)) > kante:
                 bild.thumbnail((int(kante), int(kante)), Image.Resampling.LANCZOS)
-            feld = np.asarray(bild, dtype=np.float32) / 255.0
+            feld = Torchfeld.feld(bild, dtype=torch.float32) / 255.0
         if art == 'albedo':
-            feld = cls.linear(feld).astype(np.float32)
+            feld = Torchfeld.astype(cls.linear(feld), torch.float32)
         elif int(achse) < 0:
-            feld = feld.copy()
+            feld = Torchfeld.kopie(feld)
             feld[..., 1] = 1.0 - feld[..., 1]
-        cls._vorrat[schluessel] = np.ascontiguousarray(feld)
+        cls._vorrat[schluessel] = Torchfeld.feld(feld)
         while len(cls._vorrat) > cls.VORRAT:
             cls._vorrat.popitem(last=False)
         return cls._vorrat[schluessel]
@@ -111,7 +112,7 @@ class Mitsubamaterial:
         Karte als geschlossene Fläche im Bild, der Bart als dunkler Block im Gesicht (01.10.2026 abends)."""
         feld = cls.bild(alpha, kante, 'normalen')[..., :1]
         return {'type': 'mask', 'bsdf': innen,
-                'opacity': {'type': 'bitmap', 'data': np.ascontiguousarray(feld, dtype=np.float32), 'raw': True,
+                'opacity': {'type': 'bitmap', 'data': Torchfeld.feld(feld, dtype=torch.float32), 'raw': True,
                             'filter_type': 'bilinear'}}
 
     @staticmethod
@@ -143,9 +144,9 @@ class Mitsubamaterial:
         """Albedo-Bild × Faktor, wahlweise mit Normalkarte; `metall`/`rauheit` nur für Metallstücke. Der Faktor ist wie jede Farbe hier sRGB (Daz-Farbe × 2 × Tönung, `Kleidermodellbau._textur`) und wird nach
         linear gerechnet — wie `Standmodellglb._netz` es für glTFs baseColorFactor tut und wie `flach` es für Stücke ohne Bild tut. Bis 05.10.2026 ging er unumgerechnet in die Multiplikation: Das Hemd der
         Runde 1 (Tönung #353230, Grau 0,75) stand mit Mittel 0,48 im Render bei 0,33 im Foto (`befund.teile`: foto_farbe 0,3266 / render_farbe 0,4795), im Viewer-Modell dagegen bei 0,30."""
-        feld = cls.bild(albedo, kante, 'albedo') * cls.linear(np.asarray(faktor, dtype=np.float64)[:3]).astype(np.float32)
+        feld = cls.bild(albedo, kante, 'albedo') * Torchfeld.astype(cls.linear(Torchfeld.feld(faktor, dtype=torch.float64)[:3]), torch.float32)
         innen = {'type': 'principled',
-                 'base_color': {'type': 'bitmap', 'data': np.ascontiguousarray(feld, dtype=np.float32), 'raw': True,
+                 'base_color': {'type': 'bitmap', 'data': Torchfeld.feld(feld, dtype=torch.float32), 'raw': True,
                                 'filter_type': 'bilinear'},
                  **cls.metallglanz(metall, rauheit)}
         if normalen is not None:
@@ -172,24 +173,23 @@ class Mitsubamaterial:
         """Je Punkt die Nummer seiner Lage — Nahtkopien teilen sie. Im Film einmal aus der Ruhelage (`Mitsubaszene`):
         Nahtkopien tragen dieselbe Haut und bleiben beisammen, und die Suche kostete je Bild und Netz 0,19 s
         (01.10.2026)."""
-        p = np.asarray(punkte, dtype=np.float64)
-        return np.unique(np.round(p / 1e-6).astype(np.int64), axis=0, return_inverse=True)[1].ravel()
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        return Torchfeld.unique(Torchfeld.astype(Torchfeld.round(p / 1e-6), torch.int64), axis=0, return_inverse=True)[1].ravel()
 
     @classmethod
     def normalen(cls, punkte, dreiecke, gruppe=None):
         """Glatte Normalen je Punkt, flächengewichtet, über Punkte gleicher Lage gemittelt (Nahtkopien; `gruppe` aus
         `gruppen`, sonst hier gesucht)."""
-        p = np.asarray(punkte, dtype=np.float64)
-        d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        flaeche = np.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
-        gruppe = cls.gruppen(p) if gruppe is None else np.asarray(gruppe, dtype=np.int64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        flaeche = Torchfeld.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
+        gruppe = cls.gruppen(p) if gruppe is None else Torchfeld.feld(gruppe, dtype=torch.int64)
         anzahl = int(gruppe.max()) + 1 if len(gruppe) else 0
         ecken = gruppe[d.T.ravel()]                   # alle Ecke-0-, dann Ecke-1-, dann Ecke-2-Einträge
-        summe = np.stack([np.bincount(ecken, weights=np.tile(flaeche[:, k], 3), minlength=anzahl) for k in range(3)],
-                         axis=1)
+        summe = Torchfeld.stack([Torchfeld.bincount(ecken, weights=torch.tile(flaeche[:, k], (3,)), minlength=anzahl) for k in range(3)], axis=1)
         n = summe[gruppe]
-        laenge = np.linalg.norm(n, axis=1, keepdims=True)
+        laenge = Torchfeld.linalg_norm(n, dim=1, keepdim=True)
         leer = laenge[:, 0] < 1e-20
-        n = n / np.maximum(laenge, 1e-20)
+        n = n / Torchfeld.maximum(laenge, 1e-20)
         n[leer] = (0.0, 0.0, 1.0)
-        return n.astype(np.float32)
+        return Torchfeld.astype(n, torch.float32)

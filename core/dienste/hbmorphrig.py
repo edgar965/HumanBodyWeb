@@ -38,7 +38,8 @@ Torso_Mass 37 / 7,0 (die Oberflaeche wandert, nicht das Gelenk: die
 Schaetzung aus Hautpunkten ueberzeichnet Massemorphe — deshalb zaehlt
 nur Laenge und Kopf, nicht der rohe Gelenkwert).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.formung import G9formung
 from Genesis9.haut import G9haut
 
@@ -59,10 +60,10 @@ class Hbmorphrig:
 
     def __init__(self, formung=None):
         self.formung = formung or G9formung({})
-        self.basis = np.asarray(self.formung.punkte(), dtype=np.float64)
+        self.basis = Torchfeld.feld(self.formung.punkte(), dtype=torch.float64)
         knochen = self.formung.skelett().gelenkknochen()
-        hoch = np.array([0.0, self.formung.boden(), 0.0])
-        self.kopf = {k['name']: np.asarray(k['kopf'], dtype=np.float64) + hoch for k in knochen}
+        hoch = Torchfeld.feld([0.0, self.formung.boden(), 0.0], copy=True)
+        self.kopf = {k['name']: Torchfeld.feld(k['kopf'], dtype=torch.float64) + hoch for k in knochen}
         self.eltern = {k['name']: k['eltern'] for k in knochen}
         self.bindung = self._bindung(G9haut.holen())
 
@@ -74,18 +75,18 @@ class Hbmorphrig:
             i = spalte.get(name)
             if i is None:
                 continue
-            gewicht = np.where(haut.index == i, haut.gewicht, 0.0).sum(axis=1)
-            nah = (gewicht > 0) & (np.linalg.norm(self.basis - kopf, axis=1) < self.RADIUS)
+            gewicht = torch.where(haut.index == i, haut.gewicht, 0.0).sum(axis=1)
+            nah = (gewicht > 0) & (Torchfeld.linalg_norm(self.basis - kopf, dim=1) < self.RADIUS)
             if gewicht[nah].sum() >= self.MINDESTGEWICHT:
-                aus[name] = (np.nonzero(nah)[0], gewicht[nah])
+                aus[name] = (torch.nonzero(nah, as_tuple=True)[0], gewicht[nah])
         return aus
 
     # ------------------------------------------------------------- messen
 
     def gelenke(self, nummern, deltas):
         u"""`{knochen: Verschiebung (3,)}` fuer ein Delta-Feld auf Kaefigpunkten."""
-        voll = np.zeros_like(self.basis)
-        voll[np.asarray(nummern, dtype=np.int64)] = np.asarray(deltas, dtype=np.float64)
+        voll = torch.zeros_like(self.basis)
+        voll[Torchfeld.feld(nummern, dtype=torch.int64)] = Torchfeld.feld(deltas, dtype=torch.float64)
         return {name: (voll[nr] * w[:, None]).sum(axis=0) / w.sum()
                 for name, (nr, w) in self.bindung.items()}
 
@@ -95,11 +96,11 @@ class Hbmorphrig:
         laenge = 0.0
         for name, e in self.eltern.items():
             if name in v and e in v:
-                alt = np.linalg.norm(self.kopf[name] - self.kopf[e])
-                neu = np.linalg.norm(self.kopf[name] + v[name] - self.kopf[e] - v[e])
+                alt = Torchfeld.linalg_norm(self.kopf[name] - self.kopf[e])
+                neu = Torchfeld.linalg_norm(self.kopf[name] + v[name] - self.kopf[e] - v[e])
                 laenge = max(laenge, abs(float(neu - alt)))
-        gelenk = max((float(np.linalg.norm(x)) for x in v.values()), default=0.0)
-        kopf = float(np.linalg.norm(v.get(self.KOPF, np.zeros(3))))
+        gelenk = max((float(Torchfeld.linalg_norm(x)) for x in v.values()), default=0.0)
+        kopf = float(Torchfeld.linalg_norm(v.get(self.KOPF, torch.zeros(3, dtype=torch.float64, device='cuda'))))
         return {'kopf_mm': round(kopf * 1000, 2), 'laenge_mm': round(laenge * 1000, 2),
                 'gelenk_mm': round(gelenk * 1000, 2)}
 

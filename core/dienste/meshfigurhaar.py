@@ -18,7 +18,9 @@ Ablage:
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -69,14 +71,10 @@ class Meshfigurhaar:
         # Die Haarmaske aus der Sapiens-Klasse „Hair" (Option `segmentierung.haar`, 05.10.2026) — nur in 2D3D Kleider; „farbe" (Vorgabe) ändert nichts.
         from .sapienshaar import Sapienshaar
         sapiens = Sapienshaar(self.lauf).anwenden(maske, haar, len(scan.flaechen))
-        np.savez_compressed(self.ablage.arbeit('haar_maske.npz'),
-                            **{k: maske[k] for k in ('haar', 'geschuetzt', 'unten', 'bart')},
-                            # Sapiens sieht einen Hut als `Apparel`, nicht als Haar (`Sapienshaar.kopfbedeckung`); der Schritt „kleidung" macht daraus Zubehör. Ohne Sapiens: nichts.
-                            kopfbedeckung=maske.get('kopfbedeckung', np.zeros(len(scan.flaechen), dtype=bool)),
-                            # Ein Bart unter der Schnittebene (`Sapienshaar.langer_bart`): nur im Haar-Objekt, nicht in `haar` (die Frisurwahl misst die Hülle des Kopfhaars).
-                            langer_bart=maske.get('langer_bart', np.zeros(len(scan.flaechen), dtype=bool)),
-                            # Das Haar, das Sapiens selbst sieht — Ziel der Frisurwahl bei `frisur_ziel = sapiens` (`Meshfigurfrisur`). Ohne Sapiens: nichts (alles False, keine stille Ersatzmaske).
-                            haar_sapiens=maske.get('haar_sapiens', np.zeros(len(scan.flaechen), dtype=bool)))
+        Npztorch.speichern(self.ablage.arbeit('haar_maske.npz'), **{k: maske[k] for k in ('haar', 'geschuetzt', 'unten', 'bart')}, # Sapiens sieht einen Hut als `Apparel`, nicht als Haar (`Sapienshaar.kopfbedeckung`); der Schritt „kleidung" macht daraus Zubehör. Ohne Sapiens: nichts.
+                            kopfbedeckung=maske.get('kopfbedeckung', torch.zeros(len(scan.flaechen), dtype=torch.bool, device='cuda')), # Ein Bart unter der Schnittebene (`Sapienshaar.langer_bart`): nur im Haar-Objekt, nicht in `haar` (die Frisurwahl misst die Hülle des Kopfhaars).
+                            langer_bart=maske.get('langer_bart', torch.zeros(len(scan.flaechen), dtype=torch.bool, device='cuda')), # Das Haar, das Sapiens selbst sieht — Ziel der Frisurwahl bei `frisur_ziel = sapiens` (`Meshfigurfrisur`). Ohne Sapiens: nichts (alles False, keine stille Ersatzmaske).
+                            haar_sapiens=maske.get('haar_sapiens', torch.zeros(len(scan.flaechen), dtype=torch.bool, device='cuda')), komprimiert=True)
         teilung = Haarteilung(scan.punkte, scan.flaechen, scan.uv_ecken, farben, maske, haar.rahmen)
         t2 = time.perf_counter()
         self.lauf.melden(0.5, 'Bilder ohne Haar / nur Haar')
@@ -111,7 +109,7 @@ class Meshfigurhaar:
         if not scan.hat_aussehen():
             haar['objekt'] = {'fehler': 'Netz ohne Textur und ohne Farben je Punkt'}
             return None
-        with np.load(self.ablage.arbeit('haar_maske.npz')) as d:
+        with Npztorch.lesen(self.ablage.arbeit('haar_maske.npz')) as d:
             bart = d['langer_bart'] if 'langer_bart' in d.files else None
         # Ein Bart, den SAM 3 als Bestandteil mit eigenem Objekt gefunden hat (`Meshfigurteile`, Gruppe „haar"), ist dieses Objekt — es steht neben JEDER Frisur der Bühne und nicht nur in „Haar aus dem Netz".
         from .meshfigurteile import Meshfigurteile
@@ -130,7 +128,7 @@ class Meshfigurhaar:
         from .meshfigurobjektflaechen import Meshfigurobjektflaechen
 
         Meshfigurobjektflaechen.schreiben(self.ablage, 'haar', wahl)              # für die Abnahme: welche Flächen dieses Objekt wirklich trägt
-        genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
+        genutzt, neu = Torchfeld.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
         # Haar und Bart hängen am Kopf (die Ruhelage ist eine Starrkörperbewegung des Kopfes): ganz an `head` gebunden, damit die Animation sie mitnimmt (`Meshfigurhautgewichte`).
         from .meshfigurhautgewichte import Meshfigurhautgewichte
 
@@ -157,18 +155,18 @@ class Meshfigurhaar:
 
         pfad = self.ablage.arbeit('haar_maske.npz')
         ziel = Gesichtsformziel(self.job)
-        if not pfad.is_file() or not ziel.vorhanden():
+        if not Npztorch.da(pfad) or not ziel.vorhanden():
             return None
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             if haarziel == 'sapiens':
-                wahl = d['haar_sapiens'] if 'haar_sapiens' in d.files else np.zeros(0, dtype=bool)
+                wahl = d['haar_sapiens'] if 'haar_sapiens' in d.files else torch.zeros(0, dtype=torch.bool, device='cuda')
             else:
                 wahl = d['haar']
         scan, _ = ziel.laden()
         if len(wahl) != len(scan.flaechen) or not wahl.any():
             return None
         r, t = ziel.lage()
-        return scan, (np.asarray(scan.punkte, dtype=np.float64) - t) @ r, wahl
+        return scan, (Torchfeld.feld(scan.punkte, dtype=torch.float64) - t) @ r, wahl
 
     def hauttest(self):
         """`(test(farben) → bool, Quelle)` — das Hautmodell der KAHLEN Stellen (`Meshfigurhautmodell`, dasselbe
@@ -194,9 +192,9 @@ class Meshfigurhaar:
         return modell.ist_haut, 'Hautmodell der kahlen Stellen'
 
     def farben(self, scan):
-        alle = np.arange(len(scan.flaechen))
-        proben = [scan.farben(alle, np.tile(b, (len(alle), 1))).astype(np.float64) for b in self.PROBEN]
-        return np.mean(proben, axis=0)
+        alle = Torchfeld.arange(len(scan.flaechen))
+        proben = [Torchfeld.astype(scan.farben(alle, torch.tile(b, (len(alle), 1))), torch.float64) for b in self.PROBEN]
+        return Torchfeld.mean(proben, axis=0)
 
     def bilder(self, scan, maske, teilung, rahmen):
         """`{teil: {ansicht: Datei}}` — beide Teile im selben Ausschnitt (der Kopf ohne Rumpf)."""
@@ -204,7 +202,7 @@ class Meshfigurhaar:
         from Haar.haarbild import Haarbild
 
         bild = Haarbild(rahmen, scan.textur, self.KANTE)
-        kopf = np.unique(scan.flaechen[~maske['unten']])
+        kopf = Torchfeld.unique(scan.flaechen[~maske['unten']])
         fenster = bild.fenster(scan.punkte[kopf])
         netze = {'ohne': teilung.ohne_haar(), 'nur': teilung.nur_haar()}
         aus = {}

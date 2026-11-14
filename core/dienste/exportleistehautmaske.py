@@ -23,7 +23,8 @@ import importlib
 import re
 import sys
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 
 __all__ = ['Exportleistehautmaske']
@@ -42,9 +43,9 @@ class Exportleistehautmaske:
         """Bool je Körperpunkt: verdeckt von einem der Stücke `[(punkte, dreiecke)]` (Ruhelage). Der Körper wird dafür an gleichen Lagen verschweißt (UV-Nähte, Materialzonen),
         und die Inseln schließt die Regel des Browsers (`Exportleisteinseln`) statt der älteren der Python-Fassung."""
         from .exportleisteinseln import Exportleisteinseln
-        P = np.asarray(punkte, dtype=np.float64).reshape(-1, 3)
-        T = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        _, erster, lage = np.unique(np.round(P / cls.NAHT_M).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+        P = Torchfeld.feld(punkte, dtype=torch.float64).reshape(-1, 3)
+        T = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        _, erster, lage = Torchfeld.unique(Torchfeld.astype(Torchfeld.round(P / cls.NAHT_M), torch.int64), axis=0, return_index=True, return_inverse=True)
         lage = lage.reshape(-1)
         tw = lage[T]
         tw = tw[(tw[:, 0] != tw[:, 1]) & (tw[:, 1] != tw[:, 2]) & (tw[:, 0] != tw[:, 2])]
@@ -56,19 +57,19 @@ class Exportleistehautmaske:
     @classmethod
     def koerper(cls, netz, stuecke):
         """`netz` (`G9koerpernetz`) ohne die verdeckten Dreiecke, Gruppen nachgezogen → (Netz, Bericht). `stuecke`: `[(punkte, dreiecke)]` in Ruhelage."""
-        dreiecke = np.asarray(netz['dreiecke'], dtype=np.int64).reshape(-1, 3)
+        dreiecke = Torchfeld.feld(netz['dreiecke'], dtype=torch.int64).reshape(-1, 3)
         if not stuecke:
             return netz, {'stuecke': 0, 'punkte_verdeckt': 0, 'dreiecke_weg': 0, 'dreiecke': len(dreiecke)}
         maske = cls.maske(netz['punkte'], dreiecke, stuecke)
         weg = maske[dreiecke].all(axis=1)
-        vorher = np.concatenate([[0], np.cumsum(~weg)])                   # bleibende Dreiecke vor jedem Dreieck: die neuen Grenzen der Gruppen
+        vorher = Torchfeld.cat([[0], Torchfeld.cumsum(~weg)])                   # bleibende Dreiecke vor jedem Dreieck: die neuen Grenzen der Gruppen
         gruppen = []
         for g in netz['gruppen']:
             von = int(g['index_ab']) // 3
             bis = von + int(g['index_anzahl']) // 3
             gruppen.append(dict(g, index_ab=int(vorher[von]) * 3, index_anzahl=int(vorher[bis] - vorher[von]) * 3))
         bleibt = dreiecke[~weg]
-        neu = dict(netz, dreiecke=bleibt.reshape(-1) if np.ndim(netz['dreiecke']) == 1 else bleibt, gruppen=gruppen)
+        neu = dict(netz, dreiecke=bleibt.reshape(-1) if Torchfeld.ndim(netz['dreiecke']) == 1 else bleibt, gruppen=gruppen)
         return neu, {'stuecke': len(stuecke), 'punkte_verdeckt': int(maske.sum()), 'dreiecke_weg': int(weg.sum()), 'dreiecke': len(dreiecke)}
 
     @classmethod
@@ -84,11 +85,11 @@ class Exportleistehautmaske:
             prims = [p for p in netz['primitives'] if p.get('mode', 4) == 4 and 'indices' in p]
             for lage in sorted({p['attributes']['POSITION'] for p in prims}):
                 eigene = [p for p in prims if p['attributes']['POSITION'] == lage]
-                teile = [Exportleisterendermodell._feld(modell, p['indices']).reshape(-1, 3).astype(np.int64) for p in eigene]
+                teile = [Torchfeld.astype(Exportleisterendermodell._feld(modell, p['indices']).reshape(-1, 3), torch.int64) for p in eigene]
                 bericht['dreiecke'] += sum(len(t) for t in teile)
                 if not stuecke:
                     continue
-                maske = cls.maske(Exportleisterendermodell._feld(modell, lage), np.concatenate(teile), stuecke)
+                maske = cls.maske(Exportleisterendermodell._feld(modell, lage), Torchfeld.cat(teile), stuecke)
                 bericht['punkte_verdeckt'] += int(maske.sum())
                 for p, t in zip(eigene, teile, strict=True):
                     weg = maske[t].all(axis=1)
@@ -104,19 +105,19 @@ class Exportleistehautmaske:
         """Die bleibenden Dreiecke an den Anfang des Indexpuffers der Primitive (sie werden nur weniger), `count` nachgezogen."""
         from .exportleisterendermodell import Exportleisterendermodell
         a = modell.j['accessors'][primitiv['indices']]
-        werte = np.ascontiguousarray(dreiecke.reshape(-1), dtype=Exportleisterendermodell.TYPEN[a['componentType']])
+        werte = Torchfeld.feld(dreiecke.reshape(-1), dtype=Exportleisterendermodell.TYPEN[a['componentType']])
         ab = modell.j['bufferViews'][a['bufferView']].get('byteOffset', 0) + a.get('byteOffset', 0)
-        modell.bin[ab:ab + werte.nbytes] = werte.tobytes()
-        a['count'] = int(werte.size)
+        modell.bin[ab:ab + werte.nbytes] = Torchfeld.als_bytes(werte)
+        a['count'] = int(Torchfeld.groesse(werte))
         a.pop('min', None)
         a.pop('max', None)
 
     @classmethod
     def verschweissen(cls, punkte, dreiecke):
         """Gleiche Lagen (UV-Nähte) zu einem Punkt → (Punkte, Dreiecke ohne entartete)."""
-        p = np.asarray(punkte, dtype=np.float64).reshape(-1, 3)
-        _, erster, neu = np.unique(np.round(p / cls.NAHT_M).astype(np.int64), axis=0, return_index=True, return_inverse=True)
-        t = neu.reshape(-1)[np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)]
+        p = Torchfeld.feld(punkte, dtype=torch.float64).reshape(-1, 3)
+        _, erster, neu = Torchfeld.unique(Torchfeld.astype(Torchfeld.round(p / cls.NAHT_M), torch.int64), axis=0, return_index=True, return_inverse=True)
+        t = neu.reshape(-1)[Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)]
         return p[erster], t[(t[:, 0] != t[:, 1]) & (t[:, 1] != t[:, 2]) & (t[:, 0] != t[:, 2])]
 
     @staticmethod

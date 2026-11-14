@@ -23,7 +23,8 @@ import logging
 import shutil
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 
 from ..daten.meshfigurablage import Meshfigurablage
 from ..models import Meshfigurauftrag
@@ -90,8 +91,8 @@ class Engine2d3dKleiderkoerper:
             bezug = self.ablage.arbeit(self.ablage.BEZUGSNETZ)
             shutil.copy2(netz, bezug)
             lage = quelle.arbeit('scan_lage.npz')
-            if lage.is_file():
-                shutil.copy2(lage, self.ablage.arbeit(self.ablage.BEZUGSLAGE))
+            if Npztorch.da(lage):
+                Npztorch.kopieren(lage, self.ablage.arbeit(self.ablage.BEZUGSLAGE))
         ergebnis['koerperquelle'] = {'quelle': 'uebernehmen', 'auftrag': kennung, 'name': fremd.name,
                                      'regler': len(stellung), 'kacheln': kopiert,
                                      'bezugsnetz': bezug.name if bezug else None}
@@ -131,7 +132,7 @@ class Engine2d3dKleiderkoerper:
         # Das eigene Netz ist der 3D-Bezug — mit der Lage der Erkennung.
         shutil.copy2(self.ablage.netzdatei(), self.ablage.arbeit(self.ablage.BEZUGSNETZ))
         lage = self.ablage.arbeit('scan_lage.npz')
-        if lage.is_file():
-            with np.load(lage) as d:
-                np.savez(self.ablage.arbeit(self.ablage.BEZUGSLAGE), matrix=d['matrix'])
+        if Npztorch.da(lage):
+            with Npztorch.lesen(lage) as d:
+                Npztorch.speichern(self.ablage.arbeit(self.ablage.BEZUGSLAGE), matrix=d['matrix'], komprimiert=False)
         self.job.ergebnis['koerperquelle'] = {'quelle': 'rechnen', 'bezugsnetz': self.ablage.BEZUGSNETZ}

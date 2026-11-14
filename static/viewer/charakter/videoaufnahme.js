@@ -23,6 +23,7 @@ import { _selectedInst } from './utils.js';
 import { Weichgewebe } from './weichgewebe.js';
 import { Kamerafolge } from './kamerafolge.js';
 import { Bodenstand } from './bodenstand.js';
+import { Posenabsatz } from './posenabsatz.js';          // nach jedem von Hand gestellten Bild: Absatz und Fußhaltung der Schuhe (12.11.2026)
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export class Videoaufnahme {
@@ -101,7 +102,7 @@ export class Videoaufnahme {
         } finally {
             aktion.time = vorher.zeit;
             state.mixer.timeScale = vorher.tempo;
-            state.mixer.update(0);
+            state.mixer.update(0); Posenabsatz.nachMixer();
             aktion.paused = vorher.pausiert;
             this.laeuft = false;
             state.playing = liefWeiter;
@@ -114,7 +115,7 @@ export class Videoaufnahme {
      */
     _zeit(t) {
         state.mixer.setTime(t);
-        state.mixer.update(0);
+        state.mixer.update(0); Posenabsatz.nachMixer();
         if (state.currentAnimGroundFixed) Bodenstand.richten(state, this._arbeitsvektor);
     }
 

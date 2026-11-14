@@ -16,7 +16,8 @@ Unter den Fenstern gewinnt das mit den wenigsten Kanten (99. Perzentil des Betra
 Nicht geprüft: wie das Muster am Browser wirkt — die Zahlen oben sind Zahlen der Kachel, nicht des Bildes.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportfeindetail']
 
@@ -47,27 +48,27 @@ class Blendimportfeindetail:
     def fenster(cls, gueltig, seite):
         """Mitten möglicher Fenster `[(Zeile, Spalte), …]`: Zellen, deren Abstand zur nächsten Fehlstelle mindestens die halbe Seite plus eine Zelle
         beträgt; höchstens `KANDIDATEN`, gleichmäßig über die Menge verteilt."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         z = cls.ZELLE
         h, w = gueltig.shape
         zelle = gueltig[:h // z * z, :w // z * z].reshape(h // z, z, w // z, z).all(axis=(1, 3))
         abstand = ndimage.distance_transform_edt(zelle) * z
-        ok = np.argwhere(abstand >= seite / 2 + z)
+        ok = Torchfeld.argwhere(abstand >= seite / 2 + z)
         if not len(ok):
             return []
         schritt = max(1, len(ok) // cls.KANDIDATEN)
-        return [(int(a * z + z // 2), int(b * z + z // 2)) for a, b in ok[::schritt][:cls.KANDIDATEN]]
+        return [(int(a * z + z // 2), int(b * z + z // 2)) for a, b in Torchfeld.liste(ok[::schritt][:cls.KANDIDATEN])]
 
     @classmethod
     def detail(cls, farbe, mitte, seite):
         """Das Detail (Hochpass der Helligkeit) des Fensters um `mitte` als `(seite, seite)` float32, unbegrenzt."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         halb = seite // 2
         a, b = mitte
-        stueck = farbe[a - halb:a + halb, b - halb:b + halb].astype(np.float32)
-        hell = stueck @ np.asarray(cls.GEWICHT, dtype=np.float32)
+        stueck = Torchfeld.astype(farbe[a - halb:a + halb, b - halb:b + halb], torch.float32)
+        hell = stueck @ Torchfeld.feld(cls.GEWICHT, dtype=torch.float32)
         sigma = max(1.0, cls.SIGMA_PX * farbe.shape[0] / 8192.0)
         return hell - ndimage.gaussian_filter(hell, sigma, mode='reflect')
 
@@ -79,18 +80,18 @@ class Blendimportfeindetail:
         beste = None
         for mitte in cls.fenster(gueltig, seite):
             d = cls.detail(farbe, mitte, seite)
-            kanten = float(np.percentile(np.abs(d), 99))
+            kanten = float(Torchfeld.percentile(Torchfeld.abs(d), 99))
             if kanten <= cls.KANTEN_MAX and (beste is None or kanten < beste[0]):
                 beste = (kanten, d)
         if beste is None:
             return None
-        return beste[0], np.clip(beste[1], -cls.GRENZE, cls.GRENZE).astype(np.float32)
+        return beste[0], Torchfeld.astype(Torchfeld.clip(beste[1], -cls.GRENZE, cls.GRENZE), torch.float32)
 
     @staticmethod
     def spiegeln(n, seite):
         """Index `0 … n−1` → Index im Muster, gespiegelt gekachelt (… 0 1 … s−1 s−1 … 1 0 0 1 …)."""
-        i = np.arange(n) % (2 * seite)
-        return np.where(i >= seite, 2 * seite - 1 - i, i)
+        i = Torchfeld.arange(n) % (2 * seite)
+        return torch.where(i >= seite, 2 * seite - 1 - i, i)
 
     @classmethod
     def anwenden(cls, farbe, stelle, muster):
@@ -106,6 +107,6 @@ class Blendimportfeindetail:
                 continue
             zusatz = muster[zeilen[a:b, None], spalten[None, :]]
             teil = farbe[a:b]
-            teil[st] = np.clip(teil[st].astype(np.float32) + zusatz[st][:, None], 0, 255).astype(np.uint8)
+            teil[st] = Torchfeld.astype(Torchfeld.clip(Torchfeld.astype(teil[st], torch.float32) + zusatz[st][:, None], 0, 255), torch.uint8)
             anzahl += int(st.sum())
         return anzahl

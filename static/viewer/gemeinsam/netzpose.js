@@ -3,6 +3,7 @@ import { Netzattribute } from './netzattribute.js';
 import { Dreieckfilter } from './dreieckfilter.js';
 import { Strangbaender } from './strangbaender.js';
 import { Vollindex } from './vollindex.js';
+import { Dqhaut } from './dqhaut.js';
 
 /**
  * Netzpose — ein SkinnedMesh als STARRES Netz, in einer gewählten Pose.
@@ -100,7 +101,15 @@ export class Netzpose {
         const beitrag = new THREE.Vector3();
         const summe = new THREE.Vector3();
         const boneMatrix = new THREE.Matrix4();
+        // Glättung je Bild (`Stoffglaettung`, 12.11.2026): der Versatz nach der Häutung, wie im Shader.
+        const g = mesh.userData?.glaettVersatz?.length === 3 * pos.count ? mesh.userData.glaettVersatz : null;
         for (let i = 0; i < pos.count; i++) {
+            if (mesh.userData?.dqMisch) {                           // Genesis wie Daz halb Dual Quaternion (`Dqhaut`, 12.11.2026): so wie gezeichnet
+                Dqhaut.knochenlage(mesh, i, v.fromBufferAttribute(pos, i));
+                if (g) v.set(v.x + g[3 * i], v.y + g[3 * i + 1], v.z + g[3 * i + 2]);
+                ausgabe.setXYZ(i, v.x, v.y, v.z);
+                continue;
+            }
             v.fromBufferAttribute(pos, i).applyMatrix4(mesh.bindMatrix);
             summe.set(0, 0, 0);
             for (let k = 0; k < 4; k++) {
@@ -111,6 +120,7 @@ export class Netzpose {
                 summe.add(beitrag.copy(v).applyMatrix4(boneMatrix).multiplyScalar(gewicht));
             }
             summe.applyMatrix4(mesh.bindMatrixInverse);
+            if (g) summe.set(summe.x + g[3 * i], summe.y + g[3 * i + 1], summe.z + g[3 * i + 2]);
             ausgabe.setXYZ(i, summe.x, summe.y, summe.z);
         }
         ausgabe.needsUpdate = true;

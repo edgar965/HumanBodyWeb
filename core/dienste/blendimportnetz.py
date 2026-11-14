@@ -18,7 +18,9 @@ import struct
 import time
 from pathlib import Path
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportweg import Blendimportweg
 
@@ -86,15 +88,15 @@ class Blendimportnetz:
     def _hoehe(cls, daten):
         """Höhe (Y, glTF) des Netzes in der Welt: die Eckpunkte des Kastens aus `min`/`max` der POSITION-Zugriffe, mit der Matrix des Netzknotens (ohne Eltern — der Weg „netz“ hat einen Knoten)."""
         konten = daten.get('accessors') or []
-        unten, oben = np.full(3, np.inf), np.full(3, -np.inf)
+        unten, oben = Torchfeld.full(3, math.inf), Torchfeld.full(3, -math.inf)
         for netz in daten.get('meshes') or []:
             for p in netz.get('primitives') or []:
                 a = konten[p['attributes']['POSITION']]
                 if 'min' not in a or 'max' not in a:
                     raise ValueError('Der POSITION-Zugriff der GLB trägt kein min/max — Höhe nicht lesbar')
-                unten, oben = np.minimum(unten, a['min']), np.maximum(oben, a['max'])
+                unten, oben = Torchfeld.minimum(unten, a['min']), Torchfeld.maximum(oben, a['max'])
         knoten = next((n for n in daten.get('nodes') or [] if 'mesh' in n), {})
-        ecken = np.array([[x, y, z, 1.0] for x in (unten[0], oben[0]) for y in (unten[1], oben[1]) for z in (unten[2], oben[2])])
+        ecken = Torchfeld.feld([[x, y, z, 1.0] for x in (unten[0], oben[0]) for y in (unten[1], oben[1]) for z in (unten[2], oben[2])], copy=True)
         welt = ecken @ cls._matrix(knoten).T
         return float(welt[:, 1].max() - welt[:, 1].min())
 
@@ -102,13 +104,13 @@ class Blendimportnetz:
     def _matrix(knoten):
         """4×4 des Knotens (glTF: `matrix` spaltenweise, sonst Verschiebung · Drehung (Quaternion x y z w) · Skalierung)."""
         if 'matrix' in knoten:
-            return np.array(knoten['matrix'], dtype=np.float64).reshape(4, 4, order='F')
+            return Torchfeld.feld(knoten['matrix'], dtype=torch.float64, copy=True).reshape(4, 4).T.contiguous()     # spaltenweise (numpy order='F')
         x, y, z, w = knoten.get('rotation') or [0.0, 0.0, 0.0, 1.0]
-        d = np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        d = Torchfeld.feld([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
                       [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
-        m = np.eye(4)
-        m[:3, :3] = d @ np.diag(knoten.get('scale') or [1.0, 1.0, 1.0])
+                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]], copy=True)
+        m = torch.eye(4, dtype=torch.float64, device='cuda')
+        m[:3, :3] = d @ Torchfeld.diag(knoten.get('scale') or [1.0, 1.0, 1.0])
         m[:3, 3] = knoten.get('translation') or [0.0, 0.0, 0.0]
         return m
 
@@ -168,9 +170,9 @@ class Blendimportnetz:
         for index in szene.get('nodes') or []:
             knoten = daten['nodes'][index]
             if 'matrix' in knoten:
-                m = np.array(knoten['matrix'], dtype=np.float64).reshape(4, 4, order='F')
+                m = Torchfeld.feld(knoten['matrix'], dtype=torch.float64, copy=True).reshape(4, 4).T.contiguous()   # spaltenweise (numpy order='F')
                 m[:3, :] *= faktor
-                knoten['matrix'] = [float(v) for v in m.reshape(-1, order='F')]
+                knoten['matrix'] = [float(v) for v in m.T.reshape(-1).tolist()]
             else:
                 knoten['scale'] = [float(s) * faktor for s in knoten.get('scale') or [1.0, 1.0, 1.0]]
                 knoten['translation'] = [float(t) * faktor for t in knoten.get('translation') or [0.0, 0.0, 0.0]]

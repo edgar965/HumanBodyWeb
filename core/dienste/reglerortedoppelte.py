@@ -16,7 +16,8 @@ größten Wirkung), und eine Zusammenlegung braucht die Lage in Millimetern, nic
 „Ähnlich“ (|cos| ≥ 0,98, aber Millimeter auseinander) wird NICHT zusammengelegt — das wäre verlorene Wirkung.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Reglerortedoppelte']
 
@@ -35,22 +36,22 @@ class Reglerortedoppelte:
     def bauen(self, kandidaten):
         """`kandidaten`: `[{name, ende, feld, mm}]` → (aliase, paare, linear) für `G9reglerorte`."""
         # Ein Feld, das auf den 4.000 Stichprobenpunkten 0 ist (Wirkung nur zwischen ihnen), hat keine Richtung — sonst 0/0 im Kosinus.
-        wahl = [k for k in kandidaten if k['mm'] >= self.MIN_MM and k.get('feld') is not None and np.any(k['feld'])]
+        wahl = [k for k in kandidaten if k['mm'] >= self.MIN_MM and k.get('feld') is not None and Torchfeld.any(k['feld'])]
         if len(wahl) < 2:
             return [], [], {}
-        f = np.stack([np.asarray(k['feld'], dtype=np.float64).ravel() for k in wahl])
-        norm = np.linalg.norm(f, axis=1)
+        f = Torchfeld.stack([Torchfeld.feld(k['feld'], dtype=torch.float64).ravel() for k in wahl])
+        norm = Torchfeld.linalg_norm(f, dim=1)
         g = (f / norm[:, None]) @ (f / norm[:, None]).T
-        oben = np.triu(np.abs(g) >= self.COS, 1)
+        oben = Torchfeld.triu(Torchfeld.abs(g) >= self.COS, 1)
         aliasse, paare, linear = [], [], {}
-        for i, j in np.argwhere(oben):
+        for i, j in Torchfeld.liste(Torchfeld.argwhere(oben)):
             a, b = wahl[i], wahl[j]
             if g[i, j] <= -self.COS:
                 if self.STAERKE[0] <= norm[i] / norm[j] <= self.STAERKE[1]:
                     paare.append([a['name'], b['name'], round(float(g[i, j]), 4)])
                 continue
             c = float(f[i] @ f[j] / (f[j] @ f[j]))           # Feld a ≈ c · Feld b
-            rest = float(np.linalg.norm((f[i] - c * f[j]).reshape(-1, 3), axis=1).max()) * 1000.0
+            rest = float(Torchfeld.linalg_norm(Torchfeld.feld((f[i] - c * f[j]).reshape(-1, 3)), dim=1).max()) * 1000.0
             if rest >= self.GLEICH_MM:
                 continue
             faktor = c * float(b['ende']) / float(a['ende'])
@@ -68,7 +69,7 @@ class Reglerortedoppelte:
         schlechteste = 0.0
         for t in self.STUETZEN:
             w = float(a['ende']) * t
-            fa = self.messung.messen({a['name']: w})['feld'].astype(np.float64)
-            fb = self.messung.messen({b['name']: w * faktor})['feld'].astype(np.float64)
-            schlechteste = max(schlechteste, float(np.linalg.norm(fa - fb, axis=1).max()) * 1000.0)
+            fa = Torchfeld.astype(self.messung.messen({a['name']: w})['feld'], torch.float64)
+            fb = Torchfeld.astype(self.messung.messen({b['name']: w * faktor})['feld'], torch.float64)
+            schlechteste = max(schlechteste, float(Torchfeld.linalg_norm(fa - fb, dim=1).max()) * 1000.0)
         return schlechteste

@@ -19,7 +19,8 @@ SPITZEN (nur mit `dreiecke`): am Blender-Stück von „cute girl" (Import 08:45)
 und eine DRITTE Ecke, die 5,5–6,6 mm von der Ringkante entfernt (am Ende der Kante, außerhalb von `UMKREIS_M`) und 1,3–1,5 mm hinter der KANTENLINIE liegt; die Entfernung zum Kantenstück hält den Punkt aus dem Umkreis,
 das Dreieck klappt trotzdem um. Darum wird zusätzlich die Spitze jedes Stückdreiecks, das eine Ringkante trägt, gegen die Kantenlinie geprüft (ohne Umkreis).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Schamnahtrandseite']
 
@@ -36,24 +37,24 @@ class Schamnahtrandseite:
     def schieben(cls, punkte, figur, loch, dreiecke=None):
         """`(neue Punkte, bericht)`; `bericht`: `{bewegt, max_mm, kanten}`. `figur`: `{punkte, dreiecke}` (Stufe 1); `loch`: `{dreiecke, ring, ring_punkte, verschiebung}` des Baus;
         `dreiecke`: die des Stücks — mit ihnen wird auch die Spitze jedes Stückdreiecks an einer Ringkante geprüft (`SPITZEN` oben)."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         from .schammessungknick import Schammessungknick
 
-        p = np.array(punkte, dtype=np.float64)
-        ring = np.asarray(loch['ring'], dtype=np.float64)
-        ring_punkte = np.asarray(loch['ring_punkte'], dtype=np.int64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64, copy=True)
+        ring = Torchfeld.feld(loch['ring'], dtype=torch.float64)
+        ring_punkte = Torchfeld.feld(loch['ring_punkte'], dtype=torch.int64)
         fp = Schammessungknick.haut_lage(figur, loch)
         kanten = cls._kanten(ring, ring_punkte, fp, Schammessungknick.ringkanten(fp, Schammessungknick.sichtbare(figur, loch), ring_punkte))
         if not kanten:
             return p, {'bewegt': 0, 'max_mm': 0.0, 'kanten': 0}
-        anfang, richtung, laenge, ins = (np.array([k[i] for k in kanten]) for i in range(1, 5))
+        anfang, richtung, laenge, ins = (Torchfeld.feld([k[i] for k in kanten], copy=True) for i in range(1, 5))
         baum = cKDTree(anfang + 0.5 * laenge[:, None] * richtung)
         reichweite = cls.UMKREIS_M + 0.5 * float(laenge.max())
         auf_ring_listen = cKDTree(p).query_ball_point(ring, 1e-7)
         auf_ring = set(int(i) for liste in auf_ring_listen for i in liste)
         spitzen = cls._spitzen(dreiecke, kanten, auf_ring_listen, auf_ring) if dreiecke is not None else []
-        vorher = p.copy()
+        vorher = Torchfeld.kopie(p)
         for _durchgang in range(cls.DURCHGAENGE):
             geschoben = 0
             for i, kandidaten in enumerate(baum.query_ball_point(p, reichweite)):
@@ -63,7 +64,7 @@ class Schamnahtrandseite:
                 geschoben += cls._spitze_schieben(p, i, anfang[k], richtung[k], ins[k])
             if not geschoben:
                 break
-        weg = np.linalg.norm(p - vorher, axis=1)
+        weg = Torchfeld.linalg_norm(p - vorher, dim=1)
         return p, {'bewegt': int((weg > 0).sum()), 'max_mm': round(float(weg.max()) * 1000.0, 2), 'kanten': int(len(kanten))}
 
     @classmethod
@@ -71,9 +72,9 @@ class Schamnahtrandseite:
         """Punkt `i` an der nächsten der `kandidaten`-Ringkanten prüfen; liegt er näher als `UMKREIS_M` und weniger als `ABSTAND_M` auf der Lochseite, in `p` verschieben → 1, sonst 0."""
         bestes = None
         for j in kandidaten:
-            t = np.clip((p[i] - anfang[j]) @ richtung[j], 0.0, laenge[j])
+            t = Torchfeld.clip((p[i] - anfang[j]) @ richtung[j], 0.0, laenge[j])
             vom_fuss = p[i] - (anfang[j] + richtung[j] * t)
-            abstand = float(np.linalg.norm(vom_fuss))
+            abstand = float(Torchfeld.linalg_norm(vom_fuss))
             if bestes is None or abstand < bestes[0]:
                 bestes = (abstand, j, float(vom_fuss @ ins[j]))
         if bestes[0] < cls.UMKREIS_M and bestes[2] < cls.ABSTAND_M - 1e-9:
@@ -94,14 +95,14 @@ class Schamnahtrandseite:
     @staticmethod
     def _spitzen(dreiecke, kanten, auf_ring_listen, auf_ring):
         """`[(Punkt, Index in kanten)]`: die dritte Ecke jedes Stückdreiecks, das zwei benachbarte Ringecken trägt; Ecken, die selbst auf dem Ring liegen, zählen nicht."""
-        d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         k_ring = len(auf_ring_listen)
         aus = []
         for k, kante in enumerate(kanten):
             a, b = auf_ring_listen[kante[0]], auf_ring_listen[(kante[0] + 1) % k_ring]
             if not len(a) or not len(b):
                 continue
-            for t in d[np.isin(d, a).any(axis=1) & np.isin(d, b).any(axis=1)]:
+            for t in Torchfeld.liste(d[torch.isin(d, Torchfeld.feld(a)).any(axis=1) & torch.isin(d, Torchfeld.feld(b)).any(axis=1)]):
                 aus += [(int(x), k) for x in t if int(x) not in auf_ring]
         return aus
 
@@ -113,14 +114,14 @@ class Schamnahtrandseite:
         for j, t in ringkanten:
             a, b = j, (j + 1) % k
             r = ring[b] - ring[a]
-            laenge = float(np.linalg.norm(r))
+            laenge = float(Torchfeld.linalg_norm(r))
             spitze = [int(x) for x in t if int(x) not in (int(ring_punkte[a]), int(ring_punkte[b]))]
             if laenge < 1e-9 or not spitze:
                 continue
             r = r / laenge
             h = fp[spitze[0]] - ring[a]
             h = h - r * (h @ r)
-            ln = float(np.linalg.norm(h))
+            ln = float(Torchfeld.linalg_norm(h))
             if ln < 1e-12:
                 continue
             aus.append((j, ring[a], r, laenge, -h / ln))

@@ -35,6 +35,10 @@ from django.conf import settings
 from SMPL.gelenke import Smplgelenke
 from SMPL.koerper import Smplkoerper
 from SMPL.skelett import Smplskelett
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class SmplgelenkeTest(unittest.TestCase):
@@ -47,7 +51,7 @@ class SmplgelenkeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ordner = str(settings.SMPL_MODELS_DIR)
-        if not os.path.isfile(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
+        if not Npztorch.da(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
             raise unittest.SkipTest('SMPL-Modelle fehlen (%s)' % cls.ordner)
 
     # ------------------------------------------------------- eine Definition

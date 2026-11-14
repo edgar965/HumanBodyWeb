@@ -46,6 +46,10 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh-Genesis-Jobseite — darum
         <select id="fotogenesis-geschlecht" name="geschlecht" data-reihenfolge="fest">{% if not job.geschlecht %}<option value="" selected disabled>wählen</option>{% endif %}{% for w, t in geschlechter %}<option value="{{ w }}"{% if w == job.geschlecht %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
         <label for="fotogenesis-dichte" title="Punkte des PSHuman-Netzes: normal 480 je Körperhöhe, dicht 960 (viermal so viele Punkte, gleiche Form)."><i class="fas fa-border-all"></i> Netz</label>
         <select id="fotogenesis-dichte" name="dichte" data-reihenfolge="fest">{% for w, t in pshuman_dichten %}<option value="{{ w }}"{% if w == job.pshuman.dichte %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        {# 11.11.2026, Edgar: „lösche nicht die alte Pipeline, kannst du eine Checkbox oben machen - ‚Kleider Getrennt‘ für die Neue Pipleine?“ — `Fotogenesispshuman`, job.json `pshuman.kleider_getrennt` #}
+        <label title="{{ pshuman_wege.kleider_getrennt.beschreibung }}"><input type="checkbox" name="kleider_getrennt"{% if job.pshuman.kleider_getrennt %} checked{% endif %}> {{ pshuman_wege.kleider_getrennt.text }}</label>
+        {# 12.11.2026, Edgar: „mach den Umbau“ — Konzept „Genesis zuerst“, Abschnitt 9: „Der neue Weg hängt an einem Häkchen am Job“; `Fotogenesispshuman`, job.json `pshuman.genesis_zuerst` #}
+        <label title="{{ pshuman_wege.genesis_zuerst.beschreibung }}"><input type="checkbox" name="genesis_zuerst"{% if job.pshuman.genesis_zuerst %} checked{% endif %}> {{ pshuman_wege.genesis_zuerst.text }}</label>
         <label title="{{ pshuman_wege.fototextur.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.fototextur.text }}</label>
         <label title="{{ pshuman_wege.textur_alle_fotos.beschreibung }}"><input type="checkbox" name="textur_alle_fotos"{% if job.pshuman.textur_alle_fotos %} checked{% endif %}> {{ pshuman_wege.textur_alle_fotos.text }}</label>
         <label title="{{ pshuman_wege.hand_ersatz.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.hand_ersatz.text }}</label>
@@ -115,15 +119,14 @@ Ergebnis; das Netz (Tripo/Hunyuan) eine Zeile darunter, ausdrücklich als Test, 
 <div class="fotogenesis-zeile fotogenesis-koerperzeile">
     {% comment %} 04.11.2026, Edgar: „smpl-x ergebnis in die dritte zeile verschieben (eine darunter), Genesis-Ergebnis (Mesh3D-AI) in die zweite Zeile (eine darüber)“: Zeile Fotos · PSHuman ·
     Genesis-Ergebnis, Zeile Genesis – Mesh-Genesis · SMPL-X · Genesis – fotogenesis — bei jedem Test aus Fotos (`daten.genesiszeile`, vorher nur mit PSHuman-Netz) steht das Genesis-Modell in der Zeile darunter (fotogenesis_genesiszeile.html), das Ergebnis-Rendering entfällt (die Vergleichskarte bleibt). {% endcomment %}
-    {% if daten.genesiszeile %}<div class="fotogenesis-bereiche{% if daten.pshuman_lhm %} fotogenesis-bereiche-vier{% endif %}">{% else %}<div class="fotogenesis-bereiche{% if daten.smplx %} fotogenesis-bereiche-vier{% endif %}">{% endif %}
+    {% comment %} 13.11.2026, Edgar: „mach das Genesis Ergebnis in den jobs an erster Stelle in der Zeile“, danach „pshuman netz in der Mitte“ — Genesis-Ergebnis · PSHuman-Netz · Fotos. {% endcomment %}
+    {% if daten.genesiszeile %}<div class="fotogenesis-bereiche">{% include "_fotogenesis_genesisergebnis.html" %}{% include "_fotogenesis_pshumanfeld.html" with feld="pshuman" %}{% else %}<div class="fotogenesis-bereiche{% if daten.smplx %} fotogenesis-bereiche-vier{% endif %}">{% endif %}
         <section class="card fotogenesis-bereich">
-            <h2><span class="fotogenesis-nummer">1</span> Fotos</h2>
+            <h2><span class="fotogenesis-nummer">{% if daten.genesiszeile %}3{% else %}1{% endif %}</span> Fotos</h2>
             <div class="fotogenesis-leinwand fotogenesis-fotofeld" data-feld="fotos"></div>
             <div class="fotogenesis-daumen" id="fotogenesis-daumen"></div>
         </section>
-        {% if daten.genesiszeile %}{% include "_fotogenesis_pshumanfeld.html" with feld="pshuman" %}
-        {% if daten.pshuman_lhm %}{% include "_fotogenesis_lhmfeld.html" %}{% endif %}{# 11.11.2026: zwischen PSHuman und Genesis-Ergebnis #}
-        {% include "_fotogenesis_genesisergebnis.html" %}
+        {% if daten.genesiszeile %}
         {% else %}
         {% comment %} 27.10.2026, Edgar: „mach … anstelle des Fotos die geometrische Figur die du ausgerechnet hast, auch in einer 3D View“ — „das Genesis Modell an 3. Stellen (und das
         geometrische an 2. Stelle)“: mit gerechneter Figur (`Fotogenesistrainingfigur`) 1 Fotos · 2 gerechnete Figur · 3 Genesis-Modell, das Ergebnis-Rendering entfällt. {% endcomment %}

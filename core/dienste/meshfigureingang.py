@@ -18,6 +18,10 @@ import shutil
 from pathlib import Path
 
 from ..daten.meshfigurablage import Meshfigurablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Meshfigureingang']
 
@@ -87,8 +91,8 @@ class Meshfigureingang:
         jedem neuen Auftrag, das Kopieren der Ablage 0,3 s (gemessen 12.10.2026). Ob sie zur Kopie passt, entscheidet der Runner an ihrem Stempel (Name, Größe, Änderungszeit — `copy2` behält die Zeit);
         passt sie nicht, baut er sie neu und überschreibt sie."""
         scan = Path(str(pfad) + cls.SCAN_ENDUNG)
-        if scan.is_file():
-            shutil.copyfile(scan, str(ziel) + cls.SCAN_ENDUNG)
+        if Npztorch.da(scan):
+            Npztorch.kopieren(scan, str(ziel) + cls.SCAN_ENDUNG)
 
     def uebernehmen(self, pfad, teil):
         """Netz und Beilagen in den Eingang (`teil` = 'koerper' oder 'kopf') kopieren → Eintrag."""

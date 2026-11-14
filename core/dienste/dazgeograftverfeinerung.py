@@ -11,7 +11,8 @@ gelöst wird wie dort `(W + a·L) D = W (Ziel − Anfang)` für die ganze Versch
 Der erste Versuch (a bis 0,2, keine Normalenprüfung) knitterte das Netz: 558 von 8.320 Dreiecken klappten um. Jetzt prüft jeder Durchgang das Umklappen und halbiert den Schritt,
 bis es nicht mehr Dreiecke sind als vorher.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftverfeinerung']
 
@@ -33,39 +34,39 @@ class Dazgeograftverfeinerung:
         """`(neue Punkte, bericht)`. `anfang`: die Punkte vor jeder Anpassung (Bezug der Verschiebung), `q`: der Stand nach dem ersten Schritt, `rand`: bool je Punkt (Ring),
         `laplace`: der Graph-Laplace des Netzes, `aussen`: `(P, 3)` Richtung nach außen je Punkt (Hautnormale) — legt die Seite der Normalen fest. `toleranz`: wie viele Dreiecke ein Durchgang
         mehr umklappen darf als der Stand davor (Vorgabe `UMKLAPP_TOLERANZ`, gilt für ein Netz von ≈ 8.300 Dreiecken — bei feinerem wächst sie mit der Zahl der Dreiecke)."""
-        import scipy.sparse as sp
-        import scipy.sparse.linalg as spl
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sp
+        from KoerperKI_alle.duennloeser import Duennloeser as spl
         import trimesh
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         proben, flaeche = trimesh.sample.sample_surface(ziel_netz, cls.PROBEN, seed=7)
         proben_baum = cKDTree(proben)
-        n_proben = np.asarray(ziel_netz.face_normals)[flaeche]
+        n_proben = Torchfeld.feld(ziel_netz.face_normals)[flaeche]
         n = len(anfang)
-        schwelle = np.cos(np.radians(cls.NORMALE_GRAD))
+        schwelle = Torchfeld.cos(Torchfeld.radians(cls.NORMALE_GRAD))
         n_netz = cls._normalen(q, dreiecke, aussen)
         # Das Original hat keine verbindliche Seite: die, auf der die Normalen mehrheitlich zu denen des Netzes zeigen, ist außen.
         _d, i0 = proben_baum.query(q)
-        n_proben = n_proben * (1.0 if np.einsum('ij,ij->i', n_proben[i0], n_netz).mean() >= 0 else -1.0)
+        n_proben = n_proben * (1.0 if Torchfeld.einsum('ij,ij->i', n_proben[i0], n_netz).mean() >= 0 else -1.0)
         berichte, umgeklappt_vorher = [], cls._umgeklappt(q, dreiecke, anfang)
         toleranz = cls.UMKLAPP_TOLERANZ if toleranz is None else toleranz
         for steifigkeit, reichweite in (plan or cls.PLAN):
             n_netz = cls._normalen(q, dreiecke, aussen)
             d_vor, i_vor = proben_baum.query(q)
-            vor = (d_vor < reichweite) & (np.einsum('ij,ij->i', n_proben[i_vor], n_netz) > schwelle)
+            vor = (d_vor < reichweite) & (Torchfeld.einsum('ij,ij->i', n_proben[i_vor], n_netz) > schwelle)
             netz_baum = cKDTree(q)
             d_rueck, j_rueck = netz_baum.query(proben)
-            rueck = (d_rueck < reichweite) & (np.einsum('ij,ij->i', n_proben, n_netz[j_rueck]) > schwelle)
-            summe, anzahl = np.zeros((n, 3)), np.zeros(n)
-            np.add.at(summe, j_rueck[rueck], proben[rueck])
-            np.add.at(anzahl, j_rueck[rueck], 1.0)
-            w_vor, w_rueck = vor.astype(np.float64), cls.RUECK_GEWICHT * np.minimum(anzahl, 3.0)
+            rueck = (d_rueck < reichweite) & (Torchfeld.einsum('ij,ij->i', n_proben, n_netz[j_rueck]) > schwelle)
+            summe, anzahl = torch.zeros((n, 3), dtype=torch.float64, device='cuda'), torch.zeros(n, dtype=torch.float64, device='cuda')
+            Torchfeld.add_at(summe, j_rueck[rueck], proben[rueck])
+            Torchfeld.add_at(anzahl, j_rueck[rueck], 1.0)
+            w_vor, w_rueck = Torchfeld.astype(vor, torch.float64), cls.RUECK_GEWICHT * Torchfeld.minimum(anzahl, 3.0)
             w = w_vor + w_rueck
-            mitte = summe / np.maximum(anzahl, 1.0)[:, None]
-            ziel = np.where(w[:, None] > 0, (w_vor[:, None] * proben[i_vor] + w_rueck[:, None] * mitte) / np.maximum(w, 1e-12)[:, None], q)
+            mitte = summe / Torchfeld.maximum(anzahl, 1.0)[:, None]
+            ziel = torch.where(w[:, None] > 0, (w_vor[:, None] * proben[i_vor] + w_rueck[:, None] * mitte) / Torchfeld.maximum(w, 1e-12)[:, None], q)
             w[rand], ziel[rand] = cls.RAND_GEWICHT, anfang[rand]
             if band is not None and band.any() and band_gewicht > 0:         # randnahe Punkte bleiben mit `band_gewicht` bei ihrer verlegten Lage
-                alt = w[band].copy()
+                alt = Torchfeld.kopie(w[band])
                 w[band] = alt + band_gewicht
                 ziel[band] = (alt[:, None] * ziel[band] + band_gewicht * anfang[band]) / w[band][:, None]
             lhs = (sp.diags(w) + steifigkeit * laplace + 1e-9 * sp.identity(n)).tocsc()
@@ -80,16 +81,16 @@ class Dazgeograftverfeinerung:
         d_netz = cKDTree(q).query(proben)[0] * 1000
         d_orig = proben_baum.query(q)[0] * 1000
         return q, {'durchgaenge': berichte, 'umgeklappt': umgeklappt_vorher,
-                   'original_zu_netz_mm': [round(float(x), 2) for x in np.percentile(d_netz, [50, 90, 99])],
-                   'netz_zu_original_mm': [round(float(x), 2) for x in np.percentile(d_orig, [50, 90, 99])]}
+                   'original_zu_netz_mm': [round(float(x), 2) for x in Torchfeld.liste(Torchfeld.percentile(d_netz, [50, 90, 99]))],
+                   'netz_zu_original_mm': [round(float(x), 2) for x in Torchfeld.liste(Torchfeld.percentile(d_orig, [50, 90, 99]))]}
 
     @staticmethod
     def _normalen(punkte, dreiecke, aussen):
         """Glatte Punktnormalen des Netzes, zur Seite von `aussen` gedreht."""
         import trimesh
 
-        n = np.asarray(trimesh.Trimesh(punkte, dreiecke, process=False).vertex_normals)
-        return n * (1.0 if np.einsum('ij,ij->i', n, aussen).sum() >= 0 else -1.0)
+        n = Torchfeld.feld(trimesh.Trimesh(punkte, dreiecke, process=False).vertex_normals)
+        return n * (1.0 if Torchfeld.einsum('ij,ij->i', n, aussen).sum() >= 0 else -1.0)
 
     @staticmethod
     def _umgeklappt(punkte, dreiecke, bezug):
@@ -98,4 +99,4 @@ class Dazgeograftverfeinerung:
 
         jetzt = trimesh.Trimesh(punkte, dreiecke, process=False).face_normals
         vorher = trimesh.Trimesh(bezug, dreiecke, process=False).face_normals
-        return int((np.einsum('ij,ij->i', jetzt, vorher) < 0).sum())
+        return int((Torchfeld.einsum('ij,ij->i', jetzt, vorher) < 0).sum())

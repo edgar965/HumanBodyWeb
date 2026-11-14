@@ -11,7 +11,9 @@ auf das Rig der Probe aus. Nur Zeilen aus der KI: die Stücke des Mesh-3D-Laufs 
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdaten import Meshgenesisdaten
 from .meshgenesistest import Meshgenesistest
@@ -32,11 +34,11 @@ class Meshgenesisergebniskleider:
         if not (p / ('kleider_%s' % geschlecht) / 'ki.json').is_file():
             return None
         datei, kin = p / ('ergebnis_Form_%s.npz' % geschlecht), p / ('form_%s' % geschlecht) / 'kinematik.json'
-        if not datei.is_file() or not kin.is_file():
+        if not Npztorch.da(datei) or not kin.is_file():
             return None
         try:
-            with np.load(datei) as z:
-                rig, dreh = z['rig'].astype(float), z['dreh'].astype(float)
+            with Npztorch.lesen(datei) as z:
+                rig, dreh = Torchfeld.astype(z['rig'], torch.float64), Torchfeld.astype(z['dreh'], torch.float64)
             knochen = json.loads(kin.read_text(encoding='utf-8'))['knochen']
             zentren = [k['zentrum'] for k in knochen]
         except (OSError, ValueError, KeyError) as fehler:
@@ -44,5 +46,5 @@ class Meshgenesisergebniskleider:
             return None
         # `knochen` (22.10.2026): die Namen in der Reihenfolge der Hautgewichte der Stücke — die Animation der Ergebnisfigur bindet die Stücke damit an das Genesis-Skelett (`Meshgenesisbewegungskleid`).
         return {'test': kennung, 'geschlecht': geschlecht, 'liste': '/api/meshgenesis/test/%s/kleider/%s/' % (kennung, geschlecht),
-                'rig': np.round(rig, 4).tolist(), 'dreh': np.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(), 'ruhezentren': np.round(np.array(zentren), 6).tolist(),
+                'rig': Torchfeld.round(rig, 4).tolist(), 'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(), 'ruhezentren': Torchfeld.round(Torchfeld.feld(zentren, copy=True), 6).tolist(),
                 'knochen': [k.get('name') for k in knochen]}

@@ -12,12 +12,14 @@ Paket (little endian): uint32 Länge des Kopfes · Kopf (JSON, mit Leerzeichen a
 mit dem vorhergesagten Rig (Edgar: „im Ergebnis fenster werden 2 Rigs aber sonst nichts angezeigt“). Fehlt die Datei oder trägt sie eine unbekannte Fassung: `None` (die Seite zeigt dann die Punktwolke und sagt es).
 """
 
+from KoerperKI_alle.torchfeld import Torchfeld
 import json
 import logging
 import struct
 import zipfile
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdatensatz import Meshgenesisdatensatz
 
@@ -43,10 +45,10 @@ class Meshgenesisflaeche:
     def laden(cls, modell, nr):
         """Die Arrays der Probe oder `None` (Datei fehlt oder andere Fassung — dann mit Zeile im Log)."""
         datei = cls.datei(modell, nr)
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
         try:
-            with np.load(datei) as z:
+            with Npztorch.lesen(datei) as z:
                 fassung = int(z['fassung'])
                 if fassung not in cls.FASSUNGEN:
                     logger.warning('Meshgenesisflaeche: %s trägt Fassung %s (bekannt: %s) — nicht ausgeliefert', datei, fassung, cls.FASSUNGEN)
@@ -74,7 +76,7 @@ class Meshgenesisflaeche:
         if netz is None or len(netz['uv']) != len(d['punkte_q']) or len(netz['dreiecke']) != len(d['aussen']):
             logger.warning('Meshgenesisflaeche: %s (Fassung 4) passt nicht zum Netz in anzeige/ (fehlt oder andere Größe) — nicht ausgeliefert', datei)
             return None
-        d.update(punkte=d['punkte_q'].astype(np.float32) * np.float32(d['einheit_m']), dreiecke=netz['dreiecke'], etikett=netz['etikett'], teilfarben=netz['teilfarben'],
+        d.update(punkte=Torchfeld.astype(d['punkte_q'], torch.float32) * float(d['einheit_m']), dreiecke=netz['dreiecke'], etikett=netz['etikett'], teilfarben=netz['teilfarben'],
                  knochen=netz['knochen'], gewicht=netz['gewicht'], uv=netz['uv'], material=netz['material'])
         if 'ruhe' in netz:
             d['ruhe'] = netz['ruhe']
@@ -90,16 +92,16 @@ class Meshgenesisflaeche:
             kopf = {'fassung': d['fassung'], 'punkte': int(len(d['punkte_q'])), 'dreiecke': int(len(d['aussen'])), 'einheit_m': d['einheit_m'], 'netz': True}
             text = json.dumps(kopf).encode('utf-8')
             text += b' ' * (-len(text) % 4)
-            punkte = d['punkte_q'].astype('<i2').tobytes()
+            punkte = Torchfeld.als_bytes(Torchfeld.astype(d['punkte_q'], Torchfeld.dtype('<i2')))
             punkte += b'\0' * (-len(punkte) % 4)
-            return b''.join([struct.pack('<I', len(text)), text, punkte, d['aussen'].astype(np.uint8).tobytes()])
+            return b''.join([struct.pack('<I', len(text)), text, punkte, Torchfeld.als_bytes(Torchfeld.astype(d['aussen'], torch.uint8))])
         haut = int(d['knochen'].shape[1]) if 'knochen' in d else 0
         kopf = {'fassung': d['fassung'], 'punkte': int(len(d['punkte'])), 'dreiecke': int(len(d['dreiecke'])), 'haut': haut, 'teile': list(cls.TEILE),
-                'teilfarben': d['teilfarben'].astype(int).tolist()}
+                'teilfarben': Torchfeld.astype(d['teilfarben'], torch.int64).tolist()}
         text = json.dumps(kopf).encode('utf-8')
         text += b' ' * (-len(text) % 4)
-        teile = [struct.pack('<I', len(text)), text, d['punkte'].astype('<f4').tobytes(), d['dreiecke'].astype('<u4').tobytes()]
+        teile = [struct.pack('<I', len(text)), text, Torchfeld.als_bytes(Torchfeld.astype(d['punkte'], Torchfeld.dtype('<f4'))), Torchfeld.als_bytes(Torchfeld.astype(d['dreiecke'], Torchfeld.dtype('<u4')))]
         if haut:
-            teile += [d['knochen'].astype(np.uint8).tobytes(), d['gewicht'].astype(np.uint8).tobytes()]
-        teile += [d['etikett'].astype(np.uint8).tobytes(), d['aussen'].astype(np.uint8).tobytes()]
+            teile += [Torchfeld.als_bytes(Torchfeld.astype(d['knochen'], torch.uint8)), Torchfeld.als_bytes(Torchfeld.astype(d['gewicht'], torch.uint8))]
+        teile += [Torchfeld.als_bytes(Torchfeld.astype(d['etikett'], torch.uint8)), Torchfeld.als_bytes(Torchfeld.astype(d['aussen'], torch.uint8))]
         return b''.join(teile)

@@ -96,7 +96,8 @@ export class Fotogenesistestfigur {
                 + `${this.kleider ? `, ${this.kleider.namen.join(', ')}` : ''}.`;
             this.probe = daten;
         } catch (fehler) {
-            this.fehler = `Figur des Tests ${this.test.kennung} nicht gebaut: ${fehler.message}`;
+            // „fehlt“ ausdrücklich (13.11.2026, Edgar: „dann mach hinweis, dass es fehlt!!“)
+            this.fehler = `Genesis-Ergebnis fehlt: Figur des Tests ${this.test.kennung} nicht geladen (${fehler.message}).`;
             console.warn(`Fotogenesistestfigur: ${this.fehler}`);
         }
     }

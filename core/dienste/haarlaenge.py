@@ -18,7 +18,8 @@ Die Vorgaben sind die Länge, die `Herrenhaar` vor diesem Regler im Mittel hatte
     laenge.dickefaktor(el_grad)     # Faktor auf die Dicke des Fotohaars je Höhenwinkel
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Haarlaenge']
 
@@ -42,7 +43,7 @@ class Haarlaenge:
     @classmethod
     def begrenzen(cls, cm):
         """Auf die Grenzen der Regler gekappt (cm), eine Zahl."""
-        return float(np.clip(float(cm), *cls.GRENZE_CM))
+        return float(Torchfeld.clip(float(cm), *cls.GRENZE_CM))
 
     @classmethod
     def aus_werte(cls, werte):
@@ -66,7 +67,7 @@ class Haarlaenge:
     def gewicht(self, el):
         """0 (unten) … 1 (oben) je Höhenwinkel `el` (Grad): glatt zwischen `HOEHEN[0]` und `HOEHEN[1]`."""
         unten, oben = self.HOEHEN
-        x = np.clip((np.asarray(el, dtype=np.float64) - unten) / (oben - unten), 0.0, 1.0)
+        x = Torchfeld.clip((Torchfeld.feld(el, dtype=torch.float64) - unten) / (oben - unten), 0.0, 1.0)
         return x * x * (3.0 - 2.0 * x)
 
     def laenge(self, el):
@@ -76,7 +77,7 @@ class Haarlaenge:
 
     def dickefaktor(self, el):
         """Faktor (`DICKE_MIN` … 1) auf die Dicke der Hülle des Fotohaars je Höhenwinkel: die Länge geteilt durch `DICKE_AB_M`."""
-        return np.clip(self.laenge(el) / self.DICKE_AB_M, self.DICKE_MIN, 1.0)
+        return Torchfeld.clip(self.laenge(el) / self.DICKE_AB_M, self.DICKE_MIN, 1.0)
 
     def fingerabdruck(self):
         """Gehört in die Fassung des Standmodells (zusammen mit `Herrenhaar.VERSION`): alles, was die Länge bestimmt."""

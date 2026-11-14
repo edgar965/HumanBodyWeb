@@ -48,6 +48,10 @@ from smplestxbefund import Smplestxbefund  # noqa: E402
 from smplestxbild import Smplestxbild  # noqa: E402
 
 from ._sicher import Sicher
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class DerBefund(unittest.TestCase):
@@ -124,7 +128,7 @@ class DerBefund(unittest.TestCase):
             bild = os.path.join(ordner, 'foto.jpg')
             pfad = Sicher.wert(Smplestxbefund(ausgabe).netz_speichern(bild), 'Pfad')
             self.assertEqual(os.path.dirname(pfad), ordner)
-            self.assertEqual(np.load(pfad).shape, (5, 3))
+            self.assertEqual(Npztorch.lesen_numpy(pfad).shape, (5, 3))
 
     def test_ohne_netz_kein_dateiname(self):
         self.assertIsNone(self._befund().netz_speichern('/egal/foto.jpg'))

@@ -11,10 +11,11 @@ Hier steht ausschliesslich das Drahtformat. Was gerechnet wird, steht in
 `GarmentCode/stoffvorschau.py`.
 """
 
+from KoerperKI_alle.torchfeld import Torchfeld
 import json
 import logging
 
-import numpy as np
+import torch
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 logger = logging.getLogger('core')
@@ -53,7 +54,7 @@ class Stoffkanal:
                     }
                 )
             )
-            await self.send(bytes_data=punkte.astype(np.float32).tobytes())
+            await self.send(bytes_data=Torchfeld.als_bytes(Torchfeld.astype(punkte, torch.float32)))
 
     async def _handle_stoff_binden(self, msg):
         """Ein drapiertes Stueck an den aktuellen Koerper binden.

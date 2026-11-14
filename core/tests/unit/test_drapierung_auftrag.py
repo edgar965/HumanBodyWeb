@@ -20,6 +20,10 @@ from Genesis9.rezeptumgebung import Rezeptumgebung
 
 from core.dienste.engine2d3dkleiderblender import Engine2d3dKleiderblender
 from core.dienste.stoffsolverdrapierung import Stoffsolverdrapierung
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class Folger:
@@ -43,7 +47,7 @@ class DrapierauftragTest(SimpleTestCase):
         def lauf(auftrag_datei, bericht_datei):
             auftrag = json.loads(Path(auftrag_datei).read_text(encoding='utf-8'))
             aufrufe['auftrag'] = auftrag
-            np.savez(auftrag['aus'], punkte=(PUNKTE + (0.0, -0.02, 0.0)).astype(np.float32))      # alles 2 cm nach unten
+            Npztorch.speichern(auftrag['aus'], punkte=(PUNKTE + (0.0, -0.02, 0.0)).astype(np.float32))      # alles 2 cm nach unten
             return {'sekunden': 0.1}
 
         def ablegen(_kennung, _name, _teile, deltas, brief):

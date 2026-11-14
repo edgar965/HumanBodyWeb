@@ -20,7 +20,9 @@ import logging
 import os
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -52,7 +54,7 @@ class Meshfigurkleidung:
 
             daten = Meshfigurdaten(str(arbeit / 'auftrag.json'))
             scan = Meshfigurscan.laden(daten.auftrag['netz'])
-            with np.load(arbeit / 'scan_lage.npz') as d:
+            with Npztorch.lesen(arbeit / 'scan_lage.npz') as d:
                 scan.anwenden(d['matrix'])
         return scan, daten
 
@@ -88,12 +90,11 @@ class Meshfigurkleidung:
         maske = self._bart_abziehen(maske, regel)
         # Mit der Sapiens-Maske reicht der Kragen über die Kopfgrenze (`Sapiensmaske.KRAGEN_M`) — das Bereinigen (Rand glätten, runden) muss ihn ebenso behandeln wie den Rest des Stoffs.
         kragen = Sapiensmaske.KRAGEN_M if (sapiens or {}).get('verwendet') else 0.0
-        maske, bereinigung = self._bereinigen(maske, regel, np.asarray(modell.ist_haut(entscheidung['farben']), dtype=bool), kragen)
+        maske, bereinigung = self._bereinigen(maske, regel, Torchfeld.feld(modell.ist_haut(entscheidung['farben']), dtype=torch.bool), kragen)
         maske = Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)      # NACH dem Bereinigen: Löcher füllen und Rand glätten holten Haarflächen sonst zurück in den Stoff
         # `maske['haut']`, nicht `entscheidung['haut']`: der Hautton nur dort, wo kein Stück gilt (`Kleidungsmaske.abschliessen`) — mit der Sapiens-Maske stand er sonst auf Hose und Socken.
         # `hautfarbe`: nur die FARBE gegen das Hautmodell (nicht die Hautkarte, die Stoffbereiche ausnimmt) — damit schält `objekt` den hautfarbenen Textursaum an der Kante ab (`Kleidung.kleidungsrand`).
-        np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz'), kleidung=maske['kleidung'],
-                            stueck=maske['stueck'], haut=maske['haut'], hautfarbe=np.asarray(modell.ist_haut(entscheidung['farben']), dtype=bool))
+        Npztorch.speichern(self.ablage.arbeit('kleidung_maske.npz'), kleidung=maske['kleidung'], stueck=maske['stueck'], haut=maske['haut'], hautfarbe=Torchfeld.feld(modell.ist_haut(entscheidung['farben']), dtype=torch.bool), komprimiert=True)
         teilung = Kleidungsteilung(scan.punkte, scan.flaechen, scan.uv_ecken, entscheidung['farben'], maske,
                                    karte.inhalt)
         t1 = time.perf_counter()
@@ -122,18 +123,18 @@ class Meshfigurkleidung:
             return wahl, scan.uv_ecken, None
         from Kleidung.kleidungsrand import Kleidungsrand
 
-        ids = np.flatnonzero(wahl)
+        ids = torch.flatten(wahl).nonzero()[:, 0]
         nachbarn = Kleidungsrand.nachbarn_aus(scan.flaechen[ids])
         band = Kleidungsrand.hautband(nachbarn, hautfarbe[ids], scan.flaecheninhalte()[ids])
         if not band.any():
             return wahl, scan.uv_ecken, None
         bericht = {'flaechen': int(band.sum()), 'anteil': round(float(band.mean()), 4), 'art': art}
         if art == 'entfernen':
-            neu = wahl.copy()
+            neu = Torchfeld.kopie(wahl)
             neu[ids[band]] = False
             return neu, scan.uv_ecken, bericht
-        uv, umgefaerbt = Kleidungsrand.umfaerben(nachbarn, band, scan.uv_ecken[ids], np.asarray(scan.punkte)[np.asarray(scan.flaechen)[ids]].mean(axis=1))
-        uv_ecken = np.array(scan.uv_ecken, copy=True)
+        uv, umgefaerbt = Kleidungsrand.umfaerben(nachbarn, band, scan.uv_ecken[ids], Torchfeld.feld(scan.punkte)[Torchfeld.feld(scan.flaechen)[ids]].mean(axis=1))
+        uv_ecken = Torchfeld.feld(scan.uv_ecken, copy=True)
         uv_ecken[ids] = uv
         bericht['umgefaerbt'] = int(umgefaerbt.sum())
         return wahl, uv_ecken, bericht
@@ -141,14 +142,14 @@ class Meshfigurkleidung:
     def _bart_abziehen(self, maske, regel):
         """Was der Schritt „haar" als langen Bart ablegt (`haar_maske.npz`, `langer_bart`, `Sapienshaar.langer_bart`), ist Haar und nicht Kleidung. Fehlt die Ablage oder der Schlüssel: die Maske, wie sie ist."""
         pfad = self.ablage.arbeit('haar_maske.npz')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return maske
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             bart = d['langer_bart'] if 'langer_bart' in d.files else None
-        stueck = np.asarray(maske['stueck'])
+        stueck = Torchfeld.feld(maske['stueck'])
         if bart is None or len(bart) != len(stueck) or not (bart & (stueck > 0) & (stueck != 4)).any():
             return maske
-        stueck = stueck.copy()
+        stueck = Torchfeld.kopie(stueck)
         stueck[bart & (stueck > 0) & (stueck != 4)] = 0
         return regel.abschliessen(stueck)
 
@@ -167,15 +168,15 @@ class Meshfigurkleidung:
         `Sapienshaar.kopfbedeckung`); der Kopf ist sonst nie Kleidung (`Kleidungsmaske.kopf_ab`), also gehören sie hier ausdrücklich dazu — als Stück „Zubehör", damit sie im Objekt „Kleidung" stehen
         und nicht im Haar. Fehlt die Ablage oder ist kein Hut da, bleibt die Maske, wie sie ist (None)."""
         pfad = self.ablage.arbeit('haar_maske.npz')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return maske, None
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             hut = d['kopfbedeckung'] if 'kopfbedeckung' in d.files else None
         if hut is None or not hut.any() or len(hut) != len(maske['stueck']):
             return maske, None
         from Kleidung.kleidungsmaske import Kleidungsmaske
 
-        stueck = np.asarray(maske['stueck']).copy()
+        stueck = Torchfeld.kopie(Torchfeld.feld(maske['stueck']))
         stueck[hut] = Kleidungsmaske.ZUBEHOER
         neu = regel.abschliessen(stueck)
         return neu, {'flaechen': int(hut.sum()), 'cm2': round(float(regel.inhalt[hut].sum()) * 1e4, 0)}
@@ -243,11 +244,11 @@ class Meshfigurkleidung:
             return None
         pfad = self.ablage.arbeit('kleidung_maske.npz')
         ruhe, posiert = self.ablage.arbeit('genesis_ende.npz'), self.ablage.arbeit('posiert.npy')
-        if not (pfad.is_file() and ruhe.is_file() and posiert.is_file()):
+        if not (Npztorch.da(pfad) and Npztorch.da(ruhe) and Npztorch.da(posiert)):
             kleidung['objekt'] = {'fehler': 'Maske oder Figur fehlen'}
             return None
         scan, _ = self.koerpernetz()
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             wahl = d['kleidung']
             hautfarbe = d['hautfarbe'] if 'hautfarbe' in d.files else None
         if len(wahl) != len(scan.flaechen):
@@ -261,11 +262,11 @@ class Meshfigurkleidung:
         if not scan.hat_aussehen():
             kleidung['objekt'] = {'fehler': 'Netz ohne Textur und ohne Farben je Punkt'}
             return None
-        with np.load(ruhe) as d:
-            kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
-            teil = np.asarray(d['teil']) if 'teil' in d.files else None
+        with Npztorch.lesen(ruhe) as d:
+            kaefig_ruhe = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+            teil = Torchfeld.feld(d['teil']) if 'teil' in d.files else None
         # Mit Körperteilen (12.10.2026): eine Hand neben dem Saum zog die Unterhose mit nach außen (Fahne bis 131 mm) — `Meshfigurkleidungsruhelage`.
-        ruhelage = Meshfigurkleidungsruhelage(kaefig_ruhe, np.load(posiert).astype(np.float64), teil)
+        ruhelage = Meshfigurkleidungsruhelage(kaefig_ruhe, Torchfeld.astype(Npztorch.lesen(posiert), torch.float64), teil)
         wahl, uv_ecken, hautband = self._hautrand_behandeln(scan, wahl, hautfarbe, str((self.job.optionen or {}).get('hautband') or 'umfaerben'))
         if hautband:
             kleidung['objekt_hautrand'] = hautband
@@ -283,7 +284,7 @@ class Meshfigurkleidung:
         from .meshfigurobjektflaechen import Meshfigurobjektflaechen
 
         Meshfigurobjektflaechen.schreiben(self.ablage, 'kleidung', wahl)       # für die Abnahme: welche Flächen dieses Objekt wirklich trägt
-        genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
+        genutzt, neu = Torchfeld.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
         punkte = ruhelage.punkte(scan.punkte[genutzt], neu.reshape(-1, 3))
         # Knochen und Gewichte für die Animation (`Meshfigurhautgewichte`): aus der Käfig-Nachbarschaft, die auch die Rückrechnung benutzt hat.
         from .meshfigurhautgewichte import Meshfigurhautgewichte

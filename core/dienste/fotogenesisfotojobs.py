@@ -41,8 +41,7 @@ class Fotogenesisfotojobs:
     #: nicht im Feld „Netz“, sondern eigenes Feld jeder Zeile (`Fotogenesisseitendaten.STARTKOERPER`). Seit 07.11.2026 'pshuman_start': Genesis statt SMPL-X, alte Jobs und UP2You behalten `pshuman_smplx`
     #: 'pshuman_apose' (10.11.2026, Edgar: „mach doch das pshuman mesh und die genesis ausgabe in allen jobs auf die A-Pose“): dasselbe Netz in der A-Pose (`pshuman_port14/pshuman_apose.py`), nur fürs Feld „PSHuman“
     NETZNAMEN = {'hunyuan3d': 'Hunyuan3D-2mv', 'pshuman': 'PSHuman (1 Foto)',
-                 'pshuman_smplx': 'SMPL-X (PSHuman)', 'pshuman_start': 'Startkörper (Genesis)', 'pshuman_apose': 'PSHuman in der A-Pose',
-                 'pshuman_lhm': 'PSHuman mit LHM++-Farbe'}   # 11.11.2026: Probe LHM++ (`Fotogenesisseitendaten.PSHUMAN_LHM`)
+                 'pshuman_smplx': 'SMPL-X (PSHuman)', 'pshuman_start': 'Startkörper (Genesis)', 'pshuman_apose': 'PSHuman in der A-Pose'}
     BILDENDUNGEN = ('.jpg', '.jpeg', '.png', '.webp')
 
     @staticmethod

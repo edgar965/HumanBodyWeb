@@ -7,6 +7,7 @@ import { Genesis9antwortspeicher } from './genesis9antwortspeicher.js';
 import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
+import { Bauart } from './bauart.js';
 import { Umfaerbung } from './umfaerbung.js';
 import { Kleidfarbmischung } from './kleidfarbmischung.js';
 import { Stoffwerte } from './stoffwerte.js';
@@ -195,6 +196,7 @@ export class Genesis9kleidung {
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
             netz.userData.ersetzt = daten.ersetzt || [];    // Teile der Figur, die das Stück ersetzt (Originalaugen)
             netz.userData.hautTiefe = (daten.hautTiefeMm || 0) / 1000;   // so tief hinter der Haut es sie noch verdeckt (Scham aus der .blend), m; 0 = Vorgabe
+            Bauart.eintragen(netz, daten);                               // starr | anliegend | lose und wie tief die Haut darunter nachgibt (12.11.2026)
             if (Kleidersichtbarkeit.istKoerperteil(netz)) netz.visible = true;       // die Scham ist keine Kleidung: „Kleider aus" gilt für sie nicht
             netz.userData.hautLoch = daten.hautLoch?.dreiecke?.length ? daten.hautLoch : null;   // verschweißt: die Haut-Dreiecke, die entfallen (`stueckloch.js`)
             // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;

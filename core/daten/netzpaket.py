@@ -46,6 +46,7 @@ Rauschen — der Fehler wäre dann in der Geometrie zu suchen und nicht in der
 Antwort.
 """
 import json
+import re
 import struct
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -99,7 +100,8 @@ class Netzpaket:
         if versatz is None:
             versatz = [0]
         if isinstance(wert, Netzfeld):
-            gekuerzt = Netzkurz.packen(wert.rohdaten, wert.anzahl) if kurz and wert.typ == 'float32' else None
+            # Ein Feld mit `genau` trägt Nummern (Körperpunkte der Bindung, Knochen) und bleibt float32 (`netzkurz.py`, 12.11.2026).
+            gekuerzt = Netzkurz.packen(wert.rohdaten, wert.anzahl) if kurz and wert.typ == 'float32' and not wert.genau else None
             if gekuerzt:
                 wert = Netzfeld(gekuerzt[0], 'float32', wert.anzahl)     # die Bytes sind uint16, gelesen wird float32 (`kurz` in der Marke)
             marke = {'typ': wert.typ, 'pos': versatz[0],
@@ -114,6 +116,20 @@ class Netzpaket:
         if isinstance(wert, (list, tuple)):
             return [cls._ersetzen(v, felder, versatz, kurz) for v in wert]
         return wert
+
+    #: Der Kopf eines Pakets, in dem `bindung.dreieck` auf 16 Bit gekürzt reist: so sehen Antworten aus, die zwischen dem 19.10. und dem 12.11.2026 gepackt
+    #: wurden (`netzkurz.py`, „Nummern werden nie gekürzt“). In der Marke stehen vor `kurz` keine Klammern, der Kopf ist ohne Leerzeichen geschrieben.
+    _NUMMERN_GEKUERZT = re.compile(rb'"dreieck":\{"' + MARKE.encode('ascii') + rb'":\{[^{}]*"kurz"')
+
+    @classmethod
+    def nummern_gekuerzt(cls, roh):
+        u"""Trägt dieses Paket ein gekürztes Nummernfeld der Oberflächenbindung? Dann treffen seine Körperpunkt-Nummern im Browser andere Punkte, es darf
+        nicht mehr ausgeliefert werden (`G9vorratanfrage.holen`: der dauerhafte Vorrat hält Antworten über Code-Änderungen hinweg). Gelesen wird nur der
+        Kopf; JSON-Antworten und fremde Bytes sind nie betroffen (dort reisen die Nummern als base64 ungekürzt)."""
+        if not isinstance(roh, (bytes, bytearray)) or len(roh) < 8 or bytes(roh[:4]) != cls.MAGIE:
+            return False
+        (kopflaenge,) = struct.unpack('<I', roh[4:8])
+        return cls._NUMMERN_GEKUERZT.search(roh, 8, 8 + kopflaenge) is not None
 
     # ----------------------------------------------------------- Gegenprobe
 

@@ -15,7 +15,8 @@ Farbe muss also an die Karten, nicht in die Textur.
   zum Median des ganzen Haars → `{zone: Verhältnis (3,)}`; daraus macht `IterationHaare` die Zonenfarben
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Haarzonen']
 
@@ -33,14 +34,14 @@ class Haarzonen:
 
     @classmethod
     def zonen(cls, punkte, dreiecke):
-        punkte = np.asarray(punkte, dtype=np.float64)
-        mitte_d = punkte[np.asarray(dreiecke, dtype=np.int64)].mean(axis=1)
-        lo, hi = punkte.min(axis=0), punkte.max(axis=0)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        mitte_d = punkte[Torchfeld.feld(dreiecke, dtype=torch.int64)].mean(axis=1)
+        lo, hi = Torchfeld.amin(punkte, dim=0), Torchfeld.amax(punkte, dim=0)
         mitte = (lo + hi) / 2.0
         mitte[1] = hi[1] - 0.6 * (hi[1] - lo[1])                    # Kopfmitte unter dem Scheitel
         d = mitte_d - mitte
-        d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
-        zone = np.full(len(d), cls.ZONEN.index('seite'))
+        d /= Torchfeld.maximum(Torchfeld.linalg_norm(d, dim=1, keepdim=True), 1e-9)
+        zone = Torchfeld.full(len(d), cls.ZONEN.index('seite'))
         zone[d[:, 2] > cls.TIEFE] = cls.ZONEN.index('vorn')
         zone[d[:, 2] < -cls.TIEFE] = cls.ZONEN.index('hinten')
         zone[d[:, 1] > cls.OBEN] = cls.ZONEN.index('oben')
@@ -49,7 +50,7 @@ class Haarzonen:
     @staticmethod
     def _hex(text):
         roh = str(text or '').lstrip('#')
-        return np.array([int(roh[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]) if len(roh) == 6 else None
+        return Torchfeld.feld([int(roh[i:i + 2], 16) / 255.0 for i in (0, 2, 4)], copy=True) if len(roh) == 6 else None
 
     @classmethod
     def faktoren(cls, farben):
@@ -61,7 +62,7 @@ class Haarzonen:
         for zone in cls.ZONEN:
             f = cls._hex((farben or {}).get(cls.PRAEFIX + zone))
             if f is not None:
-                aus[zone] = np.clip(f / np.maximum(grund, 1e-3), *cls.VERHAELTNIS)
+                aus[zone] = Torchfeld.clip(f / Torchfeld.maximum(grund, 1e-3), *cls.VERHAELTNIS)
         return aus
 
     @classmethod
@@ -77,7 +78,7 @@ class Haarzonen:
             for g in t.get('gruppen') or []:
                 if any(n in str(g.get('name')).lower() for n in namen):
                     ab, anzahl = int(g['index_ab']) // 3, int(g['index_anzahl']) // 3
-                    d = np.asarray(t['dreiecke']).copy()
+                    d = Torchfeld.kopie(Torchfeld.feld(t['dreiecke']))
                     d[ab:ab + anzahl] = d[ab:ab + anzahl, :1]
                     t['dreiecke'] = d
         return teile
@@ -92,18 +93,18 @@ class Haarzonen:
             if t.get('art') != 'haar' or not t.get('textur') or any(o in str(t.get('sorte')) for o in cls.OHNE):
                 continue
             zone = cls.zonen(t['punkte'], t['dreiecke'])
-            dreiecke, textur = np.asarray(t['dreiecke']).copy(), []
+            dreiecke, textur = Torchfeld.kopie(Torchfeld.feld(t['dreiecke'])), []
             for eintrag in t['textur']:
                 ab, anzahl = int(eintrag['ab']), int(eintrag['anzahl'])
-                reihe = ab + np.argsort(zone[ab:ab + anzahl], kind='stable')
-                dreiecke[ab:ab + anzahl] = np.asarray(t['dreiecke'])[reihe]
+                reihe = ab + torch.argsort(zone[ab:ab + anzahl], stable=True)
+                dreiecke[ab:ab + anzahl] = Torchfeld.feld(t['dreiecke'])[reihe]
                 zonen_hier = zone[reihe]
-                for z in np.unique(zonen_hier):
-                    stueck = np.flatnonzero(zonen_hier == z)
+                for z in Torchfeld.liste(Torchfeld.unique(zonen_hier)):
+                    stueck = torch.flatten(zonen_hier == z).nonzero()[:, 0]
                     neu = dict(eintrag, ab=ab + int(stueck[0]), anzahl=len(stueck))
                     f = faktoren.get(cls.ZONEN[int(z)])
                     if f is not None and eintrag.get('faktor') is not None:
-                        neu['faktor'] = np.clip(np.asarray(eintrag['faktor']) * f, 0.0, 1.0)
+                        neu['faktor'] = Torchfeld.clip(Torchfeld.feld(eintrag['faktor']) * f, 0.0, 1.0)
                     textur.append(neu)
             t['dreiecke'], t['textur'] = dreiecke, textur
         return teile
@@ -117,22 +118,22 @@ class Haarzonen:
                 continue
             ruhe = t.get('ruhe', t)
             zone_d = cls.zonen(ruhe['punkte'], ruhe['dreiecke'])
-            punkte = np.asarray(t['punkte'], dtype=np.float64)
-            mitte = punkte[np.asarray(t['dreiecke'], dtype=np.int64)].mean(axis=1)
+            punkte = Torchfeld.feld(t['punkte'], dtype=torch.float64)
+            mitte = punkte[Torchfeld.feld(t['dreiecke'], dtype=torch.int64)].mean(axis=1)
             # Karten sind zweiseitig, ihre Flächennormale zeigt beliebig: „zugewandt" heißt hier vom Kopf weg
-            lo, hi = punkte.min(axis=0), punkte.max(axis=0)
-            kopf = np.array([(lo[0] + hi[0]) / 2, hi[1] - 0.6 * (hi[1] - lo[1]), (lo[2] + hi[2]) / 2])
+            lo, hi = Torchfeld.amin(punkte, dim=0), Torchfeld.amax(punkte, dim=0)
+            kopf = Torchfeld.feld([(lo[0] + hi[0]) / 2, hi[1] - 0.6 * (hi[1] - lo[1]), (lo[2] + hi[2]) / 2], copy=True)
             normale = mitte - kopf
-            normale /= np.maximum(np.linalg.norm(normale, axis=1, keepdims=True), 1e-12)
+            normale /= Torchfeld.maximum(Torchfeld.linalg_norm(normale, dim=1, keepdim=True), 1e-12)
             farbe, getroffen = projektion.farben(mitte, normale)
             if getroffen.sum() < 50:
                 continue
-            gesamt = np.median(farbe[getroffen], axis=0)
+            gesamt = Torchfeld.median(farbe[getroffen], axis=0)
             zonen = {}
             for i, name in enumerate(cls.ZONEN):
                 wahl = getroffen & (zone_d == i)
                 if wahl.sum() >= 30:
-                    verhaeltnis = np.median(farbe[wahl], axis=0) / np.maximum(gesamt, 1e-3)
+                    verhaeltnis = Torchfeld.median(farbe[wahl], axis=0) / Torchfeld.maximum(gesamt, 1e-3)
                     zonen[name] = [round(float(v), 4) for v in verhaeltnis]
             if zonen:
                 aus[str(t.get('sorte'))] = zonen

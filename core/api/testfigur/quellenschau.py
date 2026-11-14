@@ -16,7 +16,8 @@ import json
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 
 from .testkern import Testkern
 
@@ -89,7 +90,7 @@ class Quellenschau:
             if not name.endswith('.npy'):
                 continue
             pfad = os.path.join(ordner, name)
-            eintrag = {'name': name[:-4], 'file': name, 'size_bytes': os.path.getsize(pfad)}
+            eintrag = {'name': name[:-4], 'file': name, 'size_bytes': Npztorch.stat(pfad).st_size}
             eintrag.update(self._feldform(pfad))
             aus.append(eintrag)
         return aus
@@ -97,9 +98,9 @@ class Quellenschau:
     def geschlechtsdelta(self):
         """Das Delta zwischen den Geschlechtern — eine einzelne Datei."""
         pfad = Testkern.datei('morphs', 'gender_male.npy')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return None
-        eintrag = {'file': 'gender_male.npy', 'size_bytes': os.path.getsize(pfad)}
+        eintrag = {'file': 'gender_male.npy', 'size_bytes': Npztorch.stat(pfad).st_size}
         eintrag.update(self._feldform(pfad))
         return eintrag
 
@@ -107,7 +108,7 @@ class Quellenschau:
     def _feldform(pfad):
         """Form und Typ eines `.npy` — oder der Grund, warum nicht."""
         try:
-            feld = np.load(pfad)
+            feld = Npztorch.lesen(pfad)
         # stumm gewollt: Der Fehlertext IST das Ergebnis dieser Seite.
         except (OSError, ValueError) as e:
             return {'error': str(e)}
@@ -125,9 +126,9 @@ class Quellenschau:
         return aus
 
     def _paket(self, pfad, name):
-        eintrag = {'file': name, 'size_bytes': os.path.getsize(pfad)}
+        eintrag = {'file': name, 'size_bytes': Npztorch.stat(pfad).st_size}
         try:
-            with np.load(pfad) as paket:
+            with Npztorch.lesen(pfad) as paket:
                 namen = [n.decode('utf-8') for n in bytes(paket['names']).split(b'\0')]
         # stumm gewollt: Der Fehlertext IST das Ergebnis dieser Seite.
         except (OSError, ValueError, KeyError) as e:
@@ -146,8 +147,8 @@ class Quellenschau:
         aus = []
         for name in sorted(os.listdir(ordner)):
             pfad = os.path.join(ordner, name)
-            if os.path.isfile(pfad):
-                aus.append({'name': name, 'size_bytes': os.path.getsize(pfad)})
+            if Npztorch.da(pfad):
+                aus.append({'name': name, 'size_bytes': Npztorch.stat(pfad).st_size})
         return aus
 
     # ------------------------------------------------------------ Fassungsinfo
@@ -156,7 +157,7 @@ class Quellenschau:
     def fassung():
         """`commit_info.json` der geladenen Fassung — oder None."""
         pfad = os.path.join(Testkern.WURZEL, 'commit_info.json')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return None
         with open(pfad, encoding='utf-8') as f:
             return json.load(f)

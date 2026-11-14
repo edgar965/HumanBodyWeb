@@ -30,7 +30,9 @@ import json
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .bildmodellanpassung import Bildmodellanpassung
 from .bildmodelloptionen import Bildmodelloptionen
@@ -65,27 +67,24 @@ class Bildmodellzielnetz3d:
         """`(punkte, gewicht, gelenke)` nach dem Umriss — aus der Ablage, sonst gerechnet und abgelegt."""
         stand = self.stand()
         pfad = self.ablage.ergebnis() / self.DATEI
-        if pfad.is_file():
-            with np.load(pfad) as d:
+        if Npztorch.da(pfad):
+            with Npztorch.lesen(pfad) as d:
                 if str(d['stand']) == stand:
                     gelenke = {str(n): d['gelenke'][i] for i, n in enumerate(d['gelenknamen'])}
-                    return d['punkte'].astype(float), d['gewicht'].astype(float), gelenke
+                    return Torchfeld.astype(d['punkte'], torch.float64), Torchfeld.astype(d['gewicht'], torch.float64), gelenke
         t = time.perf_counter()
         punkte, gewicht, gelenke = self.anpassung._ziel_laden(roh=True)
         punkte, gelenke, _ = Bildmodellumriss(self.job, self.optionen).formen(punkte, gelenke)
-        punkte = self._ungepaarte_fuellen(np.asarray(punkte, float), gewicht)
-        np.savez_compressed(
-            pfad, stand=stand, punkte=punkte.astype(np.float32), gewicht=np.asarray(gewicht, np.float32),
-            gelenknamen=np.array(list(gelenke)), gelenke=np.array([gelenke[k] for k in gelenke], np.float32),
-        )
+        punkte = self._ungepaarte_fuellen(Torchfeld.feld(punkte, dtype=torch.float64), gewicht)
+        Npztorch.speichern(pfad, stand=stand, punkte=Torchfeld.astype(punkte, torch.float32), gewicht=Torchfeld.feld(gewicht, dtype=torch.float32), gelenknamen=Torchfeld.feld(list(gelenke), copy=True), gelenke=Torchfeld.feld([gelenke[k] for k in gelenke], dtype=torch.float32, copy=True), komprimiert=True)
         logger.info('Bildmodell %s: Grundlage fürs 3D-Popup abgelegt (%.1f s)', self.job.kennung,
                     time.perf_counter() - t)
-        return punkte, np.asarray(gewicht, float), gelenke
+        return punkte, Torchfeld.feld(gewicht, dtype=torch.float64), gelenke
 
     def _ungepaarte_fuellen(self, punkte, gewicht):
         """Punkte ohne Paarung (Gewicht 0) aus dem Modell des Ergebnisses — wenn es eines gibt."""
         stellung = self.anpassung.stellung()
-        ok = np.asarray(gewicht) > 0
+        ok = Torchfeld.feld(gewicht) > 0
         if ok.all() or not stellung:
             return punkte
         from .bildmodellproportionen import Bildmodellproportionen
@@ -93,7 +92,7 @@ class Bildmodellzielnetz3d:
         modell, _ = Bildmodellproportionen(self.job, self.ablage, stellung, None).modell()
         if len(modell) != len(punkte):
             return punkte
-        return np.where(ok[:, None], punkte, modell)
+        return torch.where(ok[:, None], punkte, modell)
 
     # ------------------------------------------------------------- Formen
 
@@ -111,7 +110,7 @@ class Bildmodellzielnetz3d:
         aus = {k: {n: (round(b[n] * 100, 1) if b.get(n) is not None else None)
                    for n in ('vorher', 'ziel', 'nachher')}
                for k, b in bericht.items()}
-        return np.asarray(p, float), aus
+        return Torchfeld.feld(p, dtype=torch.float64), aus
 
     def antwort(self, proportionen, mit_netz=False):
         """Die Antwort des Endpunkts — Punkte als base64, mit `mit_netz` auch Dreiecke und Gewicht."""
@@ -119,7 +118,7 @@ class Bildmodellzielnetz3d:
         punkte, bericht = self.formen(proportionen)
         aus = {
             'ok': True,
-            'punkte': self._b64(punkte, np.float32),
+            'punkte': self._b64(punkte, torch.float32),
             'anzahl': int(len(punkte)),
             'hoehe_cm': round(float(punkte[:, 1].max() - punkte[:, 1].min()) * 100, 1),
             'bericht': bericht,
@@ -128,11 +127,11 @@ class Bildmodellzielnetz3d:
             from Genesis9.basisnetz import G9basisnetz
 
             q = G9basisnetz.holen().vierecke
-            aus['dreiecke'] = self._b64(np.concatenate([q[:, [0, 1, 2]], q[:, [0, 2, 3]]]), np.uint32)
-            aus['gewicht'] = self._b64(self.grundlage()[1], np.float32)
+            aus['dreiecke'] = self._b64(Torchfeld.cat([q[:, [0, 1, 2]], q[:, [0, 2, 3]]]), torch.uint32)
+            aus['gewicht'] = self._b64(self.grundlage()[1], torch.float32)
         aus['dauer_ms'] = round((time.perf_counter() - t) * 1000)
         return aus
 
     @staticmethod
     def _b64(feld, art):
-        return base64.b64encode(np.ascontiguousarray(feld, dtype=art).tobytes()).decode('ascii')
+        return base64.b64encode(Torchfeld.als_bytes(Torchfeld.feld(feld, dtype=art))).decode('ascii')

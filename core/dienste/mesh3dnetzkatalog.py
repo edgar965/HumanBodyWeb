@@ -19,7 +19,9 @@ import os
 import threading
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .mesh3dnetzdreieck import Mesh3dnetzdreieck
 
@@ -50,7 +52,7 @@ class Mesh3dnetzkatalog:
         self.mitte = mitte
         #: (F,) int32 Nummer des Teils je Fläche; 0 = der größte.
         self.insel = insel
-        self.groessen = np.bincount(insel).astype(np.int64)
+        self.groessen = Torchfeld.astype(Torchfeld.bincount(insel), torch.int64)
         self.stempel = stempel
         self._baum = None
         #: Punkte (float32) und Flächen (int32) der Datei und der größte Abstand einer Ecke zur Mitte ihrer Fläche — `dreiecke` liest sie erst, wenn ein Klick die Dreiecke braucht.
@@ -91,11 +93,11 @@ class Mesh3dnetzkatalog:
 
     def naechste_flaeche(self, punkt):
         """Nummer der Fläche, deren Mitte dem Punkt am nächsten liegt."""
-        return int(self._mittenbaum().query(np.asarray(punkt, dtype=np.float64))[1])
+        return int(self._mittenbaum().query(Torchfeld.feld(punkt, dtype=torch.float64))[1])
 
     def _mittenbaum(self):
         if self._baum is None:
-            from scipy.spatial import cKDTree
+            from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
             self._baum = cKDTree(self.mitte)
         return self._baum
@@ -106,11 +108,11 @@ class Mesh3dnetzkatalog:
             return None
         if self._eck is None:
             punkte, flaechen = self.geometrie(self.pfad)
-            eck = punkte.astype(np.float32), flaechen.astype(np.int32)
-            self._flaechenradius = float(np.linalg.norm(eck[0][eck[1]] - self.mitte[:, None, :], axis=2).max())
+            eck = Torchfeld.astype(punkte, torch.float32), Torchfeld.astype(flaechen, torch.int32)
+            self._flaechenradius = float(Torchfeld.linalg_norm(eck[0][eck[1]] - self.mitte[:, None, :], dim=2).max())
             self._eck = eck
         punkte, flaechen = self._eck
-        return punkte[flaechen[np.asarray(nummern, dtype=np.int64)]].astype(np.float64)
+        return Torchfeld.astype(punkte[flaechen[Torchfeld.feld(nummern, dtype=torch.int64)]], torch.float64)
 
     def abstand_zu_flaechen(self, punkt, nummern):
         """(N,) Abstand des Punkts zu den DREIECKEN `nummern` (nicht zu ihren Mitten: ein Flügel mit 0,4 m langen Kanten hat die Mitte 4 cm neben dem Klick, der Klick liegt auf ihm); `None` ohne Datei."""
@@ -120,15 +122,15 @@ class Mesh3dnetzkatalog:
     def naechste_flaeche_genau(self, punkt):
         """Nummer der Fläche, auf der der Punkt liegt (oder die ihm am nächsten ist), gemessen am Dreieck. Kandidaten sind alle Flächen, deren Mitte höchstens so weit entfernt ist wie das größte Dreieck des Netzes reicht
         (`KANDIDATEN_MAX` nächste Mitten, `RADIUS_MAX` Szeneneinheiten); ohne Datei oder ohne Kandidaten gilt die nächste Mitte."""
-        p = np.asarray(punkt, dtype=np.float64)
+        p = Torchfeld.feld(punkt, dtype=torch.float64)
         if self.dreiecke([0]) is None:
             return self.naechste_flaeche(p)
         baum = self._mittenbaum()
-        kandidaten = np.asarray(baum.query_ball_point(p, min(self._flaechenradius, self.RADIUS_MAX)), dtype=np.int64)
+        kandidaten = Torchfeld.feld(baum.query_ball_point(p, min(self._flaechenradius, self.RADIUS_MAX)), dtype=torch.int64)
         if len(kandidaten) == 0:
             return self.naechste_flaeche(p)
         if len(kandidaten) > self.KANDIDATEN_MAX:
-            kandidaten = kandidaten[np.argsort(np.linalg.norm(self.mitte[kandidaten] - p, axis=1))[:self.KANDIDATEN_MAX]]
+            kandidaten = kandidaten[torch.argsort(Torchfeld.linalg_norm(self.mitte[kandidaten] - p, dim=1), stable=True)[:self.KANDIDATEN_MAX]]
         return int(kandidaten[int(Mesh3dnetzdreieck.abstand(p, self.dreiecke(kandidaten)).argmin())])
 
     def farben_lab(self):
@@ -153,22 +155,22 @@ class Mesh3dnetzkatalog:
             ecken = getattr(visuell, 'vertex_colors', None) if getattr(visuell, 'kind', None) == 'vertex' else None
             if ecken is None or len(ecken) != len(netz.vertices):
                 raise ValueError('Das Netz hat weder Farbtextur noch Vertexfarben — die Auswahl nach Farbe braucht eine von beiden')
-            return np.asarray(ecken, dtype=np.float32)[np.asarray(netz.faces)][:, :, :3].mean(axis=1)
-        pixel = np.asarray(bild.convert('RGB'))
+            return Torchfeld.feld(ecken, dtype=torch.float32)[Torchfeld.feld(netz.faces)][:, :, :3].mean(axis=1)
+        pixel = Torchfeld.feld(bild.convert('RGB'))
         h, b = pixel.shape[:2]
-        uvm = np.asarray(uv)[np.asarray(netz.faces)].mean(axis=1)
-        x = np.clip((uvm[:, 0] * (b - 1)).astype(np.int64), 0, b - 1)
-        y = np.clip(((1.0 - uvm[:, 1]) * (h - 1)).astype(np.int64), 0, h - 1)
-        return pixel[y, x].astype(np.float32)
+        uvm = Torchfeld.feld(uv)[Torchfeld.feld(netz.faces)].mean(axis=1)
+        x = Torchfeld.clip(Torchfeld.astype(uvm[:, 0] * (b - 1), torch.int64), 0, b - 1)
+        y = Torchfeld.clip(Torchfeld.astype((1.0 - uvm[:, 1]) * (h - 1), torch.int64), 0, h - 1)
+        return Torchfeld.astype(pixel[y, x], torch.float32)
 
     @staticmethod
     def lab_von(rgb):
         """sRGB (0…255) → CIE-Lab (D65), für den Farbabstand ΔE."""
-        c = np.asarray(rgb, dtype=np.float64) / 255.0
-        lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-        xyz = lin @ np.array([[0.4124, 0.2126, 0.0193], [0.3576, 0.7152, 0.1192], [0.1805, 0.0722, 0.9505]]) / np.array([0.95047, 1.0, 1.08883])
-        f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16.0 / 116.0)
-        return np.stack([116.0 * f[:, 1] - 16.0, 500.0 * (f[:, 0] - f[:, 1]), 200.0 * (f[:, 1] - f[:, 2])], axis=1).astype(np.float32)
+        c = Torchfeld.feld(rgb, dtype=torch.float64) / 255.0
+        lin = torch.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+        xyz = lin @ Torchfeld.feld([[0.4124, 0.2126, 0.0193], [0.3576, 0.7152, 0.1192], [0.1805, 0.0722, 0.9505]], copy=True) / Torchfeld.feld([0.95047, 1.0, 1.08883], copy=True)
+        f = torch.where(xyz > 0.008856, Torchfeld.cbrt(xyz), 7.787 * xyz + 16.0 / 116.0)
+        return Torchfeld.astype(Torchfeld.stack([116.0 * f[:, 1] - 16.0, 500.0 * (f[:, 0] - f[:, 1]), 200.0 * (f[:, 1] - f[:, 2])], axis=1), torch.float32)
 
     # ------------------------------------------------------------------ Ablage
 
@@ -179,10 +181,10 @@ class Mesh3dnetzkatalog:
     @classmethod
     def _lesen(cls, ablage, stempel):
         datei = cls._ablagedatei(ablage)
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
         try:
-            with np.load(datei) as d:
+            with Npztorch.lesen(datei) as d:
                 if list(d['stempel']) != stempel:
                     return None
                 return cls(len(d['insel']), d['mitte'], d['insel'], stempel)
@@ -195,9 +197,8 @@ class Mesh3dnetzkatalog:
         datei = cls._ablagedatei(ablage)
         datei.parent.mkdir(parents=True, exist_ok=True)
         teil = Path(str(datei) + '.teil')
-        with open(teil, 'wb') as f:
-            np.savez(f, stempel=np.asarray(katalog.stempel, dtype=np.int64), mitte=katalog.mitte, insel=katalog.insel)
-        os.replace(teil, datei)
+        Npztorch.speichern(teil, stempel=Torchfeld.feld(katalog.stempel, dtype=torch.int64), mitte=katalog.mitte, insel=katalog.insel, komprimiert=False)
+        Npztorch.ersetzen(teil, datei)
 
     # ------------------------------------------------------------------ Rechnen
 
@@ -205,7 +206,7 @@ class Mesh3dnetzkatalog:
     def _rechnen(cls, ablage, pfad, stempel):
         punkte, flaechen = cls.geometrie(pfad)
         insel = cls.teile(punkte, flaechen)
-        katalog = cls(len(flaechen), punkte[flaechen].mean(axis=1).astype(np.float32), insel, stempel)
+        katalog = cls(len(flaechen), Torchfeld.astype(punkte[flaechen].mean(axis=1), torch.float32), insel, stempel)
         cls._schreiben(ablage, katalog)
         logger.info('Mesh-3D %s: Netzkatalog %d Flächen, %d Teile', ablage.kennung, katalog.flaechen, len(katalog.groessen))
         return katalog
@@ -221,27 +222,27 @@ class Mesh3dnetzkatalog:
         netz = szene.to_geometry() if hasattr(szene, 'to_geometry') else szene.dump(concatenate=True)
         if not isinstance(netz, trimesh.Trimesh) or len(netz.faces) == 0:
             raise ValueError('Kein Dreiecksnetz in %s' % Path(pfad).name)
-        return np.asarray(netz.vertices, dtype=np.float64), np.asarray(netz.faces, dtype=np.int64)
+        return Torchfeld.feld(netz.vertices, dtype=torch.float64), Torchfeld.feld(netz.faces, dtype=torch.int64)
 
     @classmethod
     def teile(cls, punkte, flaechen):
         """Teil je Fläche (0 = der größte): Flächen, die eine Kante teilen, gehören zusammen; Punkte gleicher Lage (UV-Nähte) zählen als einer."""
-        from scipy.sparse import coo_matrix
-        from scipy.sparse.csgraph import connected_components
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        from KoerperKI_alle.kartengraph import connected_components
 
         anzahl = len(flaechen)
-        diagonale = float(np.linalg.norm(punkte.max(axis=0) - punkte.min(axis=0))) or 1.0
-        schluessel = np.round(punkte / (diagonale * cls.RUNDEN)).astype(np.int64)
-        _, neu = np.unique(schluessel, axis=0, return_inverse=True)
+        diagonale = float(Torchfeld.linalg_norm(Torchfeld.amax(punkte, dim=0) - Torchfeld.amin(punkte, dim=0))) or 1.0
+        schluessel = Torchfeld.astype(Torchfeld.round(punkte / (diagonale * cls.RUNDEN)), torch.int64)
+        _, neu = Torchfeld.unique(schluessel, axis=0, return_inverse=True)
         f = neu.reshape(-1)[flaechen]
-        kanten = np.sort(np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]]), axis=1)
-        je_kante = np.tile(np.arange(anzahl), 3)
-        ordnung = np.lexsort((kanten[:, 1], kanten[:, 0]))
+        kanten = torch.sort(Torchfeld.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]]), dim=1, stable=True).values
+        je_kante = torch.tile(Torchfeld.arange(anzahl), (3,))
+        ordnung = Torchfeld.lexsort((kanten[:, 1], kanten[:, 0]))
         k, fl = kanten[ordnung], je_kante[ordnung]
         gleich = (k[1:] == k[:-1]).all(axis=1)
-        graph = coo_matrix((np.ones(int(gleich.sum())), (fl[:-1][gleich], fl[1:][gleich])), shape=(anzahl, anzahl))
+        graph = coo_matrix((torch.ones(int(gleich.sum()), dtype=torch.float64, device='cuda'), (fl[:-1][gleich], fl[1:][gleich])), shape=(anzahl, anzahl))
         _, marke = connected_components(graph, directed=False)
-        reihenfolge = np.argsort(-np.bincount(marke), kind='stable')
-        neue_nummer = np.empty(len(reihenfolge), dtype=np.int32)
-        neue_nummer[reihenfolge] = np.arange(len(reihenfolge), dtype=np.int32)
+        reihenfolge = torch.argsort(-Torchfeld.bincount(marke), stable=True)
+        neue_nummer = torch.empty(len(reihenfolge), dtype=torch.int32, device='cuda')
+        neue_nummer[reihenfolge] = torch.arange(len(reihenfolge), dtype=torch.int32, device='cuda')
         return neue_nummer[marke]

@@ -14,7 +14,8 @@ erbt). Auf die GPU verlegt sind die beiden Schritte, die dort Minuten brauchten:
     umfeld.fuellen(kachel, farbe, leer)                          # wie `Blendimportumfeld.fuellen`
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 from ..blendimportumfeld import Blendimportumfeld
@@ -136,12 +137,12 @@ class Hautnachumfeld(Blendimportumfeld):
         g = self.geraet
         hoehe, breite = leer.shape
         uv = self.figur['uv'][self.figur['dreiecke'][dreiecke]]                    # (T, 3, 2)
-        px = np.stack([uv[..., 0] * breite, (1.0 - uv[..., 1]) * hoehe], axis=-1).reshape(len(dreiecke), 6)
-        a_px = wp.array(np.ascontiguousarray(px, dtype=np.float64), dtype=wp.float64, device=g)
+        px = Torchfeld.stack([uv[..., 0] * breite, (1.0 - uv[..., 1]) * hoehe], axis=-1).reshape(len(dreiecke), 6)
+        a_px = wp.array(Torchfeld.feld(px, dtype=torch.float64), dtype=wp.float64, device=g)
         innen = wp.full((hoehe, breite), -1, dtype=wp.int32, device=g)
         zugabe = wp.full((hoehe, breite), KEINE, dtype=wp.int32, device=g)
         wp.launch(_rastern, dim=len(dreiecke), inputs=[a_px, wp.float64(self.RAND), innen, zugabe], device=g)
-        a_leer = wp.array(np.ascontiguousarray(leer.astype(np.uint8)), dtype=wp.uint8, device=g)
+        a_leer = wp.array(Torchfeld.feld(Torchfeld.astype(leer, torch.uint8)), dtype=wp.uint8, device=g)
         summe = wp.zeros(1, dtype=wp.int32, device=g)
         wp.launch(_zaehlen, dim=(hoehe, breite), inputs=[innen, zugabe, a_leer, KEINE, summe], device=g)
         n = int(summe.numpy()[0])
@@ -149,8 +150,8 @@ class Hautnachumfeld(Blendimportumfeld):
         lam = wp.zeros((max(n, 1), 3), dtype=wp.float64, device=g)
         zaehler = wp.zeros(1, dtype=wp.int32, device=g)
         wp.launch(_sammeln, dim=(hoehe, breite), inputs=[a_px, innen, zugabe, a_leer, KEINE, zaehler, zeile, spalte, eigner, lam], device=g)
-        z, s, e, lm = zeile.numpy()[:n].astype(np.int64), spalte.numpy()[:n].astype(np.int64), eigner.numpy()[:n].astype(np.int64), lam.numpy()[:n]
-        ordnung = np.lexsort((s, z))                                                # Zeile, dann Spalte — wie `np.nonzero` der CPU-Fassung
+        z, s, e, lm = Torchfeld.astype(zeile.numpy()[:n], torch.int64), Torchfeld.astype(spalte.numpy()[:n], torch.int64), Torchfeld.astype(eigner.numpy()[:n], torch.int64), lam.numpy()[:n]
+        ordnung = Torchfeld.lexsort((s, z))                                                # Zeile, dann Spalte — wie `np.nonzero` der CPU-Fassung
         return z[ordnung], s[ordnung], e[ordnung], lm[ordnung]
 
     def original_farbe(self, orte):
@@ -158,14 +159,14 @@ class Hautnachumfeld(Blendimportumfeld):
         g = self.geraet
         o = self.original
         if self._mesh is None:
-            self._mesh = (wp.Mesh(points=wp.array(np.ascontiguousarray(o['punkte'], dtype=np.float32), dtype=wp.vec3, device=g),
-                                  indices=wp.array(np.ascontiguousarray(o['dreiecke'], dtype=np.int32).reshape(-1), dtype=wp.int32, device=g)),
-                          wp.array(np.ascontiguousarray(o['uv_ecken'], dtype=np.float32).reshape(-1, 2), dtype=wp.vec2, device=g),
-                          wp.array(np.ascontiguousarray(self.farbbild), dtype=wp.uint8, device=g))
+            self._mesh = (wp.Mesh(points=wp.array(Torchfeld.feld(o['punkte'], dtype=torch.float32), dtype=wp.vec3, device=g),
+                                  indices=wp.array(Torchfeld.feld(o['dreiecke'], dtype=torch.int32).reshape(-1), dtype=wp.int32, device=g)),
+                          wp.array(Torchfeld.feld(o['uv_ecken'], dtype=torch.float32).reshape(-1, 2), dtype=wp.vec2, device=g),
+                          wp.array(Torchfeld.feld(self.farbbild), dtype=wp.uint8, device=g))
         mesh, uv_ecken, bild = self._mesh
         n = len(orte)
         farbe = wp.zeros(max(n, 1), dtype=wp.vec3, device=g)
         gefunden = wp.zeros(max(n, 1), dtype=wp.int32, device=g)
-        wp.launch(_naechster, dim=n, inputs=[mesh.id, wp.array(np.ascontiguousarray(orte, dtype=np.float32), dtype=wp.vec3, device=g), uv_ecken, bild, float(self.ABSTAND_MAX_M),
+        wp.launch(_naechster, dim=n, inputs=[mesh.id, wp.array(Torchfeld.feld(orte, dtype=torch.float32), dtype=wp.vec3, device=g), uv_ecken, bild, float(self.ABSTAND_MAX_M),
                                               farbe, gefunden], device=g)
-        return farbe.numpy()[:n].astype(np.float64), gefunden.numpy()[:n].astype(bool)
+        return Torchfeld.astype(farbe.numpy()[:n], torch.float64), Torchfeld.astype(gefunden.numpy()[:n], torch.bool)

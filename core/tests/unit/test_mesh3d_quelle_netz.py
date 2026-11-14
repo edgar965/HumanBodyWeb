@@ -31,6 +31,10 @@ from core.dienste.mesh3dkopie import Mesh3dkopie
 from core.dienste.mesh3dquellwechsel import Mesh3dquellwechsel
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 WEB = Path(__file__).resolve().parents[3]
 QUELLE = '2026.10.14.10.00.00'
@@ -117,7 +121,7 @@ class WechselTest(_Wurzel):
             (arbeit / ordner / 'datei.bin').write_bytes(b'x')
         wechsel._altes_netz_wegraeumen()
         self.assertFalse((arbeit / 'koerper.glb').exists())
-        self.assertFalse((arbeit / 'koerper.glb.scan.npz').exists())
+        self.assertFalse(Npztorch.da(arbeit / 'koerper.glb.scan.npz'))
         self.assertFalse((arbeit / 'ansicht').exists())
         self.assertFalse((arbeit / 'netzbearbeitung').exists())
         self.assertTrue((arbeit / 'pose' / 'datei.bin').exists(), 'was nicht zum Netz gehört, bleibt')

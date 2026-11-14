@@ -17,6 +17,10 @@ from core.dienste.engine2d3dkleiderauftragsablagen import Engine2d3dKleiderauftr
 from core.dienste.iterationsarchiv import Iterationsarchiv
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class _Ablage:
@@ -110,8 +114,8 @@ class AblagenTest(SimpleTestCase):
             self.assertEqual(neu, {'kuerzel': self.NEU, 'n': 3})                  # Text umgesetzt
             alt = json.loads((tex / ('g9_base_shirt__foto_%s_f1.json' % self.ALT)).read_text(encoding='utf-8'))
             self.assertEqual(alt['kuerzel'], self.ALT)                            # die Quelle bleibt
-            self.assertTrue((morph / ('g9_base_shirt__netz_b1s4_%s_f1.npz' % self.NEU)).is_file())
-            self.assertTrue((koerper / ('ort_rumpftiefe_%s.npz' % self.NEU)).is_file())
+            self.assertTrue(Npztorch.da(morph / ('g9_base_shirt__netz_b1s4_%s_f1.npz' % self.NEU)))
+            self.assertTrue(Npztorch.da(koerper / ('ort_rumpftiefe_%s.npz' % self.NEU)))
 
     def test_2_nichts_wird_ueberschrieben_und_zuruecknehmen_raeumt_nur_das_eigene(self):
         with Pruefablage.ordner('ablagen_') as wurzel:
@@ -124,8 +128,8 @@ class AblagenTest(SimpleTestCase):
             self.assertEqual(vorhanden.read_bytes(), b'ALT')
             self.assertEqual(a.schon_da, ['ort_a_%s.npz' % self.NEU])
             a.zuruecknehmen()
-            self.assertTrue(vorhanden.is_file())                                   # was schon da war, bleibt
-            self.assertFalse((koerper / ('ort_b_%s.npz' % self.NEU)).exists())
+            self.assertTrue(Npztorch.da(vorhanden))                                   # was schon da war, bleibt
+            self.assertFalse(Npztorch.da(koerper / ('ort_b_%s.npz' % self.NEU)))
 
     def test_3_das_kuerzel_gilt_nur_als_ganzes_wort(self):
         with Pruefablage.ordner('ablagen_') as wurzel:

@@ -9,7 +9,8 @@ ohne jeden HTTP-Bezug (Umbau 15.08.2026).
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.netzmasse import Netzmasse
 from ..daten.persongrenzen import Persongrenzen
@@ -205,7 +206,7 @@ class Fotoausrichtung:
         base_scale = min(scale_x, scale_y)
 
         # Posed projection bounding box (where the person actually is)
-        valid = ~np.isnan(posed_proj).any(axis=1)
+        valid = ~Torchfeld.isnan(posed_proj).any(axis=1)
         if valid.sum() < 10:
             return None
         px_min = posed_proj[valid, 0].min()
@@ -233,7 +234,7 @@ class Fotoausrichtung:
         Returns (N, 2) float32 array of pixel coordinates.
         """
         n = len(posed_verts)
-        proj = np.zeros((n, 2), dtype=np.float32)
+        proj = torch.zeros((n, 2), dtype=torch.float32, device='cuda')
 
         if cam_data.get('cam_trans'):
             # SMPLest-X: perspective projection in camera space
@@ -247,8 +248,8 @@ class Fotoausrichtung:
             cx = princpt_cfg[0] / input_shape[1] * bbox[2] + bbox[0]
             cy = princpt_cfg[1] / input_shape[0] * bbox[3] + bbox[1]
 
-            z = posed_verts[:, 2].copy()
-            z[np.abs(z) < 1e-6] = 1e-6
+            z = Torchfeld.kopie(posed_verts[:, 2])
+            z[Torchfeld.abs(z) < 1e-6] = 1e-6
             proj[:, 0] = fx * posed_verts[:, 0] / z + cx
             proj[:, 1] = fy * posed_verts[:, 1] / z + cy
 

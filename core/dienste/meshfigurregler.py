@@ -28,7 +28,9 @@ entstehen nur die Begleitdaten je Runde: aktueller Wert, Grundwert, Stufe, Grenz
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -174,7 +176,7 @@ class Meshfigurregler:
 
             faktor = min(self.spielraum, G9reglergrenzen.SPIELRAUM)
             plan = {r['name']: r for r in G9reglerableitung.regler(self.satz, teil=teil)}
-            g = np.array(a.grenzen, dtype=np.float64)
+            g = Torchfeld.feld(a.grenzen, dtype=torch.float64, copy=True)
             for i, v in enumerate(a.namen):
                 r = plan.get(a.paare[v][0])
                 # Nur die Körperbereiche (Stufe 3: Hals, Arme, Beine, Gesäß …) — Körpertypen und Charaktere auf 200 % wären ein anderer Körper, und das Tor soll genau das melden.
@@ -190,23 +192,23 @@ class Meshfigurregler:
         a = self.ableitung(teil)
         g = self.grenzen(teil)
         bereich = {r['name']: r.get('bereich') for r in G9reglerableitung.regler(self.satz, teil=teil)}
-        jetzt = np.array([float(stellung.get(a.paare[v][0], 0.0)) for v in a.namen])
-        grund = np.array([float(self.grund.get(a.paare[v][0], 0.0)) for v in a.namen])
-        stufen = np.array([self.stufe_fuer(v, bereich.get(a.paare[v][0]), teil) for v in a.namen], np.int64)
+        jetzt = Torchfeld.feld([float(stellung.get(a.paare[v][0], 0.0)) for v in a.namen], copy=True)
+        grund = Torchfeld.feld([float(self.grund.get(a.paare[v][0], 0.0)) for v in a.namen], copy=True)
+        stufen = Torchfeld.feld([self.stufe_fuer(v, bereich.get(a.paare[v][0]), teil) for v in a.namen], dtype=torch.int64, copy=True)
         return {
-            'quelle': np.array(str(G9reglerableitung.ablagepfad(self.satz, self.grund, teil))),
-            'namen': np.array(a.namen),
-            'jetzt': jetzt.astype(np.float32),
-            'grund': grund.astype(np.float32),
+            'quelle': Torchfeld.feld(str(G9reglerableitung.ablagepfad(self.satz, self.grund, teil)), copy=True),
+            'namen': Torchfeld.feld(a.namen, copy=True),
+            'jetzt': Torchfeld.astype(jetzt, torch.float32),
+            'grund': Torchfeld.astype(grund, torch.float32),
             'stufe': stufen,
-            'unten': (g[:, 0] - jetzt).astype(np.float32),
-            'oben': (g[:, 1] - jetzt).astype(np.float32),
+            'unten': Torchfeld.astype(g[:, 0] - jetzt, torch.float32),
+            'oben': Torchfeld.astype(g[:, 1] - jetzt, torch.float32),
         }
 
     def speichern(self, pfad, teil, stellung):
         daten = self.daten(teil, stellung)
-        np.savez(pfad, **daten)
-        return {int(s): int((daten['stufe'] == s).sum()) for s in np.unique(daten['stufe'])}
+        Npztorch.speichern(pfad, **daten, komprimiert=False)
+        return {int(s): int((daten['stufe'] == s).sum()) for s in Torchfeld.liste(Torchfeld.unique(daten['stufe']))}
 
     # ------------------------------------------------------------ Ergebnis
 
@@ -219,7 +221,7 @@ class Meshfigurregler:
         for i, v in enumerate(a.namen):
             if v not in werte:
                 continue
-            wert = float(np.clip(werte[v], g[i, 0], g[i, 1]))
+            wert = float(Torchfeld.clip(werte[v], g[i, 0], g[i, 1]))
             for r in a.paare[v]:
                 if abs(wert) < self.NULL_UNTER:
                     aus.pop(r, None)

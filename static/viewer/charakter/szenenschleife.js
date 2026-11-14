@@ -9,6 +9,7 @@ import { Genesis9zopfschwung } from './genesis9/genesis9zopfschwung.js';
 import { Genesis9stoffschwung } from './genesis9/genesis9stoffschwung.js';
 import { Umapythonstoffschwung } from './umapython/umapythonstoffschwung.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
+import { Genesis9glaettung } from '../gemeinsam/genesis9glaettung.js';
 import { Genesis9lipsync } from './genesis9/genesis9lipsync.js';
 import { Humanbodybindung } from '../gemeinsam/humanbodybindung.js';
 import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
@@ -110,6 +111,8 @@ export class Szenenschleife extends Zeichenschleife {
         // Gelenkkorrekturen (18.09.2026 abends): Daz' JCMs aus den Knochen-
         // winkeln dieses Bildes — nach dem Mischer, vor dem Weichgewebe.
         Genesis9gelenke.alle(state.characters.values());
+        // Glättung je Bild (12.11.2026): anliegender Stoff, wo die Häutung ihn aufreißt — nach den Gelenkkorrekturen, wie Daz' Smoothing Modifier.
+        Genesis9glaettung.takt(state.characters.values());
         // Lippensynchronisation (18.09.2026 abends): Visemes an der Zeit der Aktion.
         Genesis9lipsync.takt();
         this.aufDenBoden();

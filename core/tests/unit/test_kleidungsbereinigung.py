@@ -12,6 +12,10 @@ import numpy as np
 from Kleidung.kleidungsbereinigung import Kleidungsbereinigung
 
 from ._kleidungsgitter import _bau
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class LoecherTest(unittest.TestCase):
@@ -198,7 +202,7 @@ class HaarabzugTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp(prefix='haarabzug_', dir=Pruefablage.wurzel()))
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         if haar is not None:
-            np.savez(tmp / 'haar_maske.npz', haar=haar)
+            Npztorch.speichern(tmp / 'haar_maske.npz', haar=haar)
         return SimpleNamespace(arbeit=lambda name: tmp / name)
 
     @staticmethod

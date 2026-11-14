@@ -19,7 +19,8 @@ Ein Fehler hier hält die Runde nicht auf (Log); die Note hängt nicht an diesen
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image, ImageDraw
 
 from .iterationsbild import Iterationsbild
@@ -72,7 +73,7 @@ class Pruefbilder:
                 render.bild_kopf([(t['punkte'], t['dreiecke'], t['farbe'], Genesishaarrender.extra(t)) for t in teile],
                                  r.winkel, pfad, groesse=(k, k))
                 with Image.open(pfad) as bild:
-                    paare.append((r.winkel, foto, bild.convert('RGB').copy()))
+                    paare.append((r.winkel, foto, Torchfeld.kopie(bild.convert('RGB'))))
             except (OSError, ValueError, RuntimeError) as fehler:
                 logger.warning('Prüfbilder: Kopf %+d° nicht gebaut (%s)', round(r.winkel), fehler)
         if not paare:
@@ -103,18 +104,18 @@ class Pruefbilder:
         halb = 0.5 * render.KOPF_HOEHE * je_m
         mitte_y = y0 + render.KOPF_UNTER_SCHEITEL * je_m
         oben = maske[y0:int(y0 + 2 * render.KOPF_UNTER_SCHEITEL * je_m)]
-        spalten = np.flatnonzero(oben.sum(axis=0) > 0)
+        spalten = torch.flatten(oben.sum(axis=0) > 0).nonzero()[:, 0]
         if not len(spalten):
             raise ValueError('kein Kopf im Foto %s' % datei)
-        mitte_x = float(np.average(spalten, weights=oben.sum(axis=0)[spalten]))
-        grund = np.full_like(rgb, 255)
-        frei = np.where(maske[..., None], rgb, grund).astype(np.uint8)
+        mitte_x = float(Torchfeld.average(spalten, weights=oben.sum(axis=0)[spalten]))
+        grund = torch.full_like(rgb, 255)
+        frei = Torchfeld.astype(torch.where(maske[..., None], rgb, grund), torch.uint8)
         kasten = (mitte_x - halb, mitte_y - halb, mitte_x + halb, mitte_y + halb)
         bild = Image.fromarray(frei).transform((k, k), Image.EXTENT, kasten, resample=Image.BICUBIC,
                                                fillcolor=self.HINTERGRUND)
-        figur = Image.fromarray(maske.astype(np.uint8) * 255).transform((k, k), Image.EXTENT, kasten,
+        figur = Image.fromarray(Torchfeld.roh(Torchfeld.astype(maske, torch.uint8) * 255)).transform((k, k), Image.EXTENT, kasten,
                                                                         resample=Image.BILINEAR, fillcolor=0)
-        return np.asarray(bild.convert('RGB')), np.asarray(figur) > 127
+        return Torchfeld.feld(bild.convert('RGB')), Torchfeld.feld(figur) > 127
 
     def _foto(self, datei):
         """(rgb uint8, maske bool) in voller Auflösung — freigestellt aus „netz", sonst das Foto auf Weiß."""
@@ -122,8 +123,8 @@ class Pruefbilder:
         vorbereitet = self.ablage.unter(Engine2d3dKleiderablage.VORBEREITET) / (datei.rsplit('.', 1)[0] + '.png')
         if vorbereitet.is_file():
             with Image.open(vorbereitet) as bild:
-                rgba = np.asarray(bild.convert('RGBA'))
+                rgba = Torchfeld.feld(bild.convert('RGBA'))
             return rgba[..., :3], rgba[..., 3] > 127
         with Image.open(self.ablage.unter(Engine2d3dKleiderablage.EINGANG) / datei) as bild:
-            rgb = np.asarray(bild.convert('RGB'))
-        return rgb, (765 - rgb.astype(np.int32).sum(axis=2)) > Iterationsbild.WEISS_SCHWELLE
+            rgb = Torchfeld.feld(bild.convert('RGB'))
+        return rgb, (765 - Torchfeld.astype(rgb, torch.int32).sum(axis=2)) > Iterationsbild.WEISS_SCHWELLE

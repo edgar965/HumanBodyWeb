@@ -70,8 +70,8 @@ export class Saumband {
         return aus;
     }
 
-    /** Die Versenkung (Meter) eines verdeckten Punkts im Abstand `d`. */
-    static tiefe(d) {
-        return Math.min(Saumband.TIEFE_M, Saumschnitt.UNTERKANTE_M + Saumband.STEIGUNG * d);
+    /** Die Versenkung (Meter) eines verdeckten Punkts im Abstand `d`; `hoechstens`: die Tiefe, bis zu der die Haut unter dem Stück nachgibt (`Bauart.nachgebenM`, 12.11.2026). */
+    static tiefe(d, hoechstens = Saumband.TIEFE_M) {
+        return Math.min(hoechstens, Saumschnitt.UNTERKANTE_M + Saumband.STEIGUNG * d);
     }
 }

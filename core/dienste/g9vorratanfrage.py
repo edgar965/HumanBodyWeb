@@ -16,6 +16,7 @@ import logging
 
 from django.http import HttpResponse
 
+from ..daten.netzpaket import Netzpaket
 from .g9modellvorrat import G9modellvorrat
 from .netzvorratwahl import Netzvorratwahl
 
@@ -48,6 +49,12 @@ class G9vorratanfrage:
             return None
         daten = G9modellvorrat.holen(self.stabil)
         if daten is None:
+            return None
+        if Netzpaket.nummern_gekuerzt(daten):
+            # 12.11.2026: Eine Antwort aus der Zeit, als die Körperpunkt-Nummern der Oberflächenbindung auf 16 Bit gerundet reisten (`netzkurz.py`) — sie
+            # zeigte Stacheln an Kragen und Schuh. Nicht ausliefern: Der Aufrufer rechnet jetzt neu, und `ablegen` ersetzt den Eintrag (`frisch`). Gemessen
+            # am Fallout Ranger: Mit „sofort alt, im Hintergrund neu“ waren nach drei Ladungen erst zwei von sechs gebundenen Stücken geheilt.
+            logger.info('Genesis 9: Antwort im dauerhaften Vorrat mit gekürzten Nummern der Bindung verworfen (%s)', self.stabil[:40])
             return None
         self.alt = True
         from .g9vorratnachlauf import G9vorratnachlauf

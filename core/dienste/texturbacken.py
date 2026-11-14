@@ -18,7 +18,9 @@ import logging
 import os
 from typing import Any
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..daten.smplxablage import Smplxablage
@@ -64,10 +66,10 @@ class Texturbacken:
         Projektion immer noch, um die orthographische Lage zu bestimmen."""
         kamera = self.daten.get('cam_data')
         pfad = Smplxablage.datei(self.job_id)
-        if not (kamera and os.path.isfile(pfad)):
+        if not (kamera and Npztorch.da(pfad)):
             return None, None
         try:
-            npz = np.load(pfad)
+            npz = Npztorch.lesen(pfad)
             if 'posed_vertices' not in npz:
                 return None, None
             posiert = npz['posed_vertices']
@@ -89,7 +91,7 @@ class Texturbacken:
         """Feinkorrektur des Assistenten auf eine fertige Projektion."""
         if not versatz:
             return projektion
-        gueltig = ~np.isnan(projektion).any(axis=1)
+        gueltig = ~Torchfeld.isnan(projektion).any(axis=1)
         mx = projektion[gueltig, 0].mean()
         my = projektion[gueltig, 1].mean()
         s = versatz.get('scale', 1.0)
@@ -166,8 +168,8 @@ class Texturbacken:
         if oben.shape[2] == 4:
             maske = oben[:, :, 3] > 0
         else:
-            maske = np.any(oben != np.array(hintergrund, dtype=np.uint8), axis=2)
-        zusammen = unten.copy()
+            maske = Torchfeld.any(oben != Torchfeld.feld(hintergrund, dtype=torch.uint8, copy=True), dim=2)
+        zusammen = Torchfeld.kopie(unten)
         zusammen[maske] = oben[maske]
         return zusammen
 

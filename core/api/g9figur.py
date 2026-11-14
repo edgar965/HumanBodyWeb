@@ -203,6 +203,8 @@ class G9figur:
             return JsonResponse({'fehler': str(fehler)}, status=500)
         antwort = G9figur._netzantwort(netz)
         antwort.update({
+            # Die Fußhaltung getragener Schuhe je Knochen — der Browser legt sie nach jedem Bild einer Animation wieder auf (12.11.2026, `G9griffkette`).
+            'griffdeltas': G9figur._griffdeltas(rumpf, eintrag, netz['skelett']),
             'name': name, 'skelett': netz['skelett'], 'hoehe': netz['hoehe'],
             'boden': netz['boden'], 'punktzahl': netz['punktzahl'],
             'browserpunkte': netz['browserpunkte'], 'stufen': netz['stufen'],
@@ -218,6 +220,21 @@ class G9figur:
 
     #: Netz -> Antwort-Dict (`G9netzantwort`, ausgelagert 18.09.2026 nachts).
     _netzantwort = staticmethod(G9netzantwort.aus)
+
+    @staticmethod
+    def _griffdeltas(rumpf, eintrag, skelett):
+        u"""`{knochen: [x, y, z, w]}`: die Fußhaltung der getragenen Schuhe als lokale Drehung gegen das Skelett OHNE sie — das Skelett,
+        gegen das der Retarget rechnet (`Retargetendpunkte._formung`: nur die Regler). Leer ohne Schuh mit Fußhaltung; scheitert die
+        Rechnung, bleibt die Antwort ohne Deltas (die Figur steht dann in der Bewegung wie bisher), der Grund steht im Log."""
+        schuhe = G9griffkette.schuhe(G9figur._namen(rumpf.get('griffe')))
+        if not schuhe:
+            return {}
+        try:
+            ohne = G9figur.formung(rumpf, eintrag, ohne_griff=schuhe).skelett().bauen()
+            return G9griffkette.deltas(ohne['knochen'], skelett['knochen'], schuhe)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            logger.exception('Genesis 9: Fußhaltung der Schuhe %s nicht als Delta rechenbar', ', '.join(schuhe))
+            return {}
 
     @staticmethod
     def formung(rumpf, eintrag, ohne_griff=None):

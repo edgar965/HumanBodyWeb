@@ -33,7 +33,9 @@ sagt das Stück das selbst (`G9stueckersatz.haut_tiefe_mm`).
 
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportatlas import Blendimportatlas
 from .blendimportnachformung import Blendimportnachformung
@@ -117,10 +119,10 @@ class Blendimportscham:
         mat = self.koerper.get('material')
         if mat is None:
             return 0, 0
-        gewaehlt = np.asarray(mat)[np.asarray(je_dreieck, dtype=bool)]
+        gewaehlt = Torchfeld.feld(mat)[Torchfeld.feld(je_dreieck, dtype=torch.bool)]
         if not len(gewaehlt):
             return 0, 0
-        slot = int(np.bincount(gewaehlt.astype(np.int64)).argmax())
+        slot = int(Torchfeld.bincount(Torchfeld.astype(gewaehlt, torch.int64)).argmax())
         return slot, int((gewaehlt != slot).sum())
 
     # ------------------------------------------------------------ Auswahl
@@ -128,12 +130,12 @@ class Blendimportscham:
     @staticmethod
     def huelle_abstand(ecken, punkte_xy):
         """Vorzeichenbehafteter Abstand (m) der Punkte zur konvexen Hülle (Ecken gegen den Uhrzeigersinn): negativ = innen."""
-        a, b = ecken, np.roll(ecken, -1, axis=0)
+        a, b = ecken, torch.roll(ecken, -1, dims=0)
         kante = b - a
-        t = np.clip(((punkte_xy[:, None, :] - a) * kante).sum(-1) / np.maximum((kante ** 2).sum(-1), 1e-18), 0.0, 1.0)
-        weg = np.linalg.norm(punkte_xy[:, None, :] - (a + t[..., None] * kante), axis=-1).min(axis=1)
+        t = Torchfeld.clip(((punkte_xy[:, None, :] - a) * kante).sum(-1) / Torchfeld.maximum((kante ** 2).sum(-1), 1e-18), 0.0, 1.0)
+        weg = Torchfeld.amin(Torchfeld.linalg_norm(punkte_xy[:, None, :] - (a + t[..., None] * kante), dim=-1), dim=1)
         links = kante[None, :, 0] * (punkte_xy[:, None, 1] - a[None, :, 1]) - kante[None, :, 1] * (punkte_xy[:, None, 0] - a[None, :, 0])
-        return np.where((links >= 0).all(axis=1), -weg, weg)
+        return torch.where((links >= 0).all(axis=1), -weg, weg)
 
     def saat(self, ruhe, flaeche, sohle, hoehe):
         """Maske der Originalpunkte im Kasten, die um mehr als `SCHWELLE_MM` von der Figurfläche abweichen. Der Kasten rückt oben
@@ -159,11 +161,11 @@ class Blendimportscham:
         import trimesh
 
         r = Blendimportnachformung.REGIONEN['scham']
-        zmed = float(np.median(ruhe[:, 2]))
+        zmed = float(Torchfeld.median(ruhe[:, 2]))
         kasten = ((ruhe[:, 1] > sohle + unten * hoehe) & (ruhe[:, 1] < sohle + oben * hoehe)
-                  & (np.abs(ruhe[:, 0]) < r['breite_m'] * hoehe / 1.75) & (ruhe[:, 2] > zmed - 0.03))
-        abstand = np.zeros(len(ruhe))
-        idx = np.flatnonzero(kasten)
+                  & (Torchfeld.abs(ruhe[:, 0]) < r['breite_m'] * hoehe / 1.75) & (ruhe[:, 2] > zmed - 0.03))
+        abstand = torch.zeros(len(ruhe), dtype=torch.float64, device='cuda')
+        idx = torch.flatten(kasten).nonzero()[:, 0]
         if len(idx):
             abstand[idx] = trimesh.proximity.closest_point(flaeche, ruhe[idx])[1] * 1000.0
         self.abstand = abstand                                    # mm; für `begrenzen`
@@ -177,33 +179,33 @@ class Blendimportscham:
         skala = hoehe / 1.75
         breite = self.SAAT_BREITE_M * skala
         kern = saat & (self.abstand >= self.KERN_MM)
-        unterkante = -np.inf
+        unterkante = -math.inf
         self.anbau = int(kern.sum()) >= self.KERN_MIN
         if self.anbau:
-            breite = max(breite, (float(np.percentile(np.abs(ruhe[kern][:, 0]), 98)) + self.KERN_RAND_M * skala))
+            breite = max(breite, (float(Torchfeld.percentile(Torchfeld.abs(ruhe[kern][:, 0]), 98)) + self.KERN_RAND_M * skala))
             # Unter dem tiefsten Punkt des Anbaus (hängende Hoden) endet die Anatomie: Schenkelhaut darunter ist keine (BodyParts3D-Haut,
             # 10.10.2026: zwei „Vorhänge" 4 cm unter den Hoden, die Innenschenkel lagen 5–15 mm neben der Figur).
             unterkante = float(ruhe[kern][:, 1].min()) - self.UNTER_MM / 1000.0 * skala
         self.saat_breite_mm = round(breite * 1000.0, 1)
-        return saat & (np.abs(ruhe[:, 0]) < breite) & (ruhe[:, 1] >= unterkante)
+        return saat & (Torchfeld.abs(ruhe[:, 0]) < breite) & (ruhe[:, 1] >= unterkante)
 
     def schnittwerte(self, ruhe, saat, flaeche, punkte=None):
         """Je Punkt ein Wert für den Schnitt (`Blendimportschamschnitt`): negativ = im Stück, 0 = auf der Kontur — die Hülle der Saat
         (Vorderansicht), `RAND_MM` nach außen, begrenzt auf die Tiefe (Saat ± `TIEFE_RAND_MM`, hinaus, bis das Original aufliegt:
         `Blendimportschamtiefe`) und den Suchraum; das Größte aus den Abständen (m), jeder Punkt hat einen endlichen Wert. `punkte`: andere
         Punkte (die Haut der Figur, `verschweissen`) mit demselben Wert; ohne die des Originals (`ruhe`). Saat statt Hülle: verworfen, `blendimport.md`."""
-        from scipy.spatial import ConvexHull
+        from KoerperKI_alle.kartenhuelle import ConvexHull
 
         xy = ruhe[saat][:, [0, 1]]
         ecken = xy[ConvexHull(xy).vertices]            # gegen den Uhrzeigersinn
         hinten, vorn = Blendimportschamtiefe.grenzen(ruhe, self.huelle_abstand(ecken, ruhe[:, [0, 1]]) < self.RAND_MM / 1000.0,
                                                      ruhe[saat][:, 2], self.TIEFE_RAND_MM, flaeche)
-        p = ruhe if punkte is None else np.asarray(punkte, dtype=np.float64)
+        p = ruhe if punkte is None else Torchfeld.feld(punkte, dtype=torch.float64)
         w = self.huelle_abstand(ecken, p[:, [0, 1]]) - self.RAND_MM / 1000.0
         grenzen = [hinten - p[:, 2], p[:, 2] - vorn,
-                   np.abs(p[:, 0]) - self.SUCH_BREITE_M, np.abs(p[:, 1] - ruhe[saat][:, 1].mean()) - self.SUCH_HOEHE_M]
+                   Torchfeld.abs(p[:, 0]) - self.SUCH_BREITE_M, Torchfeld.abs(p[:, 1] - ruhe[saat][:, 1].mean()) - self.SUCH_HOEHE_M]
         for g in grenzen:
-            w = np.maximum(w, g)
+            w = Torchfeld.maximum(w, g)
         return w
 
     @staticmethod
@@ -216,30 +218,30 @@ class Blendimportscham:
     def angleichen(cls, punkte, dreiecke, flaeche, band_mm=None, max_mm=None):
         """`(neue Punkte, bericht)`: das Randband wird weich auf die Figurfläche gezogen (höchstens `ANGLEICH_MAX_MM`)."""
         import trimesh
-        from scipy import sparse
-        from scipy.sparse import csgraph
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+        from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
         rand, band_mm, max_mm = cls.randpunkte(dreiecke), cls.BAND_MM if band_mm is None else band_mm, cls.ANGLEICH_MAX_MM if max_mm is None else max_mm
         n = len(punkte)
-        a = np.concatenate([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
-        b = np.concatenate([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
-        graph = sparse.csr_matrix((np.linalg.norm(punkte[a] - punkte[b], axis=1) * 1000.0, (a, b)), shape=(n, n))
+        a = Torchfeld.cat([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
+        b = Torchfeld.cat([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
+        graph = sparse.csr_matrix((Torchfeld.linalg_norm(punkte[a] - punkte[b], dim=1) * 1000.0, (a, b)), shape=(n, n))
         weg = csgraph.dijkstra(graph, directed=False, indices=rand, min_only=True)
-        band = np.flatnonzero(weg < band_mm)
+        band = torch.flatten(weg < band_mm).nonzero()[:, 0]
         nah = trimesh.proximity.closest_point(flaeche, punkte[band])[0]
         zug = nah - punkte[band]
-        laenge = np.linalg.norm(zug, axis=1)
+        laenge = Torchfeld.linalg_norm(zug, dim=1)
         zu_weit = laenge > max_mm / 1000.0
         zug[zu_weit] *= (max_mm / 1000.0 / laenge[zu_weit])[:, None]
-        t = np.clip(weg[band] / band_mm, 0.0, 1.0)
-        neu = np.asarray(punkte, dtype=np.float64).copy()
+        t = Torchfeld.clip(weg[band] / band_mm, 0.0, 1.0)
+        neu = Torchfeld.kopie(Torchfeld.feld(punkte, dtype=torch.float64))
         neu[band] += (1.0 - (3.0 * t ** 2 - 2.0 * t ** 3))[:, None] * zug
         vorher = trimesh.proximity.closest_point(flaeche, punkte[rand])[1] * 1000.0
         nachher = trimesh.proximity.closest_point(flaeche, neu[rand])[1] * 1000.0
         return neu, {'rand_punkte': int(len(rand)), 'band_punkte': int(len(band)), 'nicht_ganz_gezogen': int(zu_weit.sum()),
-                     'rand_vorher_median_mm': round(float(np.median(vorher)), 2),
-                     'rand_nachher_median_mm': round(float(np.median(nachher)), 2),
-                     'rand_nachher_p90_mm': round(float(np.percentile(nachher, 90)), 2),
+                     'rand_vorher_median_mm': round(float(Torchfeld.median(vorher)), 2),
+                     'rand_nachher_median_mm': round(float(Torchfeld.median(nachher)), 2),
+                     'rand_nachher_p90_mm': round(float(Torchfeld.percentile(nachher, 90)), 2),
                      'rand_nachher_max_mm': round(float(nachher.max()), 1)}
 
     # ---------------------------------------------------------------- Haut
@@ -252,7 +254,7 @@ class Blendimportscham:
         Image.MAX_IMAGE_PIXELS = None
         insel = Blendimportatlas.inseln(uv_ecken)
         with Image.open(self.material['farbe']) as b:
-            groesse = b.size
+            groesse = Torchfeld.groesse(b)
         rechtecke = Blendimportatlas.rechtecke(uv_ecken, insel, groesse)
         orte, atlas = Blendimportatlas.packen(rechtecke)
         quelle = dict(self.material)
@@ -262,11 +264,11 @@ class Blendimportscham:
                 continue
             with Image.open(pfad) as b:
                 bild = b.convert(modus)
-                if bild.size != tuple(groesse):
+                if Torchfeld.groesse(bild) != tuple(groesse):
                     # Die Karten einer .blend haben nicht immer dieselbe Größe (Asian girl: Farbe 8192², Normalen 12288², gemessen
                     # 09.10.2026 — dort fiel das Scham-Stück deshalb ganz aus). UV gilt je Bild gleich: auf die Größe der Farbe bringen.
                     bild = bild.resize(tuple(groesse), Image.LANCZOS)
-                bild = np.asarray(bild)
+                bild = Torchfeld.feld(bild)
             ziel = ordner / ('%s_atlas_%s%s' % (kennung, kanal, endung))
             Image.fromarray(Blendimportatlas.schneiden(bild, rechtecke, orte, atlas)).save(ziel, **({'quality': qualitaet} if qualitaet else {}))
             quelle[kanal] = str(ziel)
@@ -281,7 +283,7 @@ class Blendimportscham:
     def bauen(self, ordner, kennung, flaeche):
         """`{punkte, dreiecke, uv_ecken, quelle, bericht}` in Ruhelage der Figur (Y oben) — oder `{'aus': Grund}`."""
         punkte = self.lage.ruhelage(self.koerper['punkte'])
-        dreiecke = np.asarray(self.koerper['dreiecke'], dtype=np.int64)
+        dreiecke = Torchfeld.feld(self.koerper['dreiecke'], dtype=torch.int64)
         sohle, hoehe = float(punkte[:, 1].min()), float(punkte[:, 1].max() - punkte[:, 1].min())
         saat = self.saat(punkte, flaeche, sohle, hoehe)
         if saat.sum() < self.MINDEST_SAAT:
@@ -291,12 +293,12 @@ class Blendimportscham:
         je_dreieck = (w[dreiecke] < 0.0).any(axis=1)
         slot, fremd = self.material_slot(je_dreieck)    # mehrere Hautmaterialien (je eigene Bilder): nur das häufigste, der Rest steht im Bericht
         if fremd:
-            je_dreieck &= np.asarray(self.koerper['material']) == slot
+            je_dreieck &= Torchfeld.feld(self.koerper['material']) == slot
         self.waehle_material(slot)
         geschnitten = int(((w[dreiecke[je_dreieck]] < 0.0).sum(axis=1) < 3).sum())
         alle_punkte, schnitt_dreiecke, schnitt_uv = Blendimportschamschnitt.schneiden(
-            punkte, dreiecke[je_dreieck], np.asarray(self.koerper['uv_ecken'])[je_dreieck], w)
-        benutzt, neu = np.unique(schnitt_dreiecke, return_inverse=True)
+            punkte, dreiecke[je_dreieck], Torchfeld.feld(self.koerper['uv_ecken'])[je_dreieck], w)
+        benutzt, neu = Torchfeld.unique(schnitt_dreiecke, return_inverse=True)
         sel_punkte, sel_dreiecke = alle_punkte[benutzt], neu.reshape(-1, 3)
         sel_punkte, register = Blendimportschamregister.anwenden(flaeche, punkte, w, sel_punkte)
         if 'aus' in register:        # Figur und Original passen am Becken nicht zusammen: kein Stück

@@ -11,6 +11,8 @@ Ausgangslage, jede Verbesserung und jeder Vorschlag der Prüf-KI; alle Runden st
 `ergebnis['kostuem']['verlauf']`.
 """
 
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import logging
 import shutil
 import time
@@ -120,7 +122,7 @@ class Kostuemrunde:
         """{winkel: Pfad} der normierten, nach außen verlängerten Vorlagenflächen für die Fototextur — je Lauf
         einmal gebaut (`Kostuembild.aufgefuellt`, dieselbe Fläche wie die Note, nur größer)."""
         if self._texturen is None:
-            import numpy as np
+            import torch
             from PIL import Image
 
             ordner = self.ablage.arbeit('kostuem_texturen')
@@ -129,14 +131,14 @@ class Kostuemrunde:
             for r in self.referenzen:
                 pfad = ordner / ('tex_%+04d.png' % round(r.winkel))
                 flaeche = Kostuembild.aus_vorlage(self.ablage.unter('eingang') / r.datei, self.TEXTUR_GROESSE)
-                farbe = (np.clip(flaeche.aufgefuellt(), 0, 1) * 255).astype(np.uint8)
+                farbe = Torchfeld.astype(Torchfeld.clip(flaeche.aufgefuellt(), 0, 1) * 255, torch.uint8)
                 # Alpha = die Figur: Die Fototextur (`Fototextur`) nimmt außerhalb keine Farbe aus dem verlängerten Rand.
                 # Ganz unten zählt der helle Bodenschatten der Vorlage nicht zur Figur (er färbte den Saum grau-weiß).
-                figur = flaeche.maske.copy()
+                figur = Torchfeld.kopie(flaeche.maske)
                 unten = int(self.SCHATTEN_AB * figur.shape[0])
                 figur[unten:] &= flaeche.farbe[unten:].mean(axis=2) < self.SCHATTEN_HELL
-                form = (figur * 255).astype(np.uint8)
-                Image.fromarray(np.dstack([farbe, form]), 'RGBA').save(pfad)
+                form = Torchfeld.astype(figur * 255, torch.uint8)
+                Image.fromarray(Torchfeld.roh(Torchfeld.dstack([farbe, form])), 'RGBA').save(pfad)
                 aus[r.winkel] = pfad
             self._texturen = aus
         return self._texturen
@@ -149,7 +151,7 @@ class Kostuemrunde:
         normierte Fläche wie die Fototextur, weiß = Figur, GEÖFFNET — sonst zöge der Stab den Mantel bis zur
         Hand hinaus."""
         if self._masken is None:
-            import numpy as np
+            import torch
             from PIL import Image, ImageFilter
 
             ordner = self.ablage.arbeit('kostuem_texturen')
@@ -158,7 +160,7 @@ class Kostuemrunde:
             for r in self.referenzen:
                 pfad = ordner / ('maske_%+04d.png' % round(r.winkel))
                 flaeche = Kostuembild.aus_vorlage(self.ablage.unter('eingang') / r.datei, self.TEXTUR_GROESSE)
-                bild = Image.fromarray((flaeche.maske * 255).astype(np.uint8))
+                bild = Image.fromarray(Torchfeld.roh(Torchfeld.astype(flaeche.maske * 255, torch.uint8)))
                 bild = bild.filter(ImageFilter.MinFilter(self.MASKEN_OEFFNUNG)).filter(
                     ImageFilter.MaxFilter(self.MASKEN_OEFFNUNG)
                 )

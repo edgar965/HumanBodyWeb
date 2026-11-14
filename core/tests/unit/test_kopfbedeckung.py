@@ -17,6 +17,10 @@ from core.dienste.sapienshaar import Sapienshaar
 from Kleidung.sapienszuordnung import Sapienszuordnung
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 APPAREL = Sapienszuordnung.NAMEN.index('Apparel')
 HAIR = Sapienszuordnung.NAMEN.index('Hair')
@@ -114,8 +118,7 @@ class KopfAnkerTest(unittest.TestCase):
     def _ablegen(self, ordner, gruppe='kopf', treffer=2):
         stimmen = np.zeros((self.N, 1), dtype=np.float32)
         stimmen[:15, 0] = 10.0                                         # SAM 3 sieht den Begriff auf den Flächen 0–14 (30 cm², über `MIN_CM2` 20)
-        np.savez(os.path.join(ordner, 'teile_flaechen.npz'), flaechen=self.N, begriffe=np.array(['headdress']), gruppen=np.array([gruppe]), stimmen=stimmen,
-                 treffer=np.array([treffer]), bestwert=np.array([0.9]), pixel=np.full(self.N, 10.0, dtype=np.float32))
+        Npztorch.speichern(os.path.join(ordner, 'teile_flaechen.npz'), flaechen=self.N, begriffe=np.array(['headdress']), gruppen=np.array([gruppe]), stimmen=stimmen, treffer=np.array([treffer]), bestwert=np.array([0.9]), pixel=np.full(self.N, 10.0, dtype=np.float32))
 
     def _anker(self, ordner, anzahl=None):
         schritt = Sapienshaar.__new__(Sapienshaar)
@@ -187,7 +190,7 @@ class KleidungsschrittTest(unittest.TestCase):
         self.maske = {'stueck': np.array([1, 1, 2, 0, 0, 0, 0, 0, 0, 0], dtype=np.int8)}
 
     def _hut_ablegen(self, hut, **mehr):
-        np.savez(os.path.join(self.ordner, 'haar_maske.npz'), haar=np.zeros(10, bool), kopfbedeckung=np.asarray(hut, bool), **mehr)
+        Npztorch.speichern(os.path.join(self.ordner, 'haar_maske.npz'), haar=np.zeros(10, bool), kopfbedeckung=np.asarray(hut, bool), **mehr)
 
     def test_der_hut_wird_zubehoer(self):
         from Kleidung.kleidungsmaske import Kleidungsmaske
@@ -208,7 +211,7 @@ class KleidungsschrittTest(unittest.TestCase):
     def test_ohne_ablage_oder_mit_alter_ablage_bleibt_alles(self):
         neu, bericht = self.schritt._kopfbedeckung(self.maske, self.regel)           # keine Datei
         self.assertIs(neu, self.maske)
-        np.savez(os.path.join(self.ordner, 'haar_maske.npz'), haar=np.zeros(10, bool))   # Ablage von vor dem 12.10.2026: ohne `kopfbedeckung`
+        Npztorch.speichern(os.path.join(self.ordner, 'haar_maske.npz'), haar=np.zeros(10, bool))   # Ablage von vor dem 12.10.2026: ohne `kopfbedeckung`
         neu, bericht = self.schritt._kopfbedeckung(self.maske, self.regel)
         self.assertIs(neu, self.maske)
         self.assertIsNone(bericht)

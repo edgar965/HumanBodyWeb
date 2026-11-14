@@ -1,7 +1,7 @@
 /**
  * Fotogenesisjobwahl — Fotoanzahl und Genesis-Grundfigur oben auf der Testseite von Foto-Genesis (04.11.2026, Edgar: „Auswahl anzahl der fotos (1-6), wenn mehrere fotos dann Hochladen funktion bei den Ansichten“,
  * „Auswahl ob Genesis Männlich, weiblich oder Kind“; zu „Kind“ siehe `Fotogenesisgeschlecht`). Beide speichern sofort: ein vergessenes „Übernehmen“ ließe hochgeladene Fotos im nächsten Lauf still aus.
- * Die Bildplätze hören selbst auf die Anzahl (`fotogenesispshumaneingabe.js`). Schreibt `POST /api/fotogenesis/<job>/pshuman/` {anzahl | dichte | fototextur | hand_ersatz | up2you | haut_ki | keine_kleider} und `POST /api/fotogenesis/<job>/geschlecht/` {geschlecht}.
+ * Die Bildplätze hören selbst auf die Anzahl (`fotogenesispshumaneingabe.js`). Schreibt `POST /api/fotogenesis/<job>/pshuman/` {anzahl | dichte | fototextur | hand_ersatz | up2you | haut_ki | keine_kleider | kleider_getrennt} und `POST /api/fotogenesis/<job>/geschlecht/` {geschlecht}.
  * „mach beides, einstellbar ganz oben beim Job“: Netzdichte und Textur aus den Fotos; „mach das auch ganz oben“: das Häkchen der Foto-Kette.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';

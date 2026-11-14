@@ -18,7 +18,8 @@ import hashlib
 import io
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Exportleisterendermodell']
 
@@ -87,11 +88,11 @@ class Exportleisterendermodell:
     def _feld(cls, quelle, i):
         a = quelle.j['accessors'][i]
         bv = quelle.j['bufferViews'][a['bufferView']]
-        art = np.dtype(cls.TYPEN[a['componentType']])
+        art = Torchfeld.dtype(cls.TYPEN[a['componentType']])
         k = cls.ANZAHL[a['type']]
         schritt = bv.get('byteStride') or art.itemsize * k
-        w = np.ndarray((a['count'], k), dtype=art, buffer=quelle.bin, offset=bv.get('byteOffset', 0) + a.get('byteOffset', 0), strides=(schritt, art.itemsize)).copy()
-        return w.astype(np.float64) / np.iinfo(art).max if a.get('normalized') and art.kind in 'ui' else w
+        w = Torchfeld.aus_puffer(quelle.bin, art, (a['count'], k), offset=bv.get('byteOffset', 0) + a.get('byteOffset', 0), schritte=(schritt, art.itemsize))
+        return Torchfeld.astype(w, torch.float64) / torch.iinfo(art).max if a.get('normalized') and Torchfeld.typart(art) in 'ui' else w
 
     def _abweichung(self, quelle, glb):
         """Größte Entfernung (m) gleichnamiger Gelenke: Browser aus den inversen Bindmatrizen des ersten Skins, Server aus `kopf` der Stand-Knochen → (Abweichung, Zahl)."""
@@ -99,13 +100,13 @@ class Exportleisterendermodell:
         if not skins:
             return 0.0, 0
         matrizen = self._feld(quelle, skins[0]['inverseBindMatrices'])
-        server = {k['name']: np.asarray(k['kopf'], dtype=np.float64) for k in glb.knochen}
+        server = {k['name']: Torchfeld.feld(k['kopf'], dtype=torch.float64) for k in glb.knochen}
         weit, zahl = 0.0, 0
         for knoten, m in zip(skins[0]['joints'], matrizen, strict=True):
             name = quelle.j['nodes'][knoten].get('name')
             if name in server:
-                lage = np.linalg.inv(m.reshape(4, 4).T)[:3, 3]
-                weit, zahl = max(weit, float(np.linalg.norm(lage - server[name]))), zahl + 1
+                lage = Torchfeld.linalg_inv(m.reshape(4, 4).T)[:3, 3]
+                weit, zahl = max(weit, float(Torchfeld.linalg_norm(lage - server[name]))), zahl + 1
         return weit, zahl
 
     def _bild(self, quelle, glb, material):
@@ -119,22 +120,22 @@ class Exportleisterendermodell:
         bv = quelle.j['bufferViews'][quelle.j['images'][quelle_nr]['bufferView']]
         roh = bytes(quelle.bin[bv.get('byteOffset', 0):bv.get('byteOffset', 0) + bv['byteLength']])
         with Image.open(io.BytesIO(roh)) as b:
-            return glb._bild_aus(b.copy(), ('stueck', hashlib.md5(roh).hexdigest()))
+            return glb._bild_aus(Torchfeld.kopie(b), ('stueck', hashlib.md5(roh).hexdigest()))
 
     @staticmethod
     def _farben(glb, s):
         """Die Punktfarben des Stücks (linear, wie glTF `COLOR_0`) an das Netz, das `Standmodellglb._netz` eben angelegt hat — mit denselben Punkten wie dort (nur die genutzten)."""
-        dreiecke = np.asarray(s['dreiecke'], dtype=np.int64).reshape(-1)
+        dreiecke = Torchfeld.feld(s['dreiecke'], dtype=torch.int64).reshape(-1)
         if s.get('farben') is None or not len(dreiecke):
             return
         primitiv = glb.gltf['meshes'][-1]['primitives'][0]
-        primitiv['attributes']['COLOR_0'] = glb._zugriff(s['farben'][np.unique(dreiecke)], glb.FLOAT, 'VEC3', glb.ARRAY)
+        primitiv['attributes']['COLOR_0'] = glb._zugriff(s['farben'][Torchfeld.unique(dreiecke)], glb.FLOAT, 'VEC3', glb.ARRAY)
 
     @staticmethod
     def _srgb(linear):
         """glTF-Farbfaktor (linear) → sRGB 0…1 (`Standmodellglb._netz` rechnet wieder linear)."""
-        c = np.clip(np.asarray(linear, dtype=np.float64)[:3], 0.0, 1.0)
-        return np.where(c <= 0.0031308, 12.92 * c, 1.055 * np.power(c, 1 / 2.4) - 0.055)
+        c = Torchfeld.clip(Torchfeld.feld(linear, dtype=torch.float64)[:3], 0.0, 1.0)
+        return torch.where(c <= 0.0031308, 12.92 * c, 1.055 * Torchfeld.power(c, 1 / 2.4) - 0.055)
 
     def stuecke(self, quelle, deckend=None):
         """Alle Netze der Browser-GLB außer Körper und Anhängen, je Primitive ein Stück `kleidung__eigen_foto_<name>__<n>_g<k>` (ohne Bild `eigen_farbe_`) → `[{name, punkte, dreiecke, normalen, uv,
@@ -160,15 +161,15 @@ class Exportleisterendermodell:
                 a = p['attributes']
                 if p.get('mode', 4) != 4 or 'POSITION' not in a:
                     continue
-                punkte = self._feld(quelle, a['POSITION']).astype(np.float64)
-                dreiecke = self._feld(quelle, p['indices']).reshape(-1, 3) if 'indices' in p else np.arange(len(punkte)).reshape(-1, 3)
+                punkte = Torchfeld.astype(self._feld(quelle, a['POSITION']), torch.float64)
+                dreiecke = self._feld(quelle, p['indices']).reshape(-1, 3) if 'indices' in p else Torchfeld.arange(len(punkte)).reshape(-1, 3)
                 haut = {'knochen': knochen, 'index': self._feld(quelle, a['JOINTS_0']), 'gewicht': self._feld(quelle, a['WEIGHTS_0'])} if skin and 'JOINTS_0' in a else None
                 material = j['materials'][p['material']] if p.get('material') is not None else {}
                 pbr = material.get('pbrMetallicRoughness') or {}
                 faktor = pbr.get('baseColorFactor') or [1.0, 1.0, 1.0]
                 maske = {'BLEND': 'BLEND', 'MASK': True}.get(material.get('alphaMode'), False)
                 art = 'foto' if pbr.get('baseColorTexture') is not None else 'farbe'
-                farben = self._feld(quelle, a['COLOR_0'])[:, :3].astype(np.float64) if art == 'farbe' and 'COLOR_0' in a else None
+                farben = Torchfeld.astype(self._feld(quelle, a['COLOR_0'])[:, :3], torch.float64) if art == 'farbe' and 'COLOR_0' in a else None
                 aus.append({'name': 'kleidung__eigen_%s_%s__%d_g%d' % (art, slug, nr, k), 'punkte': punkte, 'dreiecke': dreiecke,
                             'normalen': self._feld(quelle, a['NORMAL']) if 'NORMAL' in a else None, 'uv': self._feld(quelle, a['TEXCOORD_0']) if 'TEXCOORD_0' in a else None,
                             'haut': haut, 'material': material, 'faktor': faktor, 'farben': farben, 'maske': maske,

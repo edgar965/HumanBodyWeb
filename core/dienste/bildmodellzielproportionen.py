@@ -24,7 +24,9 @@ Der Bericht nennt je Maß die `quelle` (eingabe / foto). Option `fotomasse`.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -99,22 +101,16 @@ class Bildmodellzielproportionen:
         ziele, quelle = self.ziele_m(ohne_foto=vorgeformt)
         pfad = self.pfad()
         if not ziele and not vorgeformt:
-            if pfad.is_file():
-                pfad.unlink()
+            if Npztorch.da(pfad):
+                Npztorch.loeschen(pfad)
             return punkte, gelenke, None
         from Genesis9.proportionsformung import G9proportionsformung
 
         if ziele:
             p, g, bericht = G9proportionsformung().formen(punkte, gelenke, ziele, gewicht > 0)
         else:
-            p, g, bericht = np.asarray(punkte, float), gelenke, {}
-        np.savez_compressed(
-            pfad,
-            punkte=p.astype(np.float32),
-            gewicht=np.asarray(gewicht, dtype=np.float32),
-            gelenknamen=np.array(list(g)),
-            gelenke=np.array([g[k] for k in g], dtype=np.float32),
-        )
+            p, g, bericht = Torchfeld.feld(punkte, dtype=torch.float64), gelenke, {}
+        Npztorch.speichern(pfad, punkte=Torchfeld.astype(p, torch.float32), gewicht=Torchfeld.feld(gewicht, dtype=torch.float32), gelenknamen=Torchfeld.feld(list(g), copy=True), gelenke=Torchfeld.feld([g[k] for k in g], dtype=torch.float32, copy=True), komprimiert=True)
         aus = {
             k: {
                 'vorher': round(b['vorher'] * 100, 1),

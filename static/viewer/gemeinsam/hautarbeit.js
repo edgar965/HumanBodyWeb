@@ -92,7 +92,7 @@ export class Hautarbeit {
         const nachricht = {
             pos: pos.slice(), index: index.slice(),
             stoffe: stoffe.map((s) => ({ schluessel: s.schluessel, punkte: s.punkte.slice(), dreiecke: s.dreiecke.slice(),
-                                         tiefe: s.tiefe, starr: s.starr, nahe: s.nahe, ersatz: s.ersatz })),
+                                         tiefe: s.tiefe, starr: s.starr, nahe: s.nahe, ersatz: s.ersatz, nachgeben: s.nachgeben })),
         };
         const puffer = [nachricht.pos.buffer, nachricht.index.buffer];
         for (const s of nachricht.stoffe) puffer.push(s.punkte.buffer, s.dreiecke.buffer);

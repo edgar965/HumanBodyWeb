@@ -11,7 +11,9 @@ entscheiden mehrere Stellen mit eigenen Regeln. Gemessen am 13.10.2026: dieselbe
 * **Hut:** wo die Flächen der Kopfbedeckung (`haar_maske.npz`, `kopfbedeckung`) gelandet sind: Kleidung, Haar, ein Bestandteil — oder nirgends.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshfigurobjektflaechen import Meshfigurobjektflaechen
 
@@ -35,12 +37,12 @@ class Meshfigurabnahmeobjekte:
         verworfen = sorted(set(masken) - set(passend))
         if not passend:
             return {'hinweis': 'Keine Objekte aufgezeichnet', 'verworfen': verworfen}
-        inhalt = np.asarray(scan.flaecheninhalte(), dtype=np.float64) * 1e4
-        zaehler = np.sum([m.astype(np.int16) for m in passend.values()], axis=0)
+        inhalt = Torchfeld.feld(scan.flaecheninhalte(), dtype=torch.float64) * 1e4
+        zaehler = Torchfeld.sum(Torchfeld.feld([Torchfeld.astype(m, torch.int16) for m in passend.values()]), dim=0)
         belegt = zaehler > 0
         erkannt = self._erkannt(flaechen)
         waise = {quelle: int((m & ~belegt).sum()) for quelle, m in erkannt.items()}
-        alle_erkannt = np.logical_or.reduce(list(erkannt.values())) if erkannt else np.zeros(flaechen, dtype=bool)
+        alle_erkannt = Torchfeld.logical_or_reduce(list(erkannt.values())) if erkannt else torch.zeros(flaechen, dtype=torch.bool, device='cuda')
         waisen = int((alle_erkannt & ~belegt).sum())
         hautrand = int(((self.job.ergebnis.get('kleidung') or {}).get('objekt_hautrand') or {}).get('flaechen') or 0)
         rest = max(0, waisen - hautrand)
@@ -67,12 +69,12 @@ class Meshfigurabnahmeobjekte:
         aus = {}
         for datei, felder in (('haar_maske.npz', (('haar', 'haar'), ('kopfbedeckung', 'hut'), ('langer_bart', 'langer_bart'))), ('kleidung_maske.npz', (('kleidung', 'kleidung'),))):
             pfad = self.ablage.arbeit(datei)
-            if not pfad.is_file():
+            if not Npztorch.da(pfad):
                 continue
-            with np.load(pfad) as d:
+            with Npztorch.lesen(pfad) as d:
                 for schluessel, quelle in felder:
                     if schluessel in d.files and len(d[schluessel]) == flaechen and d[schluessel].any():
-                        aus[quelle] = np.asarray(d[schluessel], dtype=bool)
+                        aus[quelle] = Torchfeld.feld(d[schluessel], dtype=torch.bool)
         return aus
 
     @staticmethod

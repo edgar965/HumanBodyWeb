@@ -20,6 +20,10 @@ Fehlt ein Ergebnis, steht statt der Adresse None und unter `hinweise` warum.
     Fotogenesisgenesiszeile.fuer(job)      # dict, bei Exporten None (dort kein Test aus Fotos)
 """
 import json
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Fotogenesisgenesiszeile']
 
@@ -37,11 +41,12 @@ class Fotogenesisgenesiszeile:
         t = job.get('test')
         ordner = Meshgenesistest.pfad(t) if t else None
         npz = ordner / Meshgenesistestanpassung.ORDNER / 'meshanpassung.npz' if ordner is not None else None
-        anpassung = npz is not None and npz.is_file()
+        anpassung = npz is not None and Npztorch.da(npz)
         stand = cls._stand(ordner) if ordner is not None else {}
-        # Läuft der Test neu und hat schon ein Ergebnis, steht die Figur trotzdem da wie auf der Mesh-Genesis-Testseite (08.11.2026, Edgar: „laden von genesis mesh … dauert immer noch ewig“:
-        # während des Laufs blieb das Feld 50 min leer mit „Test …: laeuft.“)
-        fertig = ordner is not None and (stand.get('status') == 'fertig' or (stand.get('status') == 'laeuft' and (ordner / 'ergebnis.npz').is_file()))
+        # Hat der Test ein Ergebnis, steht die Figur da wie auf der Mesh-Genesis-Testseite, auch während eines neuen Laufs (08.11.2026, Edgar: „laden von genesis mesh … dauert immer noch ewig“:
+        # das Feld blieb 50 min leer mit „Test …: laeuft.“) und nach einem Abbruch (11.11.2026, Edgar: „zeige einen fertigen Job an, auch wenn die Prüfung nicht durch ist“:
+        # zauberer_mesh_genesis_4 brach erst im letzten Schritt „Prüfung der Kleider“ ab, Figur, Haut und Kleider lagen fertig da, das Feld blieb leer)
+        fertig = ordner is not None and (stand.get('status') == 'fertig' or Npztorch.da(ordner / 'ergebnis.npz'))
         form = ordner is not None and any(ordner.glob('form_*/modell.json'))
         ohne = f'Der Mesh-Genesis-Test {t} liegt im Papierkorb, dieser Job hat damit kein Ergebnis.' if cls._im_papierkorb(t) else 'Noch kein Mesh-Genesis-Test zu einem Netz aus diesen Fotos (job.json meshgenesis_test).'
         return {
@@ -55,13 +60,19 @@ class Fotogenesisgenesiszeile:
             'lauf': cls._lauftext(stand),
             'hinweise': {
                 'meshgenesis': ohne if ordner is None else f'Einpassung im Test {t} noch nicht gerechnet.',
-                'ergebnis': ohne if ordner is None else cls._lauftext(stand) or f'Test {t}: {stand.get("status") or "offen"}.',
+                # 13.11.2026, Edgar: „es erscheint gar keines, weil es evtl. keines gibt?? dann mach hinweis, dass es fehlt!!“ — vorher nur „Test …: offen.“
+                'ergebnis': ohne if ordner is None else cls._lauftext(stand) or (f'Genesis-Ergebnis fehlt: Der Mesh-Genesis-Test {t} hat noch kein Ergebnis '
+                                                                                 f'(Stand: {stand.get("status") or "nicht gerechnet"}).'),
             },
         }
 
     @staticmethod
     def _lauftext(stand):
-        """Satz zum laufenden Rechenlauf des Tests (`rechnen/stand.json`), sonst None."""
+        """Satz zum laufenden oder abgebrochenen Rechenlauf des Tests (`rechnen/stand.json`), sonst None."""
+        if stand.get('status') == 'fehler':
+            schritt = next((s for s in stand.get('schritte') or [] if s.get('status') == 'fehler'), {})
+            return (f'Der letzte Lauf brach im Schritt „{schritt.get("text") or "?"}“ ab. Gezeigt ist der Stand bis dahin; '
+                    'was danach kommt, fehlt oder stammt aus keinem Lauf dieses Tests.')
         if stand.get('status') != 'laeuft':
             return None
         schritte, nr = stand.get('schritte') or [], stand.get('schritt') or 0

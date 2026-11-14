@@ -17,9 +17,11 @@ import json
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisaposewahl import Meshgenesisaposewahl
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -46,7 +48,7 @@ class Meshgenesiswege:
         dateien = [lauf / cls.JSON] + sorted(lauf.glob('wege_vor_*.json'), key=lambda p: p.name, reverse=True)
         aus = []
         for datei in dateien:
-            if not datei.is_file() or not datei.with_suffix('.npz').is_file():
+            if not datei.is_file() or not Npztorch.da(datei.with_suffix('.npz')):
                 continue
             ablage = (cls._json(datei) or {}).get('ablage')
             aus.append((datei, (cls._json(Path(ablage) / 'kette.json') if ablage else None) or {}))
@@ -74,7 +76,7 @@ class Meshgenesiswege:
         if g is None:
             return None
         try:
-            return (g[0].name, g[0].stat().st_mtime_ns, g[0].with_suffix('.npz').stat().st_mtime_ns, Meshgenesisaposewahl.gewaehlt())
+            return (g[0].name, g[0].stat().st_mtime_ns, Npztorch.stat(g[0].with_suffix('.npz')).st_mtime_ns, Meshgenesisaposewahl.gewaehlt())
         except OSError:
             return None
 
@@ -104,7 +106,7 @@ class Meshgenesiswege:
                 return None
             wege = [w for w in bericht['wege'] if w.get('schluessel')]
             proben = {}
-            with np.load(datei.with_suffix('.npz')) as d:
+            with Npztorch.lesen(datei.with_suffix('.npz')) as d:
                 nummern = [int(x) for x in d['nr']]
                 for w in wege:
                     rig, dreh = d['%s_rig' % w['schluessel']], d['%s_dreh' % w['schluessel']]
@@ -112,7 +114,7 @@ class Meshgenesiswege:
                         logger.warning('Meshgenesiswege: %s, Weg %s hat die Form %s / %s — keine Wege', datei.with_suffix('.npz'), w['schluessel'], rig.shape, dreh.shape)
                         return None
                     for i, nr in enumerate(nummern):
-                        proben.setdefault(nr, {})[w['schluessel']] = (rig[i].astype(float), dreh[i].astype(float))
+                        proben.setdefault(nr, {})[w['schluessel']] = (Torchfeld.astype(rig[i], torch.float64), Torchfeld.astype(dreh[i], torch.float64))
             standard = bericht.get('standard') if bericht.get('standard') in {w['schluessel'] for w in wege} else wege[0]['schluessel']
             # 18.10.2026: Einstellungen → Mesh-Genesis, „Zwischenschritt A-Pose“ = aus → zuerst das Netz direkt auf der Pose (`Meshgenesisaposewahl`).
             if Meshgenesisaposewahl.gewaehlt() == 'aus' and any(w['schluessel'] == 'direkt' for w in wege):

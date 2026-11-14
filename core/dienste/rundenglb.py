@@ -9,7 +9,8 @@ kommt nur der Körper der Runde dazu — der Käfig aus `Kleidermodellbau.koerpe
 `koerper__koerper__0` wie bisher.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .standmodellglb import Standmodellglb
 
@@ -26,20 +27,20 @@ class Rundenglb(Standmodellglb):
         als UNSIGNED_BYTE): mit float32/uint16 wuchs die GLB von `.51` von 25,5 auf 45,3 MB (576.309 Haarpunkte)."""
         if typ != 'VEC4' or art not in (self.FLOAT, self.USHORT):
             return super()._zugriff(werte, art, typ, ziel, grenzen)
-        werte = np.asarray(werte)
+        werte = Torchfeld.feld(werte)
         if art == self.USHORT:
             if len(werte) and int(werte.max()) > 255:
                 return super()._zugriff(werte, art, typ, ziel, grenzen)
-            roh = np.ascontiguousarray(werte, dtype=np.uint8)
+            roh = Torchfeld.feld(werte, dtype=torch.uint8)
             zugriff = {}
         else:                                           # Gewichte: auf 255 runden, Rest auf das größte (Summe 255)
-            roh = np.round(np.clip(werte, 0.0, 1.0) * 255.0).astype(np.int64)
+            roh = Torchfeld.astype(Torchfeld.round(Torchfeld.clip(werte, 0.0, 1.0) * 255.0), torch.int64)
             rest = 255 - roh.sum(axis=1)
-            groesstes = np.argmax(roh, axis=1)
-            roh[np.arange(len(roh)), groesstes] += rest
-            roh = np.ascontiguousarray(np.clip(roh, 0, 255), dtype=np.uint8)
+            groesstes = Torchfeld.argmax(roh, dim=1)
+            roh[Torchfeld.arange(len(roh)), groesstes] += rest
+            roh = Torchfeld.feld(Torchfeld.clip(roh, 0, 255), dtype=torch.uint8)
             zugriff = {'normalized': True}
-        zugriff.update({'bufferView': self._ablegen(roh.tobytes(), ziel), 'componentType': self.UBYTE,
+        zugriff.update({'bufferView': self._ablegen(Torchfeld.als_bytes(roh), ziel), 'componentType': self.UBYTE,
                         'count': int(len(roh)), 'type': typ})
         self.gltf['accessors'].append(zugriff)
         return len(self.gltf['accessors']) - 1

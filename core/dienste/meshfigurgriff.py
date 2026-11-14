@@ -25,7 +25,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -86,11 +88,11 @@ class Meshfigurgriff:
         sonst die Hand der Figur). `seite` nur für den Bericht."""
         from .meshfigurhalter import Meshfigurhalter
 
-        flaechen = np.asarray(scan.flaechen)
-        punkte = np.asarray(scan.punkte)
-        gesehen = (klassen.max(axis=1) >= Meshfigurhalter.MIN_STIMMEN) & np.isin(klassen.argmax(axis=1), Meshfigurhalter.HAND_KLASSEN)
-        nah = gesehen & (np.linalg.norm(punkte[flaechen].mean(axis=1) - mitte, axis=1) < self.RADIUS_M)
-        return punkte[np.unique(flaechen[nah].reshape(-1))]
+        flaechen = Torchfeld.feld(scan.flaechen)
+        punkte = Torchfeld.feld(scan.punkte)
+        gesehen = (Torchfeld.amax(klassen, dim=1) >= Meshfigurhalter.MIN_STIMMEN) & torch.isin(klassen.argmax(axis=1), Torchfeld.feld(Meshfigurhalter.HAND_KLASSEN))
+        nah = gesehen & (Torchfeld.linalg_norm(punkte[flaechen].mean(axis=1) - mitte, dim=1) < self.RADIUS_M)
+        return punkte[Torchfeld.unique(flaechen[nah].reshape(-1))]
 
     # ------------------------------------------------------------------ Rechnen
 
@@ -104,23 +106,23 @@ class Meshfigurgriff:
             return self.job.ergebnis['griff']
         arbeit = self.ablage.arbeit
         sapiens, posiert, ende = arbeit('sapiens_flaechen.npz'), arbeit('posiert.npy'), arbeit('genesis_ende.npz')
-        if not (sapiens.is_file() and posiert.is_file() and ende.is_file()):
+        if not (Npztorch.da(sapiens) and Npztorch.da(posiert) and Npztorch.da(ende)):
             self.job.ergebnis['griff'] = {'fassung': self.FASSUNG, 'hinweis': 'Etiketten, Käfig oder Figur fehlen'}
             return self.job.ergebnis['griff']
         scan, _ = Meshfigurkleidung(self.lauf).koerpernetz()
-        with np.load(sapiens) as d:
-            klassen = np.asarray(d['klassen'])
+        with Npztorch.lesen(sapiens) as d:
+            klassen = Torchfeld.feld(d['klassen'])
         if len(klassen) != len(scan.flaechen):
             self.job.ergebnis['griff'] = {'fassung': self.FASSUNG, 'hinweis': 'Die Etiketten gehören zu einem anderen Netz'}
             return self.job.ergebnis['griff']
-        kaefig = np.load(posiert).astype(np.float64)
-        with np.load(ende) as d:
-            teil = np.asarray(d['teil'])
+        kaefig = Torchfeld.astype(Npztorch.lesen(posiert), torch.float64)
+        with Npztorch.lesen(ende) as d:
+            teil = Torchfeld.feld(d['teil'])
         from Genesis9.koerperteile import G9koerperteile
 
         mitten = {s: kaefig[teil == G9koerperteile.NUMMER[s + '_hand']].mean(axis=0) for s in halter}
         # Das Ziel liegt um die Faust des NETZES (`zentrum`), nicht um die Hand der Figur — die steht von Lauf zu Lauf bis zu 8 cm anders und am Zauberer 25 cm neben der Netzhand.
-        ziele = {s: self.ziel(scan, klassen, np.asarray(halter[s].get('zentrum') or mitten[s], dtype=np.float64), s) for s in halter}
+        ziele = {s: self.ziel(scan, klassen, Torchfeld.feld(halter[s].get('zentrum') or mitten[s], dtype=torch.float64), s) for s in halter}
         stempel = self._stempel(kaefig, halter, ziele)
         gemerkt = self._gemerkt(stempel)
         if gemerkt is not None:
@@ -161,7 +163,7 @@ class Meshfigurgriff:
         v, n = ohne['kennzahlen'], erg['nachher']
         eintrag.update(ohne_finger=v, nachher=n, start=erg['start'], sekunden=erg['sekunden'], phi=[round(float(x), 2) for x in erg['phi']])
         # Wie weit wandert die Hand der Figur (Mitte der Handpunkte) durch Armwinkel und Finger? Mehr als `MAX_WEG_M` ist keine Korrektur mehr, sondern eine andere Pose.
-        weg = float(np.linalg.norm(modell.posiert(erg['phi']).mean(axis=0) - modell.posiert(np.zeros(modell.anzahl)).mean(axis=0)))
+        weg = float(Torchfeld.linalg_norm(modell.posiert(erg['phi']).mean(axis=0) - modell.posiert(torch.zeros(modell.anzahl, dtype=torch.float64, device='cuda')).mean(axis=0)))
         eintrag['weg_mm'] = round(weg * 1000.0, 1)
         gilt = (bool(erg['uebernommen']) and n['original_median_mm'] < self.VORTEIL * v['original_median_mm'] and n['original_p90_mm'] < self.VORTEIL * v['original_p90_mm'] and weg <= self.MAX_WEG_M)
         if gilt:
@@ -196,7 +198,7 @@ class Meshfigurgriff:
     def _stempel(self, kaefig, halter, ziele):
         """Gleiche Figur, gleiche Regler, gleiche Seiten, gleiches Ziel → dieselbe Suche."""
         h = hashlib.sha1()
-        h.update(np.ascontiguousarray(kaefig.astype(np.float32)).tobytes())
+        h.update(Torchfeld.als_bytes(Torchfeld.feld(Torchfeld.astype(kaefig, torch.float32))))
         h.update(json.dumps([self.FASSUNG, sorted(halter), self.job.stellung(), [len(ziele[s]) for s in sorted(ziele)], [round(float(ziele[s].sum()), 4) for s in sorted(ziele)]],
                             sort_keys=True, default=str).encode('utf-8'))
         return h.hexdigest()[:16]

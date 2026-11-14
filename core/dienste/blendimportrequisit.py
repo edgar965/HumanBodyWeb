@@ -16,7 +16,8 @@ am Kopf; Haar und Augen sind starr am Kopf (`Blendimportlage.kopf_starr`), das g
     Bindung    das Stück hängt ganz an dem Knochen, der das Teil führt (`Blendimportteile.KNOCHEN`, wie das Haar an `head`)
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.koerperteile import G9koerperteile
 
 __all__ = ['Blendimportrequisit']
@@ -46,20 +47,20 @@ class Blendimportrequisit:
         d, i = lage.entposen().baum.query(netz, workers=-1)
         h = lage.h
         frei = float((d > self.FREI_H * h).mean())
-        if frei < self.FREI_ANTEIL or float(np.median(d)) < self.ABSTAND_H * h:
+        if frei < self.FREI_ANTEIL or float(Torchfeld.median(d)) < self.ABSTAND_H * h:
             return None
-        nah = np.argsort(d)[:max(10, int(self.NAH_ANTEIL * len(d)))]
+        nah = torch.argsort(d, stable=True)[:max(10, int(self.NAH_ANTEIL * len(d)))]
         teile = lage.teil[i[nah]]
         teile = teile[teile >= 0]
         if not len(teile):
             return None
-        nummer = int(np.bincount(teile).argmax())
+        nummer = int(Torchfeld.bincount(teile).argmax())
         name = G9koerperteile.TEILE[nummer]
         knochen = Blendimportteile.KNOCHEN.get(name)
         if knochen is None:
             return None
         return {'teil': name, 'nummer': nummer, 'knochen': knochen,
-                'abstand_median_mm': round(float(np.median(d)) * 1000.0, 1), 'frei_anteil': round(frei, 3)}
+                'abstand_median_mm': round(float(Torchfeld.median(d)) * 1000.0, 1), 'frei_anteil': round(frei, 3)}
 
     def anteil_teil(self, punkte_blender, nummer):
         """Anteil (0…1) der Punkte, deren nächster Käfigpunkt zum Körperteil `nummer` gehört — wie weit ein Stück wirklich an EINEM Teil hängt (`erkennen` nimmt nur die 2 % nächsten Punkte: ein langer Bart, dessen
@@ -86,10 +87,10 @@ class Blendimportrequisit:
     def _starr(a, b):
         """`(R, Mitte a, Mitte b, Rundlauf mm)` — die Starrkörperbewegung a → b (Kabsch ohne Maßstab): `(x − Mitte a) @ R.T + Mitte b`."""
         ma, mb = a.mean(axis=0), b.mean(axis=0)
-        u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))
-        s = np.sign(np.linalg.det(vt.T @ u.T)) or 1.0
-        r = vt.T @ np.diag([1.0, 1.0, s]) @ u.T
-        return r, ma, mb, float(np.sqrt((np.linalg.norm((a - ma) @ r.T + mb - b, axis=1) ** 2).mean())) * 1000.0
+        u, _, vt = Torchfeld.linalg_svd(Torchfeld.feld((a - ma).T @ (b - mb)))
+        s = Torchfeld.sign(Torchfeld.linalg_det(vt.T @ u.T)) or 1.0
+        r = vt.T @ Torchfeld.diag(Torchfeld.feld([1.0, 1.0, s])) @ u.T
+        return r, ma, mb, float(Torchfeld.sqrt((Torchfeld.linalg_norm(Torchfeld.feld((a - ma) @ r.T + mb - b), dim=1) ** 2).mean())) * 1000.0
 
     #: Teile, die einen Gegenstand tragen können (Stab, Schwert, Schirm, Flasche): die Hände.
     TRAEGER = ('l_hand', 'r_hand')
@@ -111,4 +112,4 @@ class Blendimportrequisit:
         if hand.sum() < self.HANDTELLER_MIN:
             return self.ruhelage(punkte_blender, nummer)
         schritt = lage.kaefig_ruhe[hand].mean(axis=0) - lage.kaefig_posiert[hand].mean(axis=0)
-        return lage.ins_netz(punkte_blender) + schritt, round(float(np.linalg.norm(schritt)) * 1000.0, 1)
+        return lage.ins_netz(punkte_blender) + schritt, round(float(Torchfeld.linalg_norm(schritt)) * 1000.0, 1)

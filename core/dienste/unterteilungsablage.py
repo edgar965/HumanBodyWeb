@@ -15,6 +15,10 @@ from pathlib import Path
 from django.conf import settings
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
 from humanbody_core.unterteilungsbau import Unterteilungsbau
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -57,10 +61,10 @@ class Unterteilungsablage:
 
     @staticmethod
     def _laden(pfad):
-        if not pfad.is_file():
+        if not pfad.is_file():  # npz geprüft: bleibt NPZ, humanbody_core liest numpy (Npzumstellung.NUR_NUMPY)
             return None
         try:
-            return Unterteilungsbau.laden(pfad)
+            return Unterteilungsbau.laden(pfad)  # npz geprüft: ohne torch
         except Exception as fehler:  # noqa: BLE001
             # stumm gewollt: eine kaputte Ablage wird neu gebaut, nicht zum Fehler
             logger.warning('Unterteilungsablage %s unlesbar (%s) — wird neu gebaut', pfad.name, fehler)
@@ -71,7 +75,7 @@ class Unterteilungsablage:
         try:
             cls.ORDNER.mkdir(parents=True, exist_ok=True)
             vorlaeufig = pfad.with_suffix('.neu.npz')
-            Unterteilungsbau.speichern(vorlaeufig, teile)
-            vorlaeufig.replace(pfad)
+            Unterteilungsbau.speichern(vorlaeufig, teile)  # npz geprüft: ohne torch
+            Npztorch.ersetzen(vorlaeufig, pfad)
         except OSError as fehler:
             logger.warning('Unterteilungsablage %s nicht schreibbar: %s', pfad, fehler)

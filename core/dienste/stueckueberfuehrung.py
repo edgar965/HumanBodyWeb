@@ -39,7 +39,8 @@ Die Saumluft ist die Zahl, die zählt: 15 mm heißt „klebt am Bein", 73 mm hei
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -146,7 +147,7 @@ class Stueckueberfuehrung:
         if vorlage is None or vorlage.vertices is None:
             return None, '', 'Kleidungsstück %s hat kein Netz' % garment_id
         kategorie = getattr(vorlage, 'category', '') or ''
-        punkte = np.asarray(vorlage.vertices, dtype=np.float64)
+        punkte = Torchfeld.feld(vorlage.vertices, dtype=torch.float64)
         system = 'makehuman' if vorlage.source == 'makehuman-assets' else Quellsystem.erkennen(punkte)
         if system != 'blender':
             punkte = Quellsystem.nach_blender(punkte, system)

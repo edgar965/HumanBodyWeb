@@ -7,7 +7,8 @@ MITTE zum Klickpunkt (höchstens 3 cm). Gemessen an der Spiralballerina (`Projek
 war die Referenz: 435 Flächen des Unterarms wurden entfernt. Ob ein Klick auf einem Dreieck liegt, sagt der Abstand zum Dreieck, nicht der zur Mitte.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Mesh3dnetzdreieck']
 
@@ -16,29 +17,29 @@ class Mesh3dnetzdreieck:
     @staticmethod
     def abstand(punkt, dreiecke):
         """(N,) Abstand des Punkts `(3,)` zu jedem der Dreiecke `(N, 3, 3)`: zur Fläche, wenn die Projektion hineinfällt, sonst zur nächsten Kante. Ein entartetes Dreieck zählt über seine Kanten."""
-        p = np.asarray(punkt, dtype=np.float64)
-        t = np.asarray(dreiecke, dtype=np.float64)
+        p = Torchfeld.feld(punkt, dtype=torch.float64)
+        t = Torchfeld.feld(dreiecke, dtype=torch.float64)
         a, b, c = t[:, 0], t[:, 1], t[:, 2]
-        kante = np.minimum.reduce([Mesh3dnetzdreieck._strecke(p, a, b), Mesh3dnetzdreieck._strecke(p, b, c), Mesh3dnetzdreieck._strecke(p, c, a)])
+        kante = Torchfeld.minimum_reduce([Mesh3dnetzdreieck._strecke(p, a, b), Mesh3dnetzdreieck._strecke(p, b, c), Mesh3dnetzdreieck._strecke(p, c, a)])
         ab, ac, ap = b - a, c - a, p - a
-        normale = np.cross(ab, ac)
+        normale = Torchfeld.cross(ab, ac)
         flaeche2 = (normale * normale).sum(axis=1)
         ok = flaeche2 > 1e-24
         # Schwerpunktkoordinaten der Projektion: u + v <= 1, u, v >= 0 heißt innen
         d00, d01, d11 = (ab * ab).sum(axis=1), (ab * ac).sum(axis=1), (ac * ac).sum(axis=1)
         d20, d21 = (ap * ab).sum(axis=1), (ap * ac).sum(axis=1)
         nenner = d00 * d11 - d01 * d01
-        nenner = np.where(np.abs(nenner) > 1e-30, nenner, 1.0)
+        nenner = torch.where(Torchfeld.abs(nenner) > 1e-30, nenner, 1.0)
         v = (d11 * d20 - d01 * d21) / nenner
         w = (d00 * d21 - d01 * d20) / nenner
         innen = ok & (v >= 0) & (w >= 0) & (v + w <= 1)
-        ebene = np.abs((ap * normale).sum(axis=1)) / np.sqrt(np.where(ok, flaeche2, 1.0))
-        return np.where(innen, ebene, kante)
+        ebene = Torchfeld.abs((ap * normale).sum(axis=1)) / Torchfeld.sqrt(torch.where(ok, flaeche2, 1.0))
+        return torch.where(innen, ebene, kante)
 
     @staticmethod
     def _strecke(p, a, b):
         """Abstand des Punkts zu den Strecken a–b."""
         ab = b - a
         laenge2 = (ab * ab).sum(axis=1)
-        s = np.clip(((p - a) * ab).sum(axis=1) / np.where(laenge2 > 0, laenge2, 1.0), 0.0, 1.0)
-        return np.linalg.norm(p - (a + ab * s[:, None]), axis=1)
+        s = Torchfeld.clip(((p - a) * ab).sum(axis=1) / torch.where(laenge2 > 0, laenge2, 1.0), 0.0, 1.0)
+        return Torchfeld.linalg_norm(p - (a + ab * s[:, None]), dim=1)

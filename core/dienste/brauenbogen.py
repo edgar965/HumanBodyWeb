@@ -18,7 +18,9 @@ import json
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from .brauenretusche import Brauenretusche
@@ -53,7 +55,7 @@ class Brauenbogen:
 
     @classmethod
     def bestimmen(cls, geschlecht):
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         from .lippenmaske import Lippenmaske
 
@@ -62,13 +64,13 @@ class Brauenbogen:
         hoehe, breite = maske.shape
         marken, anzahl = ndimage.label(maske)
         groessen = ndimage.sum(maske, marken, range(1, anzahl + 1))
-        beste = np.argsort(groessen)[::-1][:2] + 1
+        beste = Torchfeld.umgekehrt(torch.argsort(groessen, stable=True), 0)[:2] + 1
         seiten = {}
         for marke in beste:
             linie = cls.mittellinie(marken == marke)
-            mitte_u = float(np.mean(linie[:, 0]))
+            mitte_u = float(Torchfeld.mean(linie[:, 0]))
             seiten['links' if mitte_u < breite / 2 else 'rechts'] = linie
-        ys, xs = np.nonzero(zone)
+        ys, xs = torch.nonzero(zone, as_tuple=True)
         u0 = max(0, xs.min() - cls.RAND_PX)
         u1 = min(breite - 1, xs.max() + cls.RAND_PX)
         w0 = max(0, ys.min() - cls.RAND_PX)
@@ -87,10 +89,10 @@ class Brauenbogen:
         for seite, linie in seiten.items():
             # von innen (Nasenseite) nach außen
             innen_rechts = seite == 'links'
-            reihe = linie[np.argsort(linie[:, 0])]
+            reihe = linie[torch.argsort(linie[:, 0], stable=True)]
             if innen_rechts:
-                reihe = reihe[::-1]
-            daten[seite] = [[float(u / (breite - 1)), float(1 - w / (hoehe - 1))] for u, w in reihe]
+                reihe = Torchfeld.umgekehrt(reihe, 0)
+            daten[seite] = [[float(u / (breite - 1)), float(1 - w / (hoehe - 1))] for u, w in Torchfeld.liste(reihe)]
         logger.info(
             'Brauenbogen %s: %s, Fenster %s, %.0f mm/UV',
             geschlecht,
@@ -103,29 +105,27 @@ class Brauenbogen:
     @classmethod
     def mittellinie(cls, komponente):
         """Je Spalte die mittlere Zeile → (n, 2) Pixelkoordinaten (u, w)."""
-        ys, xs = np.nonzero(komponente)
-        spalten = np.unique(xs)
-        mitten = np.array([ys[xs == x].mean() for x in spalten])
+        ys, xs = torch.nonzero(komponente, as_tuple=True)
+        spalten = Torchfeld.unique(xs)
+        mitten = Torchfeld.feld([ys[xs == x].mean() for x in Torchfeld.liste(spalten)], copy=True)
         k = min(cls.GLAETTUNG, len(mitten) if len(mitten) % 2 else len(mitten) - 1)
         if k >= 3:
-            kern = np.ones(k) / k
-            innen = np.convolve(mitten, kern, mode='valid')
-            mitten = np.concatenate([mitten[: k // 2], innen, mitten[-(k // 2) :]])
-        return np.column_stack([spalten, mitten])
+            kern = torch.ones(k, dtype=torch.float64, device='cuda') / k
+            innen = Torchfeld.convolve(mitten, kern, mode='valid')
+            mitten = Torchfeld.cat([mitten[: k // 2], innen, mitten[-(k // 2) :]])
+        return Torchfeld.column_stack([spalten, mitten])
 
     @classmethod
     def massstab(cls):
         """mm je UV-Einheit im Brauenbereich: Median über nächste Nachbarn."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         einheiten, uvs = Brauenretusche.zutaten()
-        punkte = np.load(
-            str(Path(settings.HUMANBODY_ROOT) / 'data' / 'humanBody' / 'vertices_tpose.npy')
-        ).astype(np.float64)
+        punkte = Torchfeld.astype(Npztorch.lesen(str(Path(settings.HUMANBODY_ROOT) / 'data' / 'humanBody' / 'vertices_tpose.npy')), torch.float64)
         idx = Brauenretusche.brauenpunkte(einheiten)
         uv, p = uvs[idx], punkte[idx]
         abstand_uv, nachbar = cKDTree(uv).query(uv, k=2, workers=-1)
         d_uv = abstand_uv[:, 1]
-        d_mm = np.linalg.norm(p - p[nachbar[:, 1]], axis=1) * 1000
+        d_mm = Torchfeld.linalg_norm(p - p[nachbar[:, 1]], dim=1) * 1000
         gueltig = d_uv > 1e-6
-        return float(np.median(d_mm[gueltig] / d_uv[gueltig]))
+        return float(Torchfeld.median(d_mm[gueltig] / d_uv[gueltig]))

@@ -8,7 +8,9 @@ früheren Schritts. Der Hut (`kopfbedeckung`, Stück 4 „Zubehör") und der lan
 
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Meshfigurhaarabzug']
 
@@ -21,16 +23,16 @@ class Meshfigurhaarabzug:
     def abziehen(cls, ablage, maske, regel):
         """Die Maske ohne die Flächen, die `haar_maske.npz` als Haar führt (`regel.abschliessen` rechnet `kleidung` und `haut` neu). Fehlt die Ablage, ist nichts Haar oder gehört nichts zur Kleidung: die Maske, wie sie ist."""
         pfad = ablage.arbeit('haar_maske.npz')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return maske
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             haar = d['haar'] if 'haar' in d.files else None
-        stueck = np.asarray(maske['stueck'])
+        stueck = Torchfeld.feld(maske['stueck'])
         if haar is None or len(haar) != len(stueck):
             return maske
         weg = haar & (stueck > 0) & (stueck != cls.ZUBEHOER)
         if not weg.any():
             return maske
-        stueck = stueck.copy()
+        stueck = Torchfeld.kopie(stueck)
         stueck[weg] = 0
         return regel.abschliessen(stueck)

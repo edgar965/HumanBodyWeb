@@ -26,7 +26,8 @@ und über die Daz-Haut gelegt. Aufwand: ein Runner (python10), ein
 Backschritt (python14), die Ansicht (`vertexColors` sofort, Textur nach).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Bildmodelltextur']
 
@@ -79,7 +80,7 @@ class Bildmodelltextur:
     @classmethod
     def hautton(cls, bilder):
         """`{hautton: [r, g, b], bilder: n, tauglich: m}` — gemischt nach Hautpixeln."""
-        summe = np.zeros(3)
+        summe = torch.zeros(3, dtype=torch.float64, device='cuda')
         gewicht = 0.0
         n = 0
         tauglich = 0
@@ -92,7 +93,7 @@ class Bildmodelltextur:
             w = float(t.get('anteil') or 0) * float(t.get('maske_px') or 0)
             if w <= 0:
                 continue
-            summe += np.asarray(t['hautton'], dtype=float) * w
+            summe += Torchfeld.feld(t['hautton'], dtype=torch.float64) * w
             gewicht += w
             n += 1
         if gewicht <= 0:

@@ -16,6 +16,10 @@ import numpy as np
 from PIL import Image
 
 from core.tests.unit.hautbacken_zoo import Hautbackenzoo
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Hautbackenzoogolden']
 
@@ -25,8 +29,8 @@ class Hautbackenzoogolden(Hautbackenzoo):
         super().__init__(ordner, px, je_satz, 'CPU')
         self._graphen = json.loads((self.ordner / 'graphen.json').read_text(encoding='utf-8'))
         self._saetze = json.loads((self.ordner / 'saetze.json').read_text(encoding='utf-8'))
-        self._netz = {k: v for k, v in np.load(self.ordner / 'netz.npz').items()}
-        self._material = np.load(self.ordner / 'material.npz')
+        self._netz = {k: v for k, v in Npztorch.lesen_numpy(self.ordner / 'netz.npz').items()}
+        self._material = Npztorch.lesen_numpy(self.ordner / 'material.npz')
         self._bilder = {}
 
     def saetze(self):
@@ -72,11 +76,11 @@ class Hautbackenzoogolden(Hautbackenzoo):
             e = zoo.ordner / ('satz_%02d' % satz) / 'export'
             return e, json.loads((e / 'inventar.json').read_text(encoding='utf-8'))['netze'][0]
 
-        basis = max(range(zoo.saetze()), key=lambda s: len(np.load(arrays(s)[0] / arrays(s)[1]['datei']).files))
+        basis = max(range(zoo.saetze()), key=lambda s: len(Npztorch.lesen_numpy(arrays(s)[0] / arrays(s)[1]['datei']).files))
         z0, inventar = arrays(basis)
-        netz = {k: v for k, v in np.load(z0 / inventar['datei']).items() if k != 'material'}
-        netz['lage'] = np.load(zoo.ordner / 'lage.npy').astype(np.float32)
-        np.savez_compressed(ziel / 'netz.npz', **netz)
+        netz = {k: v for k, v in Npztorch.lesen_numpy(z0 / inventar['datei']).items() if k != 'material'}
+        netz['lage'] = Npztorch.lesen_numpy(zoo.ordner / 'lage.npy').astype(np.float32)
+        Npztorch.speichern(ziel / 'netz.npz', **netz, komprimiert=True)
         graphen, namen, material = {}, [], {}
         for satz in range(zoo.saetze()):
             s = zoo.ordner / ('satz_%02d' % satz)
@@ -85,8 +89,8 @@ class Hautbackenzoogolden(Hautbackenzoo):
             for name, m in zip(n, e['materialien']):
                 graphen[name] = json.loads((s / 'export' / m['graph']).read_text(encoding='utf-8'))
             namen.append(n)
-            material['satz_%02d' % satz] = np.load(s / 'export' / e['datei'])['material'].astype(np.uint8)
-        np.savez_compressed(ziel / 'material.npz', **material)
+            material['satz_%02d' % satz] = Npztorch.lesen_numpy(s / 'export' / e['datei'])['material'].astype(np.uint8)
+        Npztorch.speichern(ziel / 'material.npz', **material, komprimiert=True)
         (ziel / 'graphen.json').write_text(json.dumps(graphen, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
         (ziel / 'saetze.json').write_text(json.dumps({'namen': namen, 'netz': {k: v for k, v in inventar.items() if k != 'materialien'}}, ensure_ascii=False), encoding='utf-8')
         for kanal in zoo.KANAELE:

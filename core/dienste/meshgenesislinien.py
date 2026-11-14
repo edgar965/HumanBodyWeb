@@ -19,7 +19,9 @@ import logging
 import re
 import struct
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -44,7 +46,7 @@ class Meshgenesislinien:
 
     @staticmethod
     def _block(werte, typ):
-        roh = np.ascontiguousarray(werte, dtype='<f4' if typ == 'f4' else np.uint8).tobytes()
+        roh = Torchfeld.als_bytes(Torchfeld.feld(werte, dtype='<f4' if typ == 'f4' else torch.uint8))
         return roh + b'\0' * (-len(roh) % 4)
 
     @classmethod
@@ -64,26 +66,26 @@ class Meshgenesislinien:
 
     @classmethod
     def _paket(cls, datei, stand, figur, nr):
-        if not datei.is_file() or stand is None:
+        if not Npztorch.da(datei) or stand is None:          # .pt seit 13.11.2026 (Parameter mit .npz-Namen, `parameter_pruefen.py`)
             return None
         vor = 'p%d_' % int(nr)
         bloecke, teile = [], []
         try:
-            with np.load(datei) as z:
+            with Npztorch.lesen(datei) as z:
                 if not any(vor + w in z.files for w in cls.WOLKEN):
                     return None
                 for name, typ in [(vor + w, 'f4') for w in cls.WOLKEN] + [(vor + 'etikett', 'u1')]:
                     if name not in z.files:
                         continue
-                    werte = z[name].astype(np.int16) + 1 if typ == 'u1' else z[name]
-                    bloecke.append([name[len(vor):], typ, int(werte.size)])
+                    werte = Torchfeld.astype(z[name], torch.int16) + 1 if typ == 'u1' else z[name]
+                    bloecke.append([name[len(vor):], typ, int(Torchfeld.groesse(werte))])
                     teile.append(cls._block(werte.reshape(-1), typ))
                 for weg in cls.WEGE:
                     for was in cls.WAS:
                         for teil, typ in cls.TEILE:
                             schluessel = '%s%s_%s_%s' % (vor, weg, was, teil)
                             if schluessel in z.files:
-                                bloecke.append([schluessel[len(vor):], typ, int(z[schluessel].size)])
+                                bloecke.append([schluessel[len(vor):], typ, int(Torchfeld.groesse(z[schluessel]))])
                                 teile.append(cls._block(z[schluessel].reshape(-1), typ))
         except (OSError, ValueError, KeyError) as fehler:
             logger.warning('Messlinien %s Probe %s nicht lesbar: %s', datei, nr, fehler)

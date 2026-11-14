@@ -6,6 +6,8 @@ Wandelt `data/Daz 3D/Genesis 9/Anatomical Elements Male|Female` (Genesis 9 Start
 nächsten Aufruf neu gebaut.
 """
 
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
@@ -58,7 +60,7 @@ class Command(BaseCommand):
         import shutil
         import time
 
-        import numpy as np
+        import torch
         from django.conf import settings
 
         from core.atomic_write import AtomarSchreiber
@@ -75,14 +77,14 @@ class Command(BaseCommand):
         gepackt = roh[:2] == b'\x1f\x8b'
         doc = json.loads(gzip.decompress(roh) if gepackt else roh)
         geo = doc['geometry_library'][0]
-        punkte = np.asarray(geo['vertices']['values'], dtype=np.float64) * 0.01 - np.array([0.0, G9eigenstueck.koerper()[4], 0.0])
-        flaechen = np.asarray([f[2:] for f in geo['polylist']['values']], dtype=object)
-        dreiecke = np.asarray([[f[0], f[i], f[i + 1]] for f in flaechen for i in range(1, len(f) - 1)], dtype=np.int64)
+        punkte = Torchfeld.feld(geo['vertices']['values'], dtype=torch.float64) * 0.01 - Torchfeld.feld([0.0, G9eigenstueck.koerper()[4], 0.0], copy=True)
+        flaechen = Torchfeld.feld([f[2:] for f in geo['polylist']['values']], dtype=object)
+        dreiecke = Torchfeld.feld([[f[0], f[i], f[i + 1]] for f in Torchfeld.liste(flaechen) for i in range(1, len(f) - 1)], dtype=torch.int64)
         ring = json.loads(ersetzt.read_text(encoding='utf-8'))['loch']['ring']
         g = dazgeograft(geschlecht)
         quelle = Dazgeograftquelle(geschlecht)
         kaefig = quelle.punkte + float(realism) * quelle.morph(g.REALISM)
-        gewichte = g.gewichte(g.figur(), punkte, dreiecke, np.asarray(ring['lage'], dtype=np.float64), np.asarray(ring['punkte'], dtype=np.int64), quelle, kaefig)
+        gewichte = g.gewichte(g.figur(), punkte, dreiecke, Torchfeld.feld(ring['lage'], dtype=torch.float64), Torchfeld.feld(ring['punkte'], dtype=torch.int64), quelle, kaefig)
         haut = next(m for m in doc['modifier_library'] if m.get('id') == 'SkinBinding')['skin']
         alt = {j['id']: round(sum(w for _i, w in j['node_weights']['values']), 1) for j in haut['joints']}
         haut['joints'] = [{'id': name, 'node': '#%s' % name, 'node_weights': {'count': len(werte), 'values': werte}} for name, werte in gewichte.items()]

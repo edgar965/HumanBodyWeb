@@ -18,7 +18,8 @@ Option `iterationen.haarumbau` = aus.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .haarkappe import Haarkappe
 from .haarlaenge import Haarlaenge
@@ -101,7 +102,7 @@ class Haarumbau:
             teil = kappe.teil(cls.anzeigefarbe(haarfarbe))
             if teil is None:
                 return haar
-            teil['dreiecke'] = np.asarray(teil['dreiecke'], dtype=np.int64).reshape(-1, 3)
+            teil['dreiecke'] = Torchfeld.feld(teil['dreiecke'], dtype=torch.int64).reshape(-1, 3)
             geschnitten = [cls._schneiden(t, kappe) for t in haar]
         except Exception:  # noqa: BLE001 — ohne Umbau bleibt die Frisur wie gewählt (Warnung im Log)
             logger.exception('Haarumbau: nicht gebaut')
@@ -114,12 +115,12 @@ class Haarumbau:
         zählen die behaltenen Dreiecke neu."""
         if teil.get('art') != 'haar' or any(o in str(teil.get('sorte')) for o in cls.OHNE) or teil.get('kurven') is not None:
             return teil
-        d = np.asarray(teil['dreiecke'], dtype=np.int64).reshape(-1, 3)
+        d = Torchfeld.feld(teil['dreiecke'], dtype=torch.int64).reshape(-1, 3)
         grad = kappe.grad_je_punkt(teil['punkte'], cls.REICHWEITE)
         behalten = grad[d].mean(axis=1) > 0.0
         if behalten.all():
             return teil
-        davor = np.concatenate([[0], np.cumsum(behalten)])          # behaltene Dreiecke vor Dreieck i
+        davor = Torchfeld.cat([[0], Torchfeld.cumsum(behalten)])          # behaltene Dreiecke vor Dreieck i
 
         def bereich(ab, anzahl):
             return int(davor[ab]), int(davor[ab + anzahl] - davor[ab])

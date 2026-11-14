@@ -15,7 +15,8 @@ HIER — nur, was Daz tut: die Gewichte der `SkinBinding` je Käfigpunkt. Eigene
 Kehrwert des Abstands. Zuschnitt, Randseite und Naht verschieben Punkte, darum über die Lage, nicht die Nummer. Den Rand legt danach
 `Blendimportschamgewichte.an_ring` auf die Haut (Daz: Randpunkte SIND Punkte des Körpers).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftgewichte']
 
@@ -38,11 +39,11 @@ class Dazgeograftgewichte:
         # id → (Name, Eltern-id); die Gelenke zeigen auf die id (`#lThighTwist`), die Figur kennt den Namen (`l_thightwist1`)
         knoten = {n['id']: (n.get('name') or n['id'], str(n.get('parent') or '').lstrip('#') or None) for n in doc.bibliothek('node_library')}
         spalte = {name: i for i, name in enumerate(self.knochen)}
-        w = np.zeros((len(q.punkte), len(self.knochen)))
+        w = torch.zeros((len(q.punkte), len(self.knochen)), dtype=torch.float64, device='cuda')
         umgelegt = {}
         haut = next(m for m in doc.modifikatoren() if m.get('id') == 'SkinBinding')['skin']
         for gelenk in haut['joints']:
-            werte = np.asarray((gelenk.get('node_weights') or {}).get('values') or [], dtype=np.float64).reshape(-1, 2)
+            werte = Torchfeld.feld((gelenk.get('node_weights') or {}).get('values') or [], dtype=torch.float64).reshape(-1, 2)
             if not len(werte):
                 continue
             k = str(gelenk.get('node', '')).lstrip('#')
@@ -53,7 +54,7 @@ class Dazgeograftgewichte:
             ziel = knoten.get(k, (k, None))[0]
             if ziel != gelenk.get('id'):
                 umgelegt[str(gelenk.get('id'))] = ziel
-            np.add.at(w[:, spalte[ziel]], werte[:, 0].astype(np.int64), werte[:, 1])
+            Torchfeld.add_at(w[:, spalte[ziel]], Torchfeld.astype(werte[:, 0], torch.int64), werte[:, 1])
         summe = w.sum(axis=1)
         if (summe <= 0).any():
             raise ValueError('%d Käfigpunkte des Geografts ohne Gewicht' % int((summe <= 0).sum()))
@@ -64,14 +65,14 @@ class Dazgeograftgewichte:
     def dicht(self, p, stufe, lage):
         """`(N, len(knochen))` für die Stückpunkte `p` (m, Ruhelage): Käfiggewichte über `stufe.matrix` auf die Stufe, je Stückpunkt aus den nächsten Punkten der Stufe
         in der Lage `lage` (`(P, 3)`, `Dazgeograft.stufe_punkte`: das gepostete Geograft, dieselbe Reihenfolge wie die Matrix)."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        p = np.asarray(p, dtype=np.float64)
+        p = Torchfeld.feld(p, dtype=torch.float64)
         w_kaefig = self.kaefig()
-        w_stufe = np.asarray(stufe.matrix(len(w_kaefig)) @ w_kaefig, dtype=np.float64)
-        abstand, nachbar = cKDTree(np.asarray(lage, dtype=np.float64)).query(p, k=self.NACHBARN)
-        g = 1.0 / np.maximum(abstand, 1e-6)
+        w_stufe = Torchfeld.feld(stufe.matrix(len(w_kaefig)) @ w_kaefig, dtype=torch.float64)
+        abstand, nachbar = cKDTree(Torchfeld.feld(lage, dtype=torch.float64)).query(p, k=self.NACHBARN)
+        g = 1.0 / Torchfeld.maximum(abstand, 1e-6)
         aus = (g[:, :, None] * w_stufe[nachbar]).sum(axis=1) / g.sum(axis=1)[:, None]
         aus /= aus.sum(axis=1, keepdims=True)
-        self.bericht.update(punkte=int(len(p)), abstand_mm={'median': round(float(np.median(abstand[:, 0])) * 1000.0, 3), 'max': round(float(abstand[:, 0].max()) * 1000.0, 3)})
+        self.bericht.update(punkte=int(len(p)), abstand_mm={'median': round(float(Torchfeld.median(abstand[:, 0])) * 1000.0, 3), 'max': round(float(abstand[:, 0].max()) * 1000.0, 3)})
         return aus

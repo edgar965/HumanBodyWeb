@@ -9,12 +9,14 @@ der Hülle werden zu `Hautbackenmikkfehler` mit Klartext.
 import ctypes
 import threading
 
-import numpy as np
+import torch
 
 from .hautbackenmikkbau import Hautbackenmikkbau
 from .hautbackenmikkfehler import Hautbackenmikkfehler
 
 __all__ = ['Hautbackenmikkdll']
+
+KARTE = torch.device('cuda')
 
 #: Schnittstellenfassung, die dieser Code erwartet (`hb_fassung` in `mikkhuelle/hautbackenmikk.cc`).
 FASSUNG = 2
@@ -26,10 +28,17 @@ FEHLER = {
 }
 
 
-def _zeiger(feld):
-    """Zeiger auf die Daten eines C-zusammenhängenden numpy-Feldes; `None` wird zum Nullzeiger
-    (optionale Felder der Hülle)."""
-    return ctypes.c_void_p(None if feld is None else feld.ctypes.data)
+def _fuer_dll(feld, typ):
+    """Eingang der Hülle: C-zusammenhängend im Arbeitsspeicher mit dem Typ, den die Hülle liest (Tensor auf der Karte oder Feld aus vorhandenem Code); `None` bleibt `None`."""
+    if feld is None:
+        return None
+    t = feld if isinstance(feld, torch.Tensor) else torch.as_tensor(feld)          # cpu gewollt: die DLL liest Arbeitsspeicher
+    return t.detach().to('cpu', typ).contiguous()                                  # cpu gewollt: die DLL liest Arbeitsspeicher
+
+
+def _zeiger(t):
+    """Zeiger auf die Daten eines zusammenhängenden Tensors im Arbeitsspeicher; `None` wird zum Nullzeiger (optionale Felder der Hülle)."""
+    return ctypes.c_void_p(None if t is None else t.data_ptr())
 
 
 class Hautbackenmikkdll:
@@ -66,22 +75,25 @@ class Hautbackenmikkdll:
     @classmethod
     def punktnormalen(cls, punkte, dreiecke):
         """`(N, 3)` float32: Punktnormalen wie Blenders `mesh.vertex_normals` (Eingaben bereits
-        float32 / int32, C-zusammenhängend)."""
-        aus = np.empty((len(punkte), 3), dtype=np.float32)
+        float32 / int32; Tensor oder Feld — die Hülle bekommt eine Kopie im Arbeitsspeicher). Ergebnis auf der Karte."""
+        punkte, dreiecke = _fuer_dll(punkte, torch.float32), _fuer_dll(dreiecke, torch.int32)
+        aus = torch.empty((len(punkte), 3), dtype=torch.float32)                  # cpu gewollt: die DLL schreibt in den Arbeitsspeicher
         code = cls.laden().hb_punktnormalen(len(punkte), len(dreiecke), _zeiger(punkte), _zeiger(dreiecke),
                                             _zeiger(aus))
         cls._pruefen(code, 'hb_punktnormalen')
-        return aus
+        return aus.to(KARTE)
 
     @classmethod
     def tangenten(cls, punkte, dreiecke, uv_ecken, normalen, ecken_normalen, glatt, modus):
         """`((T, 3, 3) float32, (T, 3) float32)`; `glatt` als uint8, `modus` 0 = Cycles,
-        1 = Blenders calc_tangents; `normalen` oder `ecken_normalen` darf `None` sein."""
-        tangenten = np.zeros((len(dreiecke), 3, 3), dtype=np.float32)
-        vorzeichen = np.zeros((len(dreiecke), 3), dtype=np.float32)
+        1 = Blenders calc_tangents; `normalen` oder `ecken_normalen` darf `None` sein. Ergebnisse auf der Karte."""
+        punkte, dreiecke, uv_ecken = _fuer_dll(punkte, torch.float32), _fuer_dll(dreiecke, torch.int32), _fuer_dll(uv_ecken, torch.float32)
+        normalen, ecken_normalen, glatt = _fuer_dll(normalen, torch.float32), _fuer_dll(ecken_normalen, torch.float32), _fuer_dll(glatt, torch.uint8)
+        tangenten = torch.zeros((len(dreiecke), 3, 3), dtype=torch.float32)       # cpu gewollt: die DLL schreibt in den Arbeitsspeicher
+        vorzeichen = torch.zeros((len(dreiecke), 3), dtype=torch.float32)         # cpu gewollt: die DLL schreibt in den Arbeitsspeicher
         code = cls.laden().hb_tangenten(
             len(punkte), len(dreiecke), _zeiger(punkte), _zeiger(dreiecke), _zeiger(uv_ecken),
             _zeiger(normalen), _zeiger(ecken_normalen), _zeiger(glatt), modus, _zeiger(tangenten),
             _zeiger(vorzeichen))
         cls._pruefen(code, 'hb_tangenten')
-        return tangenten, vorzeichen
+        return tangenten.to(KARTE), vorzeichen.to(KARTE)

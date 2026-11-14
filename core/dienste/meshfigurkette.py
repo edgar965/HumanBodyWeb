@@ -14,6 +14,10 @@ die Größe der Person. Das Netz wird dann um den Faktor Vorgabe / Figur um den 
 import logging
 
 from .meshfigurhandmass import Meshfigurhandmass
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -67,7 +71,7 @@ class Meshfigurkette:
         stellung, haltung = {**regler.grund, **regler.festwerte(self.optionen)}, {}
         # Frisch beginnen: die Haltung eines früheren Laufs (`arbeit/zustand.npz`) wäre ein Warmstart,
         # der zwei Läufe mit denselben Optionen verschieden rechnen ließe.
-        self.ablage.arbeit('zustand.npz').unlink(missing_ok=True)
+        Npztorch.loeschen(self.ablage.arbeit('zustand.npz'))
         runden = int(self.optionen.get('runden') or 2)
         verlauf = []
         for runde in range(1, runden + 1):

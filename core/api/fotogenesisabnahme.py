@@ -12,6 +12,9 @@ anders als die Seite: Die Prüfung sah Shorts bis zum Saum, die Seite zeigte Edg
                                                    ist neuer als die Messung (Seite neu aufgenommen, `koerperpruefung_lauf.py --seite` noch nicht gelaufen)
 Nur für Tests aus Fotos (`art == 'foto'`).
 """
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 import base64
 import json
 import logging
@@ -131,7 +134,7 @@ class Fotogenesisabnahmeendpunkte:
     def haltungen(request, job):
         """Haltung je Foto (Auftrag EdgarTrip, 24.10.2026: „Haltung je Foto, Form gemeinsam“): rig_<n>, dreh_<n> der Testfigur aus `ergebnis_Form_<g>.npz` des Mesh-Genesis-Tests
         (schreibt `nurfotos_koerper.py`) → {fotos: {Stamm des Fotos: {ausgabe, dreh (Quaternionen wie die Testschnittstelle)}}}; leer, wenn die Ablage nur eine Haltung trägt."""
-        import numpy as np
+        import torch
         from django.conf import settings
 
         from ..dienste.meshgenesisdaten import Meshgenesisdaten
@@ -143,15 +146,15 @@ class Fotogenesisabnahmeendpunkte:
         eigen = Fotogenesisfigur.ordner_von(gefunden)
         test = json.loads((Path(gefunden['ordner']) / 'job.json').read_text(encoding='utf-8')).get('meshgenesis_test')
         ablage = eigen or ((Path(settings.TOOLS_ROOT) / '3DObjects' / 'meshgenesis' / '_test' / str(test)) if test else None)
-        dateien = sorted(ablage.glob('ergebnis_Form_*.npz')) if ablage else []
+        dateien = sorted(Npztorch.glob(ablage, 'ergebnis_Form_*.npz')) if ablage else []
         if not dateien:
             return JsonResponse({'error': 'Für %s gibt es keine Ergebnisablage des Mesh-Genesis-Tests (%s)' % (job, test)}, status=404)
         fotos = {}
-        with np.load(dateien[0]) as z:
+        with Npztorch.lesen(dateien[0]) as z:
             for k in z.files:
                 if k.startswith('rig_') and 'dreh_' + k[4:] in z.files:
-                    fotos[k[4:]] = {'ausgabe': np.round(z[k].astype(float), 4).tolist(), 'dreh': np.round(Meshgenesisdaten._quaternionen(z['dreh_' + k[4:]].astype(float)), 5).tolist()}
-        return JsonResponse({'quelle': str(dateien[0]), 'zeit': dateien[0].stat().st_mtime, 'fotos': fotos})
+                    fotos[k[4:]] = {'ausgabe': Torchfeld.round(Torchfeld.astype(z[k], torch.float64), 4).tolist(), 'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(Torchfeld.astype(z['dreh_' + k[4:]], torch.float64)), 5).tolist()}
+        return JsonResponse({'quelle': str(dateien[0]), 'zeit': Npztorch.stat(dateien[0]).st_mtime, 'fotos': fotos})
 
     @staticmethod
     @require_http_methods(['GET', 'POST'])

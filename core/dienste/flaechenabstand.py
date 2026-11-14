@@ -15,7 +15,8 @@ bleibt klein. Abweichung gegen `trimesh.proximity.closest_point`: `ProjektTemp/_
 `test_flaechenabstand.py`.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Flaechenabstand']
 
@@ -29,20 +30,20 @@ class Flaechenabstand:
     @classmethod
     def abstand(cls, punkte, flaeche, dreiecke):
         """Abstand (in den Einheiten der Punkte) jedes Punkts zur Fläche. `flaeche` (V, 3) Netzpunkte, `dreiecke` (T, 3) Indizes."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
         from trimesh.triangles import closest_point
 
-        punkte = np.asarray(punkte, dtype=np.float64).reshape(-1, 3)
-        flaeche = np.asarray(flaeche, dtype=np.float64)
-        dreiecke = np.asarray(dreiecke, dtype=np.int64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64).reshape(-1, 3)
+        flaeche = Torchfeld.feld(flaeche, dtype=torch.float64)
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64)
         if not len(punkte):
-            return np.zeros(0)
+            return torch.zeros(0, dtype=torch.float64, device='cuda')
         baum = cKDTree(flaeche)
         eckpunkte = flaeche[dreiecke]
         start, dreieck_je_punkt = cls._dreiecke_je_punkt(dreiecke, len(flaeche))
-        anzahl = np.diff(start)
+        anzahl = Torchfeld.diff(start)
         k = min(cls.NAECHSTE, len(flaeche))
-        aus = np.empty(len(punkte))
+        aus = torch.empty(len(punkte), dtype=torch.float64, device='cuda')
         for a in range(0, len(punkte), cls.BLOCK):
             p = punkte[a:a + cls.BLOCK]
             abstand_punkt, nah = baum.query(p, k=k, workers=-1)
@@ -50,15 +51,15 @@ class Flaechenabstand:
             abstand_punkt = abstand_punkt.reshape(len(p), -1)
             je_punkt = anzahl[nah].sum(axis=1)                         # Kandidaten je Punkt
             kandidat = cls._ausrollen(start, dreieck_je_punkt, anzahl, nah.reshape(-1))
-            besitzer = np.repeat(np.arange(len(p)), je_punkt)
+            besitzer = Torchfeld.repeat_interleave(Torchfeld.arange(len(p)), je_punkt)
             nah_punkt = closest_point(eckpunkte[kandidat], p[besitzer])
-            d = np.linalg.norm(nah_punkt - p[besitzer], axis=1)
+            d = Torchfeld.linalg_norm(nah_punkt - p[besitzer], dim=1)
             # Kleinster Abstand je Punkt; ein Punkt ohne Kandidaten (nur lose Netzpunkte ohne Dreieck) behält den Abstand zum Netzpunkt.
-            ergebnis = abstand_punkt[:, 0].copy()
+            ergebnis = Torchfeld.kopie(abstand_punkt[:, 0])
             gueltig = je_punkt > 0
-            anfang = np.cumsum(je_punkt) - je_punkt
+            anfang = Torchfeld.cumsum(je_punkt) - je_punkt
             if gueltig.any():
-                ergebnis[gueltig] = np.minimum.reduceat(d, anfang[gueltig])
+                ergebnis[gueltig] = Torchfeld.minimum_reduceat(d, anfang[gueltig])
             aus[a:a + len(p)] = ergebnis
         return aus
 
@@ -66,9 +67,9 @@ class Flaechenabstand:
     def _dreiecke_je_punkt(dreiecke, punktzahl):
         """CSR-Liste: `start[v]:start[v+1]` ist der Bereich in `dreieck_je_punkt` mit den Dreiecken, die den Netzpunkt v tragen."""
         knoten = dreiecke.reshape(-1)
-        dreieck = np.repeat(np.arange(len(dreiecke)), dreiecke.shape[1])
-        ordnung = np.argsort(knoten, kind='stable')
-        start = np.searchsorted(knoten[ordnung], np.arange(punktzahl + 1))
+        dreieck = Torchfeld.repeat_interleave(Torchfeld.arange(len(dreiecke)), dreiecke.shape[1])
+        ordnung = torch.argsort(knoten, stable=True)
+        start = Torchfeld.searchsorted(knoten[ordnung], Torchfeld.arange(punktzahl + 1))
         return start, dreieck[ordnung]
 
     @staticmethod
@@ -77,7 +78,7 @@ class Flaechenabstand:
         je_knoten = anzahl[knoten]
         gesamt = int(je_knoten.sum())
         if gesamt == 0:
-            return np.zeros(0, dtype=np.int64)
-        vor_dem_knoten = np.repeat(np.cumsum(je_knoten) - je_knoten, je_knoten)
-        stelle = np.repeat(start[knoten], je_knoten) + (np.arange(gesamt) - vor_dem_knoten)
+            return torch.zeros(0, dtype=torch.int64, device='cuda')
+        vor_dem_knoten = Torchfeld.repeat_interleave(Torchfeld.cumsum(je_knoten) - je_knoten, je_knoten)
+        stelle = Torchfeld.repeat_interleave(start[knoten], je_knoten) + (Torchfeld.arange(gesamt) - vor_dem_knoten)
         return dreieck_je_punkt[stelle]

@@ -20,7 +20,8 @@ import os
 import re
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.utils import timezone
 
 from ..daten.auftragskennung import Auftragskennung
@@ -66,7 +67,7 @@ class Mesh3dnetzschnitt:
             raise ValueError('„schnitte“ muss eine Liste mit höchstens %d Auswahlen sein' % self.SCHNITTE_MAX)
         auswahl = Mesh3dnetzauswahl(self.katalog)
         je = [auswahl.maske(schnitt) for schnitt in schnitte]
-        alle = np.zeros(self.katalog.flaechen, dtype=bool)
+        alle = torch.zeros(self.katalog.flaechen, dtype=torch.bool, device='cuda')
         for m in je:
             alle |= m
         return alle, je
@@ -77,7 +78,7 @@ class Mesh3dnetzschnitt:
         gesamt = self.katalog.flaechen
         rest = ~alle
         return {'flaechen': gesamt, 'entfernt': int(alle.sum()), 'anteil': round(float(alle.sum()) / gesamt, 5), 'behalten': int(rest.sum()),
-                'teile_vorher': int(len(self.katalog.groessen)), 'teile_nachher': int(len(np.unique(self.katalog.insel[rest]))) if rest.any() else 0,
+                'teile_vorher': int(len(self.katalog.groessen)), 'teile_nachher': int(len(Torchfeld.unique(self.katalog.insel[rest]))) if rest.any() else 0,
                 'schnitte': [{'flaechen': int(m.sum()), 'anteil': round(float(m.sum()) / gesamt, 5)} for m in je]}
 
     # ------------------------------------------------------------------ Speichern

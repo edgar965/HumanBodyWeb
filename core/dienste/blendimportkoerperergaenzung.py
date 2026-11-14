@@ -12,7 +12,9 @@ Winkel und Höhen liefert dieses Modul, die Abbildung auf den Atlas macht `Blend
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -45,58 +47,58 @@ class Blendimportkoerperergaenzung:
 
     def _laden(self, name):
         netz = self.inventar[name]
-        with np.load(self.ablage.export(netz['datei'])) as d:
+        with Npztorch.lesen(self.ablage.export(netz['datei'])) as d:
             return {k: d[k] for k in d.files}
 
     def ergaenzen(self, koerper):
         """`koerper` ist das Körper-Netz `{punkte, dreiecke, uv_ecken, material}` (Blender-Achsen). → `{punkte, dreiecke, winkel,
         hoehe, kleider}` für die Stücke unter dem Körper (`winkel` in Radiant um die Stückmitte, `hoehe` in m), oder None,
         wenn kein Kleidungsnetz unter den Körper reicht."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         kante = float(koerper['punkte'][:, 2].min())
         ring = koerper['punkte'][koerper['punkte'][:, 2] < kante + self.RING_M]
-        ring_breite = float(np.ptp(ring[:, 0])) if len(ring) else 0.0
+        ring_breite = float(Torchfeld.ptp(ring[:, 0])) if len(ring) else 0.0
         punkte, winkel, hoehen, dreiecke, kleider = [], [], [], [], []
         for name in [r['name'] for r in self.rollen if r['rolle'] == 'kleid' and r['name'] in self.inventar]:
             k = self._laden(name)
-            kp = np.asarray(k['punkte'], dtype=np.float64)
-            kd = np.asarray(k['dreiecke'], dtype=np.int64)
-            unter = kd[kp[kd][..., 2].max(axis=1) < kante + self.RAND_M]
+            kp = Torchfeld.feld(k['punkte'], dtype=torch.float64)
+            kd = Torchfeld.feld(k['dreiecke'], dtype=torch.int64)
+            unter = kd[Torchfeld.amax(kp[kd][..., 2], dim=1) < kante + self.RAND_M]
             if not len(unter) or kp[:, 2].min() > kante - 0.01:
                 continue
-            verts = np.unique(unter)
-            breite = float(np.ptp(kp[verts][:, 0]))
+            verts = Torchfeld.unique(unter)
+            breite = float(Torchfeld.ptp(kp[verts][:, 0]))
             if ring_breite > 0 and breite > self.MAX_BREITE * ring_breite:
                 logger.info('Körperergänzung: %s übersprungen — unter der Körperkante %.2f m breit, der Körper dort %.2f m (kein Bein)',
                             name, breite, ring_breite)
                 continue
             baum = cKDTree(kp)
             nah = baum.query_ball_point(kp[verts], r=self.RADIUS_M)
-            neu = kp[verts].copy()
-            wink = np.zeros(len(verts))
+            neu = Torchfeld.kopie(kp[verts])
+            wink = torch.zeros(len(verts), dtype=torch.float64, device='cuda')
             for i, v in enumerate(verts):
                 nb = kp[nah[i]]
-                nb = nb[np.abs(nb[:, 2] - kp[v, 2]) < self.SCHICHT_M]
+                nb = nb[Torchfeld.abs(nb[:, 2] - kp[v, 2]) < self.SCHICHT_M]
                 if not len(nb):
                     continue
                 mitte = nb[:, :2].mean(axis=0)
                 richtung = mitte - kp[v, :2]
-                laenge = float(np.linalg.norm(richtung))
+                laenge = float(Torchfeld.linalg_norm(richtung))
                 if laenge > 1e-9:
                     neu[i, :2] += richtung / laenge * self.DICKE_M
-                wink[i] = np.arctan2(kp[v, 1] - mitte[1], kp[v, 0] - mitte[0])
+                wink[i] = Torchfeld.arctan2(kp[v, 1] - mitte[1], kp[v, 0] - mitte[0])
             punkte.append(neu)
             winkel.append(wink)
             hoehen.append(neu[:, 2])
             zuordnung = {int(v): j for j, v in enumerate(verts)}
-            dreiecke.append(np.array([[zuordnung[int(a)], zuordnung[int(b)], zuordnung[int(c)]] for a, b, c in unter], dtype=np.int64))
+            dreiecke.append(Torchfeld.feld([[zuordnung[int(a)], zuordnung[int(b)], zuordnung[int(c)]] for a, b, c in unter], dtype=torch.int64, copy=True))
             kleider.append(name)
         if not punkte:
             return None
-        versatz = np.cumsum([0] + [len(p) for p in punkte[:-1]])
-        dreiecke = np.vstack([d + int(v) for d, v in zip(dreiecke, versatz, strict=True)])
+        versatz = Torchfeld.cumsum([0] + [len(p) for p in punkte[:-1]])
+        dreiecke = Torchfeld.vstack([d + int(v) for d, v in zip(dreiecke, versatz, strict=True)])
         logger.info('Körperergänzung: %d Punkte, %d Dreiecke unter der Körperkante von %s', sum(len(p) for p in punkte), len(dreiecke),
                     ', '.join(kleider))
-        return {'punkte': np.vstack(punkte), 'dreiecke': dreiecke, 'winkel': np.concatenate(winkel),
-                'hoehe': np.concatenate(hoehen), 'kleider': kleider}
+        return {'punkte': Torchfeld.vstack(punkte), 'dreiecke': dreiecke, 'winkel': Torchfeld.cat(winkel),
+                'hoehe': Torchfeld.cat(hoehen), 'kleider': kleider}

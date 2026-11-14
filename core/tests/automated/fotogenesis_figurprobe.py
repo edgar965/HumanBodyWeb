@@ -15,6 +15,10 @@ import json
 from pathlib import Path
 
 import numpy as np
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Fotogenesisfigurprobe']
 
@@ -120,7 +124,7 @@ class Fotogenesisfigurprobe:
             if pfad is None:
                 self._masken[datei] = None
             else:
-                with np.load(pfad) as z:
+                with Npztorch.lesen_numpy(pfad) as z:
                     self._masken[datei] = {k: z[k].astype(bool) for k in z.files if z[k].ndim == 2 and k != 'klassen'}
         return self._masken[datei]
 
@@ -129,7 +133,7 @@ class Fotogenesisfigurprobe:
         pfad = self._ablage(datei)
         if pfad is None:
             return None
-        with np.load(pfad) as z:
+        with Npztorch.lesen_numpy(pfad) as z:
             return z['klassen'] if 'klassen' in z.files else None
 
     @classmethod

@@ -45,6 +45,10 @@ from Kleidung.sapiensmaske import Sapiensmaske  # noqa: E402
 from sapiens_klassen import Sapiensklassen  # noqa: E402
 from sapiens_stand import Sapiensstand  # noqa: E402
 from scipy.sparse import diags  # noqa: E402
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class Pfadkarte:
@@ -208,9 +212,7 @@ class DasLaden(SimpleTestCase):
     @staticmethod
     def _ablegen(ordner, netz, flaechen=10, fassung=None, netz_stand=None):
         stat = os.stat(netz)
-        np.savez_compressed(os.path.join(ordner, Sapiensmaske.DATEI), klassen=np.ones((flaechen, len(Sapiensklassen.NAMEN))), flaechen=flaechen,
-                            fassung=Sapiensmaske.FASSUNG if fassung is None else fassung,
-                            netz=np.array(netz_stand or [stat.st_size, stat.st_mtime_ns]))
+        Npztorch.speichern(os.path.join(ordner, Sapiensmaske.DATEI), klassen=np.ones((flaechen, len(Sapiensklassen.NAMEN))), flaechen=flaechen, fassung=Sapiensmaske.FASSUNG if fassung is None else fassung, netz=np.array(netz_stand or [stat.st_size, stat.st_mtime_ns]), komprimiert=True)
 
     def _netz(self, ordner):
         pfad = os.path.join(ordner, 'mesh.glb')

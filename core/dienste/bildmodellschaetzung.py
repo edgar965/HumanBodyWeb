@@ -24,7 +24,8 @@ import logging
 import os
 import shutil
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellbildtypen import Bildmodellbildtypen
@@ -121,10 +122,10 @@ class Bildmodellschaetzung:
         if not name:
             return False
         pfad = self.ablage.schaetzung() / name
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return False
         try:
-            return np.load(pfad, mmap_mode='r').shape[0] == self.SMPLX_PUNKTE
+            return Npztorch.lesen(pfad, mmap_mode='r').shape[0] == self.SMPLX_PUNKTE
         except (OSError, ValueError):
             return False
 
@@ -252,9 +253,9 @@ class Bildmodellschaetzung:
                 ('flame_vertices_path', '_flame.npy'),
             ):
                 p = roh.get(quelle)
-                if p and os.path.isfile(p):
+                if p and Npztorch.da(p):
                     ziel = self.ablage.schaetzung() / (stamm + vorsatz + name)
-                    shutil.move(p, ziel)
+                    shutil.move(p, ziel)  # npz geprüft: .npy aus der python10-Pipeline, bleibt .npy
                     eintrag[quelle] = ziel.name
         bild[feld] = eintrag
 

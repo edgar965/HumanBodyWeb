@@ -26,7 +26,8 @@ import io
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.rigglb import G9rigglb
 
 from .standhaut import Standhaut
@@ -81,19 +82,19 @@ class Standmodellglb(G9rigglb):
         """(index (N, 4), gewicht (N, 4)) in Knochenreihenfolge, Gewichte auf 1 normiert."""
         ersatz = self.nummer.get(self.ERSATZ, 0)
         if not haut or not haut.get('knochen'):
-            gewicht = np.zeros((anzahl, 4))
+            gewicht = torch.zeros((anzahl, 4), dtype=torch.float64, device='cuda')
             gewicht[:, 0] = 1.0
-            return np.full((anzahl, 4), ersatz, dtype=np.int64), gewicht
+            return Torchfeld.full((anzahl, 4), ersatz, dtype=torch.int64), gewicht
         spalten = []
         for name in haut['knochen']:
             if name not in self.nummer:
                 self.fehlend.add(str(name))
             spalten.append(self.nummer.get(name, ersatz))
-        index = np.asarray(spalten, dtype=np.int64)[np.asarray(haut['index'], dtype=np.int64).reshape(-1, 4)]
-        gewicht = np.asarray(haut['gewicht'], dtype=np.float64).reshape(-1, 4)
+        index = Torchfeld.feld(spalten, dtype=torch.int64)[Torchfeld.feld(haut['index'], dtype=torch.int64).reshape(-1, 4)]
+        gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64).reshape(-1, 4)
         summe = gewicht.sum(axis=1, keepdims=True)
         leer = summe[:, 0] <= 1e-9
-        gewicht = gewicht / np.where(summe > 1e-9, summe, 1.0)
+        gewicht = gewicht / torch.where(summe > 1e-9, summe, 1.0)
         gewicht[leer] = (1.0, 0.0, 0.0, 0.0)
         index[leer, 0] = ersatz
         return index, gewicht
@@ -134,17 +135,17 @@ class Standmodellglb(G9rigglb):
             with Image.open(albedo) as roh:
                 bild = roh.convert('RGB')
                 bild.thumbnail((kante, kante))
-                bild = bild.copy()
+                bild = Torchfeld.kopie(bild)
         if alpha is not None:
             with Image.open(alpha) as roh:
                 maske = roh.convert('L')
                 maske.thumbnail((kante, kante))
-                maske = maske.copy()
+                maske = Torchfeld.kopie(maske)
             if albedo is None:
-                bild = Image.new('RGB', maske.size, (255, 255, 255))
-            elif bild.size[0] * bild.size[1] < maske.size[0] * maske.size[1]:
-                bild = bild.resize(maske.size)      # Grauschicht ohne Daz-Bild ist 4 × 4 — die Maske (Strähnen) zählt
-            maske = maske.resize(bild.size)
+                bild = Image.new('RGB', Torchfeld.roh(Torchfeld.groesse(maske)), (255, 255, 255))
+            elif Torchfeld.groesse(bild)[0] * Torchfeld.groesse(bild)[1] < Torchfeld.groesse(maske)[0] * Torchfeld.groesse(maske)[1]:
+                bild = bild.resize(Torchfeld.groesse(maske))      # Grauschicht ohne Daz-Bild ist 4 × 4 — die Maske (Strähnen) zählt
+            maske = maske.resize(Torchfeld.groesse(bild))
             if alphawert < 1.0:
                 maske = maske.point(lambda v: int(v * float(alphawert)))
             bild.putalpha(maske)
@@ -167,26 +168,26 @@ class Standmodellglb(G9rigglb):
               zweiseitig=True, glanz=None, normale=None):
         """Ein Netz am gemeinsamen Skin — nur die Punkte, die seine Dreiecke brauchen. `glanz`: `{metall, rauheit, opazitaet}` der Materialgruppe
         (Stiefel glänzen, die Brille ist durchsichtig — wie im Render der Runde, `Mitsubamaterial.metallglanz`/`durchsicht`)."""
-        dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         if not len(dreiecke):
             return
-        nummern, neu = np.unique(dreiecke.ravel(), return_inverse=True)
-        punkte = np.asarray(punkte, dtype=np.float64)
+        nummern, neu = Torchfeld.unique(dreiecke.ravel(), return_inverse=True)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         if normalen is None:
             from Genesis9.figurrigglb import G9figurrigglb
             normalen = G9figurrigglb._normalen(punkte, dreiecke)
         attribute = {
             'POSITION': self._zugriff(punkte[nummern], self.FLOAT, 'VEC3', self.ARRAY, grenzen=True),
-            'NORMAL': self._zugriff(np.asarray(normalen, dtype=np.float64)[nummern], self.FLOAT, 'VEC3', self.ARRAY),
+            'NORMAL': self._zugriff(Torchfeld.feld(normalen, dtype=torch.float64)[nummern], self.FLOAT, 'VEC3', self.ARRAY),
             'JOINTS_0': self._zugriff(haut[0][nummern], self.USHORT, 'VEC4', self.ARRAY),
             'WEIGHTS_0': self._zugriff(haut[1][nummern], self.FLOAT, 'VEC4', self.ARRAY),
         }
         if uv is not None:
-            attribute['TEXCOORD_0'] = self._zugriff(np.asarray(uv, dtype=np.float64)[nummern], self.FLOAT, 'VEC2',
+            attribute['TEXCOORD_0'] = self._zugriff(Torchfeld.feld(uv, dtype=torch.float64)[nummern], self.FLOAT, 'VEC2',
                                                     self.ARRAY)
         # Daz-Farben und Tönungen sind sRGB, glTF rechnet linear — wie `Genesis9netz.farbe` im Browser. Ohne die
         # Umrechnung standen die Brauen (#382a25) als helles Graubraun (#81716a) auf der Stirn.
-        srgb = np.clip(np.asarray(list(faktor)[:3], dtype=np.float64), 0.0, 1.0)
+        srgb = Torchfeld.clip(Torchfeld.feld(list(faktor)[:3], dtype=torch.float64), 0.0, 1.0)
         farbe = [float(v) for v in self.linear(srgb * 255.0)] + [1.0]
         material = {'name': name, 'doubleSided': bool(zweiseitig),
                     'pbrMetallicRoughness': {'baseColorFactor': farbe, 'metallicFactor': 0.0, 'roughnessFactor': 0.8}}
@@ -235,7 +236,7 @@ class Standmodellglb(G9rigglb):
         """glTF zählt v von oben."""
         if uv is None:
             return None
-        uv = np.asarray(uv, dtype=np.float64).reshape(-1, 2).copy()
+        uv = Torchfeld.kopie(Torchfeld.feld(uv, dtype=torch.float64).reshape(-1, 2))
         uv[:, 1] = 1.0 - uv[:, 1]
         return uv
 
@@ -251,7 +252,7 @@ class Standmodellglb(G9rigglb):
         des Auftrags (`fototextur.augen`), wenn es eins gibt."""
         from Genesis9.material import G9material
         for a in netz.get('anhaenge') or []:
-            dreiecke = np.asarray(a['dreiecke'], dtype=np.int64).reshape(-1, 3)
+            dreiecke = Torchfeld.feld(a['dreiecke'], dtype=torch.int64).reshape(-1, 3)
             uv = self._uv(a.get('uv'))
             haut = self._haut(a.get('haut'), len(a['punkte']))
             for k, g in enumerate(a.get('gruppen') or []):
@@ -279,7 +280,7 @@ class Standmodellglb(G9rigglb):
             if t.get('art') == 'koerper':
                 continue
             name = '%s__%s__%d' % (t.get('art'), t.get('sorte') or t.get('art'), i)
-            dreiecke = np.asarray(t['dreiecke'], dtype=np.int64).reshape(-1, 3)
+            dreiecke = Torchfeld.feld(t['dreiecke'], dtype=torch.int64).reshape(-1, 3)
             haut = self._haut(t.get('haut'), len(t['punkte']))
             if Standhose.gilt(t.get('sorte')) and self._koerper is not None:
                 Standhose.ablegen(self, t, name)       # die Hose kommt aus dem Körpernetz (`Hosenkoerper`): locker (Runden) oder eng (Fotostück), nicht aus ihrem eigenen Netz
@@ -293,7 +294,7 @@ class Standmodellglb(G9rigglb):
                 self._netz(name, t['punkte'], dreiecke, t.get('normalen'), None, haut, faktor=t['farbe'])
                 continue
             je_ab = {int(x['ab']): x for x in (t.get('textur') or [])}
-            belegt = np.zeros(len(dreiecke), dtype=bool)
+            belegt = torch.zeros(len(dreiecke), dtype=torch.bool, device='cuda')
             for k, g in enumerate(gruppen):
                 ab, anzahl = int(g['index_ab']) // 3, int(g['index_anzahl']) // 3
                 tx = je_ab.get(ab) or {}

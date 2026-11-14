@@ -6,7 +6,8 @@ Aus core/api/foto.py herausgeloest (Umbau 15.08.2026).
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -45,7 +46,7 @@ class Hautfarbe:
             if len(skin_pixels) < 50:
                 return None
             # Median color (BGR → RGB)
-            median = np.median(skin_pixels, axis=0).astype(int)
+            median = Torchfeld.astype(Torchfeld.median(skin_pixels, axis=0), torch.int64)
             r, g, b = int(median[2]), int(median[1]), int(median[0])
             return f'#{r:02x}{g:02x}{b:02x}'
         except Exception:

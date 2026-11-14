@@ -9,7 +9,9 @@ aus den alten Punkten (`G9haarzusatz.aus_blender`) für die erzeugenden.
 Startet Blender NICHT selbst — das bleibt `Engine2d3dKleiderblender` (`BlenderNurUeberEinenArbeiterTest`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from ..atomic_write import AtomarSchreiber
 
@@ -46,9 +48,7 @@ class Haarknotenauftrag:
             teile, kaefige, y0 = self._quelle
             haut = G9kopfhaut.aus_teilen(teile, kaefige, y0)
             pfad = self.ordner / ('%s_kopfhaut.npz' % self.sorte)
-            np.savez_compressed(pfad, punkte=np.asarray(haut['punkte'], dtype=np.float32),
-                                dreiecke=np.asarray(haut['dreiecke'], dtype=np.int32),
-                                uv=np.asarray(haut['uv'], dtype=np.float32))
+            Npztorch.speichern(pfad, punkte=Torchfeld.feld(haut['punkte'], dtype=torch.float32), dreiecke=Torchfeld.feld(haut['dreiecke'], dtype=torch.int32), uv=Torchfeld.feld(haut['uv'], dtype=torch.float32), komprimiert=True, fuer_numpy=True)          # Blender (`haarknoten.py`) liest mit numpy
             self.kopfhaut = {'quelle': haut['quelle'], 'flaeche_m2': round(haut['flaeche_m2'], 5),
                              'dreiecke': int(len(haut['dreiecke']))}
             self._kopfhaut = pfad
@@ -60,8 +60,8 @@ class Haarknotenauftrag:
         if self.knoten in ('interpolate', 'generate') and 'Density' not in werte and self.kopfhaut:
             werte['Density'] = round(self.DICHTE_ANTEIL * len(ketten) / max(self.kopfhaut['flaeche_m2'], 1e-4), 1)
         if self.knoten == 'generate' and 'Hair Length' not in werte:
-            laengen = [float(np.linalg.norm(np.diff(punkte[k], axis=0), axis=1).sum()) for k in ketten]
-            werte['Hair Length'] = round(float(np.median(laengen)), 4)
+            laengen = [float(Torchfeld.linalg_norm(Torchfeld.diff(punkte[k], dim=0), dim=1).sum()) for k in ketten]
+            werte['Hair Length'] = round(float(Torchfeld.median(laengen)), 4)
         return werte
 
     # -------------------------------------------------------------- hin
@@ -71,18 +71,15 @@ class Haarknotenauftrag:
             from Genesis9.kleidmorphe import G9kleidmorphe
             k_punkte, k_dreiecke, _n, _b, _boden = G9kleidmorphe.koerper()
             pfad = self.ordner / ('%s_koerper.npz' % self.sorte)
-            np.savez_compressed(pfad, punkte=np.asarray(k_punkte, dtype=np.float32),
-                                dreiecke=np.asarray(k_dreiecke, dtype=np.int32))
+            Npztorch.speichern(pfad, punkte=Torchfeld.feld(k_punkte, dtype=torch.float32), dreiecke=Torchfeld.feld(k_dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)          # Blender (`haarknoten.py`) liest mit numpy
             self._koerper = pfad
         return self._koerper
 
     def schreiben(self, nummer, punkte, ketten, maske):
         """→ (Pfad der auftrag.json, Auftrag) für ein Strang-Teil; `ketten` aus `G9haarzusatz.ketten`."""
-        reihe = np.concatenate(ketten)
+        reihe = Torchfeld.cat(ketten)
         stamm = self.ordner / ('%s_%d_%s' % (self.sorte, nummer, self.knoten))
-        np.savez_compressed(str(stamm) + '_straehnen.npz', punkte=punkte[reihe].astype(np.float32),
-                            laengen=np.asarray([len(k) for k in ketten], dtype=np.int32),
-                            maske=maske[reihe].astype(np.float32))
+        Npztorch.speichern(str(stamm) + '_straehnen.npz', punkte=Torchfeld.astype(punkte[reihe], torch.float32), laengen=Torchfeld.feld([len(k) for k in ketten], dtype=torch.int32), maske=Torchfeld.astype(maske[reihe], torch.float32), komprimiert=True, fuer_numpy=True)          # Blender (`haarknoten.py`) liest mit numpy
         auftrag = {'straehnen': str(stamm) + '_straehnen.npz', 'aus': str(stamm) + '_nachher.npz',
                    'bericht': str(stamm) + '_bericht.json', 'knoten': self.knoten,
                    'zusatz': self.knoten in self.ZUSATZ}
@@ -102,9 +99,9 @@ class Haarknotenauftrag:
     def delta(auftrag, punkte, reihe, maske):
         """Verformender Knoten: Delta je Punkt, mit dem Ortsgewicht je Punkt (Blender wertet `Mask` je Strähne —
         gemessen 01.10.2026 am Pixie: 82 % der Punkte bewegt bei 30 % im Sektor)."""
-        with np.load(auftrag['aus']) as d:
-            nachher = np.asarray(d['punkte'], dtype=np.float64)
-        delta = np.zeros_like(punkte)
+        with Npztorch.lesen(auftrag['aus']) as d:
+            nachher = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+        delta = torch.zeros_like(punkte)
         delta[reihe] = (nachher - punkte[reihe]) * maske[reihe][:, None]
         return delta
 
@@ -112,7 +109,7 @@ class Haarknotenauftrag:
     def zusatz(auftrag, folger, punkte):
         """Erzeugender Knoten: die neuen Strähnen als Rezept aus den alten Punkten (`G9haarzusatz.aus_blender`)."""
         from Genesis9.haarzusatz import G9haarzusatz
-        with np.load(auftrag['aus']) as d:
-            nachher = np.asarray(d['punkte'], dtype=np.float64)
-            laengen = np.asarray(d['laengen'], dtype=np.int64)
+        with Npztorch.lesen(auftrag['aus']) as d:
+            nachher = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+            laengen = Torchfeld.feld(d['laengen'], dtype=torch.int64)
         return G9haarzusatz.aus_blender(folger, punkte, nachher, laengen)

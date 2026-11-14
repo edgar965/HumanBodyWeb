@@ -21,7 +21,8 @@ VERSCHLUCKTE REGLER (`uebertragen_wirksam`, 17.10.2026): Ein kleiner Gesichtsreg
 als HumanBodys (`Eyes_innerSinus`: 2,62 mm in der Quelle, 0,000 auf Genesis). Kommt ein Regler mit weniger als `RUECKFALL` seiner Staerke an, wird er mit der Kopfausrichtung
 (`Hbzuordnung(ausgerichtet=True)`) neu uebertragen und die Fassung genommen, die mindestens `FAKTOR`-mal staerker ist. Alle anderen Regler bleiben bitgleich.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.feldputz import G9feldputz
 from Genesis9.kollision import G9kollision
@@ -74,7 +75,7 @@ class Hbmorphuebertragung:
         u"""`{punkte, normalen, dreiecke}` der HumanBody-Grundfigur (Three-Lage)."""
         if self._hb is None:
             figur = Hbtraeger.laden(self.GESCHLECHT, self.BAUART, {}, {})
-            self._hb = {'punkte': figur['punkte'], 'normalen': figur['normalen'], 'dreiecke': np.asarray(figur['dreiecke'], dtype=np.int64)}
+            self._hb = {'punkte': figur['punkte'], 'normalen': figur['normalen'], 'dreiecke': Torchfeld.feld(figur['dreiecke'], dtype=torch.int64)}
         return self._hb
 
     def quellknick(self, hb_delta):
@@ -82,9 +83,9 @@ class Hbmorphuebertragung:
         hb = self.humanbody()
         if '_kanten' not in hb:
             tri = hb['dreiecke']
-            k = np.sort(np.concatenate([tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [2, 0]]]), axis=1)
-            f = np.tile(np.arange(len(tri)), 3)
-            o = np.lexsort((k[:, 1], k[:, 0]))
+            k = torch.sort(Torchfeld.cat([tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [2, 0]]]), dim=1, stable=True).values
+            f = torch.tile(Torchfeld.arange(len(tri)), (3,))
+            o = Torchfeld.lexsort((k[:, 1], k[:, 0]))
             k, f = k[o], f[o]
             gleich = (k[1:] == k[:-1]).all(1)
             hb['_kanten'] = (f[:-1][gleich], f[1:][gleich])
@@ -92,17 +93,17 @@ class Hbmorphuebertragung:
         def winkel(p):
             tri = hb['dreiecke']
             a, b = hb['_kanten']
-            n = np.cross(p[tri[:, 1]] - p[tri[:, 0]], p[tri[:, 2]] - p[tri[:, 0]])
-            n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-30)
-            return np.degrees(np.arccos(np.clip((n[a] * n[b]).sum(1), -1.0, 1.0)))
+            n = Torchfeld.cross(p[tri[:, 1]] - p[tri[:, 0]], p[tri[:, 2]] - p[tri[:, 0]])
+            n /= Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-30)
+            return Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip((n[a] * n[b]).sum(1), -1.0, 1.0)))
         if 'winkel0' not in hb:
-            hb['winkel0'] = winkel(np.asarray(hb['punkte'], dtype=np.float64))
-        return float((winkel(np.asarray(hb['punkte'], dtype=np.float64) + hb_delta) - hb['winkel0']).max())
+            hb['winkel0'] = winkel(Torchfeld.feld(hb['punkte'], dtype=torch.float64))
+        return float((winkel(Torchfeld.feld(hb['punkte'], dtype=torch.float64) + hb_delta) - hb['winkel0']).max())
 
     def ursprung(self):
         u"""(27087,) Browserpunkt -> Kaefigpunkt."""
         if self._ursprung is None:
-            self._ursprung = np.asarray(G9basisnetz.holen().netzstufe(0).ursprung, dtype=np.int64)
+            self._ursprung = Torchfeld.feld(G9basisnetz.holen().netzstufe(0).ursprung, dtype=torch.int64)
         return self._ursprung
 
     def nachbarn(self):
@@ -110,7 +111,7 @@ class Hbmorphuebertragung:
         if self._nachbar is None:
             punkte = G9basisnetz.holen().punkte
             _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=self.GLAETTUNG)
-            self._nachbar = np.asarray(nachbar, dtype=np.int64)
+            self._nachbar = Torchfeld.feld(nachbar, dtype=torch.int64)
         return self._nachbar
 
     def zuordnungsobjekt(self, ausgerichtet=False):
@@ -148,16 +149,16 @@ class Hbmorphuebertragung:
         (`ProjektTemp/_wegwerf/familien/hb_affin_probe.py`). Bei R² 0,88–0,97 (Bein-, Hals-, Armlaengen: eher stueckweise Verschiebung als affin) machte die Teilung dagegen neue Knicke
         (`Legs_LowerlegLength` +1: 0 → 10 Kanten, `Neck_Angle` −1: 0 → 8) — darum nur ab `AFFIN_R2`."""
         punkte = self.humanbody()['punkte']
-        x = np.hstack([punkte, np.ones((len(punkte), 1))])
-        coef = np.linalg.lstsq(x, hb_delta, rcond=None)[0]
+        x = Torchfeld.hstack([punkte, torch.ones((len(punkte), 1), dtype=torch.float64, device='cuda')])
+        coef = Torchfeld.lstsq(x, hb_delta, rcond=None)[0]
         rest = hb_delta - x @ coef
         gesamt = float((hb_delta ** 2).sum())
         if gesamt <= 0 or 1.0 - float((rest ** 2).sum()) / gesamt < self.AFFIN_R2:
             return self._ueber_paarung(hb_delta, ausgerichtet)
         m, t = coef[:3].T, coef[3]
-        kaefig = np.asarray(G9basisnetz.holen().punkte, dtype=np.float64)
+        kaefig = Torchfeld.feld(G9basisnetz.holen().punkte, dtype=torch.float64)
         feld = self._ueber_paarung(rest, ausgerichtet) + kaefig @ m.T + (m @ self.affin_versatz(ausgerichtet) + t) / self.paarung()['massstab']
-        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
+        feld[Torchfeld.linalg_norm(feld, dim=1) < self.NULL_M] = 0.0
         return feld
 
     def affin_versatz(self, ausgerichtet=False):
@@ -165,19 +166,19 @@ class Hbmorphuebertragung:
         paar = self.paarung()
         kand, gewicht = self.zuordnung(ausgerichtet)
         hb = self.humanbody()['punkte']
-        return np.median(np.einsum('ik,ikj->ij', gewicht, hb[kand]) - paar['massstab'] * np.asarray(paar['g9_punkte'], dtype=np.float64), axis=0)
+        return Torchfeld.median(Torchfeld.einsum('ik,ikj->ij', gewicht, hb[kand]) - paar['massstab'] * Torchfeld.feld(paar['g9_punkte'], dtype=torch.float64), axis=0)
 
     def _ueber_paarung(self, hb_delta, ausgerichtet=False):
         u"""Das Delta ueber die Kandidaten der Paarung (Weltraum), gefuellt, geglaettet, geputzt, Knicke geglaettet."""
         paar = self.paarung()
         kand, gewicht = self.zuordnung(ausgerichtet)
-        browser = np.einsum('ik,ikj->ij', gewicht, hb_delta[kand]) / paar['massstab']
+        browser = Torchfeld.einsum('ik,ikj->ij', gewicht, hb_delta[kand]) / paar['massstab']
         zahl = len(G9basisnetz.holen().punkte)
-        summe = np.zeros((zahl, 3))
-        anzahl = np.zeros(zahl)
-        np.add.at(summe, self.ursprung(), browser)
-        np.add.at(anzahl, self.ursprung(), 1.0)
-        feld = summe / np.maximum(anzahl, 1.0)[:, None]
+        summe = torch.zeros((zahl, 3), dtype=torch.float64, device='cuda')
+        anzahl = torch.zeros(zahl, dtype=torch.float64, device='cuda')
+        Torchfeld.add_at(summe, self.ursprung(), browser)
+        Torchfeld.add_at(anzahl, self.ursprung(), 1.0)
+        feld = summe / Torchfeld.maximum(anzahl, 1.0)[:, None]
         putz = self.putz()
         feld = putz.fuellen(feld, self.ungueltig(ausgerichtet))
         nachbar = self.nachbarn()
@@ -185,13 +186,13 @@ class Hbmorphuebertragung:
             feld = feld[nachbar].mean(axis=1)
         feld, _zacken = putz.putzen(feld)
         feld = self.knicke(feld, hb_delta)
-        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
+        feld[Torchfeld.linalg_norm(feld, dim=1) < self.NULL_M] = 0.0
         return feld
 
     @staticmethod
     def staerke(feld):
         u"""Groesste Verschiebung (m) eines Felds."""
-        return float(np.linalg.norm(np.asarray(feld, dtype=np.float64), axis=1).max()) if len(feld) else 0.0
+        return float(Torchfeld.linalg_norm(Torchfeld.feld(feld, dtype=torch.float64), dim=1).max()) if len(feld) else 0.0
 
     def vorwaerts(self, ausgerichtet=False):
         u"""Die `Hbvorwaerts` zur Paarung, mit oder ohne Kopfausrichtung (gemerkt)."""
@@ -204,7 +205,7 @@ class Hbmorphuebertragung:
         u"""(25182, 3) das Delta vorwaerts auf den Kaefig gelegt (siehe `Hbvorwaerts`), geputzt."""
         feld, _zacken = self.putz().putzen(self.vorwaerts(ausgerichtet).uebertragen(hb_delta))
         feld = self.knicke(feld, hb_delta)
-        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
+        feld[Torchfeld.linalg_norm(feld, dim=1) < self.NULL_M] = 0.0
         return feld
 
     def uebertragen_wirksam(self, hb_plus, hb_minus):

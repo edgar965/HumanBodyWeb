@@ -23,6 +23,8 @@ Runner-Zeilen: `[fortschritt] <0..100> <Text>` (je Schritt auf sein Band umgerec
 `[ergebnis] {…}`, `[fehler] {…}`. Alles, was die Seite zeigt, steht in `job.ergebnis`.
 """
 
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 import json
 import logging
 import time
@@ -243,20 +245,20 @@ class Meshfigurlauf:
         """Tabellenbild des Körpernetzes (`ergebnis/vorlage.png`, Edgar 27.09.2026: „eine Spalte
         für die Vorlage … so ähnlich wie bei #mesh"), von vorn in der Lage der Erkennung — hier
         in python14 gerendert wie `Meshicon` im Reiter „Mesh". None, wenn es scheitert."""
-        import numpy as np
+        import torch
 
         from .meshicon import Meshicon
 
         lage, matrix = self.ablage.arbeit('scan_lage.npz'), None
-        if lage.is_file():
-            with np.load(lage) as d:
+        if Npztorch.da(lage):
+            with Npztorch.lesen(lage) as d:
                 matrix = d['matrix']
         netz = self.ablage.netzdatei()
         return Meshicon.schreiben(netz, self.ablage.ergebnis(), Meshicon.VORLAGE, matrix) or None
 
     def _kalibrierung(self):
         """Genesis durch denselben Detektor — nur, wenn die Tabelle auf diesem Rechner fehlt."""
-        import numpy as np
+        import torch
         from Genesis9.figurglb import G9figurglb
         from Genesis9.netzlandmarken import G9netzlandmarken
 
@@ -268,7 +270,7 @@ class Meshfigurlauf:
         grund = Meshfigurregler.GRUNDFIGUREN['feminine']
         G9figurglb(grund).schreiben(self.ablage.arbeit('genesis_kalibrierung.glb'))
         self.runner('kalibrierung')
-        with np.load(self.ablage.arbeit('kalibrierung.npz')) as d:
+        with Npztorch.lesen(self.ablage.arbeit('kalibrierung.npz')) as d:
             tabelle = G9netzlandmarken.bauen(grund, d['koerper'], d['gesicht'], d['gesicht_treffer'])
         tabelle.speichern()
         self.job.ergebnis['kalibrierung'] = {'vorhanden': False, **tabelle.steckbrief()}

@@ -19,7 +19,9 @@ import logging
 import re
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +52,13 @@ class Fotogenesisfigur:
     @classmethod
     def geschlecht(cls, p):
         """Das Geschlecht der gebauten Figur (erstes `form_<g>` mit Anzeigenetz) oder None."""
-        return next((g for g in cls.GESCHLECHTER if (p / ('form_%s' % g) / 'anzeige' / 'netz.npz').is_file()), None)
+        return next((g for g in cls.GESCHLECHTER if Npztorch.da(p / ('form_%s' % g) / 'anzeige' / 'netz.npz')), None)
 
     @classmethod
     def _form(cls, kennung, geschlecht):
         """Ordner der Figur als Text für `Meshgenesisflaechennetz` (absolut — `Meshgenesisdatensatz.ordner` hängt ihn an `meshgenesis/`, ein absoluter Pfad bleibt er selbst) oder None."""
         p = cls.ordner(kennung)
-        if p is None or geschlecht not in cls.GESCHLECHTER or not (p / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz').is_file():
+        if p is None or geschlecht not in cls.GESCHLECHTER or not Npztorch.da(p / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz'):
             return None
         return str(p / ('form_%s' % geschlecht))
 
@@ -66,7 +68,7 @@ class Fotogenesisfigur:
         from .meshgenesisrig import Meshgenesisrig
         p = cls.ordner(kennung)
         g = cls.geschlecht(p) if p else None
-        if g is None or not (p / ('ergebnis_Form_%s.npz' % g)).is_file():
+        if g is None or not Npztorch.da(p / ('ergebnis_Form_%s.npz' % g)):
             return None
         fig = p / ('form_%s' % g)
         kin = json.loads((fig / 'kinematik.json').read_text(encoding='utf-8'))['knochen']
@@ -75,18 +77,18 @@ class Fotogenesisfigur:
             logger.warning('Fotogenesisfigur: kinematik.json von %s passt nicht zum Rig', fig)
             return None
         modell = json.loads((fig / 'modell.json').read_text(encoding='utf-8'))
-        with np.load(p / ('ergebnis_Form_%s.npz' % g)) as e:
-            ausgabe, dreh = e['rig'].astype(float), e['dreh'].astype(float)
+        with Npztorch.lesen(p / ('ergebnis_Form_%s.npz' % g)) as e:
+            ausgabe, dreh = Torchfeld.astype(e['rig'], torch.float64), Torchfeld.astype(e['dreh'], torch.float64)
             # Form der Zeile 1 in der Ruhelage (`KoerperKI_Fotos.Zeile1versatz`, 31.10.2026 nachts) — die Abspielleiste der Zeile 1 legt sie auf die bewegte Figur (`Fotogenesiszeile1form`)
-            zeile1 = {k: base64.b64encode(e['zeile1_' + k].astype('<f4').tobytes()).decode('ascii') for k in ('ruhe', 'versatz')} if 'zeile1_versatz' in e.files else None
+            zeile1 = {k: base64.b64encode(Torchfeld.als_bytes(Torchfeld.astype(e['zeile1_' + k], Torchfeld.dtype('<f4')))).decode('ascii') for k in ('ruhe', 'versatz')} if 'zeile1_versatz' in e.files else None
         name = (modell.get('kopfbild') or {}).get('quelle') or 'nur Fotos'
         from .meshgenesisergebnisfigur import Meshgenesisergebnisfigur
         # Die Figur als Genesis9Modell (31.10.2026, Exportleiste): dieselbe Angabe wie `Meshgenesistest.daten`, dazu die Kacheln der Haut aus den Fotos als `fototextur`
         figur = dict(Meshgenesisergebnisfigur._figur(g, modell['figur']['regler']), fototextur=cls._kacheln(kennung, p, g))
         return {'kennung': kennung, 'info': {'name': name, 'geschlecht': g, 'gerechnet': (modell.get('kopfbild') or {}).get('gerechnet')}, 'job': None, 'rig': beschr,
                 'figur_netz': '/api/fotogenesis/%s/figur/%s' % (kennung, g), 'form_regler': modell['figur']['regler'], 'figur_genesis': figur,
-                'ausgabe': np.round(ausgabe, 4).tolist(), 'dreh': np.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(),
-                'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist(), 'zeile1_ursprung': cls._ursprung(p.parent), 'zeile1_form': zeile1}
+                'ausgabe': Torchfeld.round(ausgabe, 4).tolist(), 'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(),
+                'ruhezentren': Torchfeld.round(Torchfeld.feld([k['zentrum'] for k in kin], copy=True), 6).tolist(), 'zeile1_ursprung': cls._ursprung(p.parent), 'zeile1_form': zeile1}
 
     @staticmethod
     def _ursprung(jobordner):
@@ -102,11 +104,11 @@ class Fotogenesisfigur:
         if not (tf.get('genesis') or {}).get('fotos'):
             return None
         from Genesis9.basisnetz import G9basisnetz
-        ursprung = np.asarray(G9basisnetz.netzstufe(0).ursprung, dtype=np.int32)
+        ursprung = Torchfeld.feld(G9basisnetz.netzstufe(0).ursprung, dtype=torch.int32)
         if int(ursprung.max()) + 1 != int(tf.get('n_punkte') or -1):
             logger.warning('Fotogenesisfigur: Zeile 1 hat %s Punkte, der Käfig %d — keine Vorlage', tf.get('n_punkte'), int(ursprung.max()) + 1)
             return None
-        return base64.b64encode(ursprung.tobytes()).decode('ascii')
+        return base64.b64encode(Torchfeld.als_bytes(ursprung)).decode('ascii')
 
     @classmethod
     def _kacheln(cls, kennung, p, g):
@@ -162,4 +164,4 @@ class Fotogenesisfigur:
         if p is None or geschlecht not in cls.GESCHLECHTER or weg not in Meshgenesistestkikleider.WEGE or not cls.ID.match(str(stueck)):
             return None
         o = p / ('kleider_%s' % geschlecht) / weg / stueck
-        return str(o) if (o / 'anzeige' / 'netz.npz').is_file() else None
+        return str(o) if Npztorch.da(o / 'anzeige' / 'netz.npz') else None

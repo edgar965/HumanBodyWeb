@@ -36,6 +36,8 @@ Was die Schleife von der Engine erwartet (der Vertrag, abgeleitet von der Blende
         Prozesse und Zwischenstände der Engine beenden — auch nach einem Fehler oder „Anhalten".
 """
 
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import logging
 
 logger = logging.getLogger('core')
@@ -98,17 +100,17 @@ class Genesisengine2d3dkleider:
     @staticmethod
     def _glb(bau, werte, punkte, dreiecke, ordner):
         """Die Frisur als GLB (`haar.glb`) — die Bühne zeigt sie als „Modell (letzte Iteration)"."""
-        import numpy as np
+        import torch
         import trimesh
 
         from .genesishaarrender import Genesishaarrender
         if punkte is None or dreiecke is None:
             return None
-        netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64),
-                               faces=np.asarray(dreiecke, dtype=np.int64), process=False)
+        netz = trimesh.Trimesh(vertices=Torchfeld.roh(Torchfeld.feld(punkte, dtype=torch.float64)),
+                               faces=Torchfeld.roh(Torchfeld.feld(dreiecke, dtype=torch.int64)), process=False)
         rgb = [int(c * 255) for c in Genesishaarrender._hex(bau.farbe(werte))]
         netz.visual = trimesh.visual.ColorVisuals(
-            netz, vertex_colors=np.tile(np.array([*rgb, 255], dtype=np.uint8), (len(netz.vertices), 1)))
+            netz, vertex_colors=Torchfeld.roh(torch.tile(Torchfeld.feld([*rgb, 255], dtype=torch.uint8, copy=True), (len(netz.vertices), 1))))
         ordner.mkdir(parents=True, exist_ok=True)
         netz.export(ordner / 'haar.glb')
         return 'haar.glb'

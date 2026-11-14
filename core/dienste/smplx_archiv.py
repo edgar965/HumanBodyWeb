@@ -16,7 +16,9 @@ import logging
 import os
 from typing import Any
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from ..daten.smplxablage import Smplxablage
 from .smplxnetz import SmplxNetz, SmplxNetzFehler
@@ -62,16 +64,16 @@ class SmplxArchiv:
             vertices=netz['vertices'],
             faces=netz['faces'],
             joints=netz['joints'],
-            parents=np.array(netz['parents'], dtype=np.int32),
+            parents=Torchfeld.feld(netz['parents'], dtype=torch.int32, copy=True),
             skin_indices=netz['skin_indices'],
             skin_weights=netz['skin_weights'],
-            betas=np.array(ergebnis.betas, dtype=np.float32),
-            expression=np.array(ergebnis.roh.get('expression', []), dtype=np.float32),
+            betas=Torchfeld.feld(ergebnis.betas, dtype=torch.float32, copy=True),
+            expression=Torchfeld.feld(ergebnis.roh.get('expression', []), dtype=torch.float32, copy=True),
         )
         posiert = cls._posierte_vertices(ergebnis)
         if posiert is not None:
-            inhalt['posed_vertices'] = posiert.astype(np.float32)
-        np.savez_compressed(os.path.join(ordner, '%s.npz' % job.id), **inhalt)
+            inhalt['posed_vertices'] = Torchfeld.astype(posiert, torch.float32)
+        Npztorch.speichern(os.path.join(ordner, '%s.npz' % job.id), **inhalt, komprimiert=True)
 
     @staticmethod
     def _posierte_vertices(ergebnis):
@@ -80,15 +82,15 @@ class SmplxArchiv:
         Die Zwischendatei gehoert dem Unterprozess; bleibt sie liegen, sammelt
         sich je Analyse ein Netz auf der Platte."""
         pfad = ergebnis.roh.get('posed_vertices_path')
-        if not (pfad and os.path.isfile(pfad)):
+        if not (pfad and Npztorch.da(pfad)):
             return None
         try:
-            vertices = np.load(pfad)
+            vertices = Npztorch.lesen(pfad)
         except Exception:  # noqa: BLE001
             logger.error('Posierte Vertices nicht ladbar: %s', pfad)
             return None
         try:
-            os.remove(pfad)
+            Npztorch.loeschen(pfad)          # .pt seit 13.11.2026 (python10 schreibt weiter .npy)
         except OSError as e:
             logger.debug('Zwischendatei %s bleibt liegen: %s', pfad, e)
         return vertices

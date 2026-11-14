@@ -37,7 +37,8 @@ import math
 import threading
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .g9hautteile import G9hautteile
 
@@ -104,14 +105,14 @@ class G9koerperkoordinaten:
         if len(haut.index) != len(punkte):
             raise ValueError('Hautgewichte für %d Punkte, Käfig hat %d' % (len(haut.index), len(punkte)))
         teil = G9koerperteile.genesis_punkte(haut)
-        je_teil = np.array([cls.nummer(cls.TEIL_KETTE.get(t, 'keine')) for t in G9koerperteile.TEILE] + [0], dtype=np.int64)   # Teil −1 → letzte Zeile = keine
+        je_teil = Torchfeld.feld([cls.nummer(cls.TEIL_KETTE.get(t, 'keine')) for t in G9koerperteile.TEILE] + [0], dtype=torch.int64, copy=True)   # Teil −1 → letzte Zeile = keine
         von, nach, _laenge = G9hautteile.kanten(torch, g, ecken, punkte)
         return G9hautteile.inseln(torch, torch.as_tensor(je_teil[teil], device=g), von, nach)
 
     @staticmethod
     def gelenke():
         from Genesis9.skelett import G9skelett
-        return {k['name']: np.asarray(k['kopf'], dtype=np.float64) for k in G9skelett().gelenkknochen()}
+        return {k['name']: Torchfeld.feld(k['kopf'], dtype=torch.float64) for k in G9skelett().gelenkknochen()}
 
     @staticmethod
     def glied(torch, p, a, b, c):
@@ -250,7 +251,7 @@ class G9koerperkoordinaten:
         t0 = time.perf_counter()
         torch, g = G9hautteile.geraet()
         abtastung = G9texturabtastung.holen(cls.ABTASTUNG)
-        punkte = np.asarray(G9basisnetz.holen().punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(G9basisnetz.holen().punkte, dtype=torch.float64)
         kette, umgeteilt, inseln = cls.ketten(torch, g, abtastung.ecken, punkte)
         werte, proben = cls.punktwerte(torch, g, punkte, kette)
         glied = {cls.nummer(k) for k in ('rumpf', 'arm_links', 'arm_rechts', 'bein_links', 'bein_rechts')}
@@ -264,7 +265,7 @@ class G9koerperkoordinaten:
             zeilen.append(cls.kodieren(torch, feld).cpu().numpy())
             texel_je_kette[str(nummer)] = {cls.KETTEN[i]: int(n) for i, n in enumerate(je) if n and i}
         puffer = io.BytesIO()
-        Image.fromarray(np.concatenate(zeilen, 0), 'RGBA').save(puffer, 'PNG')
+        Image.fromarray(Torchfeld.roh(Torchfeld.cat(zeilen, 0)), 'RGBA').save(puffer, 'PNG')
         png = puffer.getvalue()
         angaben = {'fassung': cls.FASSUNG, 'seite': cls.SEITE, 'kacheln': kacheln, 'ketten': list(cls.KETTEN), 'stufe': cls.STUFE,
                    'hoehe_bereich': list(cls.HOEHE_BEREICH), 'anteil_bereich': list(cls.ANTEIL_BEREICH), 'bytes': len(png), 'geraet': str(g),

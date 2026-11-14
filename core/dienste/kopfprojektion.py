@@ -6,7 +6,8 @@ Hier ersetzt der Warp die zweite Hälfte: Punkt → Pixel des Kopf-Renders (orth
 Deckung, Licht je Ansicht — erbt die Klasse unverändert, auch `Hautproben` und `Hautmischung` laufen damit wie bei den Körperkacheln.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from iterationen2d3d.fotoprojektion import Fotoprojektion
 
 __all__ = ['Kopfprojektion']
@@ -20,11 +21,11 @@ class Kopfprojektion(Fotoprojektion):
 
     def render_pixel(self, punkte, winkel):
         """(N, 2) Pixel des Kopf-Renders für Punkte (N, 3) bei Drehung `winkel` (Grad) — die Hälfte der Figurprojektion vor der Normierung."""
-        w = np.radians(float(winkel))
-        c, s = np.cos(w), np.sin(w)
-        rel = np.asarray(punkte, dtype=np.float64) - self.mitte
+        w = Torchfeld.radians(float(winkel))
+        c, s = Torchfeld.cos(w), Torchfeld.sin(w)
+        rel = Torchfeld.feld(punkte, dtype=torch.float64) - self.mitte
         ppm = self.hoehe / (2.0 * self.halb)
-        return np.column_stack([self.breite / 2.0 + (c * rel[:, 0] - s * rel[:, 2]) * ppm, self.hoehe / 2.0 - rel[:, 1] * ppm])
+        return Torchfeld.column_stack([self.breite / 2.0 + (c * rel[:, 0] - s * rel[:, 2]) * ppm, self.hoehe / 2.0 - rel[:, 1] * ppm])
 
     def projizieren(self, punkte, winkel, abbildung, hf, bf):
         """(u, v) in Pixeln des Fotoausschnitts (`abbildung`, `hf`, `bf` kommen von der Figurprojektion und zählen hier nicht)."""

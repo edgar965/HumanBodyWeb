@@ -21,7 +21,8 @@ Die Hülle hat die Topologie der Figur: keine Risse, und die Ruhelage ist exakt 
     Fotohuelle(scan, stueck, haut, ruhe, posiert, dreiecke).bauen(nummer) → (punkte, flaechen, uv_ecken, textur) | None
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .huellenschnitt import Huellenschnitt
 
@@ -41,26 +42,26 @@ class Fotohuelle:
     def __init__(self, scan, stueck, haut, ruhe, posiert, dreiecke, farbsperre=None, halsgewicht=None):
         """`farbsperre` (F,) bool: Netzflächen, die nicht zur Farbe beitragen (Hautton) — für die Zugehörigkeit zählen
         sie (die gebackene Textur hat warme Flecken mitten im Shirt; als Lücken gerechnet wurden es Löcher)."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
         self.scan = scan
-        self.stueck = np.where(np.asarray(haut, dtype=bool), 0, np.asarray(stueck))
-        self.farbsperre = np.zeros(len(self.stueck), bool) if farbsperre is None else np.asarray(farbsperre, bool)
+        self.stueck = torch.where(Torchfeld.feld(haut, dtype=torch.bool), 0, Torchfeld.feld(stueck))
+        self.farbsperre = torch.zeros(len(self.stueck), dtype=torch.bool, device='cuda') if farbsperre is None else Torchfeld.feld(farbsperre, dtype=torch.bool)
         self.halsgewicht = halsgewicht                  # (V,) für den Rundhals (`Huellenschnitt.halsgewichte`)
-        self.ruhe = np.asarray(ruhe, dtype=np.float64)
-        self.posiert = np.asarray(posiert, dtype=np.float64)
-        self.dreiecke = np.asarray(dreiecke, dtype=np.int64)
+        self.ruhe = Torchfeld.feld(ruhe, dtype=torch.float64)
+        self.posiert = Torchfeld.feld(posiert, dtype=torch.float64)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64)
         #: Der tiefste waagerechte Saum je gebautem Stück (`Huellenschnitt.tiefster_saum`) — das Stück darunter schneidet an ihm (`_saum_darueber`).
         self._saeume = {}
         self.mitten = scan.punkte[scan.flaechen].mean(axis=1)
         abstand, index = cKDTree(self.mitten).query(self.posiert, workers=-1)
-        self.marke = np.where(abstand < self.REICHWEITE, self.stueck[index], 0)
+        self.marke = torch.where(abstand < self.REICHWEITE, self.stueck[index], 0)
 
     # ------------------------------------------------------------ Auswahl
 
     def _nachbarn(self, flaechen, n_punkte):
-        from scipy.sparse import coo_matrix
-        zeilen = np.repeat(np.arange(len(flaechen)), 3)
-        return coo_matrix((np.ones(len(zeilen)), (zeilen, flaechen.reshape(-1))),
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        zeilen = Torchfeld.repeat_interleave(Torchfeld.arange(len(flaechen)), 3)
+        return coo_matrix((torch.ones(len(zeilen), dtype=torch.float64, device='cuda'), (zeilen, flaechen.reshape(-1))),
                           shape=(len(flaechen), n_punkte)).tocsr()
 
     #: Das obere Stück schließt die Lücke zum unteren (Haut zwischen Shirtsaum und Hosenbund, Testauftrag: ein Streifen
@@ -82,7 +83,7 @@ class Fotohuelle:
         saum = self._saeume.get(self.DARUEBER.get(nummer))
         if saum is None:
             return None
-        return np.asarray(saum[0], dtype=np.float64) + np.array([0.0, self.BUND_UEBER_SAUM, 0.0]), saum[1]
+        return Torchfeld.feld(saum[0], dtype=torch.float64) + Torchfeld.feld([0.0, self.BUND_UEBER_SAUM, 0.0], copy=True), saum[1]
 
     #: Socken: jede Insel zum ganzen Fuß schließen. Die Maske nennt vorn am Knöchel „Bein", nicht „Socke" — die Socke hatte dort Löcher (Auftrag 2026.10.04.11.11.44: Ferse, Sohle und Rückseite des Knöchels
     #: ja, die Vorderseite nein; gesehen am Bild der Rückseite/Vorderseite). Alle Figurflächen im Kasten der Insel (± `FUSS_RAND`) und in ihrer Höhenspanne gehören dazu.
@@ -95,18 +96,18 @@ class Fotohuelle:
 
     def _fuss_schliessen(self, wahl):
         """Je Körperseite (links/rechts der Mittellinie) der Kasten um die gewählten Flächen — alle Figurflächen darin (Höhe ohne den Rand) kommen dazu."""
-        index = np.flatnonzero(wahl)
+        index = torch.flatten(wahl).nonzero()[:, 0]
         if not len(index):
             return wahl
         mitten = self.ruhe[self.dreiecke].mean(axis=1)
-        mitte_x = float(np.median(self.ruhe[:, 0]))
-        aus = wahl.copy()
+        mitte_x = float(Torchfeld.median(self.ruhe[:, 0]))
+        aus = Torchfeld.kopie(wahl)
         for seite in (mitten[:, 0] < mitte_x, mitten[:, 0] >= mitte_x):
             gewaehlt = index[seite[index]]
             if len(gewaehlt) < self.FUSS_MIN:
                 continue
             e = mitten[gewaehlt]
-            unten, oben = e.min(axis=0) - self.FUSS_RAND, e.max(axis=0) + self.FUSS_RAND
+            unten, oben = e.amin(dim=0) - self.FUSS_RAND, e.amax(dim=0) + self.FUSS_RAND
             drin = ((mitten[:, 0] >= unten[0]) & (mitten[:, 0] <= oben[0]) & (mitten[:, 2] >= unten[2]) & (mitten[:, 2] <= oben[2])
                     & (mitten[:, 1] >= unten[1] + self.FUSS_RAND) & (mitten[:, 1] <= oben[1] - self.FUSS_RAND))          # die Höhe ohne den Rand: der Saum bleibt, wo die Maske ihn sah
             aus |= drin
@@ -115,7 +116,7 @@ class Fotohuelle:
     def _auswahl(self, nummer, hoehen=None, kappe=None):
         """(F,) bool der Figurflächen des Stücks — im Höhenbereich `hoehen` (von, bis), geschlossen, geöffnet, Lücken
         zum Stück darunter gefüllt, ohne kleine Teile. `kappe` `(Mitte, Normale)` (`_saum_darueber`): Flächen oberhalb dieser Ebene gehören nicht dazu."""
-        from scipy.sparse.csgraph import connected_components
+        from KoerperKI_alle.kartengraph import connected_components
         inzidenz = self._nachbarn(self.dreiecke, len(self.ruhe))
         wahl = (self.marke[self.dreiecke] == nummer).all(axis=1)
         y = self.posiert[self.dreiecke].mean(axis=1)[:, 1]
@@ -123,14 +124,14 @@ class Fotohuelle:
             wahl &= (y >= hoehen[0] - self.HOEHE_RAND) & (y <= hoehen[1] + self.HOEHE_RAND)
 
         def wachsen(w, innerhalb=None):
-            punkte = np.zeros(len(self.ruhe))
-            punkte[np.unique(self.dreiecke[w])] = 1.0
+            punkte = torch.zeros(len(self.ruhe), dtype=torch.float64, device='cuda')
+            punkte[Torchfeld.unique(self.dreiecke[w])] = 1.0
             neu = (inzidenz @ punkte) > 0
             return neu if innerhalb is None else neu & innerhalb
 
         def schrumpfen(w):
-            draussen = np.zeros(len(self.ruhe))
-            draussen[np.unique(self.dreiecke[~w])] = 1.0
+            draussen = torch.zeros(len(self.ruhe), dtype=torch.float64, device='cuda')
+            draussen[Torchfeld.unique(self.dreiecke[~w])] = 1.0
             return w & ~((inzidenz @ draussen) > 0)
 
         for _ in range(self.RINGE):                     # schließen: Löcher und Kerben zu
@@ -153,13 +154,13 @@ class Fotohuelle:
         if kappe is not None:                           # Hose: nichts oberhalb der Ebene des Hemdsaums (gemessen: ein Teil der Maske ragte bis 156 mm darüber hinaus — die „Zunge" am Hosenbund)
             hoch = kappe[1] if kappe[1][1] > 0 else -kappe[1]
             wahl = wahl & ~((self.ruhe[self.dreiecke].mean(axis=1) - kappe[0]) @ hoch > 0)
-        index = np.flatnonzero(wahl)
+        index = torch.flatten(wahl).nonzero()[:, 0]
         if not len(index):
             return wahl
         teil_inz = inzidenz[index]
         n, teil = connected_components(teil_inz @ teil_inz.T, directed=False)
-        groesse = np.bincount(teil, minlength=n)
-        aus = np.zeros_like(wahl)
+        groesse = Torchfeld.bincount(teil, minlength=n)
+        aus = torch.zeros_like(wahl)
         aus[index[groesse[teil] >= self.TEIL_MIN * len(index)]] = True
         return aus
 
@@ -168,11 +169,11 @@ class Fotohuelle:
     @staticmethod
     def _normalen(punkte, flaechen):
         e = punkte[flaechen]
-        n = np.zeros_like(punkte)
-        kreuz = np.cross(e[:, 1] - e[:, 0], e[:, 2] - e[:, 0])
+        n = torch.zeros_like(punkte)
+        kreuz = Torchfeld.cross(e[:, 1] - e[:, 0], e[:, 2] - e[:, 0])
         for i in range(3):
-            np.add.at(n, flaechen[:, i], kreuz)
-        return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+            Torchfeld.add_at(n, flaechen[:, i], kreuz)
+        return n / Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-12)
 
     def _glatt(self, werte, flaechen, runden=None, faktoren=(1.0,)):
         """Werte je Punkt über die Nachbarn (gemeinsame Fläche) mitteln, `runden` (Vorgabe `GLAETTEN`) Runden mit je
@@ -180,8 +181,8 @@ class Fotohuelle:
         Mitteln schrumpfte)."""
         inzidenz = self._nachbarn(flaechen, len(werte))
         nachbar = (inzidenz.T @ inzidenz).tocsr()
-        anzahl = np.maximum(np.asarray(nachbar.sum(axis=1)).ravel()[:, None], 1e-12)
-        w = werte.reshape(len(werte), -1).astype(np.float64)
+        anzahl = Torchfeld.maximum(Torchfeld.feld(nachbar.sum(axis=1)).ravel()[:, None], 1e-12)
+        w = Torchfeld.astype(werte.reshape(len(werte), -1), torch.float64)
         for _ in range(self.GLAETTEN if runden is None else runden):
             for faktor in faktoren:
                 w = w + faktor * ((nachbar @ w) / anzahl - w)
@@ -212,18 +213,18 @@ class Fotohuelle:
     OBEN = (0.35, 0.7)
 
     def _aufliegen(self, normalen, luft, hoechst=None):
-        oben = np.clip((normalen[:, 1] - self.OBEN[0]) / (self.OBEN[1] - self.OBEN[0]), 0.0, 1.0)
+        oben = Torchfeld.clip((normalen[:, 1] - self.OBEN[0]) / (self.OBEN[1] - self.OBEN[0]), 0.0, 1.0)
         return (self.ABSTAND_MAX if hoechst is None else hoechst) * (1.0 - oben) + luft * oben
 
     def _drapieren(self, ruhe, normalen, versatz, flaechen, luft, hoechst=None):
         punkte = self._glatt(ruhe + normalen * versatz[:, None], flaechen, self.DRAPIER_RUNDEN, self.TAUBIN)
         # Taubins Gegenschritt schießt am Rand über (Kunstnetz: 30,1 mm bei 30 mm Grenze, test_fotohuelle Fall 1)
-        tiefe = np.clip(np.einsum('ij,ij->i', punkte - ruhe, normalen), luft, self.ABSTAND_MAX if hoechst is None else hoechst)
+        tiefe = Torchfeld.clip(Torchfeld.einsum('ij,ij->i', punkte - ruhe, normalen), luft, self.ABSTAND_MAX if hoechst is None else hoechst)
         return ruhe + normalen * tiefe[:, None]
 
     def bauen(self, nummer, hoehen=None):
         import trimesh
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
         kappe = self._saum_darueber(nummer)
         wahl = self._auswahl(nummer, hoehen, kappe)
         if not wahl.any():
@@ -232,28 +233,28 @@ class Fotohuelle:
         feld = schnitt.feld(wahl, hals=self.HALS.get(nummer, False), vorgabe=kappe)
         self._saeume[nummer] = schnitt.tiefster_saum()
         nah = (feld[self.dreiecke] >= schnitt.SCHNITT).any(axis=1)
-        genutzt, neu = np.unique(self.dreiecke[nah].reshape(-1), return_inverse=True)
+        genutzt, neu = Torchfeld.unique(self.dreiecke[nah].reshape(-1), return_inverse=True)
         flaechen = neu.reshape(-1, 3)
-        lagen = np.hstack([self.ruhe[genutzt], self.posiert[genutzt], feld[genutzt][:, None]])   # gemeinsam teilen
+        lagen = Torchfeld.hstack([self.ruhe[genutzt], self.posiert[genutzt], feld[genutzt][:, None]])   # gemeinsam teilen
         lagen, flaechen = trimesh.remesh.subdivide(lagen, flaechen)
         lagen, flaechen = schnitt.schneiden(lagen, flaechen, 6)
         ruhe, posiert = lagen[:, :3], lagen[:, 3:6]
-        eigene = np.flatnonzero(self.stueck == nummer)
+        eigene = torch.flatten(self.stueck == nummer).nonzero()[:, 0]
         baum = cKDTree(self.mitten[eigene])
         abstand, _ = baum.query(posiert, workers=-1)
         luft = max(self.ABSTAND_MIN, self.LUFT.get(nummer, 0.0))
         hoechst = max(luft, self.HOECHST.get(nummer, self.ABSTAND_MAX))
         normalen = self._normalen(ruhe, flaechen)
-        versatz = self._glatt(np.clip(np.minimum(abstand, self._aufliegen(normalen, luft, hoechst)), luft, hoechst),
+        versatz = self._glatt(Torchfeld.clip(Torchfeld.minimum(abstand, self._aufliegen(normalen, luft, hoechst)), luft, hoechst),
                               flaechen)
         punkte = self._drapieren(ruhe, normalen, versatz, flaechen, luft, hoechst)
         bunt = eigene[~self.farbsperre[eigene]]
         bunt = bunt if len(bunt) >= self.NACHBARN else eigene
         _, nah = cKDTree(self.mitten[bunt]).query(posiert, k=self.NACHBARN, workers=-1)
-        bary = np.full((nah.size, 3), 1.0 / 3.0)
-        farben = self.scan.farben(bunt[nah.reshape(-1)], bary).astype(np.float64).reshape(len(posiert), -1, 3)
-        farben = self._glatt(np.median(farben, axis=1), flaechen)
-        grund = np.median(farben, axis=0)                     # einfarbiger Stoff, Netzflecken nur gedämpft
+        bary = Torchfeld.full((Torchfeld.groesse(nah), 3), 1.0 / 3.0)
+        farben = Torchfeld.astype(self.scan.farben(bunt[nah.reshape(-1)], bary), torch.float64).reshape(len(posiert), -1, 3)
+        farben = self._glatt(Torchfeld.median(farben, axis=1), flaechen)
+        grund = Torchfeld.median(farben, axis=0)                     # einfarbiger Stoff, Netzflecken nur gedämpft
         farben = grund + self.FLECKEN * (farben - grund)
         uv_ecken, textur = self._atlas(flaechen, farben)
         return punkte, flaechen, uv_ecken, textur
@@ -262,24 +263,24 @@ class Fotohuelle:
         """Je Fläche eine Zelle; das untere linke Dreieck der Zelle trägt die Fläche, die ganze Zelle die baryzentrisch
         fortgesetzte Farbe (kein Rand, der beim Filtern hineinblutet) → (uv_ecken (F, 3, 2), Bild uint8)."""
         z = self.ZELLE
-        spalten = int(np.ceil(np.sqrt(len(flaechen))))
-        zeilen = int(np.ceil(len(flaechen) / spalten))
+        spalten = int(Torchfeld.ceil(Torchfeld.sqrt(len(flaechen))))
+        zeilen = int(Torchfeld.ceil(len(flaechen) / spalten))
         breite, hoehe = spalten * z, zeilen * z
-        ecke = np.array([[0.5, 0.5], [z - 1.5, 0.5], [0.5, z - 1.5]])          # Pixelmitten in der Zelle (x, y)
-        y, x = np.mgrid[0:z, 0:z] + 0.5
+        ecke = Torchfeld.feld([[0.5, 0.5], [z - 1.5, 0.5], [0.5, z - 1.5]], copy=True)          # Pixelmitten in der Zelle (x, y)
+        y, x = Torchfeld.mgrid[0:z, 0:z] + 0.5
         # Baryzentrische Koordinaten jedes Zellpixels bezüglich `ecke` (fortgesetzt, dann geklemmt)
         b1 = (x - ecke[0, 0]) / (ecke[1, 0] - ecke[0, 0])
         b2 = (y - ecke[0, 1]) / (ecke[2, 1] - ecke[0, 1])
         b0 = 1.0 - b1 - b2
-        b = np.clip(np.stack([b0, b1, b2], axis=-1), 0.0, None)
+        b = Torchfeld.clip(Torchfeld.stack([b0, b1, b2], axis=-1), 0.0, None)
         b /= b.sum(axis=-1, keepdims=True)
-        zellfarben = np.einsum('yxk,fkc->fyxc', b, farben[flaechen])          # (F, z, z, 3)
-        bild = np.zeros((zeilen * spalten, z, z, 3))
+        zellfarben = Torchfeld.einsum('yxk,fkc->fyxc', b, farben[flaechen])          # (F, z, z, 3)
+        bild = torch.zeros((zeilen * spalten, z, z, 3), dtype=torch.float64, device='cuda')
         bild[:len(flaechen)] = zellfarben
-        bild = bild.reshape(zeilen, spalten, z, z, 3).transpose(0, 2, 1, 3, 4).reshape(hoehe, breite, 3)
-        f = np.arange(len(flaechen))
+        bild = bild.reshape(zeilen, spalten, z, z, 3).permute(0, 2, 1, 3, 4).reshape(hoehe, breite, 3)
+        f = Torchfeld.arange(len(flaechen))
         x0, y0 = (f % spalten) * z, (f // spalten) * z
         px = x0[:, None] + ecke[None, :, 0]
         py = y0[:, None] + ecke[None, :, 1]
-        uv = np.stack([px / breite, 1.0 - py / hoehe], axis=-1)                # v nach oben (OBJ)
-        return uv, np.clip(bild + 0.5, 0, 255).astype(np.uint8)
+        uv = Torchfeld.stack([px / breite, 1.0 - py / hoehe], axis=-1)                # v nach oben (OBJ)
+        return uv, Torchfeld.astype(Torchfeld.clip(bild + 0.5, 0, 255), torch.uint8)

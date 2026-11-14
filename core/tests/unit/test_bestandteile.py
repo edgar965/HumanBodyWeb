@@ -7,6 +7,10 @@ import unittest
 import numpy as np
 
 from Kleidung.bestandteile import Bestandteile
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 def streifen(n):
@@ -81,8 +85,7 @@ class BestandteileTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(dir=str(Path(__file__).resolve().parents[3] / 'ProjektTemp')) as ordner:
             pfad = Path(ordner) / 'teile.npz'
-            np.savez(pfad, begriffe=np.array(['staff']), gruppen=np.array(['requisit']), stimmen=np.zeros((5, 1), dtype=np.float32), treffer=np.array([4]), bestwert=np.array([0.7], dtype=np.float32),
-                     pixel=np.zeros(5, dtype=np.float32), flaechen=5)
+            Npztorch.speichern(pfad, begriffe=np.array(['staff']), gruppen=np.array(['requisit']), stimmen=np.zeros((5, 1), dtype=np.float32), treffer=np.array([4]), bestwert=np.array([0.7], dtype=np.float32), pixel=np.zeros(5, dtype=np.float32), flaechen=5)
             self.assertIsNotNone(Bestandteile.laden(pfad, 5))
             self.assertIsNone(Bestandteile.laden(pfad, 6))                  # Stimmen eines anderen Netzes gelten nie
             self.assertIsNone(Bestandteile.laden(Path(ordner) / 'fehlt.npz', 5))

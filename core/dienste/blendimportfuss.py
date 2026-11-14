@@ -41,7 +41,8 @@ Strümpfe bleiben flach: Sie folgen der Figur über ihre Haut und drehen mit dem
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportsohle import Blendimportsohle
 
@@ -83,9 +84,9 @@ class Blendimportfuss:
         from Genesis9.koerperteile import G9koerperteile
 
         self.lage = lage
-        self.netz = np.asarray(koerper_netz, dtype=np.float64)
-        self.teile = np.asarray(koerper_teile)
-        self.schuhe = None if schuh_netz is None else np.asarray(schuh_netz, dtype=np.float64)
+        self.netz = Torchfeld.feld(koerper_netz, dtype=torch.float64)
+        self.teile = Torchfeld.feld(koerper_teile)
+        self.schuhe = None if schuh_netz is None else Torchfeld.feld(schuh_netz, dtype=torch.float64)
         self.nummer = G9koerperteile.NUMMER
         self._seiten = None
 
@@ -93,13 +94,13 @@ class Blendimportfuss:
     def kabsch(a, b):
         """`(R, ma, mb)` mit `b ≈ R·(a − ma) + mb` (Starrkörper ohne Maßstab, Spiegelung ausgeschlossen)."""
         ma, mb = a.mean(axis=0), b.mean(axis=0)
-        u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))
-        d = np.sign(np.linalg.det(vt.T @ u.T)) or 1.0
-        return vt.T @ np.diag([1.0, 1.0, d]) @ u.T, ma, mb
+        u, _, vt = Torchfeld.linalg_svd(Torchfeld.feld((a - ma).T @ (b - mb)))
+        d = Torchfeld.sign(Torchfeld.linalg_det(vt.T @ u.T)) or 1.0
+        return vt.T @ Torchfeld.diag(Torchfeld.feld([1.0, 1.0, d])) @ u.T, ma, mb
 
     def _fuss(self, rest, kaefig_posiert, koerper):
         """Drehung Ruhe → Haltung des Fußes, auf die Körperpunkte nachgezogen; `(R, rest_vorher_mm, rest_nachher_mm)`."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         r, ma, mb = self.kabsch(rest, kaefig_posiert)
         baum = cKDTree(koerper)
@@ -107,11 +108,11 @@ class Blendimportfuss:
         for _ in range(self.ICP_RUNDEN):
             d, i = baum.query((rest - ma) @ r.T + mb)
             if vorher is None:
-                vorher = float(np.sqrt((d ** 2).mean())) * 1000.0
-            behalten = d <= np.quantile(d, self.ICP_ANTEIL)
+                vorher = float(Torchfeld.sqrt((d ** 2).mean())) * 1000.0
+            behalten = d <= Torchfeld.quantile(d, self.ICP_ANTEIL)
             r, ma, mb = self.kabsch(rest[behalten], koerper[i[behalten]])
         d, _ = baum.query((rest - ma) @ r.T + mb)
-        return r, vorher, float(np.sqrt((d[d <= np.quantile(d, self.ICP_ANTEIL)] ** 2).mean())) * 1000.0
+        return r, vorher, float(Torchfeld.sqrt((d[d <= Torchfeld.quantile(d, self.ICP_ANTEIL)] ** 2).mean())) * 1000.0
 
     def waagrecht(self, schuh):
         """Um wie viel (Grad, + = Spitze nach unten) der Fuß samt Schuh gegen den Unterschenkel gedreht wird, damit die Sohle waagrecht steht — 0, wenn der
@@ -124,15 +125,15 @@ class Blendimportfuss:
     @staticmethod
     def _dreh_x(grad):
         """Drehung um die Querachse, Spitze nach unten positiv."""
-        c, s = np.cos(np.radians(grad)), np.sin(np.radians(grad))
-        return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
+        c, s = Torchfeld.cos(Torchfeld.radians(grad)), Torchfeld.sin(Torchfeld.radians(grad))
+        return Torchfeld.feld([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]], copy=True)
 
     def _zuordnung(self, punkte, fuesse):
         """`{seite: Maske}` — welche Schuhpunkte zu dem Fuß gehören, dem sie am nächsten liegen (höchstens `SCHUH_REICHWEITE`)."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        abstand = np.stack([cKDTree(f['punkte']).query(punkte)[0] for f in fuesse])
-        nah, eigen = abstand.min(axis=0) <= self.SCHUH_REICHWEITE_H * self.lage.h, abstand.argmin(axis=0)
+        abstand = Torchfeld.stack([cKDTree(f['punkte']).query(punkte)[0] for f in fuesse])
+        nah, eigen = Torchfeld.amin(abstand, dim=0) <= self.SCHUH_REICHWEITE_H * self.lage.h, abstand.argmin(axis=0)
         return {f['seite']: nah & (eigen == i) for i, f in enumerate(fuesse)}
 
     def _schuh_je_fuss(self, fuesse):
@@ -144,7 +145,7 @@ class Blendimportfuss:
     def _drehen(self, s, grad):
         """Den Fuß `s` um `grad` weiter drehen (Spitze unten +) — `q`, `winkel` und die Summe der Zusatzdrehung fortschreiben."""
         s['q'] = self._dreh_x(grad) @ s['q']
-        s['winkel'] = float(np.degrees(np.arccos(np.clip((np.trace(s['q']) - 1.0) / 2.0, -1.0, 1.0))))
+        s['winkel'] = float(Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip((Torchfeld.trace(s['q']) - 1.0) / 2.0, -1.0, 1.0))))
         s['waagrecht_grad'] = round(s['waagrecht_grad'] + grad, 1)
 
     def nachstellen(self, schuh_netz, schuh_ruhe):
@@ -153,8 +154,8 @@ class Blendimportfuss:
         Sohle nicht ganz: an Ferse und Knöchel mischt der Käfig-Kabsch die Drehung des Unterschenkels ein (gemessen am Stiefel, 09.10.2026:
         links Ferse 2 cm tiefer als der Ballen = 6°, rechts 2°). Unter `SOHLE_TOLERANZ` Grad bleibt es."""
         aus = self.seiten()
-        masken = self._zuordnung(np.asarray(schuh_netz, dtype=np.float64), aus) if aus else {}
-        ruhe = np.asarray(schuh_ruhe, dtype=np.float64)
+        masken = self._zuordnung(Torchfeld.feld(schuh_netz, dtype=torch.float64), aus) if aus else {}
+        ruhe = Torchfeld.feld(schuh_ruhe, dtype=torch.float64)
         geaendert = False
         for s in aus:
             if s['seite'] not in masken or masken[s['seite']].sum() < self.SCHUH_MINDEST:
@@ -203,7 +204,7 @@ class Blendimportfuss:
                 continue
             r_bein = self.kabsch(lage.kaefig_ruhe[bein], lage.kaefig_posiert[bein])[0]
             q = r_bein.T @ r_fuss
-            winkel = float(np.degrees(np.arccos(np.clip((np.trace(q) - 1.0) / 2.0, -1.0, 1.0))))
+            winkel = float(Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip((Torchfeld.trace(q) - 1.0) / 2.0, -1.0, 1.0))))
             deckung = len(koerper) / max(int(fuss.sum()), 1)
             aus.append({'seite': seite, 'knochen': knochen, 'fuss': fuss, 'q': q, 'winkel': winkel, 'winkel_koerper': winkel,
                         'waagrecht_grad': 0.0, 'r_bein': r_bein, 'punkte': lage.kaefig_posiert[fuss], 'ohne_koerper': len(koerper) < 10,
@@ -246,7 +247,7 @@ class Blendimportfuss:
 
         regler = dict(self.lage.stellung())
         boden = G9formung.aus_abfrage(dict(regler), {}).boden()
-        return G9formung.aus_abfrage(regler, self.griff()).punkte() - np.array([0.0, boden, 0.0])
+        return G9formung.aus_abfrage(regler, self.griff()).punkte() - Torchfeld.feld([0.0, boden, 0.0], copy=True)
 
     def griff(self):
         """`{l_foot: {'rotation/x': Grad, …}, r_foot: …}` — `Q` in den Achsen und der Reihenfolge des Genesis-Knochens
@@ -258,7 +259,7 @@ class Blendimportfuss:
         """Die Drehung `q` als Kanalwerte des Genesis-Knochens `knochen` (`E = Oᵀ·Q·O`, in der Reihenfolge des Knochens)."""
         from Genesis9.knochenmatrizen import G9knochenmatrizen
         from Genesis9.skelett import G9skelett
-        from scipy.spatial.transform import Rotation
+        from KoerperKI_alle.drehung import Drehung as Rotation
 
         k = next(k for k in G9skelett.roh() if k['name'] == knochen)
         o = G9knochenmatrizen.euler(k.get('orientation', (0.0, 0.0, 0.0)), 'XYZ')

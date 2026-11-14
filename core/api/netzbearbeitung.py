@@ -11,7 +11,8 @@ die AUSGEWAEHLTEN Punkte uebernehmen. Diese Uebernahme steht jetzt einmal in
 
 import base64
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -39,8 +40,8 @@ class Netzbearbeitung:
     @staticmethod
     def _punkte(text):
         """base64-Float32 als (N, 3)-Feld in float64 — eine eigene Kopie."""
-        roh = np.frombuffer(base64.b64decode(text), dtype=np.float32).copy()
-        return roh.reshape(-1, 3).astype(np.float64)
+        roh = Torchfeld.kopie(torch.frombuffer(bytearray(base64.b64decode(text)), dtype=torch.float32).to(Torchfeld.KARTE))
+        return Torchfeld.astype(roh.reshape(-1, 3), torch.float64)
 
     @staticmethod
     def _nur_ausgewaehlte(vorher, nachher, auswahl):
@@ -49,13 +50,13 @@ class Netzbearbeitung:
         Das ist Absicht: Glaettung und Herausschieben brauchen die Nachbarn.
         Wer nur die Auswahl rechnete, bekaeme an ihrem Rand einen Absatz.
         """
-        ergebnis = vorher.copy()
+        ergebnis = Torchfeld.kopie(vorher)
         for platz in set(auswahl):
             if 0 <= platz < len(ergebnis):
                 ergebnis[platz] = nachher[platz]
         # Kein `request` hier (die Aktionen rufen den Helfer), also der
         # JSON-Weg mit base64 — die Netzbearbeitung schickt nur Punkte zurueck.
-        return JsonResponse({'vertices': Netzantwort.feld(ergebnis.astype(np.float32), 'vertices')},
+        return JsonResponse({'vertices': Netzantwort.feld(Torchfeld.astype(ergebnis, torch.float32), 'vertices')},
                             encoder=Netzjson)
 
     # ---------------------------------------------------------------- Aktionen
@@ -77,7 +78,7 @@ class Netzbearbeitung:
         if not punkte_roh or not flaechen_roh:
             return JsonResponse({'error': 'vertices and faces are required'}, status=400)
         punkte = Netzbearbeitung._punkte(punkte_roh)
-        flaechen = np.frombuffer(base64.b64decode(flaechen_roh), dtype=np.uint32).reshape(-1, 3)
+        flaechen = torch.frombuffer(bytearray(base64.b64decode(flaechen_roh)), dtype=torch.uint32).to(Torchfeld.KARTE).reshape(-1, 3)
         geglaettet = _laplacian_smooth(
             punkte,
             flaechen,
@@ -107,7 +108,7 @@ class Netzbearbeitung:
             return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
         # Der unterteilte Koerper loest feiner auf — die Kollision trifft
         # dadurch auch schmale Stellen.
-        punkte = np.asarray(koerper.vertices, dtype=np.float64)
+        punkte = Torchfeld.feld(koerper.vertices, dtype=torch.float64)
         unterteiler = Charakterdaten.unterteiler(koerper.geschlecht)
         if unterteiler is not None:
             punkte = unterteiler.subdivide(punkte)

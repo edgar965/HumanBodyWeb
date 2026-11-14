@@ -18,7 +18,8 @@ import json
 import logging
 import struct
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .meshgenesisflaeche import Meshgenesisflaeche
 
@@ -59,8 +60,8 @@ class Meshgenesisflaechenanimation:
                 return None
             ohne_haar = d['etikett'] != haar
             f = d['dreiecke'][ohne_haar]
-            e = np.unique(f)
-            v = np.searchsorted(e, f).astype(np.uint32)
+            e = Torchfeld.unique(f)
+            v = Torchfeld.astype(Torchfeld.searchsorted(e, f), torch.uint32)
             if verbindung is None:
                 verbindung, ecken = v, len(e)
                 kopf_daten = {'etikett': d['etikett'][ohne_haar], 'knochen': d['knochen'][e], 'gewicht': d['gewicht'][e], 'teilfarben': d['teilfarben']}
@@ -69,29 +70,29 @@ class Meshgenesisflaechenanimation:
                     kopf_daten.update(uv=d['uv'][e], material=d['material'][ohne_haar])
                 if 'ruhe' in d:
                     kopf_daten['ruhe'] = d['ruhe'][e]
-            elif len(e) != ecken or not np.array_equal(v, verbindung):
+            elif len(e) != ecken or not Torchfeld.equal(v, verbindung):
                 logger.warning('Meshgenesisflaechenanimation: Probe %s hat eine andere Verbindung als das erste Bild — Play zeigt keine Flächen', nr)
                 return None
             p = d['punkte'][e]
-            if np.abs(p).max() >= 32767 * cls.EINHEIT_M:
+            if Torchfeld.abs(p).max() >= 32767 * cls.EINHEIT_M:
                 logger.warning('Meshgenesisflaechenanimation: Probe %s liegt außerhalb ±3,27 m — Play zeigt keine Flächen', nr)
                 return None
-            lagen.append(np.round(p / cls.EINHEIT_M).astype('<i2'))
-            aussen.append(np.packbits(d['aussen'][ohne_haar].astype(bool)))
+            lagen.append(Torchfeld.astype(Torchfeld.round(p / cls.EINHEIT_M), Torchfeld.dtype('<i2')))
+            aussen.append(Torchfeld.packbits(Torchfeld.astype(d['aussen'][ohne_haar], torch.bool)))
         haut = int(kopf_daten['knochen'].shape[1])
         textur = 'uv' in kopf_daten
         kopf = {'bilder': len(nummern), 'punkte': int(ecken), 'dreiecke': int(len(verbindung)), 'haut': haut, 'einheit_m': cls.EINHEIT_M, 'teile': list(Meshgenesisflaeche.TEILE),
-                'teilfarben': kopf_daten['teilfarben'].astype(int).tolist(), 'textur': textur, 'ruhe': 'ruhe' in kopf_daten}
+                'teilfarben': Torchfeld.astype(kopf_daten['teilfarben'], torch.int64).tolist(), 'textur': textur, 'ruhe': 'ruhe' in kopf_daten}
         text = json.dumps(kopf).encode('utf-8')
         text += b' ' * (-len(text) % 4)
-        teile = [struct.pack('<I', len(text)), text, verbindung.astype('<u4').tobytes(), np.concatenate(lagen).tobytes(),
-                 kopf_daten['knochen'].astype(np.uint8).tobytes(), kopf_daten['gewicht'].astype(np.uint8).tobytes(),
-                 kopf_daten['etikett'].astype(np.uint8).tobytes(), np.concatenate(aussen).tobytes()]
+        teile = [struct.pack('<I', len(text)), text, Torchfeld.als_bytes(Torchfeld.astype(verbindung, Torchfeld.dtype('<u4'))), Torchfeld.als_bytes(Torchfeld.cat(lagen)),
+                 Torchfeld.als_bytes(Torchfeld.astype(kopf_daten['knochen'], torch.uint8)), Torchfeld.als_bytes(Torchfeld.astype(kopf_daten['gewicht'], torch.uint8)),
+                 Torchfeld.als_bytes(Torchfeld.astype(kopf_daten['etikett'], torch.uint8)), Torchfeld.als_bytes(Torchfeld.cat(aussen))]
         if textur:
             # Hinter dem Bitfeld, auf 4 aufgefüllt: float32 uv (V·2) · int16 material (F).
             laenge = sum(len(t) for t in teile)
-            teile += [b'\0' * (-laenge % 4), kopf_daten['uv'].astype('<f4').tobytes(), kopf_daten['material'].astype('<i2').tobytes()]
+            teile += [b'\0' * (-laenge % 4), Torchfeld.als_bytes(Torchfeld.astype(kopf_daten['uv'], Torchfeld.dtype('<f4'))), Torchfeld.als_bytes(Torchfeld.astype(kopf_daten['material'], Torchfeld.dtype('<i2')))]
         if 'ruhe' in kopf_daten:
             laenge = sum(len(t) for t in teile)
-            teile += [b'\0' * (-laenge % 4), kopf_daten['ruhe'].astype('<f4').tobytes()]
+            teile += [b'\0' * (-laenge % 4), Torchfeld.als_bytes(Torchfeld.astype(kopf_daten['ruhe'], Torchfeld.dtype('<f4')))]
         return b''.join(teile)

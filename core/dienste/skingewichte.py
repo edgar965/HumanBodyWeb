@@ -16,8 +16,9 @@ import json
 import logging
 import os
 
-import numpy as np
+import torch
 from django.conf import settings
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -120,8 +121,8 @@ class Skingewichte:
         if gewichte is None:
             return None
         indices, werte = cls._vierer_felder(gewichte)
-        indices.flags.writeable = False
-        werte.flags.writeable = False
+        Torchfeld.schreibschutz(indices)               # Tensoren kennen keinen Schreibschutz (`Torchfeld.schreibschutz`)
+        Torchfeld.schreibschutz(werte)
         cls._arrays[geschlecht] = (indices, werte)
         logger.info(
             'Basisgewichte (%s) aufbereitet: %d Vertices, %d Einfluesse',
@@ -135,8 +136,8 @@ class Skingewichte:
     def _vierer_felder(cls, gewichte):
         anzahl = gewichte['vertex_count']
         k = cls.EINFLUESSE
-        indices = np.zeros((anzahl, k), dtype=np.float32)
-        werte = np.zeros((anzahl, k), dtype=np.float32)
+        indices = torch.zeros((anzahl, k), dtype=torch.float32, device='cuda')
+        werte = torch.zeros((anzahl, k), dtype=torch.float32, device='cuda')
         for v in range(anzahl):
             paare = gewichte['weights'][v]
             if not paare:

@@ -22,7 +22,9 @@ import struct
 import threading
 from collections import OrderedDict
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisflaechennetz import Meshgenesisflaechennetz
 
@@ -46,7 +48,7 @@ class Meshgenesisformvariantefigur:
         if cls._ursprung is None:
             from Genesis9.basisnetz import G9basisnetz
 
-            cls._ursprung = np.asarray(G9basisnetz.netzstufe(0).ursprung, dtype=np.int64)
+            cls._ursprung = Torchfeld.feld(G9basisnetz.netzstufe(0).ursprung, dtype=torch.int64)
         return cls._ursprung
 
     @classmethod
@@ -54,7 +56,7 @@ class Meshgenesisformvariantefigur:
         """`schwelle` und `faktor` je Regler, wo die Liste sie trägt (Regler-KI: Anfasser im Vektor in cm, in G9formung in m, `meshgenesis_reglerki_ablage.py`)."""
         aus = {}
         for v, r in zip(vektor, liste, strict=True):
-            v = float(np.clip(v, r['min'], r['max']))
+            v = float(Torchfeld.clip(v, r['min'], r['max']))
             if abs(v) >= r.get('schwelle', cls.SCHWELLE):
                 aus[r['name']] = v * r.get('faktor', 1.0)
         return aus
@@ -68,7 +70,7 @@ class Meshgenesisformvariantefigur:
         if not zeilen:
             return None
         if was == 'mittel':
-            return np.concatenate(list(zeilen.values())).astype(np.float64).mean(axis=0)
+            return Torchfeld.astype(Torchfeld.cat(list(zeilen.values())), torch.float64).mean(axis=0)
         probe = next((p for p in proben if str(p['nr']) == str(was)), None)
         if probe is None or probe.get('zeile') is None or probe['gruppe'] not in zeilen:
             return None
@@ -79,7 +81,7 @@ class Meshgenesisformvariantefigur:
         """(25.182, 3) float64 auf dem Boden und die Zahl der gesetzten Regler — oder (None, 0)."""
         datei = lauf / cls.VORHERSAGEN
         try:
-            stand = datei.stat().st_mtime_ns
+            stand = Npztorch.stat(datei).st_mtime_ns
         except OSError:
             return None, 0
         schluessel = (str(lauf), stand, name, str(was))
@@ -88,7 +90,7 @@ class Meshgenesisformvariantefigur:
             if gemerkt is not None:
                 cls._ablage.move_to_end(schluessel)
                 return gemerkt
-        with np.load(datei) as z:
+        with Npztorch.lesen(datei) as z:
             vektor = cls.vektor(z, name, was, proben)
         if vektor is None or len(vektor) != len(liste):
             if vektor is not None:
@@ -99,7 +101,7 @@ class Meshgenesisformvariantefigur:
         regler = cls.regler(vektor, liste)
         with cls._schloss:
             f = G9formung(regler)
-            p = np.asarray(f.punkte(), dtype=np.float64).copy()
+            p = Torchfeld.kopie(Torchfeld.feld(f.punkte(), dtype=torch.float64))
             p[:, 1] -= f.boden()
             cls._ablage[schluessel] = (p, len(regler))
             while len(cls._ablage) > cls.MAX:
@@ -108,8 +110,8 @@ class Meshgenesisformvariantefigur:
 
     @staticmethod
     def abstand(a, b):
-        d = 1000.0 * np.linalg.norm(a - b, axis=1)
-        return {'rms_mm': round(float(np.sqrt((d ** 2).mean())), 1), 'median_mm': round(float(np.median(d)), 1), 'p95_mm': round(float(np.percentile(d, 95)), 1)}
+        d = 1000.0 * Torchfeld.linalg_norm(a - b, dim=1)
+        return {'rms_mm': round(float(Torchfeld.sqrt((d ** 2).mean())), 1), 'median_mm': round(float(Torchfeld.median(d)), 1), 'p95_mm': round(float(Torchfeld.percentile(d, 95)), 1)}
 
     @staticmethod
     def _kopf(kopf):
@@ -129,7 +131,7 @@ class Meshgenesisformvariantefigur:
             if ziel is not None:
                 kopf['abstand'] = cls.abstand(p, ziel)
                 kopf['hoehe_ziel_m'] = round(float(ziel[:, 1].max()), 3)
-        return cls._kopf(kopf) + p[ursprung].astype('<f4').tobytes()
+        return cls._kopf(kopf) + Torchfeld.als_bytes(Torchfeld.astype(p[ursprung], Torchfeld.dtype('<f4')))
 
     @classmethod
     def koerper(cls, grundlage):
@@ -142,17 +144,17 @@ class Meshgenesisformvariantefigur:
             return gemerkt[1]
         n = len(cls.ursprung())
         koerper = d['etikett'] == 0
-        f = int(np.argmin(koerper)) if not koerper.all() else len(koerper)
+        f = int(Torchfeld.argmin(koerper)) if not koerper.all() else len(koerper)
         dreiecke = d['dreiecke'][:f]
         if f == 0 or len(d['uv']) < n or int(dreiecke.max()) >= n:
             logger.warning('Meshgenesisformvariantefigur: Anzeigenetz von %s passt nicht zum Körper (%d Dreiecke, größter Index %s, %d Punkte)', grundlage, f,
                            int(dreiecke.max()) if f else '—', n)
             return None
-        material = d['material'][:f].astype('<i2')
-        genutzt = sorted(int(i) for i in np.unique(material) if i >= 0)
+        material = Torchfeld.astype(d['material'][:f], Torchfeld.dtype('<i2'))
+        genutzt = sorted(int(i) for i in Torchfeld.liste(Torchfeld.unique(material)) if i >= 0)
         kopf = {'punkte': n, 'dreiecke': f, 'grundlage': grundlage,
                 'materialien': [{'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe'), 'genutzt': i in genutzt} for i, m in enumerate(d['materialien'])]}
-        roh = material.tobytes()
-        paket = cls._kopf(kopf) + dreiecke.astype('<u4').tobytes() + d['uv'][:n].astype('<f4').tobytes() + roh + b'\0' * (-len(roh) % 4)
+        roh = Torchfeld.als_bytes(material)
+        paket = cls._kopf(kopf) + Torchfeld.als_bytes(Torchfeld.astype(dreiecke, Torchfeld.dtype('<u4'))) + Torchfeld.als_bytes(Torchfeld.astype(d['uv'][:n], Torchfeld.dtype('<f4'))) + roh + b'\0' * (-len(roh) % 4)
         cls._koerper[grundlage] = (d, paket)
         return paket

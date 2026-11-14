@@ -12,7 +12,8 @@ Stücks die Farbe des Originals (`Blendimportumfeld`).
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportfarbangleich import Blendimportfarbangleich
 from .blendimportnormalen import Blendimportnormalen
@@ -78,16 +79,16 @@ class Blendimporthautnacharbeit:
             # Der Saum um die Fehlstellen ist nicht rein schwarz und bliebe als dunkle Linie stehen (`Blendimportrand`).
             farbe, saum = Blendimportrand.schliessen(farbe, leer)
         else:
-            saum = np.zeros_like(leer)
+            saum = torch.zeros_like(leer)
         ersatz = self.meshfigur_kachel(k)
         if leer.any() and ersatz is not None:
             # Die Ersatzkachel steht in einem anderen Ton als das Gebackene daneben (Asian, Daumenwurzel: beige Flecken zwischen rosa
             # Streifen, ein weißes Loch im Daumen): Löcher stopfen, den Ton an die gebackene Nachbarschaft angleichen.
             hinten = self.farbangleich().hinten(Image.open(ersatz), farbe, leer | saum)
-            farbe = np.where(leer[..., None], hinten, farbe)
+            farbe = torch.where(leer[..., None], hinten, farbe)
         if leer.any() and self.umfeld is not None:
             # Um das Scham-Stück gilt in den Fehlstellen die Farbe des Originals, nicht die blasse Ersatzkachel.
-            farbe = self.umfeld.fuellen(k, np.array(farbe), leer)
+            farbe = self.umfeld.fuellen(k, Torchfeld.feld(farbe, copy=True), leer)
             self.umfeld_bericht[str(k)] = self.umfeld.bericht
         return farbe, saum
 
@@ -95,18 +96,18 @@ class Blendimporthautnacharbeit:
         """Eine Kachel nacharbeiten. `farbe`, `normal`, `rauheit_rgb`: `(H, W, 3)` uint8 — Texel ohne Treffer schwarz bzw. flach. Die Eingabefelder bleiben unverändert."""
         import cv2
 
-        leer = farbe.max(axis=2) <= self.LEER_BIS
+        leer = Torchfeld.amax(farbe, dim=2) <= self.LEER_BIS
         deckung = round(100.0 * (1.0 - leer.mean()), 1)
         farbe, saum = self.farbe_fuellen(k, farbe, leer, saum_schliessen)
-        normal = np.array(normal)
+        normal = Torchfeld.feld(normal, copy=True)
         normal[leer | saum] = self.FLACH
         normal, self.normalen_flach[str(k)] = self.saeubern(normal, leer | saum)
         if self.normalen_form != 'bleibt':
             # Die Formdifferenz zwischen Figur und Original steht nicht in der Normalenkarte, sondern in der Fläche.
             normal = self.normalen().feindetail(normal, leer | saum, self.form_px())
-        rauh = cv2.cvtColor(np.ascontiguousarray(rauheit_rgb), cv2.COLOR_RGB2GRAY)
+        rauh = cv2.cvtColor(Torchfeld.roh(Torchfeld.feld(rauheit_rgb)), cv2.COLOR_RGB2GRAY)
         if (~(leer | saum)).any():
-            rauh[leer | saum] = int(np.median(rauh[~(leer | saum)]))
+            rauh[leer | saum] = int(Torchfeld.median(rauh[~(leer | saum)]))
         self.melden(0.95, 'Kachel %d nachgearbeitet (%.1f %% getroffen)' % (k, deckung))
         self.warnen(k)
         return {'farbe': farbe, 'normalen': normal, 'rauheit': rauh, 'deckung': deckung, 'farbe_geaendert': bool(leer.any() or saum.any())}

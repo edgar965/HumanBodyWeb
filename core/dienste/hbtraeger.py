@@ -15,7 +15,8 @@ richtet die Schar am Schwerpunkt aus, falls sie als Ganzes nach innen zeigt.
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -39,43 +40,43 @@ class Hbtraeger:
                 aus.append(ecken[:3])
             if len(ecken) == 4:
                 aus.append([ecken[0], ecken[2], ecken[3]])
-        return np.asarray(aus, dtype=np.int64)
+        return Torchfeld.feld(aus, dtype=torch.int64)
 
     @staticmethod
     def normalen(punkte, dreiecke):
         u"""Flaechengewichtete Punktnormalen, Laenge 1."""
-        p = np.asarray(punkte, dtype=np.float64)
-        d = np.asarray(dreiecke, dtype=np.int64)
-        n = np.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
-        aus = np.zeros_like(p)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64)
+        n = Torchfeld.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
+        aus = torch.zeros_like(p)
         for k in range(3):
-            np.add.at(aus, d[:, k], n)
-        laenge = np.linalg.norm(aus, axis=1)
+            Torchfeld.add_at(aus, d[:, k], n)
+        laenge = Torchfeld.linalg_norm(aus, dim=1)
         laenge[laenge < 1e-12] = 1.0
         return aus / laenge[:, None]
 
     @staticmethod
     def three(punkte):
         u"""Projekt (m, Z oben) -> Three (m, Y oben)."""
-        a = np.asarray(punkte, dtype=np.float64)
-        return np.column_stack([a[:, 0], a[:, 2], -a[:, 1]])
+        a = Torchfeld.feld(punkte, dtype=torch.float64)
+        return Torchfeld.column_stack([a[:, 0], a[:, 2], -a[:, 1]])
 
     @classmethod
     def rahmen(cls, normalen):
         u"""(N, 3, 3): je Punkt die Achsen Normale, Aufwaerts (ohne Normalanteil), Quer."""
-        n = np.asarray(normalen, dtype=np.float64)
-        auf = np.tile([0.0, 1.0, 0.0], (len(n), 1))
-        auf -= np.einsum('ij,ij->i', auf, n)[:, None] * n
-        laenge = np.linalg.norm(auf, axis=1)
+        n = Torchfeld.feld(normalen, dtype=torch.float64)
+        auf = torch.tile([0.0, 1.0, 0.0], (len(n), 1))
+        auf -= Torchfeld.einsum('ij,ij->i', auf, n)[:, None] * n
+        laenge = Torchfeld.linalg_norm(auf, dim=1)
         flach = laenge < 1e-6
         if flach.any():
-            ersatz = np.tile([1.0, 0.0, 0.0], (int(flach.sum()), 1))
-            ersatz -= np.einsum('ij,ij->i', ersatz, n[flach])[:, None] * n[flach]
+            ersatz = torch.tile([1.0, 0.0, 0.0], (int(flach.sum()), 1))
+            ersatz -= Torchfeld.einsum('ij,ij->i', ersatz, n[flach])[:, None] * n[flach]
             auf[flach] = ersatz
-            laenge = np.linalg.norm(auf, axis=1)
+            laenge = Torchfeld.linalg_norm(auf, dim=1)
         auf /= laenge[:, None]
-        quer = np.cross(n, auf)
-        return np.stack([n, auf, quer], axis=1)
+        quer = Torchfeld.cross(n, auf)
+        return Torchfeld.stack([n, auf, quer], axis=1)
 
 
     @classmethod
@@ -125,9 +126,9 @@ class Hbtraeger:
         try:
             unterteiler = charakterdaten().unterteiler(geschlecht)
             if unterteiler is not None:
-                fein = unterteiler.subdivide(np.asarray(roh))
+                fein = unterteiler.subdivide(Torchfeld.feld(roh))
                 fein_n = cls.three(unterteiler.compute_quad_normals(fein))
-                return (cls.three(fein), np.asarray(unterteiler.triangles, dtype=np.int64),
+                return (cls.three(fein), Torchfeld.feld(unterteiler.triangles, dtype=torch.int64),
                         cls.nach_aussen(cls.three(fein), fein_n))
         except Exception:                                 # noqa: BLE001
             logger.exception('Daz auf HumanBody: Unterteiler nicht verfuegbar')
@@ -136,12 +137,12 @@ class Hbtraeger:
     @staticmethod
     def nach_aussen(punkte, normalen):
         u"""Normalen so, dass die Mehrheit vom Schwerpunkt wegzeigt (Laenge 1)."""
-        n = np.asarray(normalen, dtype=np.float64).copy()
-        laenge = np.linalg.norm(n, axis=1)
+        n = Torchfeld.kopie(Torchfeld.feld(normalen, dtype=torch.float64))
+        laenge = Torchfeld.linalg_norm(n, dim=1)
         laenge[laenge < 1e-12] = 1.0
         n /= laenge[:, None]
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         weg = p - p.mean(axis=0)
-        if (np.einsum('ij,ij->i', n, weg) > 0).mean() < 0.5:
+        if (Torchfeld.einsum('ij,ij->i', n, weg) > 0).mean() < 0.5:
             n = -n
         return n

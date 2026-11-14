@@ -12,7 +12,9 @@ hängendem Arm und Rumpf), zählen nicht — sie sagen etwas über die Haltung, 
 Braucht `kleidung_maske.npz`, `genesis_ende.npz`, `posiert.npy` (Schritt „koerper"/„vorschau") und das Netz des Auftrags; fehlt etwas, sagt `fehlt()` was.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Kleiderstueckbezug']
 
@@ -28,7 +30,7 @@ class Kleiderstueckbezug:
     def fehlt(self):
         """Der Grund, warum nicht gemessen werden kann — oder None."""
         for name in self.DATEIEN:
-            if not self.ablage.arbeit(name).is_file():
+            if not Npztorch.da(self.ablage.arbeit(name)):
                 return '%s fehlt (Schritt „Körper")' % name
         if self.ablage.netzdatei() is None:
             return 'Kein Netz'
@@ -41,12 +43,12 @@ class Kleiderstueckbezug:
 
         from .meshfigurkleidung import Meshfigurkleidung
         self.scan, _ = Meshfigurkleidung(type('Lauf', (), {'job': self.job, 'ablage': self.ablage})()).koerpernetz()
-        with np.load(self.ablage.arbeit('kleidung_maske.npz')) as d:
-            self.stueck_je_flaeche = np.asarray(d['stueck'])
-            self.haut_je_flaeche = np.asarray(d['haut'], dtype=bool) if 'haut' in d.files else np.zeros(len(self.stueck_je_flaeche), dtype=bool)
-        with np.load(self.ablage.arbeit('genesis_ende.npz')) as d:
-            self.koerper = (np.asarray(d['punkte'], dtype=np.float64), np.asarray(d['dreiecke'], dtype=np.int64))
-        self.entposen = Kleidungsentposen(self.koerper[0], np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64))
+        with Npztorch.lesen(self.ablage.arbeit('kleidung_maske.npz')) as d:
+            self.stueck_je_flaeche = Torchfeld.feld(d['stueck'])
+            self.haut_je_flaeche = Torchfeld.feld(d['haut'], dtype=torch.bool) if 'haut' in d.files else torch.zeros(len(self.stueck_je_flaeche), dtype=torch.bool, device='cuda')
+        with Npztorch.lesen(self.ablage.arbeit('genesis_ende.npz')) as d:
+            self.koerper = (Torchfeld.feld(d['punkte'], dtype=torch.float64), Torchfeld.feld(d['dreiecke'], dtype=torch.int64))
+        self.entposen = Kleidungsentposen(self.koerper[0], Torchfeld.astype(Npztorch.lesen(self.ablage.arbeit('posiert.npy')), torch.float64))
         if len(self.stueck_je_flaeche) != len(self.scan.flaechen):
             raise ValueError('Maske (%d Flächen) passt nicht zum Netz (%d)' % (len(self.stueck_je_flaeche), len(self.scan.flaechen)))
         self._geladen = True
@@ -71,12 +73,12 @@ class Kleiderstueckbezug:
         if not wahl.any():
             return None
         flaechen = self.scan.flaechen[wahl]
-        genutzt, neu = np.unique(flaechen.reshape(-1), return_inverse=True)
+        genutzt, neu = Torchfeld.unique(flaechen.reshape(-1), return_inverse=True)
         posiert = self.scan.punkte[genutzt]
         ruhe = self.entposen.ruhelage(posiert)
         f = neu.reshape(-1, 3)
         heil = Fotostuecke._ungedehnt(posiert, ruhe, f) & Fotostuecke._ungeklappt(posiert, ruhe, f, self.entposen.posiert, *self.koerper)
         if not heil.any():
             return None
-        genutzt, neu = np.unique(f[heil].reshape(-1), return_inverse=True)
+        genutzt, neu = Torchfeld.unique(f[heil].reshape(-1), return_inverse=True)
         return ruhe[genutzt], neu.reshape(-1, 3)

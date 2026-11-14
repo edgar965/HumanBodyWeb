@@ -11,6 +11,8 @@ GPU: jeder Schritt nimmt die Sperre selbst (`meshgenesis_stimmen_lauf.py`, `Gpus
 
     Meshgenesisrechenlauf(kennung).ausfuehren()      # im Arbeitsprozess (`manage.py meshgenesis_rechnen`)
 """
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 import json
 import logging
 import os
@@ -63,6 +65,20 @@ class Meshgenesisrechenlauf:
     #: Schritt „form“ aus der Regler-KI statt aus dem Formkopf — nur für einen Test, dessen `einstellung.json` es nennt (`form_ki`: {"art": "reglerki", "lauf": <Lauf unter
     #: `_reglerki/laeufe`>}), nie als Vorgabe (27.10.2026, Edgar: „ich will bei einem Trainings oder Testjob mal ergebnisse sehen“)
     FORM_REGLERKI = ('form', 'Form aus der Regler-KI (Genesis-Regler, Hauptregler und Anfasser)', ['-u', 'meshgenesis_reglerki_test.py', '--lauf', '{reglerki_lauf}', '--als-form', '--nur', '{k}'])
+    #: „Genesis zuerst“ (12.11.2026, Edgar: „mach den Umbau“, Konzept `Docu/konzepte/2026-11-12_genesis-zuerst-konzept.md`, Abschnitt 9 und 10d Punkt 3): nur für einen Test mit
+    #: `genesis_zuerst` in `einstellung.json` (Häkchen am Foto-Genesis-Job, `Fotogenesisgenesisstart`). Die Figur nur aus Reglern (`--nur-regler`), danach die Prüfung „Proportionen wie im Foto“;
+    #: der Kostüm-Weg schneidet weiter, aber nur als Messung, das Ergebnis tragen Stücke der Garderobe (Weg z), und die Prüfung misst diese Stücke (`--weg z`). Die alte Kette bleibt die Vorgabe.
+    GENESIS_ZUERST = {
+        'zeile1': ('zeile1', 'Figur aus Zeile 1, nur Regler (Genesis zuerst)', ['-u', 'meshgenesis_zeile1figur.py', '--nur', '{k}', '--geschlecht', '{g}', '--nur-regler']),
+        'proportionen': ('proportionen', 'Prüfung „Proportionen wie im Foto“ (Genesis zuerst)', ['-u', 'meshgenesis_proportionen.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # nur die Haut, ohne die Stücke von Weg g (12.11.2026, Edgar: „optimiere“; am Zauberer 67,6 s): die Kleiderliste zeigt hier nur Weg z
+        'haut': ('haut', 'Haut aus der KI (Stufe 2: Farbe je Texel, ohne Kleider von Weg g)', ['-u', 'meshgenesis_stufe2_lauf.py', '--nur-einsatz', '{stufe2}', '--fassung', '{stufe2_fassung}',
+                                                                                                '--test', '{k}', '--job', '', '--geschlecht', '{g}', '--hautki', '{hautki}', '--ohne-kleider']),
+        'kleider': ('kleider', 'Kleider und Haar aus dem Mesh messen (Kostüm-Weg, nur Messung für Genesis zuerst)', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
+                                                                                                                      '--ohne-pruefung']),
+        'garderobe': ('garderobe', 'Kleider, Haar und Requisit aus der Garderobe wählen und anpassen (Genesis zuerst)', ['-u', 'meshgenesis_garderobe_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        'pruefung': ('pruefung', 'Prüfung der Garderobenstücke: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--nur-pruefen', '--weg', 'z']),
+    }
     #: Rückfall (27.10.2026, Edgar: „In der Kette automatisch auf den Formkopf zurückfallen, sobald MIA durchfällt“): die Regler-KI kennt nur MIAs A-Pose; stammt die jüngste A-Pose vom Rig
     #: (MIAs Prüfung nicht bestanden) und hat der gewählte Lauf den Weg „Rig“ nicht gelernt (`reglerki_wege`), rechnet der Schritt „form“ mit dem Formkopf der KI-Fassungen
     RUECKFALL_TEXT = 'Form aus der KI (Formkopf) — Rückfall: MIAs A-Pose ist durch die Prüfung gefallen, die Regler-KI kennt nur MIAs A-Pose'
@@ -105,19 +121,34 @@ class Meshgenesisrechenlauf:
             return None
         return wahl if isinstance(wahl, dict) and wahl.get('art') == 'reglerki' and wahl.get('lauf') else None
 
+    def genesis_zuerst(self):
+        """Ob der Test „Genesis zuerst“ rechnet (`einstellung.json` → `genesis_zuerst`)."""
+        try:
+            return bool(json.loads((self.test / 'einstellung.json').read_text(encoding='utf-8')).get('genesis_zuerst'))
+        except (OSError, ValueError):
+            return False
+
     def schritte(self):
-        """Die Schritte dieses Tests: `SCHRITTE`, mit `FORM_REGLERKI`, wenn der Test die Regler-KI wählt."""
-        if self.form_ki() is None:
-            return self.SCHRITTE
-        return tuple(self.FORM_REGLERKI if s[0] == 'form' else s for s in self.SCHRITTE)
+        """Die Schritte dieses Tests: `SCHRITTE`, mit `FORM_REGLERKI`, wenn der Test die Regler-KI wählt, und mit den Schritten von `GENESIS_ZUERST`, wenn er „Genesis zuerst“ rechnet."""
+        schritte = self.SCHRITTE if self.form_ki() is None else tuple(self.FORM_REGLERKI if s[0] == 'form' else s for s in self.SCHRITTE)
+        if not self.genesis_zuerst():
+            return schritte
+        aus = []
+        for s in schritte:
+            aus.append(self.GENESIS_ZUERST.get(s[0], s))
+            if s[0] == 'zeile1':
+                aus.append(self.GENESIS_ZUERST['proportionen'])
+            elif s[0] == 'kleider':
+                aus.append(self.GENESIS_ZUERST['garderobe'])
+        return tuple(aus)
 
     def mia_apose(self):
         """Ob die jüngste A-Pose der Vorstufe von MIA stammt (`apose.npz` → `weg` = 'mia'); dieselbe Kette wie `Kleiderzerlegung.kette`, die auch die Regler-KI liest."""
-        import numpy as np
-        ketten = sorted(p.parent for p in (self.test / 'vorstufe').glob('*/apose.npz'))
+        import torch
+        ketten = sorted(p.parent for p in Npztorch.glob(self.test / 'vorstufe', '*/apose.npz'))
         if not ketten:
             return False
-        with np.load(ketten[-1] / 'apose.npz') as ap:
+        with Npztorch.lesen(ketten[-1] / 'apose.npz') as ap:
             return 'weg' in ap.files and str(ap['weg']) == 'mia'
 
     def reglerki_wege(self):
@@ -243,7 +274,17 @@ class Meshgenesisrechenlauf:
         stand.update(status='fertig', ende=time.strftime('%Y-%m-%dT%H:%M:%S'), dauer_s=round(time.perf_counter() - t_alles, 1))
         self._schreiben(stand)
         logger.info('Mesh-Genesis Rechenlauf %s fertig in %.0f s', self.kennung, stand['dauer_s'])
+        self._anzeige_vorbauen()
         return stand
+
+    def _anzeige_vorbauen(self):
+        """Die Figur der Seite gleich mitbauen (`Meshgenesisanzeigeablage`, 13.11.2026, Edgar: „… dass es vorher gebaut wird und schnell angezeigt wird!“) — nach „fertig“, ein Fehler
+        hier ändert den Lauf nicht; die Seite baut dann beim ersten Abruf."""
+        from .meshgenesisanzeigeablage import Meshgenesisanzeigeablage
+        try:
+            Meshgenesisanzeigeablage.vorbauen(self.kennung, self._geschlecht())
+        except Exception as fehler:  # noqa: BLE001 — gewollt breit: der Lauf ist fertig, nur die Vorarbeit für die Seite fehlt
+            logger.warning('Mesh-Genesis Rechenlauf %s: Anzeige nicht vorgebaut (%s: %s)', self.kennung, type(fehler).__name__, fehler)
 
     def _schritt(self, befehl, aus, messung):
         """Einen Schritt rechnen (`Meshgenesisrechenschritt`). → (letzte Zeilen, Rückgabewert)."""

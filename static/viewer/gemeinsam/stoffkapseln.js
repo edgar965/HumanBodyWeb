@@ -3,6 +3,7 @@ import { Kapselmass } from './kapselmass.js';
 import { Kleidungsmass } from './kleidungsmass.js';
 import { Stoffkoerper } from './stoffkoerper.js';
 import { Koerperzuordnung } from './koerperzuordnung.js';
+import { Dqhaut } from './dqhaut.js';
 
 /**
  * Stoffkapseln — der Körper für den Stoffschwung, als Kapseln um die Knochen,
@@ -219,6 +220,10 @@ export class Stoffhaut {
         const M = Stoffhaut.matrizen(netz);
         const W = netz.matrixWorld.elements;
         const aus = ziel || new Float32Array(n * 3);
+        // Genesis wie Daz halb linear, halb Dual Quaternion (`Dqhaut`, 12.11.2026) — gemessen wird, was gezeichnet ist.
+        const a = netz.userData?.dqMisch || 0, Q = a > 0 ? Dqhaut.tafel(M, netz.skeleton.bones.length) : null, dq = [0, 0, 0];
+        // Glättung je Bild (`Stoffglaettung`, 12.11.2026): der Versatz nach der Häutung, wie im Shader.
+        const g = netz.userData?.glaettVersatz?.length === 3 * n ? netz.userData.glaettVersatz : null;
         for (let i = 0; i < n; i++) {
             const x = pos[3 * i], y = pos[3 * i + 1], z = pos[3 * i + 2];
             let sx = 0, sy = 0, sz = 0;
@@ -230,6 +235,11 @@ export class Stoffhaut {
                 sy += w * (M[o + 1] * x + M[o + 5] * y + M[o + 9] * z + M[o + 13]);
                 sz += w * (M[o + 2] * x + M[o + 6] * y + M[o + 10] * z + M[o + 14]);
             }
+            if (Q) {
+                Dqhaut.punkt(Q, index, gewicht, i, x, y, z, dq);
+                sx += a * (dq[0] - sx); sy += a * (dq[1] - sy); sz += a * (dq[2] - sz);
+            }
+            if (g) { sx += g[3 * i]; sy += g[3 * i + 1]; sz += g[3 * i + 2]; }
             aus[3 * i] = W[0] * sx + W[4] * sy + W[8] * sz + W[12];
             aus[3 * i + 1] = W[1] * sx + W[5] * sy + W[9] * sz + W[13];
             aus[3 * i + 2] = W[2] * sx + W[6] * sy + W[10] * sz + W[14];

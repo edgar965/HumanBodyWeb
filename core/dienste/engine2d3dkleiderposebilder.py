@@ -6,9 +6,10 @@
 Nur Pillow, NumPy, SciPy: kein Renderer, kein Browser (`nur-echter-chrome.md`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image, ImageDraw
-from scipy.ndimage import binary_closing
+from KoerperKI_alle.kartenbild import binary_closing
 
 from .engine2d3dkleiderposegelenke import Engine2d3dKleiderposegelenke
 
@@ -26,27 +27,27 @@ class Engine2d3dKleiderposebilder:
     def foto(png):
         """Das vorbereitete RGBA-Foto auf Grau — dasselbe Bild, das SAM 3D Body bekommt."""
         rgba = Image.open(png).convert('RGBA')
-        return Image.alpha_composite(Image.new('RGBA', rgba.size, Engine2d3dKleiderposebilder.GRAU + (255,)), rgba).convert('RGB')
+        return Image.alpha_composite(Image.new('RGBA', Torchfeld.roh(Torchfeld.groesse(rgba)), Engine2d3dKleiderposebilder.GRAU + (255,)), rgba).convert('RGB')
 
     @staticmethod
     def _drehen(punkte, grad, b, h):
         """Wie `Sam3dposerunner.drehen` (PIL `rotate(grad, expand=True)`): Pixel des ungedrehten Bildes → Pixel der gedrehten Aufnahme."""
         u, v = punkte[:, 0], punkte[:, 1]
         if grad == 0:
-            return np.stack([u, v], axis=1)
+            return Torchfeld.stack([u, v], axis=1)
         if grad == 90:
-            return np.stack([v, b - u], axis=1)
+            return Torchfeld.stack([v, b - u], axis=1)
         if grad == 180:
-            return np.stack([b - u, h - v], axis=1)
-        return np.stack([h - v, u], axis=1)
+            return Torchfeld.stack([b - u, h - v], axis=1)
+        return Torchfeld.stack([h - v, u], axis=1)
 
     def skelett(self, rgb, k2, namen, grad, weglassen=(), unter=''):
         """Das Foto um `grad` gedreht mit den Gelenken (`k2` (70, 2) in Pixeln des UNgedrehten Fotos)."""
-        b, h = rgb.size
+        b, h = Torchfeld.groesse(rgb)
         bild = rgb.rotate(grad, expand=True)
-        k = self.KANTE / float(max(bild.size))
-        bild = bild.resize((max(1, round(bild.size[0] * k)), max(1, round(bild.size[1] * k))), Image.LANCZOS)
-        p = self._drehen(np.asarray(k2, dtype=np.float64), grad, b, h) * k
+        k = self.KANTE / float(max(Torchfeld.groesse(bild)))
+        bild = bild.resize((max(1, round(Torchfeld.groesse(bild)[0] * k)), max(1, round(Torchfeld.groesse(bild)[1] * k))), Image.LANCZOS)
+        p = self._drehen(Torchfeld.feld(k2, dtype=torch.float64), grad, b, h) * k
         index = Engine2d3dKleiderposegelenke.index(namen)
         gelenke = set(Engine2d3dKleiderposegelenke.ZUORDNUNG.values())
         zeichner = ImageDraw.Draw(bild)
@@ -66,8 +67,8 @@ class Engine2d3dKleiderposebilder:
 
     def _umriss(self, u, v, breite, hoehe, rand=3):
         """Maske (hoehe × breite) aus Punkten in Bildkoordinaten, Lücken geschlossen."""
-        m = np.zeros((hoehe, breite), bool)
-        x, y = np.round(u).astype(int), np.round(v).astype(int)
+        m = torch.zeros((hoehe, breite), dtype=torch.bool, device='cuda')
+        x, y = Torchfeld.astype(Torchfeld.round(u), torch.int64), Torchfeld.astype(Torchfeld.round(v), torch.int64)
         ok = (x >= 0) & (x < breite) & (y >= 0) & (y < hoehe)
         m[y[ok], x[ok]] = True
         return binary_closing(m, iterations=rand)
@@ -82,13 +83,13 @@ class Engine2d3dKleiderposebilder:
         breite, hoehe = round((ausschnitt[2] - ausschnitt[0]) * k), round((ausschnitt[3] - ausschnitt[1]) * k)
         foto = abbildung.auf_foto(punkte)
         vorn = self._umriss((foto[:, 0] - ausschnitt[0]) * k, (foto[:, 1] - ausschnitt[1]) * k, breite, hoehe)
-        mass = float(np.sqrt(abbildung.sx * abbildung.sy))                   # Pixel je Netzeinheit, für die Tiefe wie in der Bildebene
+        mass = float(Torchfeld.sqrt(abbildung.sx * abbildung.sy))                   # Pixel je Netzeinheit, für die Tiefe wie in der Bildebene
         mitte_z = 0.5 * (float(punkte[:, 2].min()) + float(punkte[:, 2].max()))
         seite_u = ((punkte[:, 2] - mitte_z) * mass + 0.5 * (ausschnitt[2] - ausschnitt[0])) * k
         seite = self._umriss(seite_u, (foto[:, 1] - ausschnitt[1]) * k, breite, hoehe)
         blatt = Image.new('RGB', (2 * breite + 12, hoehe), (24, 24, 30))
         for nr, maske in enumerate((vorn, seite)):
-            flaeche = Image.fromarray(np.where(maske, 90, 30).astype(np.uint8)).convert('RGB')
+            flaeche = Image.fromarray(Torchfeld.roh(Torchfeld.astype(torch.where(maske, 90, 30), torch.uint8))).convert('RGB')
             blatt.paste(flaeche, (nr * (breite + 12), 0))
         zeichner = ImageDraw.Draw(blatt)
         zeichner.text((6, 4), 'Netz von vorn', fill=(255, 255, 255))
@@ -97,7 +98,7 @@ class Engine2d3dKleiderposebilder:
             if 'netz' not in e:
                 continue
             px, py, z = e['netz']
-            f = abbildung.auf_foto(np.array([[px, py, z]]))[0]
+            f = abbildung.auf_foto(Torchfeld.feld([[px, py, z]], copy=True))[0]
             farbe = self.FARBEN[e['stand']]
             vx, vy = (f[0] - ausschnitt[0]) * k, (f[1] - ausschnitt[1]) * k
             sx = ((z - mitte_z) * mass + 0.5 * (ausschnitt[2] - ausschnitt[0])) * k + breite + 12

@@ -14,6 +14,8 @@ Das Original bleibt Eingang von „Mesh to 3D" und wird nicht angefasst. Gebaut 
 (`POST …/netzansicht/`), nicht beim Lesen des Zustands: ein GET schreibt nichts. Unter `GROSS_BYTES` braucht es keine Kopie (`unnoetig`); scheitert der Bau, lädt die Bühne das Original (`fehler`).
 """
 
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import json
 import logging
 import os
@@ -158,10 +160,13 @@ class Mesh3dnetzansicht:
     def vorab(cls, kennung):
         """Den Bau schon im Lauf des Imports anstoßen, nicht erst beim Öffnen der Seite (Edgar, 12.10.2026: „bei Edgar dauert es ewig, bis das Mesh in der 3D-View angezeigt wird“ — gemessen: der Bau
         brauchte beim ersten Öffnen 125 s, 09:56 bis 09:58). Er läuft in einem eigenen Prozess neben dem Rest des Imports und ist fertig, wenn der Auftrag fertig ist. Ein Fehler hier bricht den Import
-        nie ab (die Seite stößt den Bau dann beim Öffnen an, wie vorher) → der Zustand oder `None`. Nur Aufträge der Jobseite „Mesh-3D“ (`stand.bereich`) haben eine 3D-Ansicht."""
+        nie ab (die Seite stößt den Bau dann beim Öffnen an, wie vorher) → der Zustand oder `None`. Nur Aufträge der Jobseite „Mesh-3D“ (`stand.bereich`) haben eine 3D-Ansicht.
+        `stand.vorschau_vorab = False` (Aufträge „Nur Rig“ der Mesh-Genesis-Kette, `Vorstufenrig.anlegen`, seit 12.11.2026): nicht vorab — die Kette braucht die Vorschau nicht, und sie lief als zweiter
+        Prozess neben dem Skriptdienst (py-spy am Zauberer: 9,6 % der Stichproben des Schritts „rig“, `ProjektTemp/_wegwerf/genesis_zuerst/umbau/profil_rig.txt`); beim Öffnen baut die Seite sie wie vorher."""
         try:
             ansicht = cls(kennung)
-            if ansicht.ablage.stand().get('bereich') != 'mesh3d':
+            stand = ansicht.ablage.stand()
+            if stand.get('bereich') != 'mesh3d' or stand.get('vorschau_vorab') is False:
                 return None
             return ansicht.anstossen()
         except Exception:  # noqa: BLE001 — die Ansicht ist Beiwerk des Imports
@@ -195,7 +200,7 @@ class Mesh3dnetzansicht:
         """Das Netz `quelle` (GLB, mit seinen Knoten-Transformationen) auf `flaechen` Dreiecke (Vorgabe `ZIEL_FLAECHEN`) vereinfachen und als GLB nach `ziel` schreiben → `(Dreiecke, Punkte)`.
         Koordinaten bleiben die des Originals. `farben`: die Farbe je Punkt aus der Textur mitnehmen (die Ansicht braucht sie, das Abstimm-Netz der Segmentierung nicht).
         `vorstufe`: bei einem Netz über `VORSTUFE_AB` Dreiecken erst eine Gitter-Vereinfachung (O(n), 3 s), dann die quadratische Kantenreduktion auf dem Rest."""
-        import numpy as np
+        import torch
         import pymeshlab
         import trimesh
 
@@ -205,10 +210,10 @@ class Mesh3dnetzansicht:
         if len(netz.faces) <= ziel_flaechen:
             kleines = netz
         else:
-            punkt_farben = {'v_color_matrix': np.asarray(netz.visual.to_color().vertex_colors, dtype=np.float64) / 255.0} if farben else {}
+            punkt_farben = {'v_color_matrix': Torchfeld.feld(netz.visual.to_color().vertex_colors, dtype=torch.float64) / 255.0} if farben else {}
 
             def neues_netz():
-                return pymeshlab.Mesh(vertex_matrix=np.asarray(netz.vertices, dtype=np.float64), face_matrix=np.asarray(netz.faces, dtype=np.int32), **punkt_farben)
+                return pymeshlab.Mesh(vertex_matrix=Torchfeld.roh(Torchfeld.feld(netz.vertices, dtype=torch.float64)), face_matrix=Torchfeld.roh(Torchfeld.feld(netz.faces, dtype=torch.int32)), **punkt_farben)
 
             ms = pymeshlab.MeshSet()
             ms.add_mesh(neues_netz())
@@ -220,7 +225,7 @@ class Mesh3dnetzansicht:
                     ms.add_mesh(neues_netz())
             ms.meshing_decimation_quadric_edge_collapse(targetfacenum=ziel_flaechen, preserveboundary=True, preservenormal=True, optimalplacement=True)
             m = ms.current_mesh()
-            rgba = (np.clip(m.vertex_color_matrix(), 0, 1) * 255).astype(np.uint8) if farben else None
+            rgba = Torchfeld.astype(Torchfeld.clip(m.vertex_color_matrix(), 0, 1) * 255, torch.uint8) if farben else None
             kleines = trimesh.Trimesh(vertices=m.vertex_matrix(), faces=m.face_matrix(), vertex_colors=rgba, process=False)
         kleines.vertex_normals  # noqa: B018 — im Zwischenspeicher, damit der GLB-Schreiber sie mitnimmt (sonst schattiert three.js flach)
         teil = Path(str(ziel) + '.teil')

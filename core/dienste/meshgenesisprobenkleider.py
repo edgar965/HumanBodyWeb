@@ -14,7 +14,8 @@ import json
 import logging
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .meshgenesisdaten import Meshgenesisdaten
 from .meshgenesisdatensatz import Meshgenesisdatensatz
@@ -22,6 +23,10 @@ from .meshgenesisflaechennetz import Meshgenesisflaechennetz
 from .meshgenesisprobenhaltung import Meshgenesisprobenhaltung
 from .meshgenesistestkikleider import Meshgenesistestkikleider
 from .meshgenesistestkleider import Meshgenesistestkleider
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -80,21 +85,21 @@ class Meshgenesisprobenkleider:
             return None
         if haltung is None or len(haltung['dreh']) != len(kin):
             return None
-        zentren = np.array([k['zentrum'] for k in kin], dtype=float)
+        zentren = Torchfeld.feld([k['zentrum'] for k in kin], dtype=torch.float64, copy=True)
         dreh = haltung['dreh']
-        rig = np.zeros_like(zentren)
+        rig = torch.zeros_like(zentren)
         for b, k in enumerate(kin):
             e = int(k['eltern'])
             rig[b] = zentren[b] if e < 0 else rig[e] + dreh[e] @ (zentren[b] - zentren[e])
         return {'test': None, 'probe': int(nr), 'weg': haltung.get('weg'), 'liste': '/api/meshgenesis/%s/kleider/%d/' % (job['id'], int(nr)),
-                'rig': np.round(rig, 4).tolist(), 'dreh': np.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(), 'ruhezentren': np.round(zentren, 6).tolist()}
+                'rig': Torchfeld.round(rig, 4).tolist(), 'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(), 'ruhezentren': Torchfeld.round(zentren, 6).tolist()}
 
     @classmethod
     def stueck_ordner(cls, job, nr, weg, stueck):
         """Ordner des Stücks relativ zu `meshgenesis/` (für `Meshgenesisflaechennetz`) oder None — alle Teile aus der Adresse, geprüft."""
         if weg not in Meshgenesistestkikleider.WEGE or not cls.ID.match(str(stueck)):
             return None
-        if not (cls.ordner(job, nr) / 'kleider' / weg / stueck / 'anzeige' / 'netz.npz').is_file():
+        if not Npztorch.da(cls.ordner(job, nr) / 'kleider' / weg / stueck / 'anzeige' / 'netz.npz'):
             return None
         return '%s/kleider_ki/%04d/kleider/%s/%s' % (job['ordner'], int(nr), weg, stueck)
 

@@ -13,7 +13,8 @@ Tupel aus — das war eine Uebergangshilfe von 2026-08-15 und ist entfallen.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -60,7 +61,7 @@ class Schnittmuster:
         if koerper.vertices is None:
             return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
         abstand = float(rumpf.get('offset', Schnittmuster.VORGABE_ABSTAND))
-        punkte = np.asarray(koerper.vertices, dtype=np.float64)
+        punkte = Torchfeld.feld(koerper.vertices, dtype=torch.float64)
         ergebnis = generate_from_pattern(
             schnitt,
             punkte,
@@ -81,9 +82,9 @@ class Schnittmuster:
         if unterteiler is None:
             return
         geschoben = Koerperabstand.radial(
-            ergebnis['vertices'].astype(np.float64), unterteiler.subdivide(punkte), mindestabstand=abstand
+            Torchfeld.astype(ergebnis['vertices'], torch.float64), unterteiler.subdivide(punkte), mindestabstand=abstand
         )
-        ergebnis['vertices'] = geschoben.astype(np.float32)
+        ergebnis['vertices'] = Torchfeld.astype(geschoben, torch.float32)
 
     @staticmethod
     @require_GET

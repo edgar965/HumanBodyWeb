@@ -14,9 +14,14 @@ Verhältnis der Landmarken.
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.wrapperpfad import Wrapperpfad
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -37,21 +42,21 @@ class Bildmodellmischung:
         for b in koerper:
             s = b.get('schaetzung') or {}
             if s.get('betas'):
-                reihen.append(np.asarray(s['betas'], dtype=float)[:10])
+                reihen.append(Torchfeld.feld(s['betas'], dtype=torch.float64)[:10])
                 gewichte.append(float(b.get('gewicht') or 0) * float(s.get('confidence') or 1.0))
                 quellen.append(b['datei'])
                 mit.append(b)
         betas = None
         hauptgewichte = None
         if reihen:
-            m = np.array([np.pad(r, (0, 10 - len(r))) for r in reihen])
-            w = np.array(gewichte)
+            m = Torchfeld.feld([Torchfeld.pad(r, (0, 10 - len(r))) for r in reihen], copy=True)
+            w = Torchfeld.feld(gewichte, copy=True)
             if art == 'bestes':
                 betas = m[int(w.argmax())]
             elif art == 'mittel' and w.sum() > 0:
                 betas = (m * w[:, None]).sum(0) / w.sum()
             elif art == 'median':
-                betas = np.median(m, axis=0)
+                betas = Torchfeld.median(m, axis=0)
             else:
                 # „Nur die Hauptbilder" (Vorgabe seit 20.09.2026): die markierten Hauptbilder
                 # bauen den Körper, die übrigen Bilder wiegen 0 (`Bildmodellhauptgewicht`).
@@ -60,10 +65,10 @@ class Bildmodellmischung:
 
                 hg = Bildmodellhauptgewicht(self.job) if self.job is not None else None
                 hauptgewichte = hg.gewichte(mit) if hg else None
-                betas = hg.mittel(mit, m) if hg else np.median(m, axis=0)
+                betas = hg.mittel(mit, m) if hg else Torchfeld.median(m, axis=0)
         kopf = self._kopf(koepfe + koerper)
         return {
-            'betas': [round(float(v), 5) for v in betas] if betas is not None else None,
+            'betas': [round(float(v), 5) for v in Torchfeld.liste(betas)] if betas is not None else None,
             'bilder': quellen,
             'gewichte': {k: round(float(v), 3) for k, v in hauptgewichte.items()} if hauptgewichte else None,
             'mischung': art,
@@ -85,7 +90,7 @@ class Bildmodellmischung:
         from ..daten.bildmodellablage import Bildmodellablage
 
         name = os.path.splitext(b['datei'])[0] + '_gesicht_flame.npy'
-        return name if (Bildmodellablage(self.job.kennung).schaetzung() / name).is_file() else None
+        return name if Npztorch.da(Bildmodellablage(self.job.kennung).schaetzung() / name) else None
 
     def _kopf(self, bilder):
         """Der FLAME-Kopf: erst die Kopf-Hauptbilder (vorn, Seite, hinten — `Bildmodellhauptgewicht`),
@@ -153,7 +158,7 @@ class Bildmodellmischung:
                 werte.append(schulter / huefte)
         if not werte:
             return 'feminine'
-        return 'masculine' if float(np.median(werte)) > self.MASKULIN_AB else 'feminine'
+        return 'masculine' if float(Torchfeld.median(werte)) > self.MASKULIN_AB else 'feminine'
 
     #: Schulterbreite / Hüftbreite am SMPL-X-Maßband (`G9massband`): gemessen an den Grundkörpern
     #: SMPLX_MALE 1,08–1,14 (Betas 0, ±2 in b0 und b1), SMPLX_FEMALE 0,92–0,94; Damira (GVHMR,

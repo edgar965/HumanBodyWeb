@@ -14,7 +14,8 @@ Danach misst `pruefen` je Regler, ob das neue Stück sich verformt wie das alte 
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -53,7 +54,7 @@ class Dazgeograftmorphuebertrag:
         stelle, self.abstand, dreieck = trimesh.proximity.closest_point(self.netz_alt, self.p_neu)
         self.ecken = self.dreiecke_alt[dreieck]
         self.bary = trimesh.triangles.points_to_barycentric(self.netz_alt.triangles[dreieck], stelle)
-        x = np.clip((self.abstand - self.voll_m) / (self.aus_m - self.voll_m), 0.0, 1.0)
+        x = Torchfeld.clip((self.abstand - self.voll_m) / (self.aus_m - self.voll_m), 0.0, 1.0)
         self.auslauf = 1.0 - x * x * (3.0 - 2.0 * x)
         from Genesis9.schammorphe import G9schammorphe
 
@@ -70,9 +71,9 @@ class Dazgeograftmorphuebertrag:
         felder = G9kleidmorphe.deltas(self.alt, name)
         if not felder:
             raise ValueError('alter Regler %s/%s nicht lesbar' % (self.alt, name))
-        d = np.zeros((len(self.p_alt), 3))
+        d = torch.zeros((len(self.p_alt), 3), dtype=torch.float64, device='cuda')
         for nummern, deltas in felder.values():
-            d[np.asarray(nummern, dtype=np.int64)] = deltas
+            d[Torchfeld.feld(nummern, dtype=torch.int64)] = deltas
         return d
 
     #: Regler, deren Verschiebung der Formel nach genau entlang der Flächennormale zeigt (`G9schammorphe.deltas`: Art `normal`, `kraeuseln`): sie werden als vorzeichenbehafteter Betrag
@@ -82,9 +83,9 @@ class Dazgeograftmorphuebertrag:
     def neu_deltas(self, alt_deltas, nach_normale=False):
         """`(Nn, 3)`: die Deltas des alten Stücks, auf die Punkte des neuen übertragen (`nach_normale`: als Betrag entlang der Normale des neuen Stücks)."""
         if nach_normale:
-            betrag = np.einsum('ij,ij->i', alt_deltas, self.n_alt)
-            return (np.einsum('nk,nk->n', self.bary, betrag[self.ecken]) * self.auslauf)[:, None] * self.n_neu
-        return np.einsum('nk,nkj->nj', self.bary, alt_deltas[self.ecken]) * self.auslauf[:, None]
+            betrag = Torchfeld.einsum('ij,ij->i', alt_deltas, self.n_alt)
+            return (Torchfeld.einsum('nk,nk->n', self.bary, betrag[self.ecken]) * self.auslauf)[:, None] * self.n_neu
+        return Torchfeld.einsum('nk,nkj->nj', self.bary, alt_deltas[self.ecken]) * self.auslauf[:, None]
 
     def uebertragen(self, name):
         """Den Regler `name` auf das neue Stück übertragen und ablegen → `(deltas_neu (Nn, 3), Steckbrief)`."""
@@ -123,16 +124,16 @@ class Dazgeograftmorphuebertrag:
             aus.append(v[:3])
             if len(v) > 3:
                 aus.append([v[0], v[2], v[3]])
-        return np.asarray(aus, dtype=np.int64)
+        return Torchfeld.feld(aus, dtype=torch.int64)
 
     @staticmethod
     def _punktflaechen(punkte, dreiecke):
         """Fläche je Punkt (m²): ein Drittel der Fläche seiner Dreiecke — das Gewicht, mit dem ein Punkt zum Integral der Verschiebung beiträgt (die Stücke sind verschieden fein vermascht)."""
-        p = np.asarray(punkte)
-        a = 0.5 * np.linalg.norm(np.cross(p[dreiecke[:, 1]] - p[dreiecke[:, 0]], p[dreiecke[:, 2]] - p[dreiecke[:, 0]]), axis=1)
-        aus = np.zeros(len(p))
+        p = Torchfeld.feld(punkte)
+        a = 0.5 * Torchfeld.linalg_norm(Torchfeld.cross(p[dreiecke[:, 1]] - p[dreiecke[:, 0]], p[dreiecke[:, 2]] - p[dreiecke[:, 0]]), dim=1)
+        aus = torch.zeros(len(p), dtype=torch.float64, device='cuda')
         for ecke in range(3):
-            np.add.at(aus, dreiecke[:, ecke], a / 3.0)
+            Torchfeld.add_at(aus, dreiecke[:, ecke], a / 3.0)
         return aus
 
     def pruefen(self, namen):
@@ -157,18 +158,18 @@ class Dazgeograftmorphuebertrag:
             try:
                 d_alt = self.alt_deltas(name)
                 felder = G9kleidmorphe.deltas(self.neu, name)
-                d_neu = np.zeros((len(self.p_neu), 3))
+                d_neu = torch.zeros((len(self.p_neu), 3), dtype=torch.float64, device='cuda')
                 for nummern, deltas in (felder or {}).values():
-                    d_neu[np.asarray(nummern, dtype=np.int64)] = deltas
+                    d_neu[Torchfeld.feld(nummern, dtype=torch.int64)] = deltas
             except (ValueError, OSError, KeyError) as fehler:
                 aus[name] = {'fehler': str(fehler)[:120]}
                 continue
             verformt = trimesh.Trimesh(self.p_alt + self.PRUEF_WERT * d_alt, self.dreiecke_alt, process=False)
             rest = trimesh.proximity.closest_point(verformt, (self.p_neu + self.PRUEF_WERT * d_neu)[im_alt])[1] * 1000.0
-            weg_alt, weg_neu = np.linalg.norm(d_alt, axis=1) * 1000.0, np.linalg.norm(d_neu, axis=1) * 1000.0
+            weg_alt, weg_neu = Torchfeld.linalg_norm(d_alt, dim=1) * 1000.0, Torchfeld.linalg_norm(d_neu, dim=1) * 1000.0
             gedeckt = abstand_alt <= self.aus_m
-            aus[name] = {'grund_mm': [round(float(np.median(grund[im_alt])), 2), round(float(np.percentile(grund[im_alt], 90)), 2)],
-                         'rest_mm': [round(float(np.median(rest)), 2), round(float(np.percentile(rest, 90)), 2)],
+            aus[name] = {'grund_mm': [round(float(Torchfeld.median(grund[im_alt])), 2), round(float(Torchfeld.percentile(grund[im_alt], 90)), 2)],
+                         'rest_mm': [round(float(Torchfeld.median(rest)), 2), round(float(Torchfeld.percentile(rest, 90)), 2)],
                          'masse': round(float((weg_neu * flaeche_neu)[erreicht_neu].sum() / max((weg_alt * flaeche_alt)[gedeckt].sum(), 1e-12)), 2),
                          'abdeckung': round(float(weg_alt[gedeckt].sum() / max(weg_alt.sum(), 1e-12)), 3),
                          'bewegt_alt': int((weg_alt > 0.05).sum()), 'bewegt_neu': int((weg_neu > 0.05).sum()),
@@ -186,8 +187,8 @@ class Dazgeograftmorphuebertrag:
             je = {k: v for k, v in pruefung.items() if k.startswith('sch_' + gruppe + '_') and isinstance(v, dict) and 'masse' in v}
             if not je:
                 continue
-            z.append('  %-8s %4.2f  %3.0f %%  %+.2f' % (gruppe, np.mean([v['masse'] for v in je.values()]), 100 * np.mean([v['abdeckung'] for v in je.values()]),
-                                                    np.mean([v['rest_mm'][1] - v['grund_mm'][1] for v in je.values()])))
+            z.append('  %-8s %4.2f  %3.0f %%  %+.2f' % (gruppe, Torchfeld.mean([v['masse'] for v in je.values()]), 100 * Torchfeld.mean([v['abdeckung'] for v in je.values()]),
+                                                    Torchfeld.mean([v['rest_mm'][1] - v['grund_mm'][1] for v in je.values()])))
             schwach += ['%s (Masse %.2f, Abdeckung %.0f %%)' % (k, v['masse'], v['abdeckung'] * 100) for k, v in je.items() if v['masse'] < 0.5 or v['abdeckung'] < 0.6]
         fehler = {k: v['fehler'] for k, v in pruefung.items() if isinstance(v, dict) and 'fehler' in v}
         if fehler:

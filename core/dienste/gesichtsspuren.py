@@ -31,7 +31,8 @@ unter jede Spur: `q = ruhe · delta`, dieselbe Reihenfolge wie im JS.
 import json
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Gesichtsspuren:
@@ -68,7 +69,7 @@ class Gesichtsspuren:
             knochen = geometrie.bones.get(name)
             if knochen is None:
                 continue
-            deltas = np.asarray(werte, dtype=float).reshape(-1, 4)
+            deltas = Torchfeld.feld(werte, dtype=torch.float64).reshape(-1, 4)
             lagen = Quat.mul_reihe(knochen.rest_local_quat, deltas)
             spuren.tracks[name] = lagen.reshape(-1).tolist()
         return spuren

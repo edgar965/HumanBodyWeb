@@ -18,6 +18,10 @@ import shutil
 
 from .quellenschau import Quellenschau
 from .testkern import Testkern
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +50,7 @@ class Figurenwechsel:
             d
             for d in os.listdir(self.ablage)
             if os.path.isdir(os.path.join(self.ablage, d))
-            and os.path.isfile(os.path.join(self.ablage, d, self.KENNDATEI))
+            and Npztorch.da(os.path.join(self.ablage, d, self.KENNDATEI))
         )
 
     def umschalten(self):

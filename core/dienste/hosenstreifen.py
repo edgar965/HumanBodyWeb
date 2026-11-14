@@ -9,7 +9,8 @@ nur Rot); `Hosenkoerper.textur` malt ihn deshalb aus diesem Muster ins Hosenbild
     farbe, deckung = Hosenstreifen.muster(u, y, oben, unten)     # u: Bogenlänge um das Bein (m, 0 = Außennaht, positiv nach vorn), y: Höhe (m); beide (H, B)
                                                                  # → farbe (H, B, 3) in 0…255, deckung (H, B) in 0…1"""
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hosenstreifen']
 
@@ -26,7 +27,7 @@ class Hosenstreifen:
     @staticmethod
     def _kante(x, breite):
         """0…1 mit weicher Kante: x ≥ 0 innen."""
-        return np.clip(x / breite + 0.5, 0.0, 1.0)
+        return Torchfeld.clip(x / breite + 0.5, 0.0, 1.0)
 
     @classmethod
     def muster(cls, u, y, oben, unten):
@@ -37,17 +38,17 @@ class Hosenstreifen:
         karo_hinten = karo_vorn - cls.SPALTEN * cls.KARO
 
         def band(von, bis):
-            return np.minimum(cls._kante(von - u, k), cls._kante(u - bis, k))
+            return Torchfeld.minimum(cls._kante(von - u, k), cls._kante(u - bis, k))
 
-        in_hoehe = np.minimum(cls._kante(oben - cls.OBEN_ABSTAND - y, k), cls._kante(y - unten, k))
+        in_hoehe = Torchfeld.minimum(cls._kante(oben - cls.OBEN_ABSTAND - y, k), cls._kante(y - unten, k))
         a_rot, a_schwarz, a_karo = band(*rot), band(*schwarz), band(karo_vorn, karo_hinten)
-        spalte = np.floor((karo_vorn - u) / cls.KARO)
-        zeile = np.floor(y / cls.KARO)
+        spalte = Torchfeld.floor((karo_vorn - u) / cls.KARO)
+        zeile = Torchfeld.floor(y / cls.KARO)
         schwarz_karo = ((spalte + zeile) % 2) == 0
-        farbe = np.zeros(u.shape + (3,))
+        farbe = torch.zeros(u.shape + (3,), dtype=torch.float64, device='cuda')
         farbe[:] = cls.FARBEN['karo_hell']
         farbe[schwarz_karo & (a_karo > 0.5)] = cls.FARBEN['schwarz']
         farbe[a_schwarz > 0.5] = cls.FARBEN['schwarz']
         farbe[a_rot > 0.5] = cls.FARBEN['rot']
-        deckung = np.maximum.reduce([a_rot, a_schwarz, a_karo]) * in_hoehe
-        return farbe, np.nan_to_num(deckung)
+        deckung = Torchfeld.maximum_reduce([a_rot, a_schwarz, a_karo]) * in_hoehe
+        return farbe, Torchfeld.nan_to_num(deckung)

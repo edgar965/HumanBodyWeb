@@ -5,6 +5,7 @@ import { Retargetziel } from './retargetziel.js';
 import { Spurfigurarten } from './spurfigurarten.js';
 import { Zeitkurve } from './zeitkurve.js';
 import { Effektebindung } from './effektebindung.js';
+import { Fusshaltung } from '../gemeinsam/fusshaltung.js';
 
 /**
  * Bvhspur — den passenden Bewegungsclip am Abspielkopf laufen lassen.
@@ -61,6 +62,8 @@ export class Bvhspur {
             else if (!spur._activeAction.isRunning()) Bvhspur._weiter(spur, clip);
             spur._activeAction.time = ort;
             spur.mixer.setTime(ort);
+            // Fußhaltung der Schuhe (Genesis `griffdeltas`) nach dem Mixer wieder auf die Füße — wie die Charakter-Seite (12.11.2026, `Fusshaltung`).
+            if (spur.modell?.absatzDeltas) Fusshaltung.mischen(spur.modell);
             spur._lastLogState = 'playing';
             return true;
         }

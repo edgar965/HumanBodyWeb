@@ -16,7 +16,7 @@ durch die Note und wanderte in BlenderModel bis an ihre Grenzen.
 
 import hashlib
 
-import numpy as np
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 from .haarparameter import Haarparameter
 
@@ -43,7 +43,7 @@ class Iterationsoptimierer:
 
     def _zufall(self, runde):
         saat = int(hashlib.sha256(('%s:%d' % (self.kennung, runde)).encode()).hexdigest()[:12], 16)
-        return np.random.default_rng(saat)
+        return Zufallsstrom.default_rng(saat)
 
     @classmethod
     def veraenderlich(cls, werte):

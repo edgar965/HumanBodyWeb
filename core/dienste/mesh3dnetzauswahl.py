@@ -17,7 +17,8 @@ Original. Ungültige Schritte (fremde Art, keine Zahlen, zu viele Ebenen) sind e
 
 import math
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Mesh3dnetzauswahl']
 
@@ -42,7 +43,7 @@ class Mesh3dnetzauswahl:
             raise ValueError('Die Auswahl muss eine Liste von Schritten sein')
         if len(schritte) > self.SCHRITTE_MAX:
             raise ValueError('Zu viele Schritte (%d, höchstens %d)' % (len(schritte), self.SCHRITTE_MAX))
-        maske = np.zeros(self.katalog.flaechen, dtype=bool)
+        maske = torch.zeros(self.katalog.flaechen, dtype=torch.bool, device='cuda')
         for schritt in schritte:
             if not isinstance(schritt, dict):
                 raise ValueError('Ein Schritt der Auswahl ist kein Objekt')
@@ -70,14 +71,14 @@ class Mesh3dnetzauswahl:
             ebenen = schritt.get('ebenen')
             if not isinstance(ebenen, (list, tuple)) or not self.EBENEN[0] <= len(ebenen) <= self.EBENEN[1]:
                 raise ValueError('Ein Rahmen braucht %d bis %d Ebenen' % self.EBENEN)
-            drin = np.ones(self.katalog.flaechen, dtype=bool)
+            drin = torch.ones(self.katalog.flaechen, dtype=torch.bool, device='cuda')
             for ebene in ebenen:
                 e = self._zahlen(ebene, 4, 'ebene')
-                drin &= self.katalog.mitte @ np.asarray(e[:3], dtype=np.float32) + np.float32(e[3]) >= 0
+                drin &= self.katalog.mitte @ Torchfeld.feld(e[:3], dtype=torch.float32) + float(e[3]) >= 0
             return drin
         if art == 'kasten':
             unten, oben = self._zahlen(schritt.get('min'), 3, 'min'), self._zahlen(schritt.get('max'), 3, 'max')
-            return ((self.katalog.mitte >= np.asarray(unten, dtype=np.float32)) & (self.katalog.mitte <= np.asarray(oben, dtype=np.float32))).all(axis=1)
+            return ((self.katalog.mitte >= Torchfeld.feld(unten, dtype=torch.float32)) & (self.katalog.mitte <= Torchfeld.feld(oben, dtype=torch.float32))).all(axis=1)
         if art == 'farbe':
             punkt = self._zahlen(schritt.get('punkt'), 3, 'punkt')
             radius, toleranz = self._zahlen([schritt.get('radius'), schritt.get('toleranz')], 2, 'radius und toleranz')
@@ -85,8 +86,8 @@ class Mesh3dnetzauswahl:
                 raise ValueError('Farbe: Radius muss in (0, %g] und Toleranz in (0, %g] liegen' % (self.RADIUS_MAX, self.TOLERANZ_MAX))
             lab = self.katalog.farben_lab()
             start = self._startflaeche(punkt, schritt.get('flaeche'))
-            nah = np.linalg.norm(self.katalog.mitte - np.asarray(punkt, dtype=np.float32), axis=1) <= radius
-            return nah & (np.linalg.norm(lab - lab[start], axis=1) <= toleranz)
+            nah = Torchfeld.linalg_norm(self.katalog.mitte - Torchfeld.feld(punkt, dtype=torch.float32), dim=1) <= radius
+            return nah & (Torchfeld.linalg_norm(lab - lab[start], dim=1) <= toleranz)
         raise ValueError('Unbekannte Art der Auswahl: %s' % (art,))
 
     def _startflaeche(self, punkt, nummer):
@@ -99,7 +100,7 @@ class Mesh3dnetzauswahl:
             if abstand is not None:
                 if float(abstand[0]) <= self.AUF_FLAECHE_M:
                     return int(nummer)
-            elif float(np.linalg.norm(self.katalog.mitte[int(nummer)] - np.asarray(punkt, dtype=np.float32))) <= self.START_M:
+            elif float(Torchfeld.linalg_norm(self.katalog.mitte[int(nummer)] - Torchfeld.feld(punkt, dtype=torch.float32))) <= self.START_M:
                 return int(nummer)
         return self.katalog.naechste_flaeche_genau(punkt)
 

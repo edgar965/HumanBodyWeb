@@ -29,6 +29,10 @@ from django.test import SimpleTestCase
 
 from core.dienste.hautbacken.hautbackenblendermathe import Hautbackenblendermathe
 from core.dienste.hautbacken.hautbackenblendernormalen import Hautbackenblendernormalen
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 GOLDEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hautbacken_daten', 'blendernormalen_golden.npz')
 TOLERANZ = 1e-6
@@ -41,7 +45,7 @@ class BlendernormalenTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        with np.load(GOLDEN, allow_pickle=False) as d:
+        with Npztorch.lesen_numpy(GOLDEN, allow_pickle=False) as d:
             cls.daten = {k: d[k] for k in d.files}
         cls.namen = sorted({k.split('__')[0] for k in cls.daten if '__' in k})
 
@@ -112,7 +116,7 @@ class BlendernormalenTest(SimpleTestCase):
         for n in self.namen:
             self.assertGreater(float(d['%s__bewegt' % n]), 1e-3, n)
             self.assertGreater(float(np.abs(d['%s__p2' % n] - d['%s__p' % n]).max()), 1e-4, n)
-        self.assertLess(os.path.getsize(GOLDEN), 5 * 1024 * 1024)
+        self.assertLess(Npztorch.stat(GOLDEN).st_size, 5 * 1024 * 1024)
 
     # ------------------------------------------------------------------ 4
 

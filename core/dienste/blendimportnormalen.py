@@ -23,7 +23,8 @@ fällt (Setzung): dort stimmt die Grenze oder das Backen nicht.
 
 import math
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportnormalen']
 
@@ -43,11 +44,11 @@ class Blendimportnormalen:
         """Maske (H, W) der Texel mit Kippung über `grad` (Vorgabe `GRENZE_GRAD`), ohne `leer` — bandweise (8192² in
         float32 wäre ein Gigabyte)."""
         grenze = math.cos(math.radians(cls.GRENZE_GRAD if grad is None else grad))
-        maske = np.zeros(normal.shape[:2], dtype=bool)
+        maske = torch.zeros(normal.shape[:2], dtype=torch.bool, device='cuda')
         for oben in range(0, normal.shape[0], cls.BAND):
-            band = normal[oben:oben + cls.BAND].astype(np.float32) / 127.5 - 1.0
-            laenge = np.linalg.norm(band, axis=2)
-            maske[oben:oben + cls.BAND] = band[..., 2] < grenze * np.maximum(laenge, 1e-6)
+            band = Torchfeld.astype(normal[oben:oben + cls.BAND], torch.float32) / 127.5 - 1.0
+            laenge = Torchfeld.linalg_norm(band, dim=2)
+            maske[oben:oben + cls.BAND] = band[..., 2] < grenze * Torchfeld.maximum(laenge, 1e-6)
         if leer is not None:
             maske &= ~leer
         return maske
@@ -62,31 +63,31 @@ class Blendimportnormalen:
         auch den Unterschied der FORM — wo die Figur vom Original abweicht (gemessen 08.10.2026: Scham, bis 22 mm), kippt sie
         die Normalen großflächig, und im Licht steht eine Form, die die Fläche nicht hat. `leer` (Fehlstellen) zählt nicht in
         die Mittelung und bleibt flach; die Eingabe bleibt unverändert."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         hoehe, breite = normal.shape[:2]
         if hoehe % teiler or breite % teiler:
             teiler = 1
         sigma = (cls.FORM_PX if sigma_px is None else float(sigma_px)) / teiler
-        gueltig = np.ones((hoehe, breite), dtype=np.float32) if leer is None else (~leer).astype(np.float32)
-        x = normal[..., 0].astype(np.float32) / 127.5 - 1.0
-        y = normal[..., 1].astype(np.float32) / 127.5 - 1.0
-        z = np.maximum(normal[..., 2].astype(np.float32) / 127.5 - 1.0, 0.05)
+        gueltig = torch.ones((hoehe, breite), dtype=torch.float32, device='cuda') if leer is None else Torchfeld.astype(~leer, torch.float32)
+        x = Torchfeld.astype(normal[..., 0], torch.float32) / 127.5 - 1.0
+        y = Torchfeld.astype(normal[..., 1], torch.float32) / 127.5 - 1.0
+        z = Torchfeld.maximum(Torchfeld.astype(normal[..., 2], torch.float32) / 127.5 - 1.0, 0.05)
         tx, ty = x / z, y / z
 
         def tief(feld):
             """Gewichtetes Mittel der gültigen Neigung, auf `teiler` verkleinert, geglättet und wieder in voller Größe."""
             klein = (feld * gueltig).reshape(hoehe // teiler, teiler, breite // teiler, teiler).mean(axis=(1, 3))
             gewicht = gueltig.reshape(hoehe // teiler, teiler, breite // teiler, teiler).mean(axis=(1, 3))
-            mittel = ndimage.gaussian_filter(klein, sigma) / np.maximum(ndimage.gaussian_filter(gewicht, sigma), 1e-3)
+            mittel = ndimage.gaussian_filter(klein, sigma) / Torchfeld.maximum(ndimage.gaussian_filter(gewicht, sigma), 1e-3)
             return ndimage.zoom(mittel, teiler, order=1) if teiler > 1 else mittel
 
         hx = (tx - tief(tx)) * gueltig
         hy = (ty - tief(ty)) * gueltig
-        laenge = np.sqrt(hx * hx + hy * hy + 1.0)
-        neu = normal.copy()
+        laenge = Torchfeld.sqrt(hx * hx + hy * hy + 1.0)
+        neu = Torchfeld.kopie(normal)
         for kanal, wert in enumerate((hx / laenge, hy / laenge, 1.0 / laenge)):
-            kodiert = np.clip(np.rint((wert + 1.0) * 127.5), 0, 255).astype(normal.dtype)
+            kodiert = Torchfeld.clip(Torchfeld.round((wert + 1.0) * 127.5), 0, 255).to(normal.dtype)
             if leer is not None:
                 kodiert[leer] = cls.FLACH[kanal]
             neu[..., kanal] = kodiert
@@ -95,13 +96,13 @@ class Blendimportnormalen:
     @classmethod
     def saeubern(cls, normal, leer=None, grad=None):
         """`(neue Karte, Anteil der geänderten Texel in %)` — `normal` (H, W, 3) uint8; ändert die Eingabe nicht."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         schlecht = cls.falsche(normal, leer, grad)
         if schlecht.any() and cls.RAND_PX:
             schlecht = ndimage.binary_dilation(schlecht, iterations=cls.RAND_PX)
         if leer is not None:
             schlecht &= ~leer
-        neu = normal.copy()
+        neu = Torchfeld.kopie(normal)
         neu[schlecht] = cls.FLACH
         return neu, round(100.0 * float(schlecht.mean()), 3)

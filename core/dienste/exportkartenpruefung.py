@@ -25,6 +25,8 @@ WAS DER PRÜFER NICHT KANN (damit niemand mehr hineinliest, als drinsteht):
 - Die UV-Mitte steht für die ganze Fläche. Bei Flächen, die größer als die
   Karte sind, ist das zu grob.
 """
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from collections import defaultdict
 from pathlib import Path
 
@@ -104,8 +106,8 @@ class Exportkartenpruefung:
     def _mitten(uvs, liste):
         u"""`(anzahl, u, v)` — die UV-Mitte jeder Fläche der Liste, auf 0..1
         gefaltet. `uvs` ist das float32-Feld aus `_lesen`."""
-        import numpy as np
-        f = np.asarray(liste, dtype=np.int64) - 1
+        import torch
+        f = Torchfeld.feld(liste, dtype=torch.int64) - 1
         return len(f), uvs[f, 0].mean(axis=1) % 1.0, uvs[f, 1].mean(axis=1) % 1.0
 
     def flaechentexel(self):
@@ -115,23 +117,23 @@ class Exportkartenpruefung:
         lässt sich vorhersagen, ob ein Teil GEWOLLT farblos ist
         (`Exportgrauteile`). Materialien ohne Karte oder mit fehlender Datei
         fehlen im Ergebnis."""
-        import numpy as np
+        import torch
         from PIL import Image
 
         uvs, flaechen = self._lesen()
         if not uvs:
             return {}
-        uvs = np.asarray(uvs, dtype=np.float32)
+        uvs = Torchfeld.feld(uvs, dtype=torch.float32)
         aus = {}
         for material, liste in flaechen.items():
             pfad = self.ordner / self.karten[material]
             if not pfad.exists():
                 continue
-            feld = np.asarray(Image.open(pfad).convert('RGB'), dtype=np.int16)
+            feld = Torchfeld.feld(Image.open(pfad).convert('RGB'), dtype=torch.int16)
             hoehe, breite = feld.shape[:2]
             _, u, v = self._mitten(uvs, liste)
-            px = np.clip(u * (breite - 1), 0, breite - 1).astype(np.int32)
-            py = np.clip((1.0 - v) * (hoehe - 1), 0, hoehe - 1).astype(np.int32)
+            px = Torchfeld.astype(Torchfeld.clip(u * (breite - 1), 0, breite - 1), torch.int32)
+            py = Torchfeld.astype(Torchfeld.clip((1.0 - v) * (hoehe - 1), 0, hoehe - 1), torch.int32)
             aus[material] = feld[py, px]
         return aus
 
@@ -144,14 +146,14 @@ class Exportkartenpruefung:
         Dazu `gesamt` und `verdacht_gespiegelt` (Liste der Materialien, bei
         denen die Gegenrichtung deutlich besser abschneidet).
         """
-        import numpy as np
+        import torch
         from PIL import Image
 
         uvs, flaechen = self._lesen()
         if not uvs or not flaechen:
             return {'material': {}, 'gesamt': {'flaechen': 0, 'leer': 0},
                     'verdacht_gespiegelt': [], 'hinweis': 'keine Flächen mit Farbkarte'}
-        uvs = np.asarray(uvs, dtype=np.float32)
+        uvs = Torchfeld.feld(uvs, dtype=torch.float32)
 
         je_material = {}
         verdacht = []
@@ -162,14 +164,14 @@ class Exportkartenpruefung:
                 je_material[material] = {'fehlt': self.karten[material]}
                 continue
             bild = Image.open(pfad).convert('RGB')
-            feld = np.asarray(bild, dtype=np.int16)
+            feld = Torchfeld.feld(bild, dtype=torch.int16)
             hoehe, breite = feld.shape[:2]
             rand, rand_anteil = self._randfarbe(feld)
 
             anzahl, u, v = self._mitten(uvs, liste)
-            px = np.clip(u * (breite - 1), 0, breite - 1).astype(np.int32)
-            gerade = np.clip((1.0 - v) * (hoehe - 1), 0, hoehe - 1).astype(np.int32)
-            gedreht = np.clip(v * (hoehe - 1), 0, hoehe - 1).astype(np.int32)
+            px = Torchfeld.astype(Torchfeld.clip(u * (breite - 1), 0, breite - 1), torch.int32)
+            gerade = Torchfeld.astype(Torchfeld.clip((1.0 - v) * (hoehe - 1), 0, hoehe - 1), torch.int32)
+            gedreht = Torchfeld.astype(Torchfeld.clip(v * (hoehe - 1), 0, hoehe - 1), torch.int32)
             leer = self._leere(feld, px, gerade, rand)
             leer_gespiegelt = self._leere(feld, px, gedreht, rand)
             je_material[material] = {
@@ -204,21 +206,20 @@ class Exportkartenpruefung:
         ist stattdessen die HÄUFIGSTE Farbe der Karte — er ist flach, während
         echte Bildinhalte rauschen. Gezählt wird eine Stichprobe.
         """
-        import numpy as np
+        import torch
         schritt = max(1, min(feld.shape[0], feld.shape[1]) // self.ZIELKANTE)
-        probe = feld[::schritt, ::schritt].reshape(-1, 3).astype(np.int32)
+        probe = Torchfeld.astype(feld[::schritt, ::schritt].reshape(-1, 3), torch.int32)
         schluessel = (probe[:, 0] << 16) | (probe[:, 1] << 8) | probe[:, 2]
-        werte, anzahl = np.unique(schluessel, return_counts=True)
+        werte, anzahl = Torchfeld.unique(schluessel, return_counts=True)
         haeufigste = int(werte[int(anzahl.argmax())])
         anteil = float(anzahl.max() / len(schluessel))
-        farbe = np.array([(haeufigste >> 16) & 255, (haeufigste >> 8) & 255, haeufigste & 255],
-                         dtype=np.int16)
+        farbe = Torchfeld.feld([(haeufigste >> 16) & 255, (haeufigste >> 8) & 255, haeufigste & 255], dtype=torch.int16, copy=True)
         return farbe, anteil
 
     def _leere(self, feld, px, py, rand):
         u"""Wie viele der abgetasteten Punkte liegen auf dem leeren Rand?"""
-        import numpy as np
-        return int((np.abs(feld[py, px] - rand).max(axis=1) <= self.ABSTAND).sum())
+        import torch
+        return int((Torchfeld.amax(Torchfeld.abs(feld[py, px] - rand), dim=1) <= self.ABSTAND).sum())
 
     @staticmethod
     def zeilen(bericht):

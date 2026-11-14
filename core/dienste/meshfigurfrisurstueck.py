@@ -10,7 +10,7 @@ Haar des Netzes liegt (`Meshfigurhaar.objekt`). Ohne Lagenrechnung gegen andere 
 
 import logging
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -28,7 +28,7 @@ class Meshfigurfrisurstueck:
         self.kennung = kennung
         self.eintrag = G9garderobe.eintrag(kennung) or {}
         self.formung = formung
-        self.hoch = np.array([0.0, float(formung.boden()), 0.0])
+        self.hoch = Torchfeld.feld([0.0, float(formung.boden()), 0.0], copy=True)
         self.teile = G9garderobe.teile(kennung)
 
     @property
@@ -61,7 +61,7 @@ class Meshfigurfrisurstueck:
 
     def punkte(self, stil=None, regler=None):
         """(N, 3) alle Teile hintereinander."""
-        return np.vstack(self.teilpunkte(stil, regler))
+        return Torchfeld.vstack(self.teilpunkte(stil, regler))
 
     def deltas(self, stil, namen):
         """`{regler: (N, 3)}` Wirkung bei Wert 1 über dem Stil — Daz-Morphe sind linear. Direkt auf den Punkten des Morphs (`Meshfigurfrisurdeltas`, 12.10.2026: Eirgrid 51 s → Sekunden); was dieser Weg nicht

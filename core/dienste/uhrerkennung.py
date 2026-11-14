@@ -13,7 +13,8 @@ als `ANTEIL` solcher Pixel ist ein Uhrband — gefunden, wenn mindestens `STREIF
 Testauftrag 2026.10.01.12.38.09: schwarze Uhr links, rechts nichts.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Uhrerkennung']
 
@@ -34,19 +35,19 @@ class Uhrerkennung:
 
     @staticmethod
     def _hell(rgb):
-        return rgb @ np.array([0.299, 0.587, 0.114])
+        return rgb @ Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
 
     def _streifen(self, bild, hand, ellbogen, t):
         """Pixel (K, 3) 0…1 eines Querstreifens bei `t` (Anteil Handgelenk → Ellbogen)."""
         achse = ellbogen - hand
-        laenge = float(np.linalg.norm(achse))
-        quer = np.array([-achse[1], achse[0]]) / max(laenge, 1e-9)
+        laenge = float(Torchfeld.linalg_norm(achse))
+        quer = Torchfeld.feld([-achse[1], achse[0]], copy=True) / max(laenge, 1e-9)
         mitte = hand + achse * t
-        s = np.linspace(-self.BREITE, self.BREITE, 21) * laenge
-        dt = np.linspace(-0.5, 0.5, 3) * laenge * (self.BIS - self.VON) / self.SCHRITTE
+        s = torch.linspace(-self.BREITE, self.BREITE, 21, dtype=torch.float64, device='cuda') * laenge
+        dt = torch.linspace(-0.5, 0.5, 3, dtype=torch.float64, device='cuda') * laenge * (self.BIS - self.VON) / self.SCHRITTE
         orte = mitte[None, None, :] + s[None, :, None] * quer + dt[:, None, None] * (achse / max(laenge, 1e-9))
-        x = np.clip(np.round(orte[..., 0]).astype(int), 0, bild.shape[1] - 1)
-        y = np.clip(np.round(orte[..., 1]).astype(int), 0, bild.shape[0] - 1)
+        x = Torchfeld.clip(Torchfeld.astype(Torchfeld.round(orte[..., 0]), torch.int64), 0, bild.shape[1] - 1)
+        y = Torchfeld.clip(Torchfeld.astype(Torchfeld.round(orte[..., 1]), torch.int64), 0, bild.shape[0] - 1)
         return bild[y, x].reshape(-1, 3)
 
     def arm(self, bild, pose, seite):
@@ -56,14 +57,14 @@ class Uhrerkennung:
         p_hand, p_ell = pose[i_hand], pose[i_ell]
         if len(p_hand) > 2 and min(float(p_hand[-1]), float(p_ell[-1])) < self.SICHTBAR:
             return None
-        hand = np.array([float(p_hand[0]) * b, float(p_hand[1]) * h])
-        ell = np.array([float(p_ell[0]) * b, float(p_ell[1]) * h])
-        haut = np.concatenate([self._streifen(bild, hand, ell, t) for t in np.linspace(*self.HAUT, 6)])
-        haut_hell = float(np.median(self._hell(haut)))
+        hand = Torchfeld.feld([float(p_hand[0]) * b, float(p_hand[1]) * h], copy=True)
+        ell = Torchfeld.feld([float(p_ell[0]) * b, float(p_ell[1]) * h], copy=True)
+        haut = Torchfeld.cat([self._streifen(bild, hand, ell, t) for t in Torchfeld.liste(torch.linspace(*self.HAUT, 6, dtype=torch.float64, device='cuda'))])
+        haut_hell = float(Torchfeld.median(self._hell(haut)))
         anteile = []
-        for t in np.linspace(self.VON, self.BIS, self.SCHRITTE):
+        for t in Torchfeld.liste(torch.linspace(self.VON, self.BIS, self.SCHRITTE, dtype=torch.float64, device='cuda')):
             px = self._streifen(bild, hand, ell, t)
-            dunkel = (self._hell(px) < self.DUNKEL * haut_hell) & ((px.max(axis=1) - px.min(axis=1)) < self.BUNT)
+            dunkel = (self._hell(px) < self.DUNKEL * haut_hell) & ((Torchfeld.amax(px, dim=1) - Torchfeld.amin(px, dim=1)) < self.BUNT)
             anteile.append(round(float(dunkel.mean()), 3))
         lauf, best = 0, 0
         for a in anteile:
@@ -86,7 +87,7 @@ class Uhrerkennung:
             befund = marken.get(r.datei) or {}
             if not befund.get('pose'):
                 continue
-            bild = np.asarray(Image.open(eingang / r.datei).convert('RGB'), dtype=np.float64) / 255.0
+            bild = Torchfeld.feld(Image.open(eingang / r.datei).convert('RGB'), dtype=torch.float64) / 255.0
             for seite in self.GELENKE:
                 ergebnis = self.arm(bild, befund['pose'], seite)
                 if ergebnis is None:

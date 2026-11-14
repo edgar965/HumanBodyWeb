@@ -22,6 +22,10 @@ from core.tests.unit._pruefablage import Pruefablage
 from effekte.figur.modellfigur import Modellfigur
 from effekte.figurparameter import Figurparameter
 from effekte.parametersatz import Parametersatz
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class FigurparameterTest(SimpleTestCase):
@@ -143,7 +147,7 @@ class ModellfigurTest(SimpleTestCase):
         kiste.export(glb)
         npz = os.path.join(self.ordner, 'frisur.npz')
         n = Modellfigur.frisur_schreiben(glb, npz)
-        with np.load(npz) as daten:
+        with Npztorch.lesen_numpy(npz) as daten:
             punkte, knochen = daten['punkte'], [str(k) for k in daten['knochen']]
             gewichte, nummern = daten['skin_weight'], daten['skin_index']
             dreiecke = daten['dreiecke']

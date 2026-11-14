@@ -20,7 +20,8 @@ Stellen (Brust, Knie, Schulter) nach innen. Der zweite, größere Schub fängt g
 die ein.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from humanbody_core.cloth import generate_builder_custom
 from humanbody_core.koerperabstand import Koerperabstand
 
@@ -45,7 +46,7 @@ class Bereichsstoff:
 
     def bauen(self, koerper):
         """`(ergebnis, fehlertext)` — genau eines von beiden ist gesetzt."""
-        punkte = np.asarray(koerper.vertices, dtype=np.float64)
+        punkte = Torchfeld.feld(koerper.vertices, dtype=torch.float64)
         flaechen = self._flaechen(koerper)
         if flaechen is None:
             return None, 'No face topology available'
@@ -81,12 +82,12 @@ class Bereichsstoff:
         unterteiler = Charakterdaten.unterteiler(geschlecht)
         if unterteiler is None:
             return punkte, flaechen
-        return (unterteiler.subdivide(punkte).astype(np.float64), unterteiler._sub_quads)
+        return (Torchfeld.astype(unterteiler.subdivide(punkte), torch.float64), unterteiler._sub_quads)
 
     def _herausschieben(self, ergebnis, grundlage):
         """Zweiter Schub gegen die konvexen Stellen (siehe Modul-Docstring)."""
         abstand = self.GRUNDABSTAND + self.weite * self.WEITENANTEIL
         geschoben = Koerperabstand.radial(
-            ergebnis['vertices'].astype(np.float64), grundlage, mindestabstand=abstand
+            Torchfeld.astype(ergebnis['vertices'], torch.float64), grundlage, mindestabstand=abstand
         )
-        return geschoben.astype(np.float32)
+        return Torchfeld.astype(geschoben, torch.float32)

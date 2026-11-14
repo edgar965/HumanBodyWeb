@@ -30,7 +30,9 @@ import json
 import logging
 import math
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 from .brauenbogen import Brauenbogen
 
@@ -167,8 +169,8 @@ class Brauendecal:
         for nummer, seite in enumerate(('links', 'rechts')):
             if seite not in bogen:
                 continue
-            linie = np.array([[(u - u0) * px_je_uv, (v1 - v) * px_je_uv] for u, v in bogen[seite]])
-            striche = cls.haare(linie, px_je_mm, regler, farbe, np.random.default_rng(1000 + nummer))
+            linie = Torchfeld.feld([[(u - u0) * px_je_uv, (v1 - v) * px_je_uv] for u, v in bogen[seite]], copy=True)
+            striche = cls.haare(linie, px_je_mm, regler, farbe, Zufallsstrom.default_rng(1000 + nummer))
             teil, ecke = cls.ausschnitt(striche, farbe)
             bild.paste(teil, ecke, teil)
         return bild
@@ -178,10 +180,10 @@ class Brauendecal:
         """Eine Braue als kleines RGBA-Bild plus seine linke obere Ecke."""
         from PIL import Image, ImageDraw
 
-        alle = np.concatenate([p for p, _b, _r in striche])
+        alle = Torchfeld.cat([p for p, _b, _r in striche])
         rand = 4
-        x0, y0 = np.floor(alle.min(axis=0)).astype(int) - rand
-        x1, y1 = np.ceil(alle.max(axis=0)).astype(int) + rand
+        x0, y0 = Torchfeld.astype(Torchfeld.floor(Torchfeld.amin(alle, dim=0)), torch.int64) - rand
+        x1, y1 = Torchfeld.astype(Torchfeld.ceil(Torchfeld.amax(alle, dim=0)), torch.int64) + rand
         x0, y0 = max(0, x0), max(0, y0)
         breite, hoehe = x1 - x0, y1 - y0
         gross = Image.new('RGBA', (breite * cls.S, hoehe * cls.S), farbe + (0,))
@@ -202,23 +204,23 @@ class Brauendecal:
     def haare(cls, linie, px_je_mm, regler, farbe, rng):
         """Die Striche einer Braue: `[(punkte (SEGMENTE+1, 2), breiten, rgba je
         Segment)]` — `linie` in Bildpixeln von innen nach außen."""
-        laengen = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(linie, axis=0), axis=1))])
+        laengen = Torchfeld.cat([[0], Torchfeld.cumsum(Torchfeld.linalg_norm(Torchfeld.diff(linie, dim=0), dim=1))])
         gesamt = laengen[-1]
         t_linie = laengen / gesamt
 
         def punkt(s):
             if s <= 1:
-                return np.array([np.interp(s, t_linie, linie[:, 0]), np.interp(s, t_linie, linie[:, 1])])
+                return Torchfeld.feld([Torchfeld.interp(s, t_linie, linie[:, 0]), Torchfeld.interp(s, t_linie, linie[:, 1])], copy=True)
             return linie[-1] + tangente(1.0) * (s - 1) * gesamt
 
         def tangente(s):
-            i = min(len(linie) - 2, max(0, int(np.searchsorted(t_linie, min(s, 1.0)) - 1)))
+            i = min(len(linie) - 2, max(0, int(Torchfeld.searchsorted(t_linie, min(s, 1.0)) - 1)))
             d = linie[i + 1] - linie[i]
-            return d / (np.linalg.norm(d) or 1.0)
+            return d / (Torchfeld.linalg_norm(d) or 1.0)
 
         def normale(s):
             t = tangente(s)
-            n = np.array([-t[1], t[0]])
+            n = Torchfeld.feld([-t[1], t[0]], copy=True)
             return n if n[1] < 0 else -n  # „oben" = kleinere Bildzeile
 
         anzahl = max(2, int(round(cls.HAARE * regler['dichte'] * regler['laenge'])))
@@ -239,14 +241,14 @@ class Brauendecal:
                 + regler['hoehe_aussen'] * s_form
                 + regler['woelbung'] * math.sin(math.pi * s_form)
             )
-            breite_mm = regler['dicke'] * np.interp(s_form, [0, 1], cls.BOGEN_MM)
+            breite_mm = regler['dicke'] * Torchfeld.interp(s_form, [0, 1], cls.BOGEN_MM)
             quer = rng.normal(0, 0.5) * breite_mm / 2
             n = normale(s)
             wurzel = punkt(s) + n * (versatz + quer) * px_je_mm
-            winkel = np.interp(s_form, [0, 0.45, 1], cls.WINKEL) + rng.normal(0, 7)
+            winkel = Torchfeld.interp(s_form, [0, 0.45, 1], cls.WINKEL) + rng.normal(0, 7)
             richtung = cls._drehen(tangente(s), n, winkel)
             laenge = (
-                np.interp(s_form, [0, 1], cls.HAAR_MM)
+                Torchfeld.interp(s_form, [0, 1], cls.HAAR_MM)
                 * regler['haar_laenge']
                 * (1 + rng.normal(0, 0.18))
                 * (cls.ENDE_LAENGE + (1 - cls.ENDE_LAENGE) * ende)
@@ -254,9 +256,9 @@ class Brauendecal:
             spitze = cls._drehen(richtung, n, -25.0)
             steuer = wurzel + richtung * laenge * 0.55
             ende = wurzel + spitze * laenge
-            tt = np.linspace(0, 1, cls.SEGMENTE + 1)[:, None]
+            tt = torch.linspace(0, 1, cls.SEGMENTE + 1, dtype=torch.float64, device='cuda')[:, None]
             punkte = (1 - tt) ** 2 * wurzel + 2 * (1 - tt) * tt * steuer + tt**2 * ende
-            breiten = np.interp(np.linspace(0, 1, cls.SEGMENTE), [0, 1], cls.STRICH_MM) * px_je_mm
+            breiten = Torchfeld.interp(torch.linspace(0, 1, cls.SEGMENTE, dtype=torch.float64, device='cuda'), [0, 1], cls.STRICH_MM) * px_je_mm
             hell = 1 + rng.normal(0, 0.10)
             rgb = tuple(int(min(255, max(0, c * hell))) for c in farbe)
             rgba = [

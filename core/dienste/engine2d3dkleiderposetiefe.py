@@ -16,7 +16,8 @@ Was gemessen wurde (12 Mesh-3D-Aufträge mit Ziel, `meshgenesis_fuesse_rig_messe
 Füße und Hände drehte sie mit den falschen Spitzen. Schichten (Lücken im Strahl) taugen NICHT als Glieder: das Netz ist hohl, ein dickes Glied zerfällt in Vorder- und Rückseite.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Engine2d3dKleiderposetiefe']
 
@@ -56,7 +57,7 @@ class Engine2d3dKleiderposetiefe:
 
     def __init__(self, k3, namen, radius, massstab):
         """`k3` (70, 3) SAM 3D Body in Metern (Kamera: x rechts, y unten, z in die Szene), `namen` die MHR-Namen, `radius` des Strahlrohrs und `massstab` (Netzeinheiten je Meter) aus der Abbildung."""
-        self.k3 = np.asarray(k3, dtype=np.float64)
+        self.k3 = Torchfeld.feld(k3, dtype=torch.float64)
         self.index = {n: i for i, n in enumerate(namen)}
         self.radius = float(radius)
         self.massstab = float(massstab)
@@ -64,9 +65,9 @@ class Engine2d3dKleiderposetiefe:
     @classmethod
     def massstab_aus(cls, xy_netz, k3_xy):
         """Netzeinheiten je Meter: Streuung der Gelenke in der Bildebene (Netz) ÷ dieselbe Streuung bei SAM — unabhängig von einer Drehung im Bild (Drehungen 90/180/270)."""
-        a = np.asarray(xy_netz, dtype=np.float64)
-        b = np.asarray(k3_xy, dtype=np.float64)
-        return float(np.sqrt(((a - a.mean(0)) ** 2).sum() / max(((b - b.mean(0)) ** 2).sum(), 1e-12)))
+        a = Torchfeld.feld(xy_netz, dtype=torch.float64)
+        b = Torchfeld.feld(k3_xy, dtype=torch.float64)
+        return float(Torchfeld.sqrt(((a - a.mean(0)) ** 2).sum() / max(((b - b.mean(0)) ** 2).sum(), 1e-12)))
 
     def kette(self, name):
         return self.ELTERN.get(name)
@@ -79,19 +80,19 @@ class Engine2d3dKleiderposetiefe:
         """Tiefe einer Hüfte aus dem Strahl über ihr (Punkt Hüfte + `RUMPF_ANTEIL` · (Schulter − Hüfte)): Mitte des Bereichs, oder None, wenn der Strahl leer oder länger als `RUMPF_HOECHST` Radien ist."""
         if z_strahl is None or not len(z_strahl):
             return None
-        lo, hi = float(np.percentile(z_strahl, 2)), float(np.percentile(z_strahl, 98))
+        lo, hi = float(Torchfeld.percentile(z_strahl, 2)), float(Torchfeld.percentile(z_strahl, 98))
         return None if (hi - lo) / self.radius > self.RUMPF_HOECHST else (lo + hi) / 2.0
 
     def tiefe(self, name, z_strahl, z_eltern):
         """`(z, art, vorhersage)`: `art` = `mitte` (kurzer Bereich), `sam` (langer Bereich, Vorhersage darin), `gemischt`, `verworfen` (`z` = NaN)."""
         vorhersage = float(z_eltern) - self.massstab * (self.k3[self.index[name], 2] - self.k3[self.index[self.ELTERN[name]], 2])
-        z = np.asarray(z_strahl, dtype=np.float64)
-        lo, hi = float(np.percentile(z, 2)), float(np.percentile(z, 98))
+        z = Torchfeld.feld(z_strahl, dtype=torch.float64)
+        lo, hi = float(Torchfeld.percentile(z, 2)), float(Torchfeld.percentile(z, 98))
         aussen = max(lo - vorhersage, vorhersage - hi, 0.0)
         if aussen > self.WEIT * self.radius and name not in self.BEREICH:
             return float('nan'), 'verworfen', vorhersage
         mitte = (lo + hi) / 2.0
         kurz, lang = self.BEREICH.get(name, (self.KURZ, self.LANG))
-        w = float(np.clip(((hi - lo) / self.radius - kurz) / (lang - kurz), 0.0, 1.0))
+        w = float(Torchfeld.clip(((hi - lo) / self.radius - kurz) / (lang - kurz), 0.0, 1.0))
         art = 'mitte' if w == 0.0 else ('sam' if w == 1.0 else 'gemischt')
-        return (1.0 - w) * mitte + w * float(np.clip(vorhersage, lo, hi)), art, vorhersage
+        return (1.0 - w) * mitte + w * float(Torchfeld.clip(vorhersage, lo, hi)), art, vorhersage

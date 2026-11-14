@@ -10,7 +10,8 @@ orthographisch aus den Vertices.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.bildrahmen import Bildrahmen
 
@@ -43,9 +44,9 @@ class Silhouette:
 
         `versatz` ist die Feinkorrektur aus dem Assistenten: Verschiebung und
         Skalierung um den Schwerpunkt der gueltigen Punkte."""
-        proj = np.asarray(punkte_2d, dtype=np.float32).copy()
+        proj = Torchfeld.kopie(Torchfeld.feld(punkte_2d, dtype=torch.float32))
         if versatz:
-            gueltig = ~np.isnan(proj).any(axis=1)
+            gueltig = ~Torchfeld.isnan(proj).any(axis=1)
             mx = proj[gueltig, 0].mean()
             my = proj[gueltig, 1].mean()
             s = versatz.get('scale', 1)
@@ -71,7 +72,7 @@ class Silhouette:
         grund = min(s_x, s_y)
         cx, cy = (x_min + x_max) / 2, (y_min + y_max) / 2
 
-        proj = np.zeros((len(v), 2), dtype=np.float32)
+        proj = torch.zeros((len(v), 2), dtype=torch.float32, device='cuda')
         if koerpertransformation:
             bt = koerpertransformation
             s = grund * bt['scale']
@@ -92,16 +93,16 @@ class Silhouette:
         v2 = self.vertices[self.faces[:, 2]]
         e1, e2 = v1 - v0, v2 - v0
         kreuz_z = e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]
-        return np.where(kreuz_z > 0)[0]
+        return torch.nonzero(kreuz_z > 0, as_tuple=True)[0]
 
     def _vorderseiten_im_bild(self, proj):
         """Dasselbe in Bildkoordinaten: Y zeigt nach unten, also ist im
         Uhrzeigersinn vorne (kreuz_z < 0)."""
         p0, p1, p2 = proj[self.faces[:, 0]], proj[self.faces[:, 1]], proj[self.faces[:, 2]]
-        hat_nan = np.isnan(p0).any(axis=1) | np.isnan(p1).any(axis=1) | np.isnan(p2).any(axis=1)
+        hat_nan = Torchfeld.isnan(p0).any(axis=1) | Torchfeld.isnan(p1).any(axis=1) | Torchfeld.isnan(p2).any(axis=1)
         e1, e2 = p1 - p0, p2 - p0
         kreuz_z = e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]
-        return np.where((kreuz_z < 0) & ~hat_nan)[0]
+        return torch.nonzero((kreuz_z < 0) & ~hat_nan, as_tuple=True)[0]
 
     # ----------------------------------------------------------------- rastern
 
@@ -110,7 +111,7 @@ class Silhouette:
         if self.projektion is None or self.vorderseiten is None:
             raise RuntimeError('Silhouette: erst projizieren, dann rastern')
         sx, sy = self.MASKE / self.breite, self.MASKE / self.hoehe
-        maske = np.zeros((self.MASKE, self.MASKE), dtype=np.uint8)
+        maske = torch.zeros((self.MASKE, self.MASKE), dtype=torch.uint8, device='cuda')
         if self.posiert and self.anzahl_posiert < len(self.vertices):
             self._streuen(cv2, maske, sx, sy)
         else:
@@ -124,9 +125,9 @@ class Silhouette:
         gerasterte Dreiecke ergaeben ein Flickenmuster. Deshalb werden die
         Punkte gesetzt und morphologisch geschlossen."""
         gueltig = self._projektion()[: self.anzahl_posiert]
-        gueltig = gueltig[~np.isnan(gueltig).any(axis=1)]
-        px = (gueltig[:, 0] * sx).astype(np.int32)
-        py = (gueltig[:, 1] * sy).astype(np.int32)
+        gueltig = gueltig[~Torchfeld.isnan(gueltig).any(axis=1)]
+        px = Torchfeld.astype(gueltig[:, 0] * sx, torch.int32)
+        py = Torchfeld.astype(gueltig[:, 1] * sy, torch.int32)
         drin = (px >= 0) & (px < self.MASKE) & (py >= 0) & (py < self.MASKE)
         maske[py[drin], px[drin]] = 255
         kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
@@ -145,14 +146,11 @@ class Silhouette:
         proj = self._projektion()
         for fi in self.vorderseiten if self.vorderseiten is not None else ():
             i0, i1, i2 = self.faces[fi]
-            punkte = np.array(
-                [
+            punkte = Torchfeld.feld([
                     [proj[i0, 0] * sx, proj[i0, 1] * sy],
                     [proj[i1, 0] * sx, proj[i1, 1] * sy],
                     [proj[i2, 0] * sx, proj[i2, 1] * sy],
-                ],
-                dtype=np.int32,
-            ).reshape((-1, 1, 2))
+                ], dtype=torch.int32, copy=True).reshape((-1, 1, 2))
             cv2.fillConvexPoly(maske, punkte, 255)
 
     # ------------------------------------------------------------------ Umriss

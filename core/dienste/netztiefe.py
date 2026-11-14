@@ -26,7 +26,8 @@ import os
 import time
 from datetime import datetime
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .seitentiefe import Seitentiefe
@@ -69,8 +70,8 @@ class Netztiefe:
         from PIL import Image
         with Image.open(png) as bild:
             kanal = bild.convert('RGBA').getchannel('A')
-        f = max(1, max(kanal.size) // 1600)
-        return np.asarray(kanal.resize((kanal.width // f, kanal.height // f), Image.NEAREST)) > 8
+        f = max(1, max(Torchfeld.groesse(kanal)) // 1600)
+        return Torchfeld.feld(kanal.resize((kanal.width // f, kanal.height // f), Image.NEAREST)) > 8
 
     @staticmethod
     def _stat(pfad):
@@ -86,32 +87,32 @@ class Netztiefe:
     def faktoren(self, netz, foto, tiefe_min, toleranz):
         """`{höhenanteil: s}` auf dem Raster `Seitentiefe.HOEHEN` — 1 außerhalb von `BAND` und wo das Netz nicht deutlich tiefer ist als das Foto."""
         raster = list(Seitentiefe.HOEHEN)
-        roh = np.ones(len(raster))
+        roh = torch.ones(len(raster), dtype=torch.float64, device='cuda')
         for i, h in enumerate(raster):
             if h in netz and h in foto and self.BAND[0] <= h <= self.BAND[1] and netz[h]['tiefe'] > (1.0 + toleranz) * foto[h]:
                 roh[i] = max(tiefe_min, min(1.0, foto[h] / netz[h]['tiefe']))
         schritt = raster[1] - raster[0]
-        halb = int(np.ceil(3 * self.GLAETTUNG / schritt))
-        kern = np.exp(-0.5 * (np.arange(-halb, halb + 1) * schritt / self.GLAETTUNG) ** 2)
+        halb = int(Torchfeld.ceil(3 * self.GLAETTUNG / schritt))
+        kern = Torchfeld.exp(-0.5 * (Torchfeld.arange(-halb, halb + 1) * schritt / self.GLAETTUNG) ** 2)
         kern /= kern.sum()
-        glatt = np.convolve(np.pad(roh, halb, constant_values=1.0), kern, mode='valid')
+        glatt = Torchfeld.convolve(Torchfeld.pad(roh, halb, constant_values=1.0), kern, mode='valid')
         return {h: float(min(1.0, g)) for h, g in zip(raster, glatt, strict=True)}
 
     def anwenden(self, punkte, faktoren, hinten):
         """Neue Punkte (V, 3): die Tiefe je Höhe um die Rückseite stauchen — nur im Rumpf (Quer) und im Band (mit Auslauf)."""
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         y0, y1 = float(p[:, 1].min()), float(p[:, 1].max())
         hoehe = max(y1 - y0, 1e-9)
         h = (p[:, 1] - y0) / hoehe
-        raster = np.array(sorted(faktoren))
-        s = np.interp(h, raster, [faktoren[x] for x in raster], left=1.0, right=1.0)
-        hinten_z = np.interp(h, np.array(sorted(hinten)), [hinten[x] for x in sorted(hinten)])
-        auslauf = np.clip(np.minimum(h - self.BAND[0], self.BAND[1] - h) / self.SAUM, 0.0, 1.0)
+        raster = Torchfeld.feld(sorted(faktoren), copy=True)
+        s = Torchfeld.interp(h, raster, [faktoren[x] for x in Torchfeld.liste(raster)], left=1.0, right=1.0)
+        hinten_z = Torchfeld.interp(h, Torchfeld.feld(sorted(hinten), copy=True), [hinten[x] for x in sorted(hinten)])
+        auslauf = Torchfeld.clip(Torchfeld.minimum(h - self.BAND[0], self.BAND[1] - h) / self.SAUM, 0.0, 1.0)
         auslauf = auslauf * auslauf * (3.0 - 2.0 * auslauf)                                  # weich
-        mitte = float(np.median(p[(h > self.BAND[0]) & (h < self.BAND[1]), 0]))
-        quer = np.clip((self.QUER_NULL - np.abs(p[:, 0] - mitte) / hoehe) / (self.QUER_NULL - self.QUER_VOLL), 0.0, 1.0)
+        mitte = float(Torchfeld.median(p[(h > self.BAND[0]) & (h < self.BAND[1]), 0]))
+        quer = Torchfeld.clip((self.QUER_NULL - Torchfeld.abs(p[:, 0] - mitte) / hoehe) / (self.QUER_NULL - self.QUER_VOLL), 0.0, 1.0)
         wirkung = 1.0 - (1.0 - s) * auslauf * quer
-        neu = p.copy()
+        neu = Torchfeld.kopie(p)
         neu[:, 2] = hinten_z + wirkung * (p[:, 2] - hinten_z)
         return neu
 
@@ -147,7 +148,7 @@ class Netztiefe:
             return alt
         foto = Seitentiefe.mittel([Seitentiefe.foto_profil(self._alpha(p)) for _, p in fotos])
         netz = self._laden(original)
-        punkte = np.asarray(netz.vertices, dtype=np.float64)
+        punkte = Torchfeld.feld(netz.vertices, dtype=torch.float64)
         vorher = Seitentiefe.modell_profil(punkte)
         hinten = self._glatt_hinten(vorher)
         faktoren = self.faktoren(vorher, foto, o['tiefe_min'], o['tiefe_toleranz'])
@@ -176,19 +177,19 @@ class Netztiefe:
     def _glatt_hinten(profil):
         """`{höhenanteil: z der Rückseite}` — über fünf Höhen gemittelt, damit ein einzelner Ausreißer die Rückseite nicht zackt."""
         hs = sorted(profil)
-        z = np.array([profil[h]['hinten'] for h in hs])
-        glatt = np.convolve(np.pad(z, 2, mode='edge'), np.ones(5) / 5.0, mode='valid')
+        z = Torchfeld.feld([profil[h]['hinten'] for h in hs], copy=True)
+        glatt = Torchfeld.convolve(Torchfeld.pad(z, 2, mode='edge'), torch.ones(5, dtype=torch.float64, device='cuda') / 5.0, mode='valid')
         return dict(zip(hs, glatt.tolist(), strict=True))
 
     def _pruefen(self, original, abgeleitet, erwartet):
         """None, wenn das abgeleitete Netz dieselben Flächen und UV hat und die erwarteten Punkte; sonst der Grund."""
         a, b = self._laden(original), self._laden(abgeleitet)
-        if not np.array_equal(np.asarray(a.faces), np.asarray(b.faces)):
+        if not Torchfeld.equal(Torchfeld.feld(a.faces), Torchfeld.feld(b.faces)):
             return 'Flächen anders als im Original'
         if len(a.vertices) != len(b.vertices):
             return 'Punktzahl anders (%d gegen %d)' % (len(b.vertices), len(a.vertices))
-        hoehe = float(np.ptp(np.asarray(a.vertices)[:, 1]))
-        if float(np.abs(np.asarray(b.vertices) - erwartet).max()) > 1e-4 * hoehe:
+        hoehe = float(Torchfeld.ptp(Torchfeld.feld(a.vertices)[:, 1]))
+        if float(Torchfeld.abs(Torchfeld.feld(b.vertices) - erwartet).max()) > 1e-4 * hoehe:
             return 'Punkte nach dem Schreiben nicht wie berechnet'
         if (getattr(a.visual, 'uv', None) is None) != (getattr(b.visual, 'uv', None) is None):
             return 'UV-Belegung geht verloren'

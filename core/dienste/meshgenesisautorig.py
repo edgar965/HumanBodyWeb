@@ -11,7 +11,9 @@ Die Seite zeigt es im Feld „Start“, wenn der Knopf „Rig“ an ist — gef�
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -26,20 +28,20 @@ class Meshgenesisautorig:
     @classmethod
     def stand(cls, ordner):
         """Stempel aller Dateien des Zwischenschritts im Datensatz (für die Ablage von `Meshgenesisdaten`: eine neue Datei soll sofort erscheinen)."""
-        return tuple(sorted((p.parent.name, p.stat().st_mtime_ns) for p in (ordner / 'proben').glob('*/' + cls.DATEI)))
+        return tuple(sorted((p.parent.name, Npztorch.stat(p).st_mtime_ns) for p in (ordner / 'proben').glob('*/' + cls.DATEI)))
 
     @classmethod
     def lesen(cls, ordner, nr, soll, namen):
         """`{rig, je_mm, info}` für die Probe `nr` oder `None` (keine Datei, andere Fassung, anderes Rig)."""
         datei = ordner / 'proben' / ('%04d' % int(nr)) / cls.DATEI
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
         try:
-            with np.load(datei) as d:
+            with Npztorch.lesen(datei) as d:
                 if int(d['fassung']) != cls.FASSUNG:
                     logger.warning('Meshgenesisautorig: %s hat Fassung %s statt %s — nicht gezeigt', datei, int(d['fassung']), cls.FASSUNG)
                     return None
-                rig = d['rig'].astype(float)
+                rig = Torchfeld.astype(d['rig'], torch.float64)
                 info = {'mesh3d': str(d['mesh3d']), 'meshfigur': str(d['meshfigur']), 'umfang': str(d['umfang'])}
         except (OSError, KeyError, ValueError) as fehler:
             logger.warning('Meshgenesisautorig: %s nicht lesbar (%s)', datei, fehler)
@@ -47,6 +49,6 @@ class Meshgenesisautorig:
         if rig.shape != (len(namen), 3):
             logger.warning('Meshgenesisautorig: %s hat %s Punkte, das Rig %d — nicht gezeigt', datei, rig.shape, len(namen))
             return None
-        je = 1000.0 * np.linalg.norm(rig - soll, axis=1)
-        info.update(mittel_mm=round(float(je.mean()), 1), median_mm=round(float(np.median(je)), 1))
-        return {'rig': np.round(rig, 4).tolist(), 'je_mm': np.round(je, 1).tolist(), 'info': info}
+        je = 1000.0 * Torchfeld.linalg_norm(rig - soll, dim=1)
+        info.update(mittel_mm=round(float(je.mean()), 1), median_mm=round(float(Torchfeld.median(je)), 1))
+        return {'rig': Torchfeld.round(rig, 4).tolist(), 'je_mm': Torchfeld.round(je, 1).tolist(), 'info': info}

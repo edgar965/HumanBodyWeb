@@ -23,7 +23,8 @@ import logging
 import os
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .g9hautfalten import G9hautfalten
 
@@ -65,17 +66,17 @@ class G9hautebenen(G9hautfalten):
 
         from .lippenmaske import Lippenmaske
         pfad = os.path.join(str(Lippenmaske.ordner()), 'human_%s_frecklemask.png' % self.geschlecht)
-        return np.asarray(Image.open(pfad).convert('L'), dtype=np.float64) / 255.0
+        return Torchfeld.feld(Image.open(pfad).convert('L'), dtype=torch.float64) / 255.0
 
     @staticmethod
     def _glatt(t):
         """Smoothstep 0..1 (Anteile)."""
-        t = np.clip(t, 0.0, 1.0)
+        t = Torchfeld.clip(t, 0.0, 1.0)
         return t * t * (3.0 - 2.0 * t)
 
     @staticmethod
     def _gauss(abstand, radius):
-        return np.exp(-(abstand / radius) ** 2)
+        return Torchfeld.exp(-(abstand / radius) ** 2)
 
     # ------------------------------------------------------------- Rechnen
 
@@ -83,15 +84,15 @@ class G9hautebenen(G9hautfalten):
         """`(sommer (n,), alter (n,))` — die beiden Gebiete je Texel; `teil` sind Nummern aus `G9koerperteile`."""
         from Genesis9.koerperteile import G9koerperteile
         from humanbody_core.hautverschiebung import Hautverschiebung
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         nummer = G9koerperteile.NUMMER
-        ist = lambda *namen: np.isin(teil, [nummer[n] for n in namen])           # noqa: E731
+        ist = lambda *namen: torch.isin(teil, Torchfeld.feld([nummer[n] for n in namen]))           # noqa: E731
         kopf = ist('kopf')
-        fk = np.clip(Hautverschiebung.abtasten(maske, uv) / self.MASKE_MAX[self.geschlecht], 0.0, 1.0)
-        sommer = np.where(kopf, 0.0, fk * 0.9)
-        alter = np.zeros(len(pos))
-        seite = np.sign(pos[:, 0])
+        fk = Torchfeld.clip(Hautverschiebung.abtasten(maske, uv) / self.MASKE_MAX[self.geschlecht], 0.0, 1.0)
+        sommer = torch.where(kopf, 0.0, fk * 0.9)
+        alter = torch.zeros(len(pos), dtype=torch.float64, device='cuda')
+        seite = Torchfeld.sign(pos[:, 0])
         aussen = self._glatt((normale[:, 0] * seite - 0.1) / 0.4)                # Handrücken/Außenseite des Arms: die Normale zeigt vom Körper weg
         hand = ist('l_hand', 'r_hand')
         arm = ist('l_unterarm', 'r_unterarm')
@@ -105,12 +106,12 @@ class G9hautebenen(G9hautfalten):
         for name, radius, staerke in self.GESICHT_SOMMER:
             if name in gesicht:
                 d, _i = cKDTree(gesicht[name]).query(pos[kopf])
-                sommer[kopf] = np.maximum(sommer[kopf], staerke * self._gauss(d, radius))
+                sommer[kopf] = Torchfeld.maximum(sommer[kopf], staerke * self._gauss(d, radius))
         for name, radius, staerke in self.GESICHT_ALTER:
             if name in gesicht:
                 d, _i = cKDTree(gesicht[name]).query(pos[kopf])
-                alter[kopf] = np.maximum(alter[kopf], staerke * self._gauss(d, radius))
-        return np.clip(sommer, 0.0, 1.0), np.clip(alter, 0.0, 1.0)
+                alter[kopf] = Torchfeld.maximum(alter[kopf], staerke * self._gauss(d, radius))
+        return Torchfeld.clip(sommer, 0.0, 1.0), Torchfeld.clip(alter, 0.0, 1.0)
 
     @classmethod
     def lidbogen(cls, gesicht):
@@ -121,16 +122,16 @@ class G9hautebenen(G9hautfalten):
             if punkte is None or not len(punkte):
                 continue
             unten = punkte[punkte[:, 1] < punkte[:, 1].mean()]
-            teile.append(unten - np.array([0.0, cls.RING_VERSATZ, 0.0]))
-        return np.vstack(teile) if teile else None
+            teile.append(unten - Torchfeld.feld([0.0, cls.RING_VERSATZ, 0.0], copy=True))
+        return Torchfeld.vstack(teile) if teile else None
 
     def gesichtsfelder(self, pos, teil, gesicht):
         """`(roete (n,), ringe (n,))` — Wangen-/Nasenröte und Augenringe je Texel, nur am Kopf (Fassung 2)."""
         from Genesis9.koerperteile import G9koerperteile
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        kopf = np.isin(teil, [G9koerperteile.NUMMER['kopf']])
-        roete, ringe = np.zeros(len(pos)), np.zeros(len(pos))
+        kopf = torch.isin(teil, Torchfeld.feld([G9koerperteile.NUMMER['kopf']]))
+        roete, ringe = torch.zeros(len(pos), dtype=torch.float64, device='cuda'), torch.zeros(len(pos), dtype=torch.float64, device='cuda')
         if not kopf.any():
             return roete, ringe
         for name, radius, staerke in self.GESICHT_ROETE:
@@ -138,47 +139,47 @@ class G9hautebenen(G9hautfalten):
             if punkte is None or not len(punkte):
                 continue
             if name == 'nase':
-                punkte = punkte[punkte[:, 1] <= np.percentile(punkte[:, 1], 70)]
+                punkte = punkte[punkte[:, 1] <= Torchfeld.percentile(punkte[:, 1], 70)]
             d, _i = cKDTree(punkte).query(pos[kopf])
-            roete[kopf] = np.maximum(roete[kopf], staerke * self._gauss(d, radius))
+            roete[kopf] = Torchfeld.maximum(roete[kopf], staerke * self._gauss(d, radius))
         bogen = self.lidbogen(gesicht)
         if bogen is not None:
             d, _i = cKDTree(bogen).query(pos[kopf])
             ringe[kopf] = self._gauss(d, self.RING_RADIUS)
-        return np.clip(roete, 0.0, 1.0), np.clip(ringe, 0.0, 1.0)
+        return Torchfeld.clip(roete, 0.0, 1.0), Torchfeld.clip(ringe, 0.0, 1.0)
 
     def kachel(self, traeger, abtastung, nummer, grund):
         """`(bild (S, S, 4) uint8, meter_je_uv)` einer Kachel."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         kaefig, normalen, teil_je_punkt, maske, gesicht = grund
         drin, _lage_hb, uv, _abstand = traeger.texel(abtastung, nummer)
         _drin, ecken, anteile = abtastung.stellen(nummer)
-        pos = np.einsum('nk,nkc->nc', anteile, kaefig[ecken])
-        normale = np.einsum('nk,nkc->nc', anteile, normalen[ecken])
-        normale /= np.maximum(np.linalg.norm(normale, axis=1, keepdims=True), 1e-9)
-        fuehrend = ecken[np.arange(len(ecken)), anteile.argmax(1)]
+        pos = Torchfeld.einsum('nk,nkc->nc', anteile, kaefig[ecken])
+        normale = Torchfeld.einsum('nk,nkc->nc', anteile, normalen[ecken])
+        normale /= Torchfeld.maximum(Torchfeld.linalg_norm(normale, dim=1, keepdim=True), 1e-9)
+        fuehrend = ecken[Torchfeld.arange(len(ecken)), anteile.argmax(1)]
         sommer, alter = self.felder(pos, normale, teil_je_punkt[fuehrend], uv, maske, gesicht)
         roete, ringe = self.gesichtsfelder(pos, teil_je_punkt[fuehrend], gesicht)
         s = abtastung.seite
-        karten = np.zeros((s, s, 4))
+        karten = torch.zeros((s, s, 4), dtype=torch.float64, device='cuda')
         karten[drin, 0], karten[drin, 1], karten[drin, 2], karten[drin, 3] = sommer, alter, roete, ringe
         weg, (iy, ix) = ndimage.distance_transform_edt(~drin, return_indices=True)
         nah = (~drin) & (weg <= self.RAND_PX)
         karten[nah] = karten[iy[nah], ix[nah]]
         for k in range(4):
             karten[..., k] = ndimage.gaussian_filter(karten[..., k], self.GLAETTUNG_PX)
-        lage = np.zeros((s, s, 3))
+        lage = torch.zeros((s, s, 3), dtype=torch.float64, device='cuda')
         lage[drin] = pos
         schritte = []
         for achse in (0, 1):
-            zu = np.take(lage, np.arange(1, s), axis=achse)
-            von = np.take(lage, np.arange(0, s - 1), axis=achse)
-            beide = np.take(drin, np.arange(1, s), axis=achse) & np.take(drin, np.arange(0, s - 1), axis=achse)
+            zu = Torchfeld.take(lage, Torchfeld.arange(1, s), axis=achse)
+            von = Torchfeld.take(lage, Torchfeld.arange(0, s - 1), axis=achse)
+            beide = Torchfeld.take(drin, Torchfeld.arange(1, s), axis=achse) & Torchfeld.take(drin, Torchfeld.arange(0, s - 1), axis=achse)
             if beide.any():
-                schritte.append(float(np.median(np.linalg.norm(zu - von, axis=2)[beide])))
-        meter_je_uv = float(np.mean(schritte)) * s if schritte else 1.0
-        bild = np.clip(karten * 255.0 + 0.5, 0, 255).astype(np.uint8)
+                schritte.append(float(Torchfeld.median(Torchfeld.linalg_norm(zu - von, dim=2)[beide])))
+        meter_je_uv = float(Torchfeld.mean(schritte)) * s if schritte else 1.0
+        bild = Torchfeld.astype(Torchfeld.clip(karten * 255.0 + 0.5, 0, 255), torch.uint8)
         bild[~(drin | nah)] = 0
         return bild, meter_je_uv
 
@@ -194,8 +195,8 @@ class G9hautebenen(G9hautfalten):
         t0 = time.perf_counter()
         abtastung = G9texturabtastung.holen(self.SEITE)
         netz = G9basisnetz.holen()
-        kaefig = np.asarray(netz.punkte, dtype=np.float64)
-        grund = (kaefig, np.asarray(netz.normalen(), dtype=np.float64), G9koerperteile.genesis_punkte(G9haut.holen()),
+        kaefig = Torchfeld.feld(netz.punkte, dtype=torch.float64)
+        grund = (kaefig, Torchfeld.feld(netz.normalen(), dtype=torch.float64), G9koerperteile.genesis_punkte(G9haut.holen()),
                  self._maske(), G9gesichtsteile.positionen(kaefig))
         if not grund[4]:
             logger.warning('Hautebenen: keine Landmarkentabelle — Gesichtsgebiete fehlen (G9netzlandmarken)')

@@ -15,8 +15,20 @@ gleich (Nahtkopien), ungleiche können gleich werden.
 Nicht gekürzt: kleine Felder (unter `AB_ANZAHL` Werten — Skelett, Matrizen, Kanäle der Gelenkfelder: dort spart es nichts), Felder mit NaN/∞, Felder,
 deren Spanne 0 ist (ein Wert — float32 bleibt kürzer zu erklären als zu sparen). Der Browser bekommt das nur, wenn er es bestellt hat
 (`Netzausgabe.will_binaer`: `Accept: …;kodierung=u16`), sonst wie bisher float32 — ein Tab mit altem Code liest also nie 16 Bit als float32.
+
+NUMMERN WERDEN NIE GEKÜRZT (12.11.2026, Edgar an Olesia1: „das T-Shirt sitzt oben nicht (kein Saum), und die Schuhe haben Texturprobleme, oder haut geht
+durch“): Ein Feld, das Nummern trägt statt Messwerte, reist als `Netzfeld` mit `genau` und bleibt float32 (`Netzpaket._ersetzen` fragt danach, hier wird
+dafür nichts gerechnet). Die Oberflächenbindung schickt je Stoffpunkt drei KÖRPERPUNKT-NUMMERN als float32 (`G9netzantwort`, `bindung.dreieck`: der Shader
+liest Attribute als Gleitkomma). Auf der feinen Stufe reichen sie bis 104.479, das Raster war dort 1,59 — gemessen im Chrome an Olesia1: von 176.484 Nummern
+der Angie Sneakers kamen 238 ganzzahlig an, 39.186 von 58.828 Punkten nannten drei Körperpunkte, die kein Dreieck des Körpers sind, 8.395 davon lagen über
+5 cm auseinander. Der Shader schob solche Punkte schon in der Ruhelage bis 40 mm (Stacheln an Kragen, Seitennaht und Schuhspitze; mit abgeschalteter Bindung
+waren Kragen und Schuh sauber). Gefolgert, nicht an weiteren Stücken gemessen: Das galt seit dem 19.10.2026 für jedes gebundene Daz-Stück der feinen Stufe; der
+Käfig (Nummern bis 27.086, Raster 0,41, Fehler höchstens 0,21) rundete noch richtig. Ebenso markiert: Knochennummern, die als float32 reisen
+(`Netzantwort.NUMMERN`, `skin_indices`) — Threes Shader schneidet ab (`int(i)`, three 0.170.0 `skinning_pars_vertex.glsl.js`), 56,9993 wäre Knochen 56. Ob
+eine Figurart davon betroffen war, ist nicht gemessen.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Netzkurz']
 
@@ -32,22 +44,22 @@ class Netzkurz:
         u"""`(bytes uint16, {'ab', 'schritt'})` für die float32-Bytes `rohdaten` — oder None (nicht kürzen)."""
         if anzahl < cls.AB_ANZAHL:
             return None
-        w = np.frombuffer(rohdaten, dtype=np.float32, count=anzahl).astype(np.float64)
-        if not np.isfinite(w).all():
+        w = Torchfeld.astype(torch.frombuffer(bytearray(rohdaten), dtype=torch.float32, count=anzahl).to(Torchfeld.KARTE), torch.float64)
+        if not Torchfeld.isfinite(w).all():
             return None
         lo, hi = float(w.min()), float(w.max())
         if hi <= lo:
             return None
         schritt = (hi - lo) / cls.STUFEN
         if lo < 0.0 < hi:                       # die Null auf das Raster: ab = −q₀·schritt
-            ab = -float(np.rint(-lo / schritt)) * schritt
+            ab = -float(Torchfeld.round(-lo / schritt)) * schritt
         else:
             ab = lo
-        q = np.clip(np.rint((w - ab) / schritt), 0, 65535).astype('<u2')
-        return q.tobytes(), {'ab': ab, 'schritt': schritt}
+        q = Torchfeld.astype(Torchfeld.clip(Torchfeld.round((w - ab) / schritt), 0, 65535), Torchfeld.dtype('<u2'))
+        return Torchfeld.als_bytes(q), {'ab': ab, 'schritt': schritt}
 
     @staticmethod
     def entpacken(rohdaten, anzahl, kurz):
         u"""Die float32-Bytes zurück (Gegenprobe, Werkzeuge) — dieselbe Rechnung wie `gemeinsam/netzpaket.js`."""
-        q = np.frombuffer(rohdaten, dtype='<u2', count=anzahl).astype(np.float64)
-        return (float(kurz['ab']) + q * float(kurz['schritt'])).astype(np.float32).tobytes()
+        q = Torchfeld.astype(torch.frombuffer(bytearray(rohdaten), dtype='<u2', count=anzahl).to(Torchfeld.KARTE), torch.float64)
+        return Torchfeld.als_bytes(Torchfeld.astype(float(kurz['ab']) + q * float(kurz['schritt']), torch.float32))

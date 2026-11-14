@@ -18,7 +18,9 @@ import logging
 import struct
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesislinienflaeche import Meshgenesislinienflaeche
 
@@ -62,24 +64,24 @@ class Meshgenesistestanpassung:
         (`anatomie_kaefig`, `Meshgenesismeshanatomie`; ein UV-Punkt je Käfigpunkt — über die UV selbst verschmierte die Naht Rumpf/Beine), linear wie Threes Punktfarben → (M, 3) f4 oder None."""
         from PIL import Image
         from Genesis9.pfade import G9pfade
-        uv, urs, dr = np.asarray(haut['uv']), np.asarray(haut['uv_ursprung']), np.asarray(haut['uv_dreiecke']).reshape(-1)
-        gruppe = np.full(len(uv), -1)
+        uv, urs, dr = Torchfeld.feld(haut['uv']), Torchfeld.feld(haut['uv_ursprung']), Torchfeld.feld(haut['uv_dreiecke']).reshape(-1)
+        gruppe = Torchfeld.full(len(uv), -1)
         for i, g in enumerate(gruppen):
             gruppe[dr[g['index_ab']:g['index_ab'] + g['index_anzahl']]] = i
-        erster = np.full(int(urs.max()) + 1, -1)
-        erster[urs[::-1]] = np.arange(len(urs))[::-1]
-        u = erster[np.asarray(kaefig, dtype=np.int64)]
-        farbe = np.full((len(u), 3), 0.5, dtype=np.float32)
-        for i in np.unique(gruppe[u]):
+        erster = Torchfeld.full(int(urs.max()) + 1, -1)
+        Torchfeld.zuweisen(erster, Torchfeld.umgekehrt(urs, 0), Torchfeld.umgekehrt(Torchfeld.arange(len(urs)), 0))     # numpys „letzter gewinnt“: die erste Stelle je Wert
+        u = erster[Torchfeld.feld(kaefig, dtype=torch.int64)]
+        farbe = Torchfeld.full((len(u), 3), 0.5, dtype=torch.float32)
+        for i in Torchfeld.liste(Torchfeld.unique(gruppe[u])):
             pfad = G9pfade.finden(gruppen[i]['albedo']) if i >= 0 and gruppen[i].get('albedo') else None
             if pfad is None:
                 continue
-            bild = np.asarray(Image.open(pfad).convert('RGB'))
+            bild = Torchfeld.feld(Image.open(pfad).convert('RGB'))
             h, w = bild.shape[:2]
             wahl = gruppe[u] == i
             t = uv[u[wahl]] % 1.0
-            px = bild[((1.0 - t[:, 1]) * (h - 1)).round().astype(np.int64), (t[:, 0] * (w - 1)).round().astype(np.int64)] / 255.0
-            farbe[wahl] = np.where(px <= 0.04045, px / 12.92, ((px + 0.055) / 1.055) ** 2.4)
+            px = bild[Torchfeld.astype(((1.0 - t[:, 1]) * (h - 1)).round(), torch.int64), Torchfeld.astype((t[:, 0] * (w - 1)).round(), torch.int64)] / 255.0
+            farbe[wahl] = torch.where(px <= 0.04045, px / 12.92, ((px + 0.055) / 1.055) ** 2.4)
         return farbe
 
     @classmethod
@@ -89,21 +91,21 @@ class Meshgenesistestanpassung:
         ordner = Path(test) / cls.ORDNER
         npz, bericht = ordner / 'meshanpassung.npz', ordner / 'meshanpassung.json'
         try:
-            schluessel = (str(npz), npz.stat().st_mtime_ns, bericht.stat().st_mtime_ns, bool(ohne_netz))
+            schluessel = (str(npz), Npztorch.stat(npz).st_mtime_ns, bericht.stat().st_mtime_ns, bool(ohne_netz))
         except OSError:
             return None
         if schluessel in cls._ablage:
             return cls._ablage[schluessel]
         try:
             b = json.loads(bericht.read_text(encoding='utf-8'))
-            with np.load(npz) as z:
+            with Npztorch.lesen(npz) as z:
                 felder = {name: z[name] for name, _typ in cls.BLOECKE + cls.ANATOMIE_BLOECKE if name in z.files or name not in dict(cls.ANATOMIE_BLOECKE)}
                 kette = Path(str(z['kette']))
                 anatomie_kaefig = z['anatomie_kaefig'] if 'anatomie_kaefig' in z.files else None
         except (OSError, KeyError, ValueError) as fehler:
             logger.warning('Genesis-Anpassung des Tests %s nicht lesbar: %s', test, fehler)
             return None
-        ketten = sorted(p.parent for p in (Path(test) / 'vorstufe').glob('*/apose.npz'))
+        ketten = sorted(p.parent for p in Npztorch.glob(Path(test) / 'vorstufe', '*/apose.npz'))
         kopf = {k: b.get(k) for k in cls.KOPF}
         kopf.update(stufe1=(b.get('stufe1') or {}).get('masse'), regler=len(b.get('regler') or {}), mesh_regler=len(b.get('mesh_regler') or {}), test=Path(test).name,
                     veraltet=bool(ketten) and ketten[-1] != kette, juengste_kette=ketten[-1].name if ketten else None)
@@ -119,10 +121,10 @@ class Meshgenesistestanpassung:
                     bloecke.append(('anatomie_farbe', 'f4'))
                 except (OSError, ValueError, IndexError) as fehler:
                     logger.warning('Genesis-Anpassung: Farbe der Anatomie nicht lesbar: %s', fehler)
-        kopf['bloecke'] = [[name, typ, int(felder[name].size)] for name, typ in bloecke]
+        kopf['bloecke'] = [[name, typ, int(Torchfeld.groesse(felder[name]))] for name, typ in bloecke]
         roh = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         roh += b' ' * (-len(roh) % 4)
-        paket = struct.pack('<I', len(roh)) + roh + b''.join(Meshgenesislinienflaeche._block(np.asarray(felder[name]).astype('<' + typ if typ != 'u1' else np.uint8))
+        paket = struct.pack('<I', len(roh)) + roh + b''.join(Meshgenesislinienflaeche._block(Torchfeld.astype(Torchfeld.feld(felder[name]), Torchfeld.dtype('<' + typ if typ != 'u1' else torch.uint8)))
                                                             for name, typ in bloecke)
         while len(cls._ablage) >= 2:          # je Test beide Fassungen (mit und ohne Netz), ältere Tests fallen heraus
             cls._ablage.pop(next(iter(cls._ablage)))

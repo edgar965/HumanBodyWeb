@@ -20,7 +20,8 @@ Retarget weg — der Player setzt nur Drehungen.
 import json
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 
 ENDUNG = '_mimik.json'
@@ -85,16 +86,16 @@ class Mimikspuren:
     def spuren(daten, basis):
         """Gewichte je Bild → Delta-Quaternionen je Knochen (Three.js [x,y,z,w])."""
         from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
-        from scipy.spatial.transform import Rotation
+        from KoerperKI_alle.drehung import Drehung as Rotation
 
         fps = float(daten.get('fps') or 30.0)
         einheiten = daten.get('einheiten') or []
-        bilder = np.asarray(daten.get('bilder') or [], dtype=float)
-        if bilder.size == 0:
+        bilder = Torchfeld.feld(daten.get('bilder') or [], dtype=torch.float64)
+        if Torchfeld.groesse(bilder) == 0:
             return Bewegungsspuren.leer()
         anzahl = bilder.shape[0]
         knochen = Mimikspuren._knochen(einheiten, basis)
-        drehung = {k: np.zeros((anzahl, 3)) for k in knochen}
+        drehung = {k: torch.zeros((anzahl, 3), dtype=torch.float64, device='cuda') for k in knochen}
         for j, einheit in enumerate(einheiten):
             Mimikspuren._einheit(drehung, basis.get(einheit), bilder[:, j])
         tracks = {k: Rotation.from_rotvec(v).as_quat().reshape(-1).tolist() for k, v in drehung.items()}
@@ -118,10 +119,10 @@ class Mimikspuren:
         if eintrag is None:
             return
         for richtung, betrag in (
-            (eintrag['plus'], np.clip(g, 0, None)),
-            (eintrag['minus'], np.clip(-g, 0, None)),
+            (eintrag['plus'], Torchfeld.clip(g, 0, None)),
+            (eintrag['minus'], Torchfeld.clip(-g, 0, None)),
         ):
             if not betrag.any():
                 continue
             for k, werte in richtung.items():
-                drehung[k] += betrag[:, None] * np.asarray(werte[:3], dtype=float)
+                drehung[k] += betrag[:, None] * Torchfeld.feld(werte[:3], dtype=torch.float64)

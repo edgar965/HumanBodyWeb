@@ -13,7 +13,8 @@ Der Anpasser aus GarmentFitter liefert weiterhin ein Woerterbuch; `aus_dict`
 nimmt es entgegen. Zusaetzliche Felder gehen dabei nicht verloren.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Anpassungsergebnis:
@@ -51,4 +52,4 @@ class Anpassungsergebnis:
 
     def flaechen_flach(self):
         """Dreiecksindizes als flaches uint32-Feld — so will es der Browser."""
-        return self.faces.ravel().astype(np.uint32)
+        return Torchfeld.astype(self.faces.ravel(), torch.uint32)

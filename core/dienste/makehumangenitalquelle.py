@@ -11,7 +11,8 @@ Mehr Genitalien hat MakeHuman nicht: der Genital-Proxy der Community-Seite ist n
 MakeHuman rechnet in Dezimetern (`Mhbasisnetz.MASSSTAB`). Der Käfig kommt im Format von `G9netzstufe` heraus (`polys` je Viereck
 `[Gruppe, Material, a, b, c, d]`, `uvs` je Punkt, `ueber` = `{(Fläche, Punkt): UV}` für Ecken an einer UV-Naht) — so unterteilt er wie jedes Daz-Netz.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Makehumangenitalquelle']
 
@@ -47,33 +48,33 @@ class Makehumangenitalquelle:
                     flaechen.append([(int(e[0]) - 1, int(e[1]) - 1) for e in ecken])
         if not flaechen or any(len(f) != 4 for f in flaechen):
             raise ValueError('%s: Gruppe %s fehlt oder hat Flächen, die keine Vierecke sind' % (pfad, self.GRUPPE))
-        roh = np.asarray(flaechen, dtype=np.int64)                       # (F, 4, 2): Punkt, UV
-        nummern, lokal = np.unique(roh[:, :, 0], return_inverse=True)
-        uv_ecken = np.asarray(uv, dtype=np.float64)[roh[:, :, 1]]
+        roh = Torchfeld.feld(flaechen, dtype=torch.int64)                       # (F, 4, 2): Punkt, UV
+        nummern, lokal = Torchfeld.unique(roh[:, :, 0], return_inverse=True)
+        uv_ecken = Torchfeld.feld(uv, dtype=torch.float64)[roh[:, :, 1]]
         return nummern, lokal.reshape(-1, 4), uv_ecken
 
     def kaefig_daz(self):
         """`(polys, uvs, ueber)` für `G9netzstufe`; UV auf das Feld 0 … 1 gezogen (Seitenverhältnis bleibt), damit eine gebackene Karte Auflösung hat."""
-        lo = self.uv_ecken.reshape(-1, 2).min(axis=0)
-        weite = float(np.ptp(self.uv_ecken.reshape(-1, 2), axis=0).max()) or 1.0
+        lo = Torchfeld.amin(self.uv_ecken.reshape(-1, 2), dim=0)
+        weite = float(Torchfeld.ptp(self.uv_ecken.reshape(-1, 2), axis=0).max()) or 1.0
         uv_ecken = (self.uv_ecken - lo) / weite
-        uvs = np.zeros((len(self.nummern), 2))
-        gesetzt = np.zeros(len(self.nummern), dtype=bool)
+        uvs = torch.zeros((len(self.nummern), 2), dtype=torch.float64, device='cuda')
+        gesetzt = torch.zeros(len(self.nummern), dtype=torch.bool, device='cuda')
         extra, ueber = [], {}
         for f, (viereck, uv4) in enumerate(zip(self.vierecke, uv_ecken, strict=True)):
             for punkt, t in zip(viereck, uv4, strict=True):
                 if not gesetzt[punkt]:
                     uvs[punkt], gesetzt[punkt] = t, True
-                elif np.abs(uvs[punkt] - t).max() > 1e-9:            # UV-Naht: die Ecke bekommt ihren eigenen UV-Eintrag
+                elif Torchfeld.abs(uvs[punkt] - t).max() > 1e-9:            # UV-Naht: die Ecke bekommt ihren eigenen UV-Eintrag
                     extra.append(t)
                     ueber[(f, int(punkt))] = len(self.nummern) + len(extra) - 1
         polys = [[0, 0] + [int(p) for p in viereck] for viereck in self.vierecke]
-        return polys, np.vstack([uvs] + ([np.asarray(extra)] if extra else [])), ueber
+        return polys, Torchfeld.vstack([uvs] + ([Torchfeld.feld(extra)] if extra else [])), ueber
 
     def ziel(self, name):
         """`(P, 3)` Verschiebung der Helferpunkte durch das Ziel `name` in MakeHumans Einheiten (dm); Punkte außerhalb des Helfers: `ValueError`."""
         pfad = self._ordner_ziele() / (name + '.target')
-        d = np.zeros((len(self.nummern), 3))
+        d = torch.zeros((len(self.nummern), 3), dtype=torch.float64, device='cuda')
         stelle = {int(n): i for i, n in enumerate(self.nummern)}
         for zeile in pfad.read_text(encoding='utf-8').splitlines():
             teile = zeile.split()

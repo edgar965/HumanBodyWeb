@@ -11,7 +11,8 @@ Zwei Dinge hängen nicht an der einen Kachel:
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportfarbangleich import Blendimportfarbangleich
 from .blendimportfeindetail import Blendimportfeindetail
@@ -36,11 +37,11 @@ class Blendimportfuellung:
         from PIL import Image
 
         Image.MAX_IMAGE_PIXELS = None
-        summe, gewicht, bester = np.zeros(3), 0.0, None
+        summe, gewicht, bester = torch.zeros(3, dtype=torch.float64, device='cuda'), 0.0, None
         bericht = {'kacheln': {}}
         for k, pfad in sorted(pfade.items()):
-            farbe = np.asarray(Image.open(pfad).convert('RGB'))
-            leer = farbe.max(axis=2) <= 6
+            farbe = Torchfeld.feld(Image.open(pfad).convert('RGB'))
+            leer = Torchfeld.amax(farbe, dim=2) <= 6
             gueltig = ~(leer | Blendimportrand.saum(leer))
             anteil = float(gueltig.mean())
             eintrag = bericht['kacheln'][str(k)] = {'gebacken_anteil': round(anteil, 4)}

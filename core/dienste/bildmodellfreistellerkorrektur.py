@@ -20,7 +20,8 @@ Maskenkanten, die neben der Person lagen. Drei Stufen, alle auf der weichen remb
 Die Striche kommen aus `freistellerpinsel.js` als `[{art, breite, punkte: [[x, y], …]}]`.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Bildmodellfreistellerkorrektur']
 
@@ -78,14 +79,14 @@ class Bildmodellfreistellerkorrektur:
         import cv2
 
         h, w = form
-        maske = np.zeros((h, w), dtype=np.uint8)
+        maske = torch.zeros((h, w), dtype=torch.uint8, device='cuda')
         for s in striche:
             if s['art'] != art:
                 continue
             dicke = max(1, int(round(s['breite'] * w)))
-            punkte = np.asarray([[p[0] * (w - 1), p[1] * (h - 1)] for p in s['punkte']], dtype=np.int32)
+            punkte = Torchfeld.feld([[p[0] * (w - 1), p[1] * (h - 1)] for p in s['punkte']], dtype=torch.int32)
             if len(punkte) == 1:
-                cv2.circle(maske, tuple(int(v) for v in punkte[0]), max(1, dicke // 2), 1, -1)
+                cv2.circle(maske, tuple(int(v) for v in Torchfeld.liste(punkte[0])), max(1, dicke // 2), 1, -1)
             else:
                 cv2.polylines(maske, [punkte.reshape(-1, 1, 2)], False, 1, thickness=dicke,
                               lineType=cv2.LINE_AA)
@@ -96,7 +97,7 @@ class Bildmodellfreistellerkorrektur:
         """Die Striche auf die Alphamaske (float 0..1) — `drin` → 1, `draussen` → 0."""
         if not striche:
             return alpha
-        aus = np.asarray(alpha, dtype=np.float32).copy()
+        aus = Torchfeld.kopie(Torchfeld.feld(alpha, dtype=torch.float32))
         drin = cls._strichmaske(aus.shape, striche, 'drin') > 0
         draussen = cls._strichmaske(aus.shape, striche, 'draussen') > 0
         aus[drin] = 1.0
@@ -113,28 +114,28 @@ class Bildmodellfreistellerkorrektur:
         h, w = alpha.shape[:2]
         f = min(1.0, cls.GRABCUT_PX / float(max(h, w)))
         klein = (max(2, int(w * f)), max(2, int(h * f)))
-        bild = cv2.resize(np.asarray(rgb, dtype=np.uint8), klein, interpolation=cv2.INTER_AREA)
-        a = cv2.resize(np.asarray(alpha, dtype=np.float32), klein, interpolation=cv2.INTER_AREA)
-        maske = np.full(a.shape, cv2.GC_PR_BGD, dtype=np.uint8)
+        bild = cv2.resize(Torchfeld.roh(Torchfeld.feld(rgb, dtype=torch.uint8)), klein, interpolation=cv2.INTER_AREA)
+        a = cv2.resize(Torchfeld.roh(Torchfeld.feld(alpha, dtype=torch.float32)), klein, interpolation=cv2.INTER_AREA)
+        maske = Torchfeld.full(a.shape, cv2.GC_PR_BGD, dtype=torch.uint8)
         maske[a >= cls.UNSICHER[0]] = cv2.GC_PR_FGD
         maske[a >= cls.UNSICHER[1]] = cv2.GC_FGD
         maske[a < cls.UNSICHER[0]] = cv2.GC_BGD
         # Ein Band um die Kante bleibt unsicher, sonst hat GrabCut nichts zu entscheiden.
-        kante = cv2.dilate((a >= 0.5).astype(np.uint8), np.ones((9, 9), np.uint8)) \
-            - cv2.erode((a >= 0.5).astype(np.uint8), np.ones((9, 9), np.uint8))
+        kante = cv2.dilate(Torchfeld.roh(Torchfeld.astype(a >= 0.5, torch.uint8)), Torchfeld.roh(torch.ones((9, 9), dtype=torch.uint8, device='cuda'))) \
+            - cv2.erode(Torchfeld.roh(Torchfeld.astype(a >= 0.5, torch.uint8)), Torchfeld.roh(torch.ones((9, 9), dtype=torch.uint8, device='cuda')))
         maske[(kante > 0) & (maske == cv2.GC_FGD)] = cv2.GC_PR_FGD
         maske[(kante > 0) & (maske == cv2.GC_BGD)] = cv2.GC_PR_BGD
         if striche:
             maske[cls._strichmaske(a.shape, striche, 'drin') > 0] = cv2.GC_FGD
             maske[cls._strichmaske(a.shape, striche, 'draussen') > 0] = cv2.GC_BGD
-        hinten = np.zeros((1, 65), np.float64)
-        vorn = np.zeros((1, 65), np.float64)
+        hinten = torch.zeros((1, 65), dtype=torch.float64, device='cuda')
+        vorn = torch.zeros((1, 65), dtype=torch.float64, device='cuda')
         try:
             cv2.grabCut(cv2.cvtColor(bild, cv2.COLOR_RGB2BGR), maske, None, hinten, vorn,
                         cls.GRABCUT_RUNDEN, cv2.GC_INIT_WITH_MASK)
         except cv2.error:
             return alpha      # z. B. alles sicher: nichts zu rechnen
-        neu = ((maske == cv2.GC_FGD) | (maske == cv2.GC_PR_FGD)).astype(np.float32)
+        neu = Torchfeld.astype((maske == cv2.GC_FGD) | (maske == cv2.GC_PR_FGD), torch.float32)
         # GrabCuts Entscheidung ist hart; das Hochrechnen macht die Kante einen Pixel weich,
         # den Rest tut der Regler „Weich" danach.
         return cv2.resize(neu, (w, h), interpolation=cv2.INTER_LINEAR)
@@ -146,22 +147,22 @@ class Bildmodellfreistellerkorrektur:
         """Maske (uint8 0/255) aus der Hintergrundfarbe der Ecken — für Renderings auf Weiß."""
         import cv2
 
-        bild = np.asarray(rgb, dtype=np.float32)
+        bild = Torchfeld.feld(rgb, dtype=torch.float32)
         h, w = bild.shape[:2]
         r = max(2, min(h, w) // 40)
-        ecken = np.concatenate([bild[:r, :r].reshape(-1, 3), bild[:r, -r:].reshape(-1, 3),
+        ecken = Torchfeld.cat([bild[:r, :r].reshape(-1, 3), bild[:r, -r:].reshape(-1, 3),
                                 bild[-r:, :r].reshape(-1, 3), bild[-r:, -r:].reshape(-1, 3)])
-        farbe = np.median(ecken, axis=0)
-        abstand = np.linalg.norm(bild - farbe[None, None, :], axis=2)
-        hinter = (abstand <= cls.KEY_TOLERANZ).astype(np.uint8)
+        farbe = Torchfeld.median(ecken, axis=0)
+        abstand = Torchfeld.linalg_norm(bild - farbe[None, None, :], dim=2)
+        hinter = Torchfeld.astype(abstand <= cls.KEY_TOLERANZ, torch.uint8)
         # Nur der Hintergrund, der mit dem Rand verbunden ist — Weiß IM Motiv bleibt Motiv.
-        markiert = np.zeros((h + 2, w + 2), np.uint8)
-        verbunden = np.zeros_like(hinter)
+        markiert = torch.zeros((h + 2, w + 2), dtype=torch.uint8, device='cuda')
+        verbunden = torch.zeros_like(hinter)
         for y, x in ((0, 0), (0, w - 1), (h - 1, 0), (h - 1, w - 1), (0, w // 2), (h - 1, w // 2),
                      (h // 2, 0), (h // 2, w - 1)):
             if hinter[y, x] and not verbunden[y, x]:
-                flut = hinter.copy()
+                flut = Torchfeld.kopie(hinter)
                 cv2.floodFill(flut, markiert, (x, y), 2)
-                verbunden |= (flut == 2).astype(np.uint8)
+                verbunden |= Torchfeld.astype(flut == 2, torch.uint8)
                 markiert[:] = 0
-        return ((1 - verbunden) * 255).astype(np.uint8)
+        return Torchfeld.astype((1 - verbunden) * 255, torch.uint8)

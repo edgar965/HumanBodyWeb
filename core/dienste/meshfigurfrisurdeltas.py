@@ -13,7 +13,8 @@ von `delta_n`. Gleiche Zahlen wie die Differenz zweier voller Rechnungen bis auf
 Nicht auf diesem Weg (→ `None`, der Aufrufer rechnet wie bisher): ein Prop (`lage`), Passform-Kanäle im Zusatz, ein Kanal mit nicht streng aufsteigenden Punktnummern, ein Kanal, den auch der Körper stellt.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurfrisurdeltas']
 
@@ -52,11 +53,11 @@ class Meshfigurfrisurdeltas:
         if matrizen.leer or haut is None:
             return None
         karte = matrizen.matrizen()
-        lin = np.zeros((len(haut.knochen), 3, 3))
+        lin = torch.zeros((len(haut.knochen), 3, 3), dtype=torch.float64, device='cuda')
         for i, name in enumerate(haut.knochen):
             m = karte.get(name)
-            lin[i] = np.eye(3) if m is None else m[:3, :3]
-        return lin, np.asarray(haut.index, dtype=np.int64), np.asarray(haut.gewicht, dtype=np.float64)
+            lin[i] = torch.eye(3, dtype=torch.float64, device='cuda') if m is None else m[:3, :3]
+        return lin, Torchfeld.feld(haut.index, dtype=torch.int64), Torchfeld.feld(haut.gewicht, dtype=torch.float64)
 
     # ------------------------------------------------------------------- Rechnen
 
@@ -67,18 +68,18 @@ class Meshfigurfrisurdeltas:
         stuecke = []
         for (folger, _lage), haeutung in zip(self.teile, self.haeutung, strict=True):
             anzahl = len(folger.punkte)
-            aus = np.zeros((anzahl, 3), dtype=np.float64)
+            aus = torch.zeros((anzahl, 3), dtype=torch.float64, device='cuda')
             if regler in folger.morphe.deltas:
                 if regler in self.formung.morphwerte():
                     return None
                 nummern, deltas = folger.morphe.deltas[regler]
                 if len(nummern) > 1 and not bool((nummern[1:] > nummern[:-1]).all()):
                     return None
-                gueltig = int(np.searchsorted(nummern, anzahl))
-                zeilen = np.asarray(nummern[:gueltig], dtype=np.int64)
-                aus[zeilen] = self._haeuten(np.asarray(deltas[:gueltig], dtype=np.float64) * (1.0 - self.werte.get(regler, 0.0)), zeilen, haeutung)
+                gueltig = int(Torchfeld.searchsorted(nummern, anzahl))
+                zeilen = Torchfeld.feld(nummern[:gueltig], dtype=torch.int64)
+                aus[zeilen] = self._haeuten(Torchfeld.feld(deltas[:gueltig], dtype=torch.float64) * (1.0 - self.werte.get(regler, 0.0)), zeilen, haeutung)
             stuecke.append(aus)
-        return np.vstack(stuecke)
+        return Torchfeld.vstack(stuecke)
 
     @staticmethod
     def _haeuten(delta, zeilen, haeutung):
@@ -87,11 +88,11 @@ class Meshfigurfrisurdeltas:
             return delta
         lin, index, gewicht = haeutung
         innen = zeilen < len(index)
-        aus = delta.copy()
+        aus = Torchfeld.kopie(delta)
         if innen.any():
             r, d = zeilen[innen], delta[innen]
-            summe = np.zeros_like(d)
+            summe = torch.zeros_like(d)
             for k in range(index.shape[1]):
-                summe += gewicht[r, k:k + 1] * np.einsum('nij,nj->ni', lin[index[r, k]], d)
+                summe += gewicht[r, k:k + 1] * Torchfeld.einsum('nij,nj->ni', lin[index[r, k]], d)
             aus[innen] = summe
         return aus

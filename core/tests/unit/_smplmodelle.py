@@ -11,6 +11,10 @@ wenn die Dateien fehlen — ein fehlender Datensatz soll nicht grün sein.
 import os
 
 from django.conf import settings
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class Smplmodelle:
@@ -23,7 +27,7 @@ class Smplmodelle:
         super().setUpClass()
         cls.modelle = str(settings.SMPL_MODELS_DIR)
         cls.vorhanden = all(
-            os.path.isfile(os.path.join(cls.modelle, 'SMPL_%s.npz' % g.upper())) for g in cls.GESCHLECHTER
+            Npztorch.da(os.path.join(cls.modelle, 'SMPL_%s.npz' % g.upper())) for g in cls.GESCHLECHTER
         )
 
     def modell(self, geschlecht):

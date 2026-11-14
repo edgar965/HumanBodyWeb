@@ -13,7 +13,9 @@ Ein Versuch mit Nachschärfen (Unsharp-Maske) machte die Flecken zu Krusten — 
 (Mittel und große Schattierung) bleibt, die Verteilung der Haare folgt nicht dem Foto. Sobald die Iterationen die Haut aus den Fotos gebaut haben (`hautfoto_<k>.jpg`), bleibt die Kachel, wie sie ist.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 __all__ = ['Standhautdetail']
 
@@ -36,12 +38,12 @@ class Standhautdetail:
 
     @staticmethod
     def _linear(c):
-        return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+        return torch.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
     @staticmethod
     def _srgb(c):
-        c = np.clip(c, 0.0, 1.0)
-        return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+        c = Torchfeld.clip(c, 0.0, 1.0)
+        return torch.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
 
     @classmethod
     def gilt(cls, kachel, pfad):
@@ -57,35 +59,35 @@ class Standhautdetail:
         hoehe, breite = w.shape
         schritt = max(1, int(sigma // 6))
         klein = (max(1, breite // schritt), max(1, hoehe // schritt))
-        zaehler = cv2.resize((lin * w[..., None]).astype(np.float32), klein, interpolation=cv2.INTER_AREA)
-        nenner = cv2.resize(w.astype(np.float32), klein, interpolation=cv2.INTER_AREA)
+        zaehler = cv2.resize(Torchfeld.roh(Torchfeld.astype(lin * w[..., None], torch.float32)), klein, interpolation=cv2.INTER_AREA)
+        nenner = cv2.resize(Torchfeld.roh(Torchfeld.astype(w, torch.float32)), klein, interpolation=cv2.INTER_AREA)
         s = sigma / schritt
         zaehler = cv2.GaussianBlur(zaehler, (0, 0), s)
         nenner = cv2.GaussianBlur(nenner, (0, 0), s)
-        aus = zaehler / np.maximum(nenner, 1e-6)[..., None]
-        return cv2.resize(aus, (breite, hoehe), interpolation=cv2.INTER_LINEAR).astype(np.float64)
+        aus = zaehler / Torchfeld.maximum(nenner, 1e-6)[..., None]
+        return Torchfeld.astype(cv2.resize(aus, (breite, hoehe), interpolation=cv2.INTER_LINEAR), torch.float64)
 
     @classmethod
     def anwenden(cls, bild):
         """PIL-Bild (sRGB) → PIL-Bild mit gedämpften Flecken und feiner Zeichnung; außerhalb der Inseln (Weiß) bleibt es, wie es ist."""
         from PIL import Image
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        arr = np.asarray(bild.convert('RGB'), dtype=np.float64) / 255.0
-        insel = ~np.all(arr > 0.985, axis=2)
+        arr = Torchfeld.feld(bild.convert('RGB'), dtype=torch.float64) / 255.0
+        insel = ~Torchfeld.all(arr > 0.985, dim=2)
         belegt = ndimage.binary_erosion(insel, iterations=6)
         lin = cls._linear(arr)
-        w = insel.astype(np.float64)
+        w = Torchfeld.astype(insel, torch.float64)
         grund = cls._tief(lin, w, cls.GRUND_PX)
         mittel = cls._tief(lin, w, cls.FLECK_PX)
         gedaempft = grund + (1.0 - cls.DAEMPFUNG) * (mittel - grund) + (lin - mittel)
-        zufall = np.random.default_rng(cls.SAMEN)
+        zufall = Zufallsstrom.default_rng(cls.SAMEN)
         rauschen = ndimage.gaussian_filter(zufall.random(w.shape), 0.8)
-        rauschen = (rauschen - rauschen.mean()) / max(float(rauschen.std()), 1e-9)
-        haar = 1.0 - cls.PUNKT_DUNKEL * np.clip(rauschen - cls.PUNKT_AB, 0.0, 1.0)
+        rauschen = (rauschen - rauschen.mean()) / max(float(rauschen.std(correction=0)), 1e-9)
+        haar = 1.0 - cls.PUNKT_DUNKEL * Torchfeld.clip(rauschen - cls.PUNKT_AB, 0.0, 1.0)
         poren = 1.0 + cls.POREN * 3.0 * ndimage.gaussian_filter(zufall.standard_normal(w.shape), 1.2)
-        neu = cls._srgb(np.clip(gedaempft, 0.0, None) * (haar * poren)[..., None])
-        return Image.fromarray(np.rint(np.where(belegt[..., None], neu, arr) * 255.0).astype(np.uint8), 'RGB')
+        neu = cls._srgb(Torchfeld.clip(gedaempft, 0.0, None) * (haar * poren)[..., None])
+        return Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.round(torch.where(belegt[..., None], neu, arr) * 255.0), torch.uint8)), 'RGB')
 
     @classmethod
     def karte(cls, glb, albedo):

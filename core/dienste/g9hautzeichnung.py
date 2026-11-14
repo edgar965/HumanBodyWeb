@@ -18,7 +18,7 @@ import json
 import logging
 import time
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .g9hautfalten import G9hautfalten
 
@@ -60,8 +60,8 @@ class G9hautzeichnung(G9hautfalten):
             gueltig, hoehe, kx, ky = self.hoehe_und_mass(traeger, abtastung, nummer, quelle)
             normale, steigung = self.normalen(hoehe, kx, ky)
             halb.append(normale[..., :2])
-            p99[name] = float(np.percentile(steigung[drin], 99)) if drin.any() else 0.0
-        bild = np.dstack(halb)
+            p99[name] = float(Torchfeld.percentile(steigung[drin], 99)) if drin.any() else 0.0
+        bild = Torchfeld.dstack(halb)
         bild[~gueltig] = 128
         return bild, p99
 

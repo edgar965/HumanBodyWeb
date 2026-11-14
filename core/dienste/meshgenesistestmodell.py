@@ -126,7 +126,9 @@ class Meshgenesistestmodell:
         """Das Modell als Wörterbuch (ohne Platte) — `form` = `modell.json` der vorhergesagten Figur, `kleidung` = `{stück: {farbe, …}}`,
         `fototextur` = `{kachel: Adresse}` bei „Haut b“ (die Kacheln des Mesh-3D-Laufs, wie ein Modell aus „Mesh to 3D“ sie trägt — `Meshfigurspeichern.modelldaten`)."""
         from .blendimportmodell import Blendimportmodell
-        eintraege = {k: {'variante': '', 'stil': '', 'stile': {}, 'regler': {}, 'farbe': w.get('farbe'), 'gruppenfarben': {}, 'griff': Blendimportmodell.griff(k), 'knochen': False}
+        # 'regler' (12.11.2026): die Regler des Stücks (Weg z, „Genesis zuerst“: Passform aus der Messung am Netzstück, `Garderoberegler`), sonst leer
+        eintraege = {k: {'variante': '', 'stil': '', 'stile': {}, 'regler': dict(w.get('regler') or {}), 'farbe': w.get('farbe'), 'gruppenfarben': {}, 'griff': Blendimportmodell.griff(k),
+                         'knochen': False}
                      for k, w in kleidung.items()}
         figur = form.get('figur') or {}
         aus = {'name': name, 'quelle': 'genesis9',
@@ -157,10 +159,12 @@ class Meshgenesistestmodell:
                     bericht.append({'id': 'haut', 'wahl': wahl, 'kacheln': sorted(fototextur or {})})
                     continue
                 cls._schreiben(ordner, meldung='%s: %s' % (st['name'], {'a': 'Katalogstück', 'b': 'Stück aus dem Netz', 'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt',
-                                                                         'f': 'KI: Schnitt aus der Fläche', 'g': 'KI: Schicht', 'h': 'KI: Frisur der Garderobe', 'aus': 'aus'}.get(wahl, wahl)))
-                if wahl in ('a', 'h'):
-                    # a: Katalogstück; h (KI, 20.10.2026): die Frisur der Garderobe nach den Haarmaßen der KI — beides ein Stück der Garderobe mit Umfärbung
-                    kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe')}
+                                                                         'f': 'KI: Schnitt aus der Fläche', 'g': 'KI: Schicht', 'h': 'KI: Frisur der Garderobe',
+                                                                         'z': 'Garderobe (Genesis zuerst)', 'aus': 'aus'}.get(wahl, wahl)))
+                if wahl in ('a', 'h', 'z'):
+                    # a: Katalogstück; h (KI, 20.10.2026): die Frisur der Garderobe nach den Haarmaßen der KI; z (12.11.2026, „Genesis zuerst“): Stück der Garderobe mit seinen
+                    # Passform-Reglern (`regler_stueck`) — alle drei ein Stück der Garderobe mit Umfärbung
+                    kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe'), 'regler': st[wahl].get('regler_stueck') or {}}
                     bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': st[wahl]['kennung']})
                 elif wahl in Meshgenesistestkleidspeichern.EIGENE:
                     # b: Objekt des Mesh-3D-Laufs; k, s, f, g (KI): geschnitten, GarmentCode-Schnitt, Schnitt aus der Fläche, Schicht — alle liegen als Anzeigenetz auf der Figur und werden eigene

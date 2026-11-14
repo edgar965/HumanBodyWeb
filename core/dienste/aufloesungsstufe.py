@@ -23,7 +23,8 @@ Zustand im Kreislauf: `aufloesung` (Breite der Stufe), `aufloesung_seit` (erste 
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
 
 from .iterationsbild import Iterationsbild
@@ -120,10 +121,10 @@ class Aufloesungsstufe:
         vorbereitet = self.ablage.unter(Engine2d3dKleiderablage.VORBEREITET) / (datei.rsplit('.', 1)[0] + '.png')
         if vorbereitet.is_file():
             with Image.open(vorbereitet) as bild:
-                maske = np.asarray(bild.convert('RGBA'))[..., 3] > 127
+                maske = Torchfeld.feld(bild.convert('RGBA'))[..., 3] > 127
         else:
             with Image.open(self.ablage.unter(Engine2d3dKleiderablage.EINGANG) / datei) as bild:
-                rgb = np.asarray(bild.convert('RGB'), dtype=np.int32)
+                rgb = Torchfeld.feld(bild.convert('RGB'), dtype=torch.int32)
             maske = (765 - rgb.sum(axis=2)) > Iterationsbild.WEISS_SCHWELLE
         abbildung = Iterationsbild.abbildung(maske)
         return (abbildung[2] - abbildung[1]) if abbildung else 0

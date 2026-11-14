@@ -14,6 +14,8 @@ Ablage `_test/<kennung>/kleider_<g>/ki.json` (eine Zeile je Stück, `quelle: 'ki
 `ki.json` neu, ohne sie zu kennen. Grundjob-Proben haben dieselbe Ablage unter `<Job>/kleider_ki/<nnnn>/kleider/` (`Meshgenesisprobenkleider`).
 """
 
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 import json
 import logging
 
@@ -27,7 +29,10 @@ class Meshgenesistestkikleider:
     #: (`GarmentCode/flaechenlauf.py`, `ProjektTemp/_wegwerf/meshgenesis_flaeche_lauf.py`); Vorgabe vor s, wo das Stück einen Schnitt hat (`Kikleiderliste.vorgabe`)
     #: g (21.10.2026, Edgar: „das muss GENAU so ausschauen wie am Ziel“): der Schichtkopf gibt die Stücke selbst aus — Deckung und Abstand je Punkt des Genesis-Käfigs, gegen die Zielstücke trainiert
     #: (`ProjektTemp/_wegwerf/meshgenesis_schicht_*.py`, Konzept `Docu/konzepte/2026-10-21_meshgenesis-kleider-wie-das-ziel-konzept.md`); Vorgabe vor den anderen Wegen seiner Art (`Kikleiderliste.G_VORN`)
-    KI = ('k', 's', 'h', 'f', 'g')
+    #: z (12.11.2026, „Genesis zuerst“, Edgar: „mach den Umbau“, Konzept `Docu/konzepte/2026-11-12_genesis-zuerst-konzept.md`): ein Stück der Garderobe, gewählt nach der Messung am Stück des
+    #: Kostüm-Wegs und mit der Passform angepasst (`meshgenesis/meshgenesis_garderobe_lauf.py`). In solchen Tests ist z die Vorgabe (`Kikleiderliste.garderobe_entscheidet`) — Edgar hat am
+    #: 12.11.2026 „Garderobe als Vorgabe“ bejaht (Konzept Abschnitt 9, Frage 1); z steht darum nicht in `AUS_DER_BIBLIOTHEK`.
+    KI = ('k', 's', 'h', 'f', 'g', 'z')
     VERGLEICH = ('d', 'n')
     WEGE = KI + VERGLEICH
     #: Wege, deren Netz aus der Bibliothek kommt (h: ein fertiges Garderobe-Stück, die KI wählt nur nach ihren Haarmaßen) — die Vorgabe „KI“ nimmt sie nie von selbst, nur auf eigene Wahl
@@ -36,7 +41,8 @@ class Meshgenesistestkikleider:
     TEXTE = {'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt (GarmentCode)', 'h': 'Bibliothek: Frisur der Garderobe nach den Haarmaßen der KI',
              'd': 'Vergleich: Schnittdeutung (Messung, keine KI)', 'n': 'Vergleich: NeuralTailor (fremde KI)',
              'f': 'KI: Schnitt aus der Fläche (Nähte vom Körper, flachgelegt, GarmentCode näht und drapiert)',
-             'g': 'KI: Schicht auf dem Körper (Form des Stücks aus dem Schichtkopf, gegen die Zielstücke trainiert)'}
+             'g': 'KI: Schicht auf dem Körper (Form des Stücks aus dem Schichtkopf, gegen die Zielstücke trainiert)',
+             'z': 'Garderobe: Stück der Bibliothek, nach den bedeckten Körperstellen gewählt, Länge und Weite aus dem Netz (Genesis zuerst)'}
 
     @staticmethod
     def lesen(ordner):
@@ -72,7 +78,7 @@ class Meshgenesistestkikleider:
                     eintrag[weg] = cls._eintrag(ordner / weg / st['id'] / 'eintrag.json')
             for weg in cls.WEGE:
                 e = eintrag.get(weg)
-                if isinstance(e, dict) and not e.get('fehler') and (ordner / weg / st['id'] / 'anzeige' / 'netz.npz').is_file():
+                if isinstance(e, dict) and not e.get('fehler') and Npztorch.da(ordner / weg / st['id'] / 'anzeige' / 'netz.npz'):
                     eintrag[weg] = dict(e, netz=adresse.format(weg=weg, id=st['id']))
                 if isinstance(eintrag.get(weg), dict) and anatomie is not None:
                     eintrag[weg] = cls._anatomie_tragen(eintrag[weg], anatomie, st.get('art'))
@@ -95,9 +101,9 @@ class Meshgenesistestkikleider:
     @classmethod
     def _anatomie(cls, ordner, geschlecht):
         """bool je Dreieck der Figur: die Anatomie im Anzeigenetz neben der Kleiderliste (`<Test>/form_<g>/`, bei Foto-Genesis `<Job>/figur/form_<g>/`) — None ohne Netz."""
-        import numpy as np
+        import torch
         try:
-            with np.load(ordner.parent / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz') as z:
+            with Npztorch.lesen(ordner.parent / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz') as z:
                 return z['etikett'] == cls._regel()[0].ETIKETT
         except (OSError, KeyError, ValueError):
             return None

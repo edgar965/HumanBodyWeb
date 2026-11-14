@@ -25,7 +25,8 @@ import hashlib
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..atomic_write import AtomarSchreiber
 
@@ -53,19 +54,19 @@ class Gesichtsvorrat:
         koerper = next((t for t in teile if t.get('art') == 'koerper'), teile[0] if teile else None)
         if koerper is None:
             return None
-        k = np.asarray(koerper['punkte'], dtype=np.float64)
+        k = Torchfeld.feld(koerper['punkte'], dtype=torch.float64)
         scheitel = float(k[:, 1].max())
         # Relativ zum Schwerpunkt des Kopfes: eine Verschiebung der ganzen Figur (Boden, Höhe) misst nicht neu.
         mitte = k[k[:, 1] >= scheitel - cls.KOPF_M].mean(axis=0)
         h = hashlib.sha1(('%r|%r|%r' % (round(float(winkel), 3), tuple(groesse), fassung)).encode('utf-8'))
         for t in teile:
-            p = np.asarray(t['punkte'], dtype=np.float64)
+            p = Torchfeld.feld(t['punkte'], dtype=torch.float64)
             p = p[p[:, 1] >= scheitel - cls.KOPF_M] - mitte
             if not len(p):
                 continue
             h.update(str(t.get('sorte') or t.get('art')).encode('utf-8'))
             h.update(repr(t.get('farbe')).encode('utf-8'))
-            h.update(np.round(p / cls.RASTER_M).astype(np.int64).tobytes())
+            h.update(Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.round(p / cls.RASTER_M), torch.int64)))
         return h.hexdigest()
 
     def _lesen(self):

@@ -6,7 +6,9 @@ bei 299 Zeilen).
 Eine Instanz je Lauf: Sichtkörper und Körperpunkte werden zwischengespeichert (je Modellhöhe auf den cm).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Begutachtungswerkzeug']
 
@@ -58,10 +60,10 @@ class Begutachtungswerkzeug:
         """True, wenn das Netz der Fotos einen Bart zeigt (Schritt „haar", `arbeit/haar_maske.npz`) — nur auf der
         männlichen Grundfigur: der Kinnbeweis der Haarmaske (`Haarmaske.KINN_ANTEIL`) hat keine Gegenprobe ohne Bart."""
         pfad = self.ablage.arbeit('haar_maske.npz')
-        if ((self.job.optionen or {}).get('figur') or {}).get('basis') != 'masculine' or not pfad.is_file():
+        if ((self.job.optionen or {}).get('figur') or {}).get('basis') != 'masculine' or not Npztorch.da(pfad):
             return False
-        with np.load(pfad) as d:
-            return 'bart' in d.files and int(np.asarray(d['bart'], dtype=bool).sum()) >= self.BART_MIN
+        with Npztorch.lesen(pfad) as d:
+            return 'bart' in d.files and int(Torchfeld.feld(d['bart'], dtype=torch.bool).sum()) >= self.BART_MIN
 
     def haarfarbe(self):
         """Mittlere Farbe (sRGB 0…1) der Haarflächen des Netzes (`haar_maske.haar` × Netztextur) — der Startwert der
@@ -69,15 +71,15 @@ class Begutachtungswerkzeug:
         if getattr(self, '_haarfarbe', False) is False:
             self._haarfarbe = None
             pfad = self.ablage.arbeit('haar_maske.npz')
-            if pfad.is_file():
+            if Npztorch.da(pfad):
                 from .meshfigurkleidung import Meshfigurkleidung
                 scan, _ = Meshfigurkleidung(type('Lauf', (), {'job': self.job, 'ablage': self.ablage})()).koerpernetz()
-                with np.load(pfad) as d:
-                    haar = np.asarray(d['haar'], dtype=bool)
+                with Npztorch.lesen(pfad) as d:
+                    haar = Torchfeld.feld(d['haar'], dtype=torch.bool)
                 if scan.textur is not None and len(haar) == len(scan.flaechen) and haar.any():
-                    index = np.flatnonzero(haar)
-                    rgb = scan.farben(index, np.full((len(index), 3), 1.0 / 3.0)).astype(np.float64) / 255.0
-                    self._haarfarbe = [round(float(c), 4) for c in np.median(rgb, axis=0)]
+                    index = torch.flatten(haar).nonzero()[:, 0]
+                    rgb = Torchfeld.astype(scan.farben(index, Torchfeld.full((len(index), 3), 1.0 / 3.0)), torch.float64) / 255.0
+                    self._haarfarbe = [round(float(c), 4) for c in Torchfeld.liste(Torchfeld.median(rgb, axis=0))]
         return self._haarfarbe
 
     def fotostuecke(self):
@@ -172,13 +174,13 @@ class Begutachtungswerkzeug:
         if not beste or not z.get('modell'):
             return None
         pfad = self.ablage.iterationen('runde_%03d_modell.glb' % beste)
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             modell = ModellMitKleidern.aus(z['modell'])
             from .iterationsoptionen import Iterationsoptionen
             bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.kacheln(), ablage=self.ablage,
                                    haarumbau=Iterationsoptionen.haarumbau(self.job))
             bau.glb(Haarzonen.anwenden(bau.teile(modell), modell.farben), pfad)
-        shutil.copyfile(pfad, self.ablage.ergebnis(name))
+        Npztorch.kopieren(pfad, self.ablage.ergebnis(name))
         return pfad
 
     def sichtkoerper(self, referenzen, z):
@@ -190,7 +192,7 @@ class Begutachtungswerkzeug:
         if not referenzen:
             return None
         if self._koerper_punkte is None:
-            self._koerper_punkte = np.asarray(Kleidermodellbau(self.job.stellung()).koerper()['punkte'])
+            self._koerper_punkte = Torchfeld.feld(Kleidermodellbau(self.job.stellung()).koerper()['punkte'])
         hoehe = round(float(z.get('modell_hoehe') or self._koerper_punkte[:, 1].max()), 2)
         if self._sicht is not None and self._sicht[0] == hoehe:
             return self._sicht[1]

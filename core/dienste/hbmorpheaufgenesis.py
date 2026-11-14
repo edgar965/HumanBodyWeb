@@ -67,7 +67,8 @@ import logging
 import os
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.gelenkversatz import G9gelenkversatz
 from Genesis9.hbmorphe import G9hbmorphe
 
@@ -112,8 +113,8 @@ class Hbmorpheaufgenesis(Hbmorphuebertragung):
                                      Charakterdaten.voreinstellungen())
             zustand.set_body_type(self.BAUART or GarmentcodeDienst.BAUART.get(
                 self.GESCHLECHT, 'Female_Caucasian'))
-            self._basis = Hbtraeger.three(np.array(zustand.compute(), dtype=np.float64))
-            abweichung = float(np.abs(self._basis - self.humanbody()['punkte']).max())
+            self._basis = Hbtraeger.three(Torchfeld.feld(zustand.compute(), dtype=torch.float64, copy=True))
+            abweichung = float(Torchfeld.abs(self._basis - self.humanbody()['punkte']).max())
             if abweichung > 1e-6:
                 raise ValueError('HumanBody-Grundfigur der Paarung und des Rechners '
                                  'weichen ab (%.4f m)' % abweichung)
@@ -130,7 +131,7 @@ class Hbmorpheaufgenesis(Hbmorphuebertragung):
         zustand = self.zustand()
         zustand.set_morph(name, float(wert))
         try:
-            punkte = Hbtraeger.three(np.array(zustand.compute(), dtype=np.float64))
+            punkte = Hbtraeger.three(Torchfeld.feld(zustand.compute(), dtype=torch.float64, copy=True))
         finally:
             zustand.set_morph(name, 0.0)
         return punkte - self._basis
@@ -157,7 +158,7 @@ class Hbmorpheaufgenesis(Hbmorphuebertragung):
                 modus = 'normal'
             else:
                 plus, minus, modus = self.uebertragen_wirksam(hb_plus, hb_minus)
-            nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
+            nummern = torch.nonzero((Torchfeld.amax(Torchfeld.abs(plus), dim=1) > 0) | (Torchfeld.amax(Torchfeld.abs(minus), dim=1) > 0), as_tuple=True)[0]
             staerke_mm = max(self.staerke(plus), self.staerke(minus)) * 1000.0
             if not len(nummern) or staerke_mm < self.MINDEST_MM:
                 logger.info('HB-Morphs: %s kommt auf dem Kaefig nicht an (%.3f mm von %.2f mm der Quelle) — uebergangen', name, staerke_mm,

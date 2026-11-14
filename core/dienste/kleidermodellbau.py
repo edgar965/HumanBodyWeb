@@ -20,7 +20,9 @@ Läuft im Arbeitsprozess (python14 mit Django), nie im Server: Die Stufe wird hi
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.http import HttpResponse
 
 from .koerperanhaenge import Koerperanhaenge
@@ -55,7 +57,7 @@ class Kleidermodellbau:
         self.formung = G9formung.aus_abfrage(self.stellung, self.drehung)
         self.boden = float(self.formung.boden())
         self._stufe = G9basisnetz.netzstufe(0)
-        self._ursprung = np.asarray(self._stufe.ursprung, dtype=np.int64)
+        self._ursprung = Torchfeld.feld(self._stufe.ursprung, dtype=torch.int64)
         self._haut = G9haut.holen().fuer(self._ursprung)
         self._koerper = None
         #: `{kachel: Pfad}` der gebackenen Haut (`Koerpertextur.kacheln`) — ohne: einfarbig `HAUT`.
@@ -69,7 +71,7 @@ class Kleidermodellbau:
     def koerper(self):
         if self._koerper is None:
             from .koerpertextur import Koerpertextur
-            punkte = np.asarray(self.formung.punkte(), dtype=np.float64) - np.array([0.0, self.boden, 0.0])
+            punkte = Torchfeld.feld(self.formung.punkte(), dtype=torch.float64) - Torchfeld.feld([0.0, self.boden, 0.0], copy=True)
             self._koerper = Koerpertextur.teil(punkte[self._ursprung], self._stufe, self._haut, self.HAUT, self.kacheln)
         return self._koerper
 
@@ -78,8 +80,8 @@ class Kleidermodellbau:
         → Dateiname. Der Anker, mit dem der Form-Pinsel Striche auf dem Modell der Runde in die Lage der Grundfigur
         überträgt (`G9formpinsel.uebertragen`, `Engine2d3dKleiderformendpunkte`)."""
         name = 'runde_%03d_formbezug.npz' % int(runde)
-        kaefig = np.asarray(self.formung.punkte(), dtype=np.float64) - np.array([0.0, self.boden, 0.0])
-        np.savez_compressed(ordner / name, koerper=kaefig.astype(np.float32))
+        kaefig = Torchfeld.feld(self.formung.punkte(), dtype=torch.float64) - Torchfeld.feld([0.0, self.boden, 0.0], copy=True)
+        Npztorch.speichern(ordner / name, koerper=Torchfeld.astype(kaefig, torch.float32), komprimiert=True)
         return name
 
     # --------------------------------------------------------------- Stücke
@@ -89,16 +91,16 @@ class Kleidermodellbau:
         """Ein Netzfeld (oder Liste) zurück zu NumPy."""
         roh = getattr(wert, 'rohdaten', None)
         if roh is not None:
-            return np.frombuffer(roh, dtype=np.dtype(wert.typ))
-        return np.asarray(wert, dtype=typ)
+            return Torchfeld.aus_puffer(roh, wert.typ, len(roh) // Torchfeld.dtype(wert.typ).itemsize)
+        return Torchfeld.feld(wert, dtype=typ)
 
     @classmethod
     def _haut_aus(cls, teil):
         h = teil.get('hautgewichte')
         if not h or not h.get('knochen'):
             return None
-        index = cls._feld(h['skin_indices']).reshape(-1, 4).astype(np.int64)
-        gewicht = cls._feld(h['skin_weights']).reshape(-1, 4).astype(np.float64)
+        index = Torchfeld.astype(cls._feld(h['skin_indices']).reshape(-1, 4), torch.int64)
+        gewicht = Torchfeld.astype(cls._feld(h['skin_weights']).reshape(-1, 4), torch.float64)
         if h.get('kodierung') == 'u16u8':
             gewicht = gewicht / 255.0
         return {'knochen': list(h['knochen']), 'index': index, 'gewicht': gewicht}
@@ -108,11 +110,11 @@ class Kleidermodellbau:
         farben = []
         for netz in netze:
             try:
-                farben.append(np.asarray(Teilevorrat.farben(netz), dtype=np.float64).mean(axis=0))
+                farben.append(Torchfeld.feld(Teilevorrat.farben(netz), dtype=torch.float64).mean(axis=0))
             except (OSError, ValueError, KeyError, TypeError) as fehler:   # ohne Textur: Haut
                 logger.debug('Kleidermodellbau: Farbe nicht lesbar (%s)', fehler)
-        grund = np.mean(farben, axis=0) if farben else np.asarray(Kleidermodellbau.HAUT)
-        return np.clip(grund * 2.0 * np.asarray(toenung), 0.0, 1.0)
+        grund = Torchfeld.mean(farben, axis=0) if farben else Torchfeld.feld(Kleidermodellbau.HAUT)
+        return Torchfeld.clip(grund * 2.0 * Torchfeld.feld(toenung), 0.0, 1.0)
 
     def _rumpf(self, modell, kennung, werte, rang):
         """Der Rumpf wie vom Browser — die getragenen Stücke AUFGELÖST (das stärkste Stück je Sammeleintrag, die
@@ -187,15 +189,15 @@ class Kleidermodellbau:
     def _teile(self, aus, roh, art, modell):
         if isinstance(aus, HttpResponse):
             raise RuntimeError('%s: %s' % (art, getattr(aus, 'content', b'')[:300].decode('utf-8', 'replace')))
-        toenungen = {sorte: np.asarray(self._hex(modell.stueckfarbe(art, sorte))) for sorte in roh}
-        grund = np.asarray(self._hex(modell.farben[art]))
+        toenungen = {sorte: Torchfeld.feld(self._hex(modell.stueckfarbe(art, sorte))) for sorte in roh}
+        grund = Torchfeld.feld(self._hex(modell.farben[art]))
         farben = {sorte: self._farbe(netze, toenungen[sorte]) for sorte, netze in roh.items()}
         teile = []
         for teil in aus.get('teile') or []:
             if teil is None or not teil.get('vertex_count'):
                 continue
-            punkte = self._feld(teil['vertices'], np.float32).reshape(-1, 3).astype(np.float64)
-            dreiecke = self._feld(teil['faces'], np.uint32).reshape(-1, 3).astype(np.int64)
+            punkte = Torchfeld.astype(self._feld(teil['vertices'], torch.float32).reshape(-1, 3), torch.float64)
+            dreiecke = Torchfeld.astype(self._feld(teil['faces'], torch.uint32).reshape(-1, 3), torch.int64)
             if not len(dreiecke):
                 continue
             sorte = teil.get('sorte') or art
@@ -211,8 +213,8 @@ class Kleidermodellbau:
                 continue
             # UV, Normalen und Materialgruppen (mit ihren Bildern, `G9kleidtexturen` schon eingerechnet) für den Render
             # mit Texturen und die Fotoprojektion (30.09.2026, nachts).
-            uv = self._feld(teil['uvs'], np.float32).reshape(-1, 2).astype(np.float64) if teil.get('uvs') else None
-            normalen = (self._feld(teil['normals'], np.float32).reshape(-1, 3).astype(np.float64)
+            uv = Torchfeld.astype(self._feld(teil['uvs'], torch.float32).reshape(-1, 2), torch.float64) if teil.get('uvs') else None
+            normalen = (Torchfeld.astype(self._feld(teil['normals'], torch.float32).reshape(-1, 3), torch.float64)
                         if teil.get('normals') else None)
             gruppen = [dict(g) for g in (teil.get('gruppen') or []) if isinstance(g, dict)]
             toenung = toenungen.get(sorte, grund)
@@ -226,7 +228,7 @@ class Kleidermodellbau:
     def _band(teil, punkte, dreiecke, haut, modell, sorte):
         from Genesis9.haargenerisch import G9haargenerisch
         from Genesis9.haarprofil import G9haarprofil
-        anteil = Kleidermodellbau._feld(teil['anteil'], np.float32) if teil.get('anteil') is not None else None
+        anteil = Kleidermodellbau._feld(teil['anteil'], torch.float32) if teil.get('anteil') is not None else None
         wurzel, spitze = G9haarprofil.werte(G9haargenerisch.regler_von(sorte, modell.haar))
         neu, dreiecke_neu, quelle = G9haarprofil.bandnetz(punkte, dreiecke, anteil, wurzel, spitze)
         if haut is not None:
@@ -242,14 +244,14 @@ class Kleidermodellbau:
         ketten = [k for k in G9haarzusatz.ketten(G9haarprofil.segmente_aus(dreiecke), len(punkte)) if len(k) >= 2]
         if not ketten:
             return None
-        anteil = (Kleidermodellbau._feld(teil['anteil'], np.float32).astype(np.float64) if teil.get('anteil') is not None
-                  else np.zeros(len(punkte)))
+        anteil = (Torchfeld.astype(Kleidermodellbau._feld(teil['anteil'], torch.float32), torch.float64) if teil.get('anteil') is not None
+                  else torch.zeros(len(punkte), dtype=torch.float64, device='cuda'))
         if len(anteil) != len(punkte):
-            anteil = np.zeros(len(punkte))
+            anteil = torch.zeros(len(punkte), dtype=torch.float64, device='cuda')
         wurzel, spitze = G9haarprofil.werte(G9haargenerisch.regler_von(sorte, modell.haar))
-        return {'punkte': np.asarray(punkte, dtype=np.float32), 'reihe': np.concatenate(ketten), 'haut': haut,
-                'laengen': np.asarray([len(k) for k in ketten], dtype=np.int64),
-                'radius': (0.5e-3 * (wurzel + (spitze - wurzel) * np.clip(anteil, 0.0, 1.0))).astype(np.float32)}
+        return {'punkte': Torchfeld.feld(punkte, dtype=torch.float32), 'reihe': Torchfeld.cat(ketten), 'haut': haut,
+                'laengen': Torchfeld.feld([len(k) for k in ketten], dtype=torch.int64),
+                'radius': Torchfeld.astype(0.5e-3 * (wurzel + (spitze - wurzel) * Torchfeld.clip(anteil, 0.0, 1.0)), torch.float32)}
 
     @staticmethod
     def _textur(gruppen, bilder, toenung):
@@ -262,12 +264,12 @@ class Kleidermodellbau:
             albedo = G9material.datei(b['albedo']) if b.get('albedo') else None
             normalen, alpha = (G9material.datei(b[k]) if b.get(k) else None for k in ('normalen', 'alpha'))
             farbe = b.get('farbe')
-            faktor = np.asarray(farbe[:3], dtype=np.float64) if isinstance(farbe, (list, tuple)) and len(farbe) >= 3 \
-                else np.ones(3)
+            faktor = Torchfeld.feld(farbe[:3], dtype=torch.float64) if isinstance(farbe, (list, tuple)) and len(farbe) >= 3 \
+                else torch.ones(3, dtype=torch.float64, device='cuda')
             aus.append({'ab': int(g['index_ab']) // 3, 'anzahl': int(g['index_anzahl']) // 3, 'albedo': albedo,
                         'normalen': normalen, 'alpha': alpha, 'opazitaet': b.get('opazitaet'), 'normalenachse': int(b.get('normalenachse') or 1),
                         'metall': b.get('metallgewicht'), 'rauheit': b.get('rauheitwert') if b.get('metallgewicht') else None,      # nur Metallstücke (Stiefel): sonst bleibt der Render matt
-                        'faktor': np.clip(faktor * 2.0 * np.asarray(toenung), 0.0, 1.0)})
+                        'faktor': Torchfeld.clip(faktor * 2.0 * Torchfeld.feld(toenung), 0.0, 1.0)})
         return aus if any(t['albedo'] is not None or t['opazitaet'] is not None for t in aus) else []
 
     @classmethod

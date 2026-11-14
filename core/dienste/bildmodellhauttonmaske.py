@@ -24,7 +24,10 @@ Pixel wären Gigabytes), die Maske dann auf Bildgröße gebracht.
 """
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 logger = logging.getLogger('core')
 
@@ -66,7 +69,7 @@ class Bildmodellhauttonmaske:
 
         h, w = maske.shape
         f = min(1.0, cls.RECHEN_PX / float(max(h, w)))     # erodieren auf Rechengröße: 241er-Kern
-        klein = (maske >= 200).astype(np.uint8)              # auf 4000 px kostete 2 s (21.09.2026)
+        klein = Torchfeld.astype(maske >= 200, torch.uint8)              # auf 4000 px kostete 2 s (21.09.2026)
         if f < 1.0:
             klein = cv2.resize(klein, (max(1, int(w * f)), max(1, int(h * f))), interpolation=cv2.INTER_NEAREST)
         r = max(1, int(round(cls.INNEN_RAND * klein.shape[1])))
@@ -81,18 +84,18 @@ class Bildmodellhauttonmaske:
         """(K, 3) float32 Lab-Farben der Proben (k-Means); weniger, wenn es weniger Proben gibt."""
         import cv2
 
-        farben = lab[proben].reshape(-1, 3).astype(np.float32)
+        farben = Torchfeld.astype(lab[proben].reshape(-1, 3), torch.float32)
         if len(farben) > cls.PROBEN_MAX:
-            farben = farben[np.random.default_rng(0).choice(len(farben), cls.PROBEN_MAX, replace=False)]
+            farben = farben[Zufallsstrom.default_rng(0).choice(len(farben), cls.PROBEN_MAX, replace=False)]
         k = int(min(cls.K, max(1, len(farben) // 50)))
         if k <= 1:
             return farben.mean(axis=0, keepdims=True)
         kriterium = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.5)
         _guete, _zuordnung, mitten = cv2.kmeans(farben, k, None, kriterium, 3, cv2.KMEANS_PP_CENTERS)
-        mitten = mitten.astype(np.float32)
+        mitten = Torchfeld.astype(mitten, torch.float32)
         # Haut hat Buntheit; eine graue Palettenfarbe (Schatten, Haar im Rückfall) zöge den grauen
         # Hintergrund mit — Damira 09: Lab (22, 5, 9) hielt den ganzen Grund (gemessen 21.09.2026).
-        bunt = np.hypot(mitten[:, 1], mitten[:, 2]) >= cls.CHROMA_MIN
+        bunt = Torchfeld.hypot(mitten[:, 1], mitten[:, 2]) >= cls.CHROMA_MIN
         return mitten[bunt] if bunt.any() else mitten
 
     @classmethod
@@ -108,19 +111,19 @@ class Bildmodellhauttonmaske:
             groesse = (max(1, int(w * f)), max(1, int(h * f)))
             klein = cv2.resize(rgb, groesse, interpolation=cv2.INTER_AREA)
             # INTER_AREA + „> 0": auch ein 1-px-Strich überlebt das Verkleinern.
-            proben_klein = cv2.resize(proben.astype(np.uint8) * 255, groesse,
+            proben_klein = cv2.resize(Torchfeld.roh(Torchfeld.astype(proben, torch.uint8) * 255), groesse,
                                       interpolation=cv2.INTER_AREA) > 0
-        lab = cv2.cvtColor(np.ascontiguousarray(klein), cv2.COLOR_RGB2LAB).astype(np.float32)
+        lab = Torchfeld.astype(cv2.cvtColor(Torchfeld.roh(Torchfeld.feld(klein)), cv2.COLOR_RGB2LAB), torch.float32)
         lab[..., 0] *= 100.0 / 255.0                        # OpenCV: L 0..255, a/b um 128
         lab[..., 1:] -= 128.0
         mitten = cls.palette(lab, proben_klein) if proben_klein.any() else None
         if mitten is None:
             logger.warning('Hauttonmaske: keine Proben — Maske leer')
             return None
-        abstand = np.full(klein.shape[:2], np.inf, dtype=np.float32)
+        abstand = Torchfeld.full(klein.shape[:2], math.inf, dtype=torch.float32)
         for m in mitten:
-            abstand = np.minimum(abstand, np.sqrt(((lab - m) ** 2).sum(axis=2)))
-        logger.info('Hauttonmaske: %d Palettenfarben, Karte %dx%d', len(mitten), *abstand.shape[::-1])
+            abstand = Torchfeld.minimum(abstand, Torchfeld.sqrt(((lab - m) ** 2).sum(axis=2)))
+        logger.info('Hauttonmaske: %d Palettenfarben, Karte %dx%d', len(mitten), *Torchfeld.umgekehrt(abstand.shape, 0))
         return abstand, f
 
     @classmethod
@@ -129,7 +132,7 @@ class Bildmodellhauttonmaske:
         import cv2
 
         toleranz = float(max(cls.TOLERANZ[0], min(cls.TOLERANZ[1], toleranz)))
-        maske = (abstand <= toleranz).astype(np.uint8) * 255
+        maske = Torchfeld.astype(abstand <= toleranz, torch.uint8) * 255
         # Poren und Härchen schließen, Streupixel öffnen (in Rechenpixeln).
         maske = cv2.morphologyEx(maske, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
         return cv2.morphologyEx(maske, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
@@ -139,13 +142,13 @@ class Bildmodellhauttonmaske:
         """uint8: nur die Flecken von `maske` (> 127), die die Figur (bool, gleiche Form) berühren."""
         import cv2
 
-        anzahl, marken = cv2.connectedComponents((maske > 127).astype(np.uint8), connectivity=8)
+        anzahl, marken = cv2.connectedComponents(Torchfeld.roh(Torchfeld.astype(maske > 127, torch.uint8)), connectivity=8)
         if anzahl <= 1:
-            return np.zeros_like(maske)
-        dran = np.zeros(anzahl, dtype=bool)
-        dran[np.unique(marken[figur])] = True
+            return torch.zeros_like(maske)
+        dran = torch.zeros(anzahl, dtype=torch.bool, device='cuda')
+        dran[Torchfeld.unique(marken[figur])] = True
         dran[0] = False
-        return np.where(dran[marken], 255, 0).astype(np.uint8)
+        return Torchfeld.astype(torch.where(dran[marken], 255, 0), torch.uint8)
 
     @classmethod
     def kern(cls, maske, regler):
@@ -165,11 +168,11 @@ class Bildmodellhauttonmaske:
         h, w = rgb.shape[:2]
         karte = cls.abstandskarte(rgb, proben)
         if karte is None:
-            return np.zeros((h, w), dtype=np.uint8)
+            return torch.zeros((h, w), dtype=torch.uint8, device='cuda')
         abstand, f = karte
         maske = cls.schwellen(abstand, toleranz)
         if figur is not None:
-            klein = figur if f >= 1.0 else cv2.resize(figur, maske.shape[::-1], interpolation=cv2.INTER_AREA)
+            klein = figur if f >= 1.0 else cv2.resize(figur, Torchfeld.roh(Torchfeld.umgekehrt(maske.shape, 0)), interpolation=cv2.INTER_AREA)
             maske = cls.verbunden(maske, klein > 127)
         if f < 1.0:
             maske = cv2.resize(maske, (w, h), interpolation=cv2.INTER_LINEAR)
@@ -182,6 +185,6 @@ class Bildmodellhauttonmaske:
         """uint8 Maske: der Kern (bool, `kern`) ganz, dazu hautfarbene Flecken, die an ihm hängen —
         alles andere ist Hintergrund (Edgar: „NUR außerhalb der Figur … suche nach Pixeln, die
         anders in der Farbe sind")."""
-        figur = kern.astype(np.uint8) * 255
+        figur = Torchfeld.astype(kern, torch.uint8) * 255
         haut = cls.aus(rgb, kern, regler.get('toleranz', cls.VORGABE_TOLERANZ), figur)
-        return np.maximum(figur, haut)
+        return Torchfeld.maximum(figur, haut)

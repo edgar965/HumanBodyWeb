@@ -10,7 +10,9 @@ Dieselbe Wahl wie `Meshgenesisgenesis.probe`: hat die Probe Wege (`Meshgenesiswe
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdaten import Meshgenesisdaten
 from .meshgenesisdatensatz import Meshgenesisdatensatz
@@ -40,15 +42,15 @@ class Meshgenesisprobenhaltung:
         if wege and nr in wege['proben']:
             w = weg if weg in wege['proben'][nr] else wege['standard']
             rig, dreh = wege['proben'][nr][w]
-            return {'rig': np.asarray(rig, dtype=float), 'dreh': np.asarray(dreh, dtype=float), 'weg': w, 'lauf': lauf.name}
+            return {'rig': Torchfeld.feld(rig, dtype=torch.float64), 'dreh': Torchfeld.feld(dreh, dtype=torch.float64), 'weg': w, 'lauf': lauf.name}
         try:
-            with np.load(lauf / 'vorhersagen.npz') as v:
+            with Npztorch.lesen(lauf / 'vorhersagen.npz') as v:
                 for gruppe in Meshgenesisdaten.GRUPPEN:
                     if gruppe + '_dreh' not in v.files or gruppe + '_rig' not in v.files:
                         continue
-                    treffer = np.nonzero(v[gruppe + '_nr'] == nr)[0]
+                    treffer = torch.nonzero(v[gruppe + '_nr'] == nr, as_tuple=True)[0]
                     if len(treffer):
-                        return {'rig': v[gruppe + '_rig'][treffer[0]].astype(float), 'dreh': v[gruppe + '_dreh'][treffer[0]].astype(float), 'weg': None, 'lauf': lauf.name}
+                        return {'rig': Torchfeld.astype(v[gruppe + '_rig'][treffer[0]], torch.float64), 'dreh': Torchfeld.astype(v[gruppe + '_dreh'][treffer[0]], torch.float64), 'weg': None, 'lauf': lauf.name}
         except (OSError, ValueError, KeyError) as fehler:
             logger.warning('Meshgenesisprobenhaltung: %s/vorhersagen.npz nicht lesbar (%s)', lauf, fehler)
         return None

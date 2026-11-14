@@ -21,9 +21,10 @@ import sys
 from contextlib import contextmanager
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
-from scipy.spatial.transform import Rotation
+from KoerperKI_alle.drehung import Drehung as Rotation
 
 from .exportleisterendermodell import Exportleisterendermodell
 
@@ -43,7 +44,7 @@ class Exportleistekollision:
         self.j = modell.j
 
     def _feld(self, i):
-        return np.asarray(Exportleisterendermodell._feld(self.m, i), dtype=np.float64)
+        return Torchfeld.feld(Exportleisterendermodell._feld(self.m, i), dtype=torch.float64)
 
     def _welt(self, belegt):
         """Weltmatrix je Knoten; `belegt` {(knoten, pfad): Wert} ersetzt TRS-Werte (ein Bild der Animation)."""
@@ -56,11 +57,11 @@ class Exportleistekollision:
                 return welt[i]
             k = knoten[i]
             if 'matrix' in k and not any((i, p) in belegt for p in ('translation', 'rotation', 'scale')):
-                lokal = np.asarray(k['matrix'], dtype=np.float64).reshape(4, 4).T
+                lokal = Torchfeld.feld(k['matrix'], dtype=torch.float64).reshape(4, 4).T
             else:
                 t, r, s = (belegt.get((i, p), k.get(p, v)) for p, v in (('translation', (0, 0, 0)), ('rotation', (0, 0, 0, 1)), ('scale', (1, 1, 1))))
-                lokal = np.eye(4)
-                lokal[:3, :3] = Rotation.from_quat(np.asarray(r, dtype=np.float64)).as_matrix() * np.asarray(s, dtype=np.float64)
+                lokal = torch.eye(4, dtype=torch.float64, device='cuda')
+                lokal[:3, :3] = Rotation.from_quat(Torchfeld.feld(r, dtype=torch.float64)).as_matrix() * Torchfeld.feld(s, dtype=torch.float64)
                 lokal[:3, 3] = t
             welt[i] = (rechnen(eltern[i]) @ lokal) if i in eltern else lokal
             return welt[i]
@@ -70,16 +71,16 @@ class Exportleistekollision:
 
     def _kapseln(self, kapseln, kinematik, namen, ibm):
         """Kapseln in der Bindelage der GLB, `nummer` = Platz im Skin (Format von `Koerperkollision`); Rest der Ausrichtung in mm; Haltung der KI im selben Rahmen (Koerperkollision Fassung 3) oder None."""
-        bind = {n: np.linalg.inv(m)[:3, 3] for n, m in zip(namen, ibm, strict=True)}
-        paare = [(np.asarray(k['zentrum'], dtype=np.float64), bind[k['name']]) for k in kinematik if k.get('name') in bind and k.get('zentrum') is not None]
+        bind = {n: Torchfeld.linalg_inv(m)[:3, 3] for n, m in zip(namen, ibm, strict=True)}
+        paare = [(Torchfeld.feld(k['zentrum'], dtype=torch.float64), bind[k['name']]) for k in kinematik if k.get('name') in bind and k.get('zentrum') is not None]
         if len(paare) < 3:
             return [], None, None
         from KoerperKI_alle.kabsch import Kabsch
-        a, b = np.array([p[0] for p in paare]), np.array([p[1] for p in paare])
+        a, b = Torchfeld.feld([p[0] for p in paare], copy=True), Torchfeld.feld([p[1] for p in paare], copy=True)
         _s, r, t = Kabsch.lage(a, b)
-        rest_mm = float(np.median(np.linalg.norm(a @ r.T + t - b, axis=1))) * 1000
+        rest_mm = float(Torchfeld.median(Torchfeld.linalg_norm(a @ r.T + t - b, dim=1))) * 1000
         platz = {n: i for i, n in enumerate(namen)}
-        aus = [{'knochen': k['knochen'], 'nummer': platz[k['knochen']], 'a': (r @ np.asarray(k['a']) + t).tolist(), 'b': (r @ np.asarray(k['b']) + t).tolist(),
+        aus = [{'knochen': k['knochen'], 'nummer': platz[k['knochen']], 'a': (r @ Torchfeld.feld(k['a']) + t).tolist(), 'b': (r @ Torchfeld.feld(k['b']) + t).tolist(),
                 'ra': float(k['ra']), 'rb': float(k['rb'])} for k in (kapseln.get('kapseln') or []) if k.get('knochen') in platz]
         return aus, rest_mm, self._haltung(kapseln.get('haltung'), kinematik, platz, r, t)
 
@@ -89,34 +90,34 @@ class Exportleistekollision:
         if not haltung:
             return None
         n = len(platz)
-        dreh, versch = np.tile(np.eye(3), (n, 1, 1)), np.zeros((n, 3))
+        dreh, versch = torch.tile(torch.eye(3, dtype=torch.float64, device='cuda'), (n, 1, 1)), torch.zeros((n, 3), dtype=torch.float64, device='cuda')
         for j, k in enumerate(kinematik):
             i = platz.get(k.get('name'))
             if i is None or j >= len(haltung['dreh']):
                 continue
-            dreh[i] = r @ np.asarray(haltung['dreh'][j], dtype=np.float64) @ r.T
-            versch[i] = r @ np.asarray(haltung['versch'][j], dtype=np.float64) + t - dreh[i] @ t
+            dreh[i] = r @ Torchfeld.feld(haltung['dreh'][j], dtype=torch.float64) @ r.T
+            versch[i] = r @ Torchfeld.feld(haltung['versch'][j], dtype=torch.float64) + t - dreh[i] @ t
         return {'dreh': dreh.tolist(), 'versch': versch.tolist()}
 
     def _ablegen(self, feld):
-        feld = np.ascontiguousarray(feld)
+        feld = Torchfeld.feld(feld)
         while len(self.m.bin) % 4:
             self.m.bin.append(0)
         start = len(self.m.bin)
-        self.m.bin += feld.tobytes()
+        self.m.bin += Torchfeld.als_bytes(feld)
         self.j.setdefault('bufferViews', []).append({'buffer': 0, 'byteOffset': start, 'byteLength': feld.nbytes})
         return len(self.j['bufferViews']) - 1
 
     def _ziel(self, versatz):
         """Ein dünn besetztes POSITION-Ziel (Accessor-Index); ohne geschobenen Punkt ein Eintrag 0 (glTF verlangt count ≥ 1). `byteOffset` steht ausdrücklich da, obwohl glTF 0 als Vorgabe kennt:
         F3D 3.5 verwirft die ganze Datei ohne ihn („Invalid accessor.sparse.indices.byteOffset value“, gemessen 04.11.2026 an Session3dTools_DanceKurz.glb, `_wegwerf/session3dtools/glb_byteoffset.py`)."""
-        idx = np.nonzero(np.linalg.norm(versatz, axis=1) > 1e-6)[0].astype(np.uint32)
+        idx = Torchfeld.astype(torch.nonzero(Torchfeld.linalg_norm(versatz, dim=1) > 1e-6, as_tuple=True)[0], torch.uint32)
         if not len(idx):
-            idx = np.zeros(1, dtype=np.uint32)
+            idx = torch.zeros(1, dtype=torch.uint32, device='cuda')
         self.j['accessors'].append({'componentType': 5126, 'count': len(versatz), 'type': 'VEC3',
-                                    'min': np.minimum(versatz.min(0), 0).astype(float).tolist(), 'max': np.maximum(versatz.max(0), 0).astype(float).tolist(),
+                                    'min': Torchfeld.astype(Torchfeld.minimum(versatz.amin(0), 0), torch.float64).tolist(), 'max': Torchfeld.astype(Torchfeld.maximum(versatz.amax(0), 0), torch.float64).tolist(),
                                     'sparse': {'count': int(len(idx)), 'indices': {'bufferView': self._ablegen(idx), 'byteOffset': 0, 'componentType': 5125},
-                                               'values': {'bufferView': self._ablegen(versatz[idx].astype(np.float32)), 'byteOffset': 0}}})
+                                               'values': {'bufferView': self._ablegen(Torchfeld.astype(versatz[idx], torch.float32)), 'byteOffset': 0}}})
         return len(self.j['accessors']) - 1
 
     @contextmanager
@@ -169,11 +170,11 @@ class Exportleistekollision:
                 continue
             skin = self.j['skins'][k['skin']]
             namen = [self.j['nodes'][g].get('name', '') for g in skin['joints']]
-            ibm = self._feld(skin['inverseBindMatrices']).reshape(-1, 4, 4).transpose(0, 2, 1)
+            ibm = self._feld(skin['inverseBindMatrices']).reshape(-1, 4, 4).permute(0, 2, 1)
             kap, rest_mm, haltung = self._kapseln(kapseln, kinematik, namen, ibm)
             if not kap:
                 continue
-            gelenke = [np.einsum('gij,gjk->gik', np.array([w[g] for g in skin['joints']]), ibm)[:, :3, :] for w in welten]
+            gelenke = [Torchfeld.einsum('gij,gjk->gik', Torchfeld.feld([w[g] for g in skin['joints']], copy=True), ibm)[:, :3, :] for w in welten]
             stueck = {'name': k['name'], 'rahmen_mm': round(rest_mm, 2), 'kapseln': len(kap), 'geschoben_max': 0, 'versatz_max_mm': 0.0}
             mesh = self.j['meshes'][k['mesh']]
             for prim in mesh['primitives']:
@@ -181,7 +182,7 @@ class Exportleistekollision:
             mesh['weights'] = [0.0] * len(bilder)
             mesh.setdefault('extras', {})['targetNames'] = ['kollision_%04d' % f for f in bilder]
             t = self.m._anhaengen(zeiten[bilder], 'SCALAR', minmax=True)
-            anim['samplers'].append({'input': t, 'output': self.m._anhaengen(np.eye(len(bilder)).reshape(-1), 'SCALAR'), 'interpolation': 'LINEAR'})
+            anim['samplers'].append({'input': t, 'output': self.m._anhaengen(torch.eye(len(bilder), dtype=torch.float64, device='cuda').reshape(-1), 'SCALAR'), 'interpolation': 'LINEAR'})
             anim['channels'].append({'sampler': len(anim['samplers']) - 1, 'target': {'node': ni, 'path': 'weights'}})
             bericht['stuecke'].append(stueck)
         return bericht
@@ -217,11 +218,11 @@ class Exportleistekollision:
         gw = gw / gw.sum(1, keepdim=True).clamp_min(1e-9)
         v32, gw32 = v.float(), gw.float()
         for jm in gelenke:
-            bild = SimpleNamespace(dreh=jm[:, :, :3], lage=jm[:, :, 3], zentren=np.zeros((len(jm), 3)))
+            bild = SimpleNamespace(dreh=jm[:, :, :3], lage=jm[:, :, 3], zentren=torch.zeros((len(jm), 3), dtype=torch.float64, device='cuda'))
             q0 = kg.haeuten(bild, v, gl, gw).float()
             d = kollision.schieben(q0, gl, gw32, bild, ruhe=v32) - q0
             weg = torch.nonzero(d.norm(dim=1) > 1e-7)[:, 0]
-            versatz = np.zeros((len(v), 3), dtype=np.float32)
+            versatz = torch.zeros((len(v), 3), dtype=torch.float32, device='cuda')
             if len(weg):
                 mischung = (gw32[weg, :, None, None] * kg.feld(jm[:, :, :3], torch.float32)[gl[weg]]).sum(1)    # Σ w_k D_k je geschobenem Punkt (W, 3, 3)
                 versatz[weg.cpu().numpy()] = torch.einsum('nji,nj->ni', self._drehung(mischung), d[weg]).cpu().numpy()

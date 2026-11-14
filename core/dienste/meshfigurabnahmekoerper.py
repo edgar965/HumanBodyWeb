@@ -11,7 +11,9 @@ vergleichen will (Jobseite Mesh-3D, „Varianten"), liest sie aus `ergebnis.abna
 * **Maße:** Umfänge und Breiten der Endfigur in Ruhe (`G9massband`, `genesis_ende.npz`) — an der Figur, nicht am Netz: das Netz ist bekleidet.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Meshfigurabnahmekoerper']
 
@@ -34,64 +36,64 @@ class Meshfigurabnahmekoerper:
 
     def abstand_je_teil(self):
         """`{Körperteil: mm oder None}` — oder `{'hinweis': …}` ohne Segmentierung."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         pfad = self.ablage.arbeit('sapiens_flaechen.npz')
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return {'hinweis': 'ohne Segmentierung nicht messbar'}
-        flaechen, punkte = np.asarray(self.scan.flaechen), np.asarray(self.scan.punkte)
-        with np.load(pfad) as d:
+        flaechen, punkte = Torchfeld.feld(self.scan.flaechen), Torchfeld.feld(self.scan.punkte)
+        with Npztorch.lesen(pfad) as d:
             klassen = d['klassen']
         if len(klassen) != len(flaechen):
             return {'hinweis': 'Flächenzahl der Segmentierung passt nicht zum Netz'}
-        abstand, _ = cKDTree(np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)).query(punkte[flaechen].mean(axis=1))
-        gesehen = klassen.max(axis=1) >= self.MIN_STIMMEN
+        abstand, _ = cKDTree(Torchfeld.astype(Npztorch.lesen(self.ablage.arbeit('posiert.npy')), torch.float64)).query(punkte[flaechen].mean(axis=1))
+        gesehen = Torchfeld.amax(klassen, dim=1) >= self.MIN_STIMMEN
         stark = klassen.argmax(axis=1)
         aus = {}
         for name, nummern in self.KLASSEN.items():
-            m = gesehen & np.isin(stark, nummern)
-            aus[name] = round(1000.0 * float(np.median(abstand[m])), 1) if m.sum() >= self.MIN_FLAECHEN else None
+            m = gesehen & torch.isin(stark, Torchfeld.feld(nummern))
+            aus[name] = round(1000.0 * float(Torchfeld.median(abstand[m])), 1) if m.sum() >= self.MIN_FLAECHEN else None
         return aus
 
     def stoff_im_koerper(self):
         """`{punkte, unter_0_prozent, unter_5mm_prozent, median_mm, baender}` — oder `{'hinweis': …}` ohne Kleidungsmaske."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         maske = self.ablage.arbeit('kleidung_maske.npz')
-        if not maske.is_file():
+        if not Npztorch.da(maske):
             return {'hinweis': 'keine Kleidungsmaske'}
-        flaechen, punkte = np.asarray(self.scan.flaechen), np.asarray(self.scan.punkte)
-        with np.load(maske) as d:
+        flaechen, punkte = Torchfeld.feld(self.scan.flaechen), Torchfeld.feld(self.scan.punkte)
+        with Npztorch.lesen(maske) as d:
             kleidung = d['kleidung']
         if len(kleidung) != len(flaechen) or not kleidung.any():
             return {'hinweis': 'keine Kleidung erkannt'}
-        kaefig = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
-        with np.load(self.ablage.arbeit('genesis_ende.npz')) as d:
+        kaefig = Torchfeld.astype(Npztorch.lesen(self.ablage.arbeit('posiert.npy')), torch.float64)
+        with Npztorch.lesen(self.ablage.arbeit('genesis_ende.npz')) as d:
             dreiecke = d['dreiecke']
         normalen = self._normalen(kaefig, dreiecke)
-        ids = np.unique(flaechen[kleidung].ravel())
+        ids = Torchfeld.unique(flaechen[kleidung].ravel())
         _, nahe = cKDTree(kaefig).query(punkte[ids])
-        tiefe = np.einsum('ij,ij->i', punkte[ids] - kaefig[nahe], normalen[nahe])           # Meter, negativ = im Körper
+        tiefe = Torchfeld.einsum('ij,ij->i', punkte[ids] - kaefig[nahe], normalen[nahe])           # Meter, negativ = im Körper
         hoehe = punkte[ids, 1]
         baender = []
-        for von in np.arange(0.0, 2.2, self.BAND_M):
+        for von in Torchfeld.liste(Torchfeld.arange(0.0, 2.2, self.BAND_M)):
             m = (hoehe >= von) & (hoehe < von + self.BAND_M)
             if m.sum() >= 30:
                 baender.append({'von_m': round(float(von), 1), 'punkte': int(m.sum()), 'unter_0_prozent': round(100.0 * float((tiefe[m] < 0).mean()), 1),
-                                'unter_5mm_prozent': round(100.0 * float((tiefe[m] < -0.005).mean()), 1), 'median_mm': round(1000.0 * float(np.median(tiefe[m])), 1)})
+                                'unter_5mm_prozent': round(100.0 * float((tiefe[m] < -0.005).mean()), 1), 'median_mm': round(1000.0 * float(Torchfeld.median(tiefe[m])), 1)})
         return {'punkte': int(len(ids)), 'unter_0_prozent': round(100.0 * float((tiefe < 0).mean()), 2), 'unter_5mm_prozent': round(100.0 * float((tiefe < -0.005).mean()), 2),
-                'median_mm': round(1000.0 * float(np.median(tiefe)), 1), 'baender': baender}
+                'median_mm': round(1000.0 * float(Torchfeld.median(tiefe)), 1), 'baender': baender}
 
     @staticmethod
     def _normalen(kaefig, dreiecke):
         """Vertexnormalen des Käfigs, nach außen (Vorzeichen des Volumens)."""
-        n = np.zeros_like(kaefig)
+        n = torch.zeros_like(kaefig)
         v0, v1, v2 = kaefig[dreiecke[:, 0]], kaefig[dreiecke[:, 1]], kaefig[dreiecke[:, 2]]
-        fn = np.cross(v1 - v0, v2 - v0)
+        fn = Torchfeld.cross(v1 - v0, v2 - v0)
         for k in range(3):
-            np.add.at(n, dreiecke[:, k], fn)
-        n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
-        if np.einsum('ij,ij->i', v0, np.cross(v1, v2)).sum() < 0:
+            Torchfeld.add_at(n, dreiecke[:, k], fn)
+        n /= Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-12)
+        if Torchfeld.einsum('ij,ij->i', v0, Torchfeld.cross(v1, v2)).sum() < 0:
             n = -n
         return n
 
@@ -100,8 +102,8 @@ class Meshfigurabnahmekoerper:
         from Genesis9.haut import G9haut
         from Genesis9.massband import G9massband
 
-        with np.load(self.ablage.arbeit('genesis_ende.npz'), allow_pickle=True) as d:
-            punkte = d['punkte'].astype(np.float64) + d['jcm'].astype(np.float64)
-            gelenke, knochen = d['kopf'].astype(np.float64), [str(n) for n in d['knochen']]
+        with Npztorch.lesen(self.ablage.arbeit('genesis_ende.npz'), allow_pickle=True) as d:
+            punkte = Torchfeld.astype(d['punkte'], torch.float64) + Torchfeld.astype(d['jcm'], torch.float64)
+            gelenke, knochen = Torchfeld.astype(d['kopf'], torch.float64), [str(n) for n in d['knochen']]
         gemessen = G9massband.genesis(punkte, G9haut.holen(), gelenke, knochen).messen()
         return {m: round(float(gemessen[m]), 1) for m in self.MASSE if isinstance(gemessen.get(m), (int, float))}

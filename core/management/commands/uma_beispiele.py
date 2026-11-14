@@ -28,9 +28,9 @@ bleibt unberuehrt: Roomguest liest `humanbody/`, `uma/` und `unified/`.
 import json
 import time
 
-import numpy as np
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Command(BaseCommand):
@@ -139,7 +139,7 @@ class Command(BaseCommand):
         skelett = Skelett(netz.knochen)
         matrizen = Haut.matrizen(skelett.weltmatrizen(), netz.bindeposen)
         ruhe = Haut.verformen(netz.punkte, netz.gewichte, netz.knochenindex, matrizen)
-        return round(float(np.abs(ruhe - netz.punkte).max()) * 1000.0, 4)
+        return round(float(Torchfeld.abs(ruhe - netz.punkte).max()) * 1000.0, 4)
 
     @staticmethod
     def _obj(pfad, punkte, dreiecke, rasse):

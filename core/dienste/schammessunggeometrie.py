@@ -11,7 +11,10 @@ Edgar: „wir haben ja die Geometrie an verschiedenen Punkten gemessen … mach 
     symmetrie            Punkte des Stücks an der Mittelebene gespiegelt → Abstand zur Fläche des Stücks (Kern `KERN_M`, ohne `RAND_ABSTAND_M` am Rand), daneben dasselbe für das Original
                          (`symmetrie.py`, 09.10.2026: das Original ist symmetrisch, Median 0,34 mm)
 """
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 __all__ = ['Schammessunggeometrie']
 
@@ -32,7 +35,7 @@ class Schammessunggeometrie:
         """`stueck`, `modell`, `vorgabe`, `original`: `trimesh.Trimesh` (Modell = sichtbare Haut + Stück; `original` = Vorgabe, bei einer Teil-Vorgabe samt Haut der Figur); `rand`: `(R, 3)`
         Randpunkte des Stücks."""
         self.rahmen, self.stueck, self.modell, self.vorgabe, self.original = rahmen, stueck, modell, vorgabe, original
-        self.rand = np.asarray(rand, dtype=np.float64).reshape(-1, 3)
+        self.rand = Torchfeld.feld(rand, dtype=torch.float64).reshape(-1, 3)
         #: `(V,)` Abstand (mm) jedes Stückpunkts zum Original — für die Textur-Messung (nah am Original oder nicht).
         self.abstand_stueck = None
 
@@ -57,12 +60,12 @@ class Schammessunggeometrie:
         k = self.rahmen.koordinaten(self.vorgabe.vertices)
         g = self.rahmen.grenzen
         zu = (self.UEBERSTAND_M, self.UEBERSTAND_M, self.TIEFE_M)
-        innen = np.ones(len(k), dtype=bool)
+        innen = torch.ones(len(k), dtype=torch.bool, device='cuda')
         for a in range(3):
             innen &= (k[:, a] >= g[a][0] - zu[a]) & (k[:, a] <= g[a][1] + zu[a])
-        nummern = np.flatnonzero(innen)
+        nummern = torch.flatten(innen).nonzero()[:, 0]
         if len(nummern) > self.PROBEN:
-            nummern = np.sort(np.random.default_rng(7).choice(nummern, self.PROBEN, replace=False))
+            nummern = torch.sort(Zufallsstrom.default_rng(7).choice(nummern, self.PROBEN, replace=False), stable=True).values
         return nummern
 
     @staticmethod
@@ -74,51 +77,51 @@ class Schammessunggeometrie:
     # ------------------------------------------------------------ Maße
 
     def _original_zu_modell(self, region):
-        punkte = np.asarray(self.vorgabe.vertices)[region]
+        punkte = Torchfeld.feld(self.vorgabe.vertices)[region]
         d = self._abstand_mm(self.modell, punkte)
         return {'gesamt': self.rahmen.statistik(d), 'innerhalb_1mm': round(float((d < 1.0).mean()), 3), 'innerhalb_2mm': round(float((d < 2.0).mean()), 3),
                 'zonen': self.rahmen.tabelle(d, punkte)}
 
     def _stueck_zu_original(self):
-        punkte = np.asarray(self.stueck.vertices)
+        punkte = Torchfeld.feld(self.stueck.vertices)
         self.abstand_stueck = self._abstand_mm(self.original, punkte)
         return {'gesamt': self.rahmen.statistik(self.abstand_stueck), 'zonen': self.rahmen.tabelle(self.abstand_stueck, punkte)}
 
     def _tiefen(self, netz, ursprung):
         """Tiefe (m, relativ zur Mitte, längs `vorne`) der ersten Fläche je Strahl — NaN ohne Treffer."""
         r = self.rahmen
-        tiefe = np.full(len(ursprung), -np.inf)
-        orte, strahl, _ = netz.ray.intersects_location(ursprung, np.tile(-r.vorne, (len(ursprung), 1)), multiple_hits=False)
+        tiefe = Torchfeld.full(len(ursprung), -math.inf)
+        orte, strahl, _ = netz.ray.intersects_location(ursprung, torch.tile(-r.vorne, (len(ursprung), 1)), multiple_hits=False)
         if len(orte):
-            np.maximum.at(tiefe, strahl, (orte - r.mitte) @ r.vorne)
-        tiefe[np.isinf(tiefe)] = np.nan
+            Torchfeld.maximum_at(tiefe, strahl, (orte - r.mitte) @ r.vorne)
+        tiefe[Torchfeld.isinf(tiefe)] = math.nan
         return tiefe
 
     def _tiefenkarte(self):
         r, g = self.rahmen, self.rahmen.grenzen
-        us = np.arange(g[0][0], g[0][1] + 1e-9, self.RASTER_M)
-        ws = np.arange(g[1][0], g[1][1] + 1e-9, self.RASTER_M)
-        uu, ww = np.meshgrid(us, ws)
+        us = Torchfeld.arange(g[0][0], g[0][1] + 1e-9, self.RASTER_M)
+        ws = Torchfeld.arange(g[1][0], g[1][1] + 1e-9, self.RASTER_M)
+        uu, ww = torch.meshgrid(us, ws, indexing='xy')
         ursprung = r.mitte + uu.ravel()[:, None] * r.quer + ww.ravel()[:, None] * r.laengs + (g[2][1] + 0.05) * r.vorne
         t_orig, t_mod = self._tiefen(self.original, ursprung), self._tiefen(self.modell, ursprung)
         d = (t_mod - t_orig) * 1000.0
-        ok = np.isfinite(d)
+        ok = Torchfeld.isfinite(d)
         if not ok.any():
             return {'hinweis': 'kein Strahl traf Original und Modell zugleich'}
         orte = r.mitte + uu.ravel()[ok][:, None] * r.quer + ww.ravel()[ok][:, None] * r.laengs
         d_ok = d[ok]
         return {'strahlen': int(len(d)), 'beide_getroffen': int(ok.sum()), 'bias_mm': round(float(d_ok.mean()), 2),
-                'betrag': self.rahmen.statistik(np.abs(d_ok)), 'zonen': self.rahmen.tabelle(np.abs(d_ok), orte),
-                'profil_mitte': self._zeilen(us, ws, t_orig, t_mod, d, [(0.0, w) for w in ws[::2]]),
+                'betrag': self.rahmen.statistik(Torchfeld.abs(d_ok)), 'zonen': self.rahmen.tabelle(Torchfeld.abs(d_ok), orte),
+                'profil_mitte': self._zeilen(us, ws, t_orig, t_mod, d, [(0.0, w) for w in Torchfeld.liste(ws[::2])]),
                 'profil_quer': self._zeilen(us, ws, t_orig, t_mod, d, [(u, g[1][1] - (k + 0.5) / 3.0 * (g[1][1] - g[1][0])) for k in range(3) for u in self.PROFIL_QUER_M])}
 
     def _zeilen(self, us, ws, t_orig, t_mod, d, orte):
         """Messpunkte `[{quer_mm, laengs_mm, original_mm, modell_mm, d_mm}]` an den Rasterzellen, die den Orten `(quer, längs)` am nächsten liegen; Zellen ohne Treffer entfallen."""
         zeilen = []
         for u, w in orte:
-            i, j = int(np.argmin(np.abs(ws - w))), int(np.argmin(np.abs(us - u)))
+            i, j = int(Torchfeld.argmin(Torchfeld.abs(ws - w))), int(Torchfeld.argmin(Torchfeld.abs(us - u)))
             n = i * len(us) + j
-            if np.isfinite(d[n]):
+            if Torchfeld.isfinite(d[n]):
                 zeilen.append({'quer_mm': round(float(us[j]) * 1000, 1), 'laengs_mm': round(float(ws[i]) * 1000, 1), 'original_mm': round(float(t_orig[n]) * 1000, 2),
                                'modell_mm': round(float(t_mod[n]) * 1000, 2), 'd_mm': round(float(d[n]), 2)})
         return zeilen
@@ -128,21 +131,21 @@ class Schammessunggeometrie:
         `ueber_90` = Anteil der Kanten, an denen die Fläche um mehr als 90° knickt (Falten, umgeklappte Dreiecke) — beim Stück und beim Original. (Ein Vergleich der Normalen mit dem nächsten
         Original-Dreieck taugt nicht: im Spalt ist das nächste Dreieck das der anderen Lippe — am 10.10.2026 meldete er 35–46 % „umgeklappt" bei jeder Fassung.)"""
         stat = self.rahmen.statistik
-        stueck, original = np.degrees(self.stueck.face_adjacency_angles), np.degrees(self.vorgabe.face_adjacency_angles)
+        stueck, original = Torchfeld.degrees(self.stueck.face_adjacency_angles), Torchfeld.degrees(self.vorgabe.face_adjacency_angles)
         return {'kantenwinkel_grad': stat(stueck), 'kantenwinkel_original_grad': stat(original),
                 'ueber_90': round(float((stueck > 90.0).mean()), 4), 'ueber_90_original': round(float((original > 90.0).mean()), 4)}
 
     def _symmetrie(self):
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         r = self.rahmen
-        p = np.asarray(self.stueck.vertices)
-        kern = np.abs(r.koordinaten(p)[:, 0]) < self.KERN_M
+        p = Torchfeld.feld(self.stueck.vertices)
+        kern = Torchfeld.abs(r.koordinaten(p)[:, 0]) < self.KERN_M
         if len(self.rand):
             kern &= cKDTree(self.rand).query(p)[0] > self.RAND_ABSTAND_M
         aus = {'stueck': r.statistik(self._abstand_mm(self.stueck, r.spiegeln(p[kern]))) if kern.any() else None}
         if self.vorgabe is not None and len(self.vorgabe.vertices):
-            v = np.asarray(self.vorgabe.vertices)[self._region()]
-            v = v[np.abs(r.koordinaten(v)[:, 0]) < self.KERN_M]
+            v = Torchfeld.feld(self.vorgabe.vertices)[self._region()]
+            v = v[Torchfeld.abs(r.koordinaten(v)[:, 0]) < self.KERN_M]
             aus['original'] = r.statistik(self._abstand_mm(self.vorgabe, r.spiegeln(v))) if len(v) else None
         return aus

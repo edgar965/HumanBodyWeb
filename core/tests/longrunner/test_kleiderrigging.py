@@ -31,6 +31,10 @@ import unittest
 
 import numpy as np
 from django.conf import settings
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class MhkleidHautTest(unittest.TestCase):
@@ -124,7 +128,7 @@ class SmplTraegerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if not os.path.isfile(os.path.join(str(settings.SMPL_MODELS_DIR), 'SMPL_FEMALE.npz')):
+        if not Npztorch.da(os.path.join(str(settings.SMPL_MODELS_DIR), 'SMPL_FEMALE.npz')):
             raise unittest.SkipTest('SMPL-Modelle fehlen')
         from GarmentCode.drapierdienst import Garmentdrapierung
 

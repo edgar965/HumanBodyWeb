@@ -17,7 +17,8 @@ und ihre Form geben die Regler (Lidlandmarken) — nicht die Mulde. Gegengerechn
 desselben Auftrags: sichtbar 12,2 × 24,3 mm (229 mm²), Schnitt auf Augenhöhe max. 6,1 statt 10,1 mm.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfiguraugenhoehle']
 
@@ -40,7 +41,7 @@ class Meshfiguraugenhoehle:
         maske = cls.maske()
         if len(maske) != len(gewicht):
             return rest, gewicht, 0
-        rest, gewicht = np.array(rest, dtype=float), np.array(gewicht, dtype=float)
+        rest, gewicht = Torchfeld.feld(rest, dtype=torch.float64, copy=True), Torchfeld.feld(gewicht, dtype=torch.float64, copy=True)
         rest[maske] = 0.0
         gewicht[maske] = 0.0
         return rest, gewicht, int(maske.sum())

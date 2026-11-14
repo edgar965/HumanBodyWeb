@@ -55,7 +55,8 @@ kommt aus `hbtraeger.py` (herausgeloest, als diese Datei 328 Zeilen hatte).
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from Genesis9.formung import G9formung
 from Genesis9.kollision import G9kollision
@@ -131,11 +132,11 @@ class G9aufhumanbody:
         # der Bund der Jeans 6,5 cm tiefer als auf Genesis (`G9hbsitz`).
         skaliert, knoten = G9hbsitz.rumpfhoehen(skaliert, g9_punkte, g9_seg.get('body') or [],
                                                 hb['punkte'], hb_seg.get('body') or [])
-        zu = np.full(len(g9_punkte), -1, dtype=np.int64)
+        zu = Torchfeld.full(len(g9_punkte), -1, dtype=torch.int64)
         ganz = G9kollision.baum(hb['punkte'])
         for teil, g9_liste in g9_seg.items():
-            g9_idx = np.asarray(g9_liste, dtype=np.int64)
-            hb_idx = np.asarray(hb_seg.get(teil) or [], dtype=np.int64)
+            g9_idx = Torchfeld.feld(g9_liste, dtype=torch.int64)
+            hb_idx = Torchfeld.feld(hb_seg.get(teil) or [], dtype=torch.int64)
             if not len(g9_idx):
                 continue
             if len(hb_idx) < cls.KANDIDATEN:
@@ -145,9 +146,9 @@ class G9aufhumanbody:
             _w, kand = G9kollision.naechste(G9kollision.baum(hb['punkte'][hb_idx]),
                                             skaliert[g9_idx], k=cls.KANDIDATEN)
             kand = hb_idx[kand]                                   # (n, K) HB-Nummern
-            einig = np.einsum('ik,ijk->ij', g9_normalen[g9_idx], hb['normalen'][kand]) > cls.EINIG
-            erster = np.where(einig.any(axis=1), einig.argmax(axis=1), 0)
-            zu[g9_idx] = kand[np.arange(len(g9_idx)), erster]
+            einig = Torchfeld.einsum('ik,ijk->ij', g9_normalen[g9_idx], hb['normalen'][kand]) > cls.EINIG
+            erster = torch.where(einig.any(axis=1), einig.argmax(axis=1), 0)
+            zu[g9_idx] = kand[Torchfeld.arange(len(g9_idx)), erster]
         logger.info('Daz auf HumanBody: Paarung %s/%s — %d Genesis-Punkte, Massstab %.3f, '
                     'Rumpfhoehen %s', geschlecht, bauart, len(zu), massstab,
                     knoten and {k: [round(v, 3) for v in knoten[k]] for k in ('von', 'nach')})
@@ -157,8 +158,8 @@ class G9aufhumanbody:
         return {'zu': zu, 'g9_punkte': g9_punkte, 'g9_normalen': g9_normalen,
                 'g9_rahmen': Hbtraeger.rahmen(g9_normalen), 'g9_baum': G9kollision.baum(g9_punkte),
                 'massstab': massstab, 'knoten': knoten, 'skaliert': skaliert,
-                'segmente': {teil: (np.asarray(g9_seg.get(teil) or [], dtype=np.int64),
-                                    np.asarray(hb_seg.get(teil) or [], dtype=np.int64))
+                'segmente': {teil: (Torchfeld.feld(g9_seg.get(teil) or [], dtype=torch.int64),
+                                    Torchfeld.feld(hb_seg.get(teil) or [], dtype=torch.int64))
                              for teil in g9_seg},
                 'g9_rumpf': list(g9_seg.get('body') or []), 'hb_rumpf': list(hb_seg.get('body') or [])}
 
@@ -167,9 +168,9 @@ class G9aufhumanbody:
         u"""Die Genesis-Punkte in der HumanBody-Lage: ueber die Knochenrahmen
         (`G9hbknochen`), ohne Rahmen nach Hoehenmassstab."""
         haut = g9.haut()
-        knochen = np.asarray(haut['knochen'])
-        staerkster = np.asarray(haut['index'])[np.arange(len(g9_punkte)),
-                                                np.asarray(haut['gewicht']).argmax(axis=1)]
+        knochen = Torchfeld.feld(haut['knochen'])
+        staerkster = Torchfeld.feld(haut['index'])[Torchfeld.arange(len(g9_punkte)),
+                                                Torchfeld.feld(haut['gewicht']).argmax(axis=1)]
         rahmen = G9hbknochen(G9formung({}).skelett().bauen()['knochen'],
                              Skelettgeometrie.holen().compute_world_transforms(), massstab)
         aus, getroffen = rahmen.schaetzen(g9_punkte, knochen[staerkster])
@@ -181,7 +182,7 @@ class G9aufhumanbody:
     def uebertragen(self, punkte_g9, bindung=None):
         u"""(M, 3) Stoffpunkte auf dem Genesis-Grundkoerper -> auf der HumanBody-Figur.
         `bindung`: die `G9teilbindung` dieser Punkte — Nachbarn nur im eigenen Koerperteil."""
-        p = np.asarray(punkte_g9, dtype=np.float64)
+        p = Torchfeld.feld(punkte_g9, dtype=torch.float64)
         if not len(p):
             return p
         paar, figur = self.paarung, self.figur()
@@ -192,16 +193,16 @@ class G9aufhumanbody:
             abstand, nachbar = bindung.nachbarn(paar['g9_punkte'], self.g9_teile(), p, k_alle)
         else:
             abstand, nachbar = G9kollision.naechste(paar['g9_baum'], p, k=k_alle)
-        abstand = np.asarray(abstand, dtype=np.float64).reshape(len(p), -1)
-        nachbar = np.asarray(nachbar).reshape(len(p), -1)
+        abstand = Torchfeld.feld(abstand, dtype=torch.float64).reshape(len(p), -1)
+        nachbar = Torchfeld.feld(nachbar).reshape(len(p), -1)
         # 0 = am Koerper (Rahmen), 1 = fern (nur Verschiebung)
-        fern = np.clip((abstand[:, 0] - self.NAH_M) / (self.FERN_M - self.NAH_M), 0.0, 1.0)[:, None]
-        g_nah = 1.0 / np.maximum(abstand[:, :self.NACHBARN], 1e-6)
+        fern = Torchfeld.clip((abstand[:, 0] - self.NAH_M) / (self.FERN_M - self.NAH_M), 0.0, 1.0)[:, None]
+        g_nah = 1.0 / Torchfeld.maximum(abstand[:, :self.NACHBARN], 1e-6)
         g_nah /= g_nah.sum(axis=1, keepdims=True)
-        g_fern = 1.0 / np.maximum(abstand, 1e-6)
+        g_fern = 1.0 / Torchfeld.maximum(abstand, 1e-6)
         g_fern /= g_fern.sum(axis=1, keepdims=True)
-        mit_rahmen = np.zeros_like(p)
-        verschoben = np.zeros_like(p)
+        mit_rahmen = torch.zeros_like(p)
+        verschoben = torch.zeros_like(p)
         for k in range(nachbar.shape[1]):
             j = nachbar[:, k]
             # Versatz im OERTLICHEN Massstab (`G9hbsitz.massstab`), nicht im
@@ -209,9 +210,9 @@ class G9aufhumanbody:
             versatz = (p - paar['g9_punkte'][j]) * oertlich[j][:, None]
             ziel = paar['zu'][j]
             if k < self.NACHBARN:
-                anteile = np.einsum('ij,iaj->ia', versatz, paar['g9_rahmen'][j])
+                anteile = Torchfeld.einsum('ij,iaj->ia', versatz, paar['g9_rahmen'][j])
                 mit_rahmen += g_nah[:, k:k + 1] * (
-                    figur['punkte'][ziel] + np.einsum('ia,iaj->ij', anteile, hb_rahmen[ziel]))
+                    figur['punkte'][ziel] + Torchfeld.einsum('ia,iaj->ij', anteile, hb_rahmen[ziel]))
             verschoben += g_fern[:, k:k + 1] * (figur['punkte'][ziel] + versatz)
         feld = (1.0 - fern) * mit_rahmen + fern * verschoben - p
         return p + ((1.0 - fern) * self.geglaettet(p, feld)
@@ -223,7 +224,7 @@ class G9aufhumanbody:
             from Genesis9.haut import G9haut
             from Genesis9.koerperteile import G9koerperteile
             h = G9garmentfigur({}).haut()          # `G9haut.fuer` gibt ein Woerterbuch
-            haut = G9haut(h['knochen'], np.asarray(h['index']), np.asarray(h['gewicht']))
+            haut = G9haut(h['knochen'], Torchfeld.feld(h['index']), Torchfeld.feld(h['gewicht']))
             self.paarung['g9_teile'] = G9koerperteile.genesis_punkte(haut)
         return self.paarung['g9_teile']
 
@@ -251,16 +252,16 @@ class G9aufhumanbody:
         if len(punkte) <= nachbarn:
             return feld
         _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=nachbarn)
-        return feld[np.asarray(nachbar)].mean(axis=1)
+        return feld[Torchfeld.feld(nachbar)].mean(axis=1)
 
     def haut(self, punkte):
         u"""`{knochen, index (N, 4), gewicht (N, 4)}` vom naechsten HumanBody-Dreieck."""
         from GarmentCode.anziehen import Anziehen
         figur = self.figur()
         rig = Anziehen(figur['punkte'], figur['dreiecke'], figur['gewichte'],
-                       figur['knochen']).anziehen(np.asarray(punkte, dtype=np.float64))
-        index = np.zeros((len(punkte), 4), dtype=np.int64)
-        gewicht = np.zeros((len(punkte), 4), dtype=np.float64)
+                       figur['knochen']).anziehen(Torchfeld.feld(punkte, dtype=torch.float64))
+        index = torch.zeros((len(punkte), 4), dtype=torch.int64, device='cuda')
+        gewicht = torch.zeros((len(punkte), 4), dtype=torch.float64, device='cuda')
         for nr, paare in enumerate(rig['gewichte']):
             beste = sorted((pa for pa in paare if pa[1] > 0), key=lambda pa: -pa[1])[:4]
             summe = sum(w for _k, w in beste) or 1.0
@@ -285,7 +286,7 @@ class G9aufhumanbody:
         an ihrer Wurzel wird zum Brustkorb hin gehoben und steckt danach
         noch immer in der Brust (gemessen: 28 Punkte bis 15 mm tief)."""
         haut, normalen, baum = self.koerperflaeche()
-        aus = np.asarray(punkte, dtype=np.float64)
+        aus = Torchfeld.feld(punkte, dtype=torch.float64)
         for _ in range(self.DURCHGAENGE):
             aus = G9kollision.hinaus(aus, haut, normalen, abstand=abstand, baum=baum,
                                      durchgaenge=1)

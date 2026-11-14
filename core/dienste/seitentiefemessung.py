@@ -11,7 +11,8 @@ nicht „genau richtig".
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .kleiderstueckobjekt import Kleiderstueckobjekt
 from .netztiefe import Netztiefe
@@ -31,11 +32,11 @@ class Seitentiefemessung:
             if not fotos:
                 return {'grund': 'kein Seitenfoto (Rolle „rechts“ oder „links“)'}
             foto = Seitentiefe.mittel([Seitentiefe.foto_profil(Netztiefe._alpha(png)) for _, png in fotos])
-            koerper = np.asarray(bezug.koerper_netz()[0], dtype=np.float64)
+            koerper = Torchfeld.feld(bezug.koerper_netz()[0], dtype=torch.float64)
             y0, y1 = float(koerper[:, 1].min()), float(koerper[:, 1].max())
             hoehe = y1 - y0
             profile = {'koerper': Seitentiefe.modell_profil(koerper, y0, y1)}
-            alles = bezug._ruhelage(np.ones(len(bezug.scan.flaechen), dtype=bool))
+            alles = bezug._ruhelage(torch.ones(len(bezug.scan.flaechen), dtype=torch.bool, device='cuda'))
             if alles is not None:
                 profile['netz'] = Seitentiefe.modell_profil(alles[0], y0, y1)
             hemd = Kleiderstueckobjekt.laden(stuecke['oberteil']) if stuecke.get('oberteil') else None

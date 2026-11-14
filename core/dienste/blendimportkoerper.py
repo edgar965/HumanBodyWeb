@@ -14,7 +14,10 @@ nimmt `Blendimportlage` für Kleider und Haar, damit sie mit der Lage aus „Mes
 
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -38,12 +41,12 @@ class Blendimportkoerper:
     @staticmethod
     def gltf(punkte):
         """Blender-Achsen → glTF-Achsen."""
-        p = np.asarray(punkte, dtype=np.float64)
-        return np.column_stack([p[:, 0], p[:, 2], -p[:, 1]])
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        return Torchfeld.column_stack([p[:, 0], p[:, 2], -p[:, 1]])
 
     def _laden(self, name):
         netz = self.inventar[name]
-        with np.load(self.ablage.export(netz['datei'])) as d:
+        with Npztorch.lesen(self.ablage.export(netz['datei'])) as d:
             return {k: d[k] for k in d.files}, netz
 
     @staticmethod
@@ -52,12 +55,12 @@ class Blendimportkoerper:
 
         Image.MAX_IMAGE_PIXELS = None          # 8192² sind gewollt
         with Image.open(pfad) as bild:
-            return np.asarray(bild.convert('RGB').resize((kante, kante), Image.LANCZOS), dtype=np.uint8)
+            return Torchfeld.feld(bild.convert('RGB').resize((kante, kante), Image.LANCZOS), dtype=torch.uint8)
 
     def atlas(self, koerperbild, augenbild, hautkachel=None):
         """(H, W, 3): oben der Körper (Kante × Kante), darunter links das Augenbild, rechts daneben die Haut der Ergänzung."""
         k, a = self.ATLAS_PX, self.AUGE_PX
-        aus = np.full((k + a, k, 3), 255, dtype=np.uint8)
+        aus = Torchfeld.full((k + a, k, 3), 255, dtype=torch.uint8)
         aus[:k] = self._bild(koerperbild, k)
         if augenbild:
             aus[k:, :a] = self._bild(augenbild, a)
@@ -82,40 +85,40 @@ class Blendimportkoerper:
         pfad = G9pfade.finden(self.HAUT_QUELLE)
         if not pfad.is_file():
             logger.warning('Körperergänzung: Genesis-9-Haut %s fehlt — flache Hautfarbe %s', pfad, self.HAUT_FARBE)
-            return np.full((self.HAUT_PX, self.HAUT_PX, 3), self.HAUT_FARBE, dtype=np.uint8)
+            return Torchfeld.full((self.HAUT_PX, self.HAUT_PX, 3), self.HAUT_FARBE, dtype=torch.uint8)
         Image.MAX_IMAGE_PIXELS = None
         with Image.open(pfad) as bild:
             ausschnitt = bild.convert('RGB').crop((self.HAUT_AUSSCHNITT[0], self.HAUT_AUSSCHNITT[1],
                                                    self.HAUT_AUSSCHNITT[0] + self.HAUT_AUSSCHNITT[2],
                                                    self.HAUT_AUSSCHNITT[1] + self.HAUT_AUSSCHNITT[2]))
-        kachel = np.asarray(ausschnitt.resize((self.HAUT_PX // 2, self.HAUT_PX // 2), Image.LANCZOS), dtype=np.uint8)
-        return np.tile(kachel, (2, 2, 1))
+        kachel = Torchfeld.feld(ausschnitt.resize((self.HAUT_PX // 2, self.HAUT_PX // 2), Image.LANCZOS), dtype=torch.uint8)
+        return torch.tile(kachel, (2, 2, 1))
 
     def uv_haut(self, winkel, hoehe):
         """UV im Atlas je Punkt: Winkel um die Stückmitte → x im Hautfeld, Höhe → y (wiederholt sich alle HAUT_WIEDERHOLUNG_M)."""
         k, a = self.ATLAS_PX, self.AUGE_PX
-        fu = (np.asarray(winkel, dtype=np.float64) / (2 * np.pi)) % 1.0
-        fv = (np.asarray(hoehe, dtype=np.float64) / self.HAUT_WIEDERHOLUNG_M) % 1.0
+        fu = (Torchfeld.feld(winkel, dtype=torch.float64) / (2 * math.pi)) % 1.0
+        fv = (Torchfeld.feld(hoehe, dtype=torch.float64) / self.HAUT_WIEDERHOLUNG_M) % 1.0
         ux = (a + self.HAUT_PX * fu) / k
         uy = self.HAUT_PX * (1.0 - fv) / (k + a)
-        return np.column_stack([ux, uy])
+        return Torchfeld.column_stack([ux, uy])
 
     def uv_koerper(self, uv):
         k, a = self.ATLAS_PX, self.AUGE_PX
-        return np.column_stack([uv[:, 0], (a + uv[:, 1] * k) / (k + a)])
+        return Torchfeld.column_stack([uv[:, 0], (a + uv[:, 1] * k) / (k + a)])
 
     def uv_auge(self, uv):
         k, a = self.ATLAS_PX, self.AUGE_PX
-        return np.column_stack([uv[:, 0] * a / k, uv[:, 1] * a / (k + a)])
+        return Torchfeld.column_stack([uv[:, 0] * a / k, uv[:, 1] * a / (k + a)])
 
     @staticmethod
     def ecken(punkte, dreiecke, uv_ecken):
         """Punkte je (Punkt, UV)-Paar — glTF trägt UV je Punkt, an UV-Nähten also doppelte Punkte."""
-        schluessel = np.column_stack([dreiecke.reshape(-1), np.round(uv_ecken.reshape(-1, 2) * 1e6)])
-        einzig, index = np.unique(schluessel, axis=0, return_inverse=True)
-        uv = np.zeros((len(einzig), 2))
+        schluessel = Torchfeld.column_stack([dreiecke.reshape(-1), Torchfeld.round(uv_ecken.reshape(-1, 2) * 1e6)])
+        einzig, index = Torchfeld.unique(schluessel, axis=0, return_inverse=True)
+        uv = torch.zeros((len(einzig), 2), dtype=torch.float64, device='cuda')
         uv[index.reshape(-1)] = uv_ecken.reshape(-1, 2)
-        return punkte[einzig[:, 0].astype(np.int64)], index.reshape(-1, 3), uv
+        return punkte[Torchfeld.astype(einzig[:, 0], torch.int64)], index.reshape(-1, 3), uv
 
     def schreiben(self):
         import trimesh
@@ -159,8 +162,8 @@ class Blendimportkoerper:
             versatz += len(p)
         bild = Image.fromarray(self.atlas(koerperbild, augenbild, hautkachel))
         material = trimesh.visual.material.PBRMaterial(baseColorTexture=bild, metallicFactor=0.0, roughnessFactor=1.0)
-        visuell = trimesh.visual.TextureVisuals(uv=np.vstack(uvs), material=material)
-        netz = trimesh.Trimesh(np.vstack(teile), np.vstack(flaechen), visual=visuell, process=False)
+        visuell = trimesh.visual.TextureVisuals(uv=Torchfeld.roh(Torchfeld.vstack(uvs)), material=material)
+        netz = trimesh.Trimesh(Torchfeld.roh(Torchfeld.vstack(teile)), Torchfeld.roh(Torchfeld.vstack(flaechen)), visual=visuell, process=False)
         ziel = self.ablage.arbeit(self.DATEI)
         netz.export(str(ziel))
         logger.info('Blender-Import %s: Körpernetz %s (%d Punkte, %d Augen)', self.ablage.kennung, ziel,
@@ -170,6 +173,6 @@ class Blendimportkoerper:
 
         Mesh3dnetzansicht.vorab(self.ablage.kennung)
         return {'datei': str(ziel), 'punkte': int(len(netz.vertices)), 'dreiecke': int(len(netz.faces)),
-                'augen': len(augen), 'atlas': list(bild.size),
+                'augen': len(augen), 'atlas': list(Torchfeld.groesse(bild)),
                 'ergaenzt': {'punkte': int(len(ergaenzt['punkte'])), 'kleider': ergaenzt['kleider'],
                              'haut': 'Genesis-9-Standardhaut' if hautkachel is not None else None} if ergaenzt else None}

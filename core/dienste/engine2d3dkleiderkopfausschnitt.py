@@ -12,7 +12,8 @@ zeigen (Sichtprobe); wie gut Hunyuan3D daraus rechnet, entscheidet der Lauf.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
 
 logger = logging.getLogger('core')
@@ -42,8 +43,8 @@ class Engine2d3dKleiderkopfausschnitt:
     def ausschnitt(cls, bild):
         """`(Bild, Befund)` — der quadratische RGBA-Ausschnitt des Kopfes aus einem freigestellten Foto. Wirft ValueError, wenn das Foto keine brauchbare Silhouette zeigt."""
         bild = bild.convert('RGBA')
-        klein = np.asarray(bild.getchannel('A').reduce(cls.TEILER)) > 127
-        zeilen = np.nonzero(klein.any(axis=1))[0]
+        klein = Torchfeld.feld(bild.getchannel('A').reduce(cls.TEILER)) > 127
+        zeilen = torch.nonzero(klein.any(axis=1), as_tuple=True)[0]
         if not len(zeilen):
             raise ValueError('Das Foto ist leer (kein Alphakanal)')
         oben, unten = int(zeilen[0]), int(zeilen[-1])
@@ -53,7 +54,7 @@ class Engine2d3dKleiderkopfausschnitt:
         anteil = kopf / hoehe
         if not cls.KOPF_ANTEIL[0] <= anteil <= cls.KOPF_ANTEIL[1]:
             raise ValueError('Kopfhöhe %.1f %% der Körperhöhe — kein Ganzkörperfoto' % (100 * anteil))
-        spalten = np.nonzero(klein[oben:hals].any(axis=0))[0]
+        spalten = torch.nonzero(klein[oben:hals].any(axis=0), as_tuple=True)[0]
         links, rechts = int(spalten[0]), int(spalten[-1])
         mitte_x = (links + rechts + 1) / 2.0
         breite = rechts - links + 1
@@ -75,11 +76,11 @@ class Engine2d3dKleiderkopfausschnitt:
     @classmethod
     def _halszeile(cls, klein, oben, hoehe):
         """(Zeile des Halses, ob der Rückfall gilt) — kleinste geglättete Zeilenbreite im Suchfenster."""
-        breiten = klein.sum(axis=1).astype(float)
-        glatt = np.convolve(breiten, np.ones(max(3, int(0.012 * hoehe))) / max(3, int(0.012 * hoehe)), mode='same')
+        breiten = Torchfeld.astype(klein.sum(axis=1), torch.float64)
+        glatt = Torchfeld.convolve(breiten, torch.ones(max(3, int(0.012 * hoehe)), dtype=torch.float64, device='cuda') / max(3, int(0.012 * hoehe)), mode='same')
         von, bis = oben + int(cls.HALS_VON * hoehe), oben + int(cls.HALS_BIS * hoehe)
         fenster = glatt[von:bis]
-        i = int(np.argmin(fenster))
+        i = int(Torchfeld.argmin(fenster))
         am_rand = i < 0.08 * len(fenster) or i > 0.92 * len(fenster)
         if am_rand:
             return oben + int(cls.HALS_RUECKFALL * hoehe), True
@@ -99,7 +100,7 @@ class Engine2d3dKleiderkopfausschnitt:
     def _schultern_weg(cls, aus, kasten, klein, hals):
         """Unter der Halszeile bleibt nur der Hals: seitlich um `HALS_SEITE` der Halsbreite breiter, der Rest wird durchsichtig."""
         zeile = klein[min(hals, klein.shape[0] - 1)]
-        spalten = np.nonzero(zeile)[0]
+        spalten = torch.nonzero(zeile, as_tuple=True)[0]
         if not len(spalten):
             return aus
         schon = int(spalten[0]), int(spalten[-1])
@@ -109,7 +110,7 @@ class Engine2d3dKleiderkopfausschnitt:
         x_bis = int(round((schon[1] + 1 + extra) * cls.TEILER)) - kasten[0]
         if grenze_oben >= aus.height:
             return aus
-        alpha = np.asarray(aus.getchannel('A')).copy()
+        alpha = Torchfeld.kopie(Torchfeld.feld(aus.getchannel('A')))
         alpha[max(grenze_oben, 0):, :max(x_von, 0)] = 0
         alpha[max(grenze_oben, 0):, max(x_bis, 0):] = 0
         aus.putalpha(Image.fromarray(alpha))

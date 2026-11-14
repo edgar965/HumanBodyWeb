@@ -10,6 +10,7 @@ Der Pfadumweg ist noetig, weil die Wrapper nicht als Paket installiert sind; er
 gehoert deshalb an EINE Stelle und nicht in jeden Endpunkt.
 """
 
+from KoerperKI_alle.torchfeld import Torchfeld
 import logging
 
 from ..daten.wrapperpfad import Wrapperpfad
@@ -42,10 +43,10 @@ class SmplxNetz:
             raise SmplxNetzFehler('SMPL-X-Wrapper nicht gefunden: %s' % e) from e
         if netz is None:
             raise SmplxNetzFehler('SMPL-X-Modell nicht verfuegbar')
-        import numpy as np
+        import torch
 
-        vertices = np.asarray(netz['vertices']).reshape(netz['n_verts'], 3)
-        faces = np.asarray(netz['faces']).reshape(netz['n_faces'], 3)
+        vertices = Torchfeld.feld(netz['vertices']).reshape(netz['n_verts'], 3)
+        faces = Torchfeld.feld(netz['faces']).reshape(netz['n_faces'], 3)
         return vertices, faces, netz
 
     @classmethod

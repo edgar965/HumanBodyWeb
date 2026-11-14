@@ -29,7 +29,8 @@ import os
 import shutil
 import subprocess
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 from django.utils import timezone
 
@@ -128,7 +129,7 @@ class Bildmodellfreisteller:
                             100 * (antwort.get('anteil') or 0),
                             ' — ' + '; '.join(antwort['hinweise']) if antwort.get('hinweise') else '')
         with Image.open(pfad) as m:
-            return np.asarray(m.convert('L'), dtype=np.uint8)
+            return Torchfeld.feld(m.convert('L'), dtype=torch.uint8)
 
     def _runner(self, *argumente):
         runner = os.path.join(Wrapperpfad.pfad(), self.RUNNER)
@@ -184,14 +185,14 @@ class Bildmodellfreisteller:
 
         from .bildmodellfreistellerkorrektur import Bildmodellfreistellerkorrektur as K
 
-        a = maske.astype(np.float32) / 255.0
+        a = Torchfeld.astype(maske, torch.float32) / 255.0
         if regler.get('verfeinern') == 'grabcut' and rgb is not None:
             a = K.grabcut(rgb, a, regler.get('striche'))
         if regler.get('positiv') and rgb is not None:
             from .bildmodellhauttonmaske import Bildmodellhauttonmaske as H
 
-            netz = np.clip(a * 255.0 + 0.5, 0, 255).astype(np.uint8)
-            a = H.erweitern(rgb, H.kern(netz, regler), regler).astype(np.float32) / 255.0
+            netz = Torchfeld.astype(Torchfeld.clip(a * 255.0 + 0.5, 0, 255), torch.uint8)
+            a = Torchfeld.astype(H.erweitern(rgb, H.kern(netz, regler), regler), torch.float32) / 255.0
         rand = int(regler['rand'])
         if rand:
             k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * abs(rand) + 1, 2 * abs(rand) + 1))
@@ -204,18 +205,18 @@ class Bildmodellfreisteller:
         t = float(regler['schwelle']) / 100.0 * cls.SICHER
         band = min(0.15, t, cls.SICHER - t)
         unten, oben = max(0.0, t - band), max(t + band, t - band + 1e-3)   # 0 bleibt 0, auch bei Schwelle 0
-        a = np.clip((a - unten) / (oben - unten), 0.0, 1.0)
+        a = Torchfeld.clip((a - unten) / (oben - unten), 0.0, 1.0)
         weich = int(regler['weich'])
         if weich > 0:
             a = cv2.GaussianBlur(a, (0, 0), sigmaX=weich * 0.5, sigmaY=weich * 0.5)
-        return K.striche(np.clip(a, 0.0, 1.0), regler.get('striche'))
+        return K.striche(Torchfeld.clip(a, 0.0, 1.0), regler.get('striche'))
 
     @classmethod
     def zusammensetzen(cls, rgb, alpha, hintergrund):
-        farbe = np.asarray(cls.HINTERGRUND.get(hintergrund, cls.HINTERGRUND['weiss']), dtype=np.float32)
+        farbe = Torchfeld.feld(cls.HINTERGRUND.get(hintergrund, cls.HINTERGRUND['weiss']), dtype=torch.float32)
         a = alpha[..., None]
-        aus = rgb.astype(np.float32) * a + farbe[None, None, :] * (1.0 - a)
-        return np.clip(aus + 0.5, 0, 255).astype(np.uint8)
+        aus = Torchfeld.astype(rgb, torch.float32) * a + farbe[None, None, :] * (1.0 - a)
+        return Torchfeld.astype(Torchfeld.clip(aus + 0.5, 0, 255), torch.uint8)
 
     # ------------------------------------------------------------ Vorschau
 
@@ -223,7 +224,7 @@ class Bildmodellfreisteller:
         from PIL import Image
 
         with Image.open(self.ablage.zuschnitt() / datei) as im:
-            return np.asarray(im.convert('RGB'))
+            return Torchfeld.feld(im.convert('RGB'))
 
     def vorschau(self, datei, regler):
         """PNG-Bytes des freigestellten Bildes, längste Seite `VORSCHAU_PX`."""
@@ -241,7 +242,7 @@ class Bildmodellfreisteller:
         ok, png = cv2.imencode('.png', cv2.cvtColor(aus, cv2.COLOR_RGB2BGR))
         if not ok:
             raise RuntimeError('Vorschau nicht kodiert')
-        return png.tobytes()
+        return Torchfeld.als_bytes(png)
 
     # ----------------------------------------------------------- Speichern
 
@@ -264,7 +265,7 @@ class Bildmodellfreisteller:
         # Die fertige Maske (mit Verfeinerung und Strichen) als DIE Maske des Bildes ablegen —
         # Textur, GVHMR-Silhouette lesen `<stamm>_maske.png`, nicht eine neue Netzschätzung.
         self.ordner().mkdir(parents=True, exist_ok=True)
-        Image.fromarray(np.clip(alpha * 255.0 + 0.5, 0, 255).astype(np.uint8), 'L').save(str(self.maskenpfad(datei)))
+        Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(alpha * 255.0 + 0.5, 0, 255), torch.uint8)), 'L').save(str(self.maskenpfad(datei)))
         eintrag[self.FELD] = {'stand': timezone.now().isoformat(), 'vorher': True,
                               'regler': dict(self.NEUTRAL, hintergrund=regler['hintergrund']),
                               'angewandt': regler}

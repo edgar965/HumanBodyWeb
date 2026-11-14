@@ -13,7 +13,8 @@ import logging
 import os
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -52,7 +53,7 @@ class Schnittmusterablage:
         if koerper.vertices is None:
             return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
         ergebnis = ablage.netz(
-            np.asarray(koerper.vertices, dtype=np.float64), koerper.faces, koerper.geschlecht
+            Torchfeld.feld(koerper.vertices, dtype=torch.float64), koerper.faces, koerper.geschlecht
         )
         if ergebnis is None:
             return JsonResponse({'error': 'Could not generate mesh from pattern'}, status=400)

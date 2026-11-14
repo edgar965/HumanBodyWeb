@@ -24,7 +24,8 @@ Die Trennschärfe an so wenigen schlechten Stücken (zwei hängende, ein zerstö
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -55,10 +56,10 @@ class Blendimportpruefung:
     @classmethod
     def kanten(cls, ruhe, original, dreiecke):
         """`{ausserhalb, streckung_max, streckung_min}` — Kanten der Ruhelage gegen die des Originals (gleiche Dreiecke)."""
-        d = np.asarray(dreiecke, dtype=np.int64)
-        a = np.concatenate([d[:, 0], d[:, 1], d[:, 2]])
-        b = np.concatenate([d[:, 1], d[:, 2], d[:, 0]])
-        verhaeltnis = np.linalg.norm(ruhe[a] - ruhe[b], axis=1) / np.maximum(np.linalg.norm(original[a] - original[b], axis=1), 1e-9)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64)
+        a = Torchfeld.cat([d[:, 0], d[:, 1], d[:, 2]])
+        b = Torchfeld.cat([d[:, 1], d[:, 2], d[:, 0]])
+        verhaeltnis = Torchfeld.linalg_norm(ruhe[a] - ruhe[b], dim=1) / Torchfeld.maximum(Torchfeld.linalg_norm(original[a] - original[b], dim=1), 1e-9)
         return {'ausserhalb': round(float(((verhaeltnis < cls.KANTEN_VON) | (verhaeltnis > cls.KANTEN_BIS)).mean()), 4),
                 'streckung_max': round(float(verhaeltnis.max()), 2), 'streckung_min': round(float(verhaeltnis.min()), 3)}
 

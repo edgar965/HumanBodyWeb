@@ -27,7 +27,8 @@ Umkreis des Stücks — der Rest liegt ohnehin weiter als `UMKREIS_M` entfernt.
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['G9hbstoffkorrektur']
 
@@ -40,7 +41,7 @@ class G9hbstoffkorrektur:
     @classmethod
     def anwenden(cls, traeger, punkte, flaechen, abstand_m):
         from GarmentCode.stoffkorrektur import Stoffkorrektur
-        punkte = np.asarray(punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         dreiecke = cls.dreiecke(flaechen, len(punkte))
         if not len(punkte) or not len(dreiecke):
             return punkte, {'bewegt': 0}
@@ -48,29 +49,29 @@ class G9hbstoffkorrektur:
         nah = cls.umkreis(koerper, punkte, Stoffkorrektur.UMKREIS_M)
         if not nah.any():
             return punkte, {'bewegt': 0}
-        korrektur = Stoffkorrektur(np.asarray(koerper)[nah], np.asarray(normalen)[nah], dreiecke)
+        korrektur = Stoffkorrektur(Torchfeld.feld(koerper)[nah], Torchfeld.feld(normalen)[nah], dreiecke)
         neu, bilanz = korrektur.anwenden(punkte, abstand_mm=float(abstand_m) * 1000.0)
         return neu, bilanz
 
     @staticmethod
     def umkreis(koerper, punkte, rand):
         u"""(N,) bool: Körperpunkte in der Hülle des Stücks, um `rand` erweitert."""
-        koerper = np.asarray(koerper, dtype=np.float64)
-        unten = punkte.min(axis=0) - rand
-        oben = punkte.max(axis=0) + rand
+        koerper = Torchfeld.feld(koerper, dtype=torch.float64)
+        unten = Torchfeld.amin(punkte, dim=0) - rand
+        oben = Torchfeld.amax(punkte, dim=0) + rand
         return ((koerper >= unten) & (koerper <= oben)).all(axis=1)
 
     @staticmethod
     def dreiecke(flaechen, anzahl):
         u"""(T, 3) Dreiecke aus den Flächen eines Folgernetzes: Vierecke zerlegt, `-1` (die
         fehlende vierte Ecke eines Daz-Dreiecks) und Indizes außerhalb verworfen."""
-        f = np.asarray(flaechen)
+        f = Torchfeld.feld(flaechen)
         if f.ndim != 2 or not len(f):
-            return np.zeros((0, 3), dtype=np.int64)
+            return torch.zeros((0, 3), dtype=torch.int64, device='cuda')
         if f.shape[1] == 3:
             aus = f
         else:
             zweite = f[:, [0, 2, 3]]
-            aus = np.vstack([f[:, :3], zweite[f[:, 3] >= 0]])
+            aus = Torchfeld.vstack([f[:, :3], zweite[f[:, 3] >= 0]])
         gilt = (aus >= 0).all(axis=1) & (aus < anzahl).all(axis=1)
-        return aus[gilt].astype(np.int64)
+        return Torchfeld.astype(aus[gilt], torch.int64)

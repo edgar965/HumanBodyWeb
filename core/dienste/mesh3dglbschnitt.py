@@ -15,7 +15,8 @@ import os
 import struct
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Mesh3dglbschnitt']
 
@@ -66,10 +67,10 @@ class Mesh3dglbschnitt:
         if z['type'] not in cls.KOMPONENTEN:
             raise ValueError('Zugriffstyp %s nicht unterstützt' % z['type'])
         ansicht = kopf['bufferViews'][z['bufferView']]
-        dtype, n = np.dtype(cls.DTYPEN[z['componentType']]), cls.KOMPONENTEN[z['type']]
+        dtype, n = Torchfeld.dtype(cls.DTYPEN[z['componentType']]), cls.KOMPONENTEN[z['type']]
         schritt = ansicht.get('byteStride') or dtype.itemsize * n
         anfang = ansicht.get('byteOffset', 0) + z.get('byteOffset', 0)
-        return np.ndarray(shape=(z['count'], n), dtype=dtype, buffer=binaer, offset=anfang, strides=(schritt, dtype.itemsize))
+        return Torchfeld.aus_puffer(binaer, dtype, (z['count'], n), offset=anfang, schritte=(schritt, dtype.itemsize))      # Kopie auf der Karte (numpy gab eine Sicht in den Puffer)
 
     @classmethod
     def _primitiv(cls, kopf):
@@ -88,13 +89,13 @@ class Mesh3dglbschnitt:
     def flaechen(cls, pfad):
         """(F, 3) Indizes der Flächen in der Reihenfolge der Datei."""
         kopf, binaer = cls.lesen(pfad)
-        return cls._zugriff(kopf, binaer, cls._primitiv(kopf)['indices']).reshape(-1, 3).astype(np.int64)
+        return Torchfeld.astype(cls._zugriff(kopf, binaer, cls._primitiv(kopf)['indices']).reshape(-1, 3), torch.int64)
 
     @classmethod
     def punkte(cls, pfad):
         """(N, 3) float64 — die Punkte des einen Netzes in der Reihenfolge der Datei (14.10.2026, Gelenkfelder der Objekte: `Meshfigurobjektfelder`)."""
         kopf, binaer = cls.lesen(pfad)
-        return cls._zugriff(kopf, binaer, cls._primitiv(kopf)['attributes']['POSITION']).astype(np.float64)
+        return Torchfeld.astype(cls._zugriff(kopf, binaer, cls._primitiv(kopf)['attributes']['POSITION']), torch.float64)
 
     # ------------------------------------------------------------------ Schneiden
 
@@ -103,26 +104,26 @@ class Mesh3dglbschnitt:
         """`ziel` = `quelle` ohne die Flächen, für die `behalten` (F,) bool falsch ist → `(Flächen vorher, nachher, Punkte vorher, nachher)`. Schreibt über eine Nebendatei."""
         kopf, binaer = cls.lesen(quelle)
         p = cls._primitiv(kopf)
-        faces = cls._zugriff(kopf, binaer, p['indices']).reshape(-1, 3).astype(np.int64)
-        behalten = np.asarray(behalten, dtype=bool)
+        faces = Torchfeld.astype(cls._zugriff(kopf, binaer, p['indices']).reshape(-1, 3), torch.int64)
+        behalten = Torchfeld.feld(behalten, dtype=torch.bool)
         if len(behalten) != len(faces):
             raise ValueError('Die Datei hat %d Flächen, die Auswahl %d' % (len(faces), len(behalten)))
         if not behalten.any():
             raise ValueError('Es bliebe keine Fläche übrig')
         neue_faces = faces[behalten]
-        genutzt = np.unique(neue_faces)
+        genutzt = Torchfeld.unique(neue_faces)
         punkte_vorher = int(kopf['accessors'][p['attributes']['POSITION']]['count'])
-        neu_nummer = np.full(punkte_vorher, -1, dtype=np.int64)
-        neu_nummer[genutzt] = np.arange(len(genutzt))
+        neu_nummer = Torchfeld.full(punkte_vorher, -1, dtype=torch.int64)
+        neu_nummer[genutzt] = Torchfeld.arange(len(genutzt))
         neue_faces = neu_nummer[neue_faces]
         ersetzt = {}
         for name, nr in p['attributes'].items():
             werte = cls._zugriff(kopf, binaer, nr)
             if len(werte) != punkte_vorher:
                 raise ValueError('Attribut %s hat %d statt %d Werte' % (name, len(werte), punkte_vorher))
-            ersetzt[nr] = np.ascontiguousarray(werte[genutzt])
+            ersetzt[nr] = Torchfeld.feld(werte[genutzt])
         breit = len(genutzt) > 65535 or kopf['accessors'][p['indices']]['componentType'] == 5125
-        ersetzt[p['indices']] = np.ascontiguousarray(neue_faces.reshape(-1, 1).astype('<u4' if breit else '<u2'))
+        ersetzt[p['indices']] = Torchfeld.feld(Torchfeld.astype(neue_faces.reshape(-1, 1), Torchfeld.dtype('<u4' if breit else '<u2')))
         kopf, binaer = cls._ersetzen(kopf, binaer, ersetzt, p['attributes']['POSITION'], p['indices'])
         teil = Path(str(ziel) + '.teil')
         teil.write_bytes(cls._bytes(kopf, binaer))
@@ -146,14 +147,14 @@ class Mesh3dglbschnitt:
             ansichten[z['bufferView']] = nr
             z['count'], z['byteOffset'] = int(len(feld)), 0
             if nr == indizes:
-                z['componentType'] = {v: k for k, v in cls.DTYPEN.items()}[feld.dtype.str]
+                z['componentType'] = {v: k for k, v in cls.DTYPEN.items()}[Torchfeld.typtext(feld.dtype)]
             if 'min' in z or 'max' in z or nr == position:
-                z['min'] = [(float(v) if feld.dtype.kind == 'f' else int(v)) for v in feld.min(axis=0)]
-                z['max'] = [(float(v) if feld.dtype.kind == 'f' else int(v)) for v in feld.max(axis=0)]
+                z['min'] = [(float(v) if Torchfeld.typart(feld.dtype) == 'f' else int(v)) for v in Torchfeld.amin(feld, dim=0)]
+                z['max'] = [(float(v) if Torchfeld.typart(feld.dtype) == 'f' else int(v)) for v in Torchfeld.amax(feld, dim=0)]
         neu = bytearray()
         for i, a in enumerate(kopf['bufferViews']):
             if i in ansichten:
-                inhalt = ersetzt[ansichten[i]].tobytes()
+                inhalt = Torchfeld.als_bytes(ersetzt[ansichten[i]])
                 a.pop('byteStride', None)
             else:
                 inhalt = binaer[a.get('byteOffset', 0):a.get('byteOffset', 0) + a['byteLength']]

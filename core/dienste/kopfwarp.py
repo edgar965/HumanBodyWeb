@@ -8,7 +8,9 @@ Die Glättung (Detektorrauschen) wird nicht geraten, sondern durch Kreuzprüfung
 `fehler_px` ist der Vorhersagefehler an UNGESEHENEN Landmarken (Pixel des Fotos), `fehler_mm` rechnet ihn mit der Skalierung des Warps auf Modellmillimeter um.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 __all__ = ['Kopfwarp']
 
@@ -20,9 +22,9 @@ class Kopfwarp:
     NORM = 1000.0
 
     def __init__(self, von, nach, glaettung):
-        from scipy.interpolate import RBFInterpolator
-        self.von = np.asarray(von, dtype=np.float64)
-        self.nach = np.asarray(nach, dtype=np.float64)
+        from KoerperKI_alle.kartenrbf import RBFInterpolator
+        self.von = Torchfeld.feld(von, dtype=torch.float64)
+        self.nach = Torchfeld.feld(nach, dtype=torch.float64)
         self.glaettung = float(glaettung)
         self._f = RBFInterpolator(self.von / self.NORM, self.nach / self.NORM, kernel='thin_plate_spline', smoothing=self.glaettung)
         self.fehler_px = None
@@ -31,21 +33,21 @@ class Kopfwarp:
     @classmethod
     def _vorhersage_fehler(cls, von, nach, glaettung, faltungen, saat=7):
         """Quadratisches Mittel der Abstände weggelassener Paare zur Vorhersage (Pixel von `nach`)."""
-        from scipy.interpolate import RBFInterpolator
+        from KoerperKI_alle.kartenrbf import RBFInterpolator
         n = len(von)
-        reihenfolge = np.random.default_rng(saat).permutation(n)
-        fehler = np.zeros(n)
+        reihenfolge = Zufallsstrom.default_rng(saat).permutation(n)
+        fehler = torch.zeros(n, dtype=torch.float64, device='cuda')
         for f in range(faltungen):
             raus = reihenfolge[f::faltungen]
-            rest = np.setdiff1d(np.arange(n), raus)
+            rest = Torchfeld.setdiff1d(Torchfeld.arange(n), raus)
             warp = RBFInterpolator(von[rest] / cls.NORM, nach[rest] / cls.NORM, kernel='thin_plate_spline', smoothing=glaettung)
-            fehler[raus] = np.hypot(*(warp(von[raus] / cls.NORM) * cls.NORM - nach[raus]).T)
-        return float(np.sqrt(np.mean(fehler ** 2)))
+            fehler[raus] = Torchfeld.hypot(*(warp(von[raus] / cls.NORM) * cls.NORM - nach[raus]).T)
+        return float(Torchfeld.sqrt(Torchfeld.mean(fehler ** 2)))
 
     @classmethod
     def passen(cls, von, nach, mm_je_px=None):
         """Warp aus den Paaren `von` → `nach` (je (N, 2)), mit der Glättung der kleinsten Kreuzprüfung. `mm_je_px`: Millimeter je Pixel von `von` (Modell-Render), für `fehler_mm`."""
-        von, nach = np.asarray(von, dtype=np.float64), np.asarray(nach, dtype=np.float64)
+        von, nach = Torchfeld.feld(von, dtype=torch.float64), Torchfeld.feld(nach, dtype=torch.float64)
         if len(von) != len(nach) or len(von) < 20:
             raise ValueError('Zu wenige Landmarkenpaare (%d)' % len(von))
         fehler = {g: cls._vorhersage_fehler(von, nach, g, cls.FALTUNGEN) for g in cls.GLAETTUNGEN}
@@ -62,14 +64,14 @@ class Kopfwarp:
         """Pixel von `nach` je Pixel von `von` (Mittel der besten Ähnlichkeit über alle Paare)."""
         a = self.von - self.von.mean(axis=0)
         b = self.nach - self.nach.mean(axis=0)
-        return float(np.sqrt((b ** 2).sum() / max((a ** 2).sum(), 1e-12)))
+        return float(Torchfeld.sqrt((b ** 2).sum() / max((a ** 2).sum(), 1e-12)))
 
     def anwenden(self, punkte):
         """(N, 2) Punkte im Bild `von` → (N, 2) im Bild `nach`."""
-        punkte = np.asarray(punkte, dtype=np.float64).reshape(-1, 2)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64).reshape(-1, 2)
         return self._f(punkte / self.NORM) * self.NORM
 
     def rest_px(self):
         """Abstand der angepassten Paare von ihren Zielen (Pixel von `nach`): quadratisches Mittel und Höchstwert — bei Glättung 0 genau 0."""
-        d = np.hypot(*(self.anwenden(self.von) - self.nach).T)
-        return float(np.sqrt(np.mean(d ** 2))), float(d.max())
+        d = Torchfeld.hypot(*(self.anwenden(self.von) - self.nach).T)
+        return float(Torchfeld.sqrt(Torchfeld.mean(d ** 2))), float(d.max())

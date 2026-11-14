@@ -34,7 +34,8 @@ Stoffdicke. Hier gelten deshalb UMAs Vorgaben (`glaetten=True`,
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .koerperhuelle import Koerperhuelle
 
@@ -64,14 +65,14 @@ class Konformeranpassung:
         """
         from UMA_Python import Einstellungen, Kleidungskonformer, Netzgeometrie
 
-        stoff = np.asarray(stoff_punkte, dtype=np.float64).reshape(-1, 3)
-        koerper = np.asarray(koerper_punkte, dtype=np.float64).reshape(-1, 3)
+        stoff = Torchfeld.feld(stoff_punkte, dtype=torch.float64).reshape(-1, 3)
+        koerper = Torchfeld.feld(koerper_punkte, dtype=torch.float64).reshape(-1, 3)
         # DER KOERPER KOMMT ALS VIERECKE (gemessen 09.09.2026: 17.288 Quads,
         # `mesh.faces.shape[1] == 4`). Ein `reshape(-1, 3)` darauf haette
         # stillschweigend Unsinn ergeben - dieselbe Zahl Werte, voellig andere
         # Flaechen. `Koerperhuelle.dreiecke` teilt sie richtig auf.
-        flaechen = np.asarray(Koerperhuelle.dreiecke(koerper_dreiecke), dtype=np.int64).reshape(-1, 3)
-        stoff_flaechen = np.asarray(Koerperhuelle.dreiecke(stoff_dreiecke), dtype=np.int64).reshape(-1, 3)
+        flaechen = Torchfeld.feld(Koerperhuelle.dreiecke(koerper_dreiecke), dtype=torch.int64).reshape(-1, 3)
+        stoff_flaechen = Torchfeld.feld(Koerperhuelle.dreiecke(stoff_dreiecke), dtype=torch.int64).reshape(-1, 3)
         dreiecke = stoff_flaechen
         if not len(stoff) or not len(dreiecke):
             return None, 'Das Stück hat keine Flächen'
@@ -122,9 +123,9 @@ class Konformeranpassung:
         mitkappt, klappt das Stück auf die Innenseite des Körpers.
         """
         grenze = cls.KAPPE_M + max(0.0, float(zusatzabstand_m))
-        abstand = np.asarray(bindung.abstand, dtype=np.float64)
-        vorzeichen = np.where(abstand >= 0, 1.0, -1.0)
-        bindung.abstand = vorzeichen * np.minimum(np.abs(abstand), grenze)
+        abstand = Torchfeld.feld(bindung.abstand, dtype=torch.float64)
+        vorzeichen = torch.where(abstand >= 0, 1.0, -1.0)
+        bindung.abstand = vorzeichen * Torchfeld.minimum(Torchfeld.abs(abstand), grenze)
 
     @staticmethod
     def _hautabstand_mm(koerper, gelegt):
@@ -136,9 +137,9 @@ class Konformeranpassung:
         und für einen Vergleich zweier Wege am selben Stück ausreichend.
         """
         try:
-            from scipy.spatial import cKDTree
+            from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
         except ImportError:  # noqa: BLE001
             logger.info('Konformer: ohne scipy kein Hautabstand')
             return None
         abstand, _ = cKDTree(koerper).query(gelegt, workers=-1)
-        return round(float(np.median(abstand)) * 1000.0, 1)
+        return round(float(Torchfeld.median(abstand)) * 1000.0, 1)

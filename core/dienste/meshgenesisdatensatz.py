@@ -15,6 +15,10 @@ import logging
 from pathlib import Path
 
 from django.conf import settings
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 log = logging.getLogger('core')
 
@@ -38,7 +42,7 @@ class Meshgenesisdatensatz:
     def _vorhanden(cls, proben):
         if not proben.is_dir():
             return 0
-        return sum(1 for p in proben.iterdir() if (p / cls.FERTIG).is_file())
+        return sum(1 for p in proben.iterdir() if Npztorch.da(p / cls.FERTIG))
 
     @staticmethod
     def _geplant(datei):

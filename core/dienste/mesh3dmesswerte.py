@@ -22,7 +22,9 @@ Ein Wert, der sich nicht messen lässt (der Lauf ist älter als die Messung, die
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -80,19 +82,19 @@ class Mesh3dmesswerte:
     def _hand(self):
         """Die Hand ist kaputt, wenn der Eigenmorph (`rest.npz`) sie verformt statt nur zu verschieben, oder wenn Punkte der Hand eine Untergrenze unter Stoff tragen (`mindest`)."""
         rest_datei, ende = self.ordner.arbeit('rest.npz'), self.ordner.arbeit('genesis_ende.npz')
-        if not (rest_datei.is_file() and ende.is_file()):
+        if not (Npztorch.da(rest_datei) and Npztorch.da(ende)):
             return {'hand_verformung_mm': None, 'hand_untergrenze': None}
-        with np.load(rest_datei) as r, np.load(ende) as g:
+        with Npztorch.lesen(rest_datei) as r, Npztorch.lesen(ende) as g:
             teil = g['teil']
-            rest = r['rest'].astype(np.float64)
-            mindest = r['mindest'].astype(np.float64) if 'mindest' in r.files else None
+            rest = Torchfeld.astype(r['rest'], torch.float64)
+            mindest = Torchfeld.astype(r['mindest'], torch.float64) if 'mindest' in r.files else None
         rms = []
         for nr in self.HAENDE:
             v = rest[teil == nr]
             if len(v):
-                rms.append(float(np.sqrt((np.linalg.norm(v - v.mean(axis=0), axis=1) ** 2).mean())) * 1000.0)
-        hand = np.isin(teil, self.HAENDE)
-        untergrenze = 0 if mindest is None else int((np.linalg.norm(mindest[hand], axis=1) > 0).sum())
+                rms.append(float(Torchfeld.sqrt((Torchfeld.linalg_norm(v - v.mean(axis=0), dim=1) ** 2).mean())) * 1000.0)
+        hand = torch.isin(teil, Torchfeld.feld(self.HAENDE))
+        untergrenze = 0 if mindest is None else int((Torchfeld.linalg_norm(mindest[hand], dim=1) > 0).sum())
         return {'hand_verformung_mm': round(max(rms), 2) if rms else None, 'hand_untergrenze': untergrenze}
 
     def _kleidung(self):
@@ -107,8 +109,8 @@ class Mesh3dmesswerte:
 
             szene = trimesh.load(str(datei), process=False)
             netze = list(szene.geometry.values()) if hasattr(szene, 'geometry') else [szene]
-            y = np.concatenate([np.asarray(n.vertices)[:, 1] for n in netze])
-            werte['kleidung_unterkante_m'] = round(float(np.quantile(y, 0.01)), 4)
+            y = Torchfeld.cat([Torchfeld.feld(n.vertices)[:, 1] for n in netze])
+            werte['kleidung_unterkante_m'] = round(float(Torchfeld.quantile(y, 0.01)), 4)
         return werte
 
     def _haar_teile(self):

@@ -23,7 +23,8 @@ Dreieckszahl auch ohne die Dreiecke.
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 from humanbody_core import CharacterState
 
@@ -83,9 +84,9 @@ class Netzanfrage:
         if self._gewuenschte_pose() != 't_pose':
             return punkte
         pfad = os.path.join(str(settings.HUMANBODY_DATA_DIR), self.TPOSE)
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return punkte
-        tpose = np.load(pfad)
+        tpose = Npztorch.lesen(pfad)
         if tpose.shape != punkte.shape:
             # Andere Punktzahl heisst: andere Figur. Stillschweigend einsetzen
             # waere der Fall, der die Maennerfigur einmal zerstoert hat.

@@ -13,7 +13,8 @@ Zwei Arten von Hosen kommen aus dem Körper:
 
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Standhose']
 
@@ -42,15 +43,15 @@ class Standhose:
                 continue
             try:
                 with Image.open(tx['albedo']) as bild:
-                    a = np.asarray(bild.convert('RGBA'), dtype=np.float64)
+                    a = Torchfeld.feld(bild.convert('RGBA'), dtype=torch.float64)
             except OSError:
                 continue
             sicht = a[..., 3] > 10
             if sicht.any():
-                ton = np.asarray(tx.get('faktor') if tx.get('faktor') is not None else (1.0, 1.0, 1.0), dtype=np.float64)[:3]
-                return np.clip(a[sicht][:, :3].mean(axis=0) * ton, 0.0, 255.0)
+                ton = Torchfeld.feld(tx.get('faktor') if tx.get('faktor') is not None else (1.0, 1.0, 1.0), dtype=torch.float64)[:3]
+                return Torchfeld.clip(a[sicht][:, :3].mean(axis=0) * ton, 0.0, 255.0)
         farbe = t.get('farbe')
-        return np.clip(np.asarray(farbe[:3], dtype=np.float64) * 255.0, 0.0, 255.0) if farbe is not None else None
+        return Torchfeld.clip(Torchfeld.feld(farbe[:3], dtype=torch.float64) * 255.0, 0.0, 255.0) if farbe is not None else None
 
     @classmethod
     def ablegen(cls, glb, t, name):
@@ -58,7 +59,7 @@ class Standhose:
         from .hosenkoerper import Hosenkoerper
 
         k = glb._koerper  # noqa: SLF001 — das Körpernetz, das `Standmodellglb.koerper` abgelegt hat
-        y = np.asarray(t['punkte'], dtype=np.float64)[:, 1]
+        y = Torchfeld.feld(t['punkte'], dtype=torch.float64)[:, 1]
         eng = cls.eng(t.get('sorte'))
         gebaut = Hosenkoerper(k['punkte'], k['dreiecke']).bauen(float(y.min()), float(y.max()) - (0.0 if eng else Hosenkoerper.BUND_UNTER_HOSE), eng=eng)
         index, gewicht = glb._haut(k['haut'], len(k['punkte']))  # noqa: SLF001

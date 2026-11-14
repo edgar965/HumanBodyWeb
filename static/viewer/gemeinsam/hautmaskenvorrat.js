@@ -48,7 +48,7 @@ export class Hautmaskenvorrat {
         const einstellungen = [];
         for (const s of stoffe) {
             felder.push(s.punkte, s.dreiecke);
-            einstellungen.push([s.schluessel, s.tiefe ?? null, !!s.starr, s.nahe ?? null, !!s.ersatz]);
+            einstellungen.push([s.schluessel, s.tiefe ?? null, !!s.starr, s.nahe ?? null, !!s.ersatz, s.nachgeben ?? null]);
         }
         const text = JSON.stringify(einstellungen);
         felder.push(Uint32Array.from(text, (c) => c.codePointAt(0)));

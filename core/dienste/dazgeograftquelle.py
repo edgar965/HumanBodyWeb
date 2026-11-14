@@ -12,7 +12,8 @@ keine Textur, nur die Farbe 0,478 grau (`current_value`); die Genitaltexturen li
 Morphe (`Morphs/Daz 3D/Base/`): `body_bs_GenitalRealism_HD3` (1.511 Deltas, Vorgabe 1), `body_bs_Uncircumcised_HD3` (1.509, Vorgabe 0); Länge, Breite und
 Hodenasymmetrie sind KNOCHENFORMELN (`Gen2…Gen6` Verschiebung, Skalierung; `rTeste`/`lTeste` Verschiebung), keine Formmorphe.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftquelle']
 
@@ -38,7 +39,7 @@ class Dazgeograftquelle:
             raise ValueError('Das Geograft fehlt: %s (Genesis 9 Starter Essentials Expansion nicht installiert?)' % datei)
         self.geo = G9dson.lesen(datei).geometrie()
         #: Käfigpunkte des Geografts in Metern (Ruhelage der Grundfigur, Y oben).
-        self.punkte = np.asarray(self.geo['vertices']['values'], dtype=np.float64) * self.CM
+        self.punkte = Torchfeld.feld(self.geo['vertices']['values'], dtype=torch.float64) * self.CM
         self.polys = self.geo['polylist']['values']
         self.materialnamen = self.geo['polygon_material_groups']['values']
         self.uvs, self.ueber = G9basisnetz.uvsatz(self.geo.get('default_uv_set'))
@@ -46,8 +47,8 @@ class Dazgeograftquelle:
         if not graft.get('hidden_polys'):
             raise ValueError('%s trägt kein Geograft (`graft` fehlt)' % datei.name)
         #: Käfigflächen der Figur, die unter dem Geograft entfallen, und die Schweißpaare `[Punkt des Geografts, Punkt der Figur]`.
-        self.versteckt = np.asarray(graft['hidden_polys']['values'], dtype=np.int64)
-        self.paare = np.asarray(graft['vertex_pairs']['values'], dtype=np.int64)
+        self.versteckt = Torchfeld.feld(graft['hidden_polys']['values'], dtype=torch.int64)
+        self.paare = Torchfeld.feld(graft['vertex_pairs']['values'], dtype=torch.int64)
         self.figur_punkte = int(graft['vertex_count'])
         self.figur_flaechen = int(graft['poly_count'])
 
@@ -61,20 +62,20 @@ class Dazgeograftquelle:
     def posen(self, kaefig, pose=1.0):
         """`(gepostet, drehungen)`: wie `gepostet`, dazu je Punkt die Drehmatrix `Σ w_k·R(S_k)` des Skinnings `(N, 3, 3)` — ein Morph, auf der geraden Form gerechnet, wandert damit in
         die Pose (Skinning ist linear in der Punktlage: `Delta_Pose = J · Delta_gerade`)."""
-        kaefig = np.asarray(kaefig, dtype=np.float64)
-        einheit = np.tile(np.eye(3), (len(kaefig), 1, 1))
+        kaefig = Torchfeld.feld(kaefig, dtype=torch.float64)
+        einheit = torch.tile(torch.eye(3, dtype=torch.float64, device='cuda'), (len(kaefig), 1, 1))
         if not pose or not self.ordner.joinpath(*self.MORPHE, 'body_ctrl_DefaultPose.dsf').is_file():     # das weibliche Geograft hat keine Kette
             return kaefig, einheit
         winkel, mitten, gewichte = self._gen_kette()
-        aus, rest = np.zeros_like(kaefig), np.ones(len(kaefig))
-        drehungen = np.zeros_like(einheit)
-        s = np.eye(4)
+        aus, rest = torch.zeros_like(kaefig), torch.ones(len(kaefig), dtype=torch.float64, device='cuda')
+        drehungen = torch.zeros_like(einheit)
+        s = torch.eye(4, dtype=torch.float64, device='cuda')
         for knoten in sorted(mitten):                                      # Gen1 … Gen6: jeder hängt am vorigen
-            w = np.radians(winkel.get(knoten, 0.0) * float(pose))
-            c, sn = np.cos(w), np.sin(w)
-            drehung = np.array([[1, 0, 0], [0, c, -sn], [0, sn, c]], dtype=np.float64)
+            w = Torchfeld.radians(winkel.get(knoten, 0.0) * float(pose))
+            c, sn = Torchfeld.cos(w), Torchfeld.sin(w)
+            drehung = Torchfeld.feld([[1, 0, 0], [0, c, -sn], [0, sn, c]], dtype=torch.float64, copy=True)
             mitte = mitten[knoten]
-            lokal = np.eye(4)
+            lokal = torch.eye(4, dtype=torch.float64, device='cuda')
             lokal[:3, :3] = drehung
             lokal[:3, 3] = mitte - drehung @ mitte
             s = s @ lokal
@@ -100,22 +101,22 @@ class Dazgeograftquelle:
                 if kanal == 'rotation/x':
                     winkel[knoten] = float(formel['operations'][1]['val'])
         zahl = lambda c: float(c['value'] if isinstance(c, dict) else c)       # noqa: E731 — Mittelpunkt: Liste von {id, value}
-        mitten = {n['id']: np.array([zahl(c) for c in n['center_point']]) * self.CM
+        mitten = {n['id']: Torchfeld.feld([zahl(c) for c in n['center_point']], copy=True) * self.CM
                   for n in doc.bibliothek('node_library') if n['id'] in ('Gen1', 'Gen2', 'Gen3', 'Gen4', 'Gen5', 'Gen6')}
         haut = next(m for m in doc.modifikatoren() if m.get('id') == 'SkinBinding')['skin']
         gewichte = {}
         for gelenk in haut['joints']:
             knoten = str(gelenk.get('node', '')).lstrip('#')
             if knoten in mitten:
-                werte = np.asarray(gelenk['node_weights']['values'], dtype=np.float64)
-                gewichte[knoten] = (werte[:, 0].astype(np.int64), werte[:, 1])
+                werte = Torchfeld.feld(gelenk['node_weights']['values'], dtype=torch.float64)
+                gewichte[knoten] = (Torchfeld.astype(werte[:, 0], torch.int64), werte[:, 1])
         return winkel, mitten, gewichte
 
     def gruppenpunkte(self, namen):
         """Nummern der Käfigpunkte aller Flächen der Polygongruppen `namen` (Penis: `gen1 … gen6`, Hodensack: `testes`)."""
         gruppen = self.geo['polygon_groups']['values']
         gesucht = {i for i, g in enumerate(gruppen) if g in namen}
-        return np.unique([v for p in self.polys if p[0] in gesucht for v in p[2:]]).astype(np.int64)
+        return Torchfeld.astype(Torchfeld.unique([v for p in self.polys if p[0] in gesucht for v in p[2:]]), torch.int64)
 
     def gen_mitte(self, knoten='Gen1'):
         """Mittelpunkt (m) eines Knochens der Kette — der Drehpunkt, die Wurzel des Penis."""
@@ -127,7 +128,7 @@ class Dazgeograftquelle:
 
         doc = G9dson.lesen(self.ordner.joinpath(*self.MORPHE) / (name + '.dsf'))
         werte = doc.bibliothek('modifier_library')[0]['morph']['deltas']['values']
-        aus = np.zeros((len(self.punkte), 3), dtype=np.float64)
+        aus = torch.zeros((len(self.punkte), 3), dtype=torch.float64, device='cuda')
         for nummer, dx, dy, dz in werte:
-            aus[int(nummer)] = (dx, dy, dz)
+            aus[int(nummer)] = Torchfeld.feld((dx, dy, dz))
         return aus * self.CM

@@ -19,6 +19,10 @@ from unittest import mock
 
 import numpy as np
 from django.conf import settings
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 sys.path.insert(0, str(settings.TOOLS_ROOT))
 sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))
@@ -45,7 +49,7 @@ class Zeile1rahmenTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory(dir=str(Path(settings.TOOLS_ROOT) / 'ProjektTemp'))
         self.test = Path(self._tmp.name) / 'kunst'
         (self.test / 'vorstufe' / '0001').mkdir(parents=True)
-        np.savez(self.test / 'vorstufe' / '0001' / 'apose.npz', netz=np.array(str(self.test / 'kunst.glb')))
+        Npztorch.speichern(self.test / 'vorstufe' / '0001' / 'apose.npz', netz=np.array(str(self.test / 'kunst.glb')))
 
     def tearDown(self):
         self._tmp.cleanup()
@@ -87,18 +91,17 @@ class Zeile1rahmenTest(unittest.TestCase):
         z.ma = {}               # Mesh-Anpassung vor Fassung 5, ohne `gelenke` (`Zeile1figur.gelenke` → None); fehlte seit 30.10.2026, der Test brach mit AttributeError ab
         z.fig = self.test / 'form_maennlich'
         (z.fig / 'anzeige').mkdir(parents=True)
-        np.savez(z.fig / 'anzeige' / 'netz.npz', ruhe=np.array([[0.0, 0.0, 0.0], [0.0, 1.81, 0.0]], dtype=np.float32))
+        Npztorch.speichern(z.fig / 'anzeige' / 'netz.npz', ruhe=np.array([[0.0, 0.0, 0.0], [0.0, 1.81, 0.0]], dtype=np.float32))
         x = datei_punkte()[:5]
         s_f, v_f, s = 1.74, np.array([0.02, -0.01, 0.03]), 1.012
         alt = ((x * s_f + v_f) * s).astype(np.float32)
-        np.savez(self.test / 'ergebnis_Form_maennlich.npz', rig=alt, dreh=np.zeros((5, 3, 3), np.float32), winkel=np.zeros((5, 3), np.float32), stimmen=alt, enden=alt,
-                 figur_massstab=np.float64(s), rahmen_massstab=np.float64(s_f), rahmen_versatz=v_f, koerper=np.bool_(True))
-        np.savez(self.test / 'form.npz', hoehe_m=np.float32(1.70), massstab=np.float32(1.74), regler=np.zeros(3, np.float32))
+        Npztorch.speichern(self.test / 'ergebnis_Form_maennlich.npz', rig=alt, dreh=np.zeros((5, 3, 3), np.float32), winkel=np.zeros((5, 3), np.float32), stimmen=alt, enden=alt, figur_massstab=np.float64(s), rahmen_massstab=np.float64(s_f), rahmen_versatz=v_f, koerper=np.bool_(True))
+        Npztorch.speichern(self.test / 'form.npz', hoehe_m=np.float32(1.70), massstab=np.float32(1.74), regler=np.zeros(3, np.float32))
         (self.test / 'test.json').write_text(json.dumps({'kennung': 'kunst', 'form': {'maennlich': {'hoehe_m': 1.7}}}), encoding='utf-8')
         b, m = np.array([0.9, -0.05, -0.05]), 1.77
         p, d, w = np.ones((5, 3)), np.tile(np.eye(3), (5, 1, 1)), np.full((5, 3), 2.0)
         h = z.schreiben({'b': b, 'm': m, 'hoehe_m': 2.832}, (p, d, w))
-        e = np.load(self.test / 'ergebnis_Form_maennlich.npz')
+        e = Npztorch.lesen_numpy(self.test / 'ergebnis_Form_maennlich.npz')
         np.testing.assert_allclose(e['stimmen'], (x - b) * m, atol=2e-6)
         np.testing.assert_allclose(e['enden'], (x - b) * m, atol=2e-6)
         np.testing.assert_allclose(e['rig'], p)
@@ -107,7 +110,7 @@ class Zeile1rahmenTest(unittest.TestCase):
         np.testing.assert_allclose(e['rahmen_versatz'], -b * m)
         self.assertTrue(bool(e['zeile1']))
         self.assertFalse(bool(e['koerper']))
-        self.assertAlmostEqual(float(np.load(self.test / 'form.npz')['hoehe_m']), 2.832, places=5)
+        self.assertAlmostEqual(float(Npztorch.lesen_numpy(self.test / 'form.npz')['hoehe_m']), 2.832, places=5)
         info = json.loads((self.test / 'test.json').read_text(encoding='utf-8'))
         self.assertEqual(info['form']['maennlich']['haltung'], 'zeile1')
         self.assertAlmostEqual(h, 1.81, places=5)

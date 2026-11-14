@@ -19,7 +19,8 @@ Das Gesichtsoval (Schläfen, Kinn) bleibt draußen: im Netz liegt dort Haar und 
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .engine2d3dkleidergesichtslage import Engine2d3dKleiderGesichtslage
 
@@ -64,23 +65,23 @@ class Meshfigurlandmarkmorphe:
         ziel = Engine2d3dKleiderGesichtslage.auf_flaeche(lage)
         ergebnis = {}
         for bereich, indizes in self.BEREICHE.items():
-            nutzbar = [i for i in indizes if np.isfinite(modell[i]).all() and np.isfinite(ziel[i]).all()]
+            nutzbar = [i for i in indizes if Torchfeld.isfinite(modell[i]).all() and Torchfeld.isfinite(ziel[i]).all()]
             if len(nutzbar) < 4:
                 continue
             reste = self._klemmen(ziel[nutzbar] - modell[nutzbar])
             feld = self._feld(modell[nutzbar], reste, punkte)
-            nummern = np.flatnonzero(np.linalg.norm(feld, axis=1) > 1e-5).astype(np.int32)
+            nummern = Torchfeld.astype(torch.flatten(Torchfeld.linalg_norm(feld, dim=1) > 1e-5).nonzero()[:, 0], torch.int32)
             if not len(nummern):
                 continue
-            vorher = np.linalg.norm(ziel[nutzbar] - modell[nutzbar], axis=1) * 1000.0
-            nachher = np.linalg.norm(ziel[nutzbar] - (modell[nutzbar] + self._feld(modell[nutzbar], reste, modell[nutzbar])), axis=1) * 1000.0
+            vorher = Torchfeld.linalg_norm(ziel[nutzbar] - modell[nutzbar], dim=1) * 1000.0
+            nachher = Torchfeld.linalg_norm(ziel[nutzbar] - (modell[nutzbar] + self._feld(modell[nutzbar], reste, modell[nutzbar])), dim=1) * 1000.0
             regler = G9eigenmorphe.ablegen(
                 '%s %s' % (name, bereich), nummern, feld[nummern],
                 {'quelle': 'mesh to 3d', 'art': 'landmarkmorph', 'auftrag': self.job.kennung, 'bereich': bereich},
             )
             ergebnis[bereich] = {
-                'regler': regler, 'punkte': int(len(nummern)), 'max_mm': round(float(np.linalg.norm(feld[nummern], axis=1).max()) * 1000.0, 2),
-                'landmarken': len(nutzbar), 'landmarken_mm': {'vorher': round(float(np.median(vorher)), 2), 'nachher': round(float(np.median(nachher)), 2)},
+                'regler': regler, 'punkte': int(len(nummern)), 'max_mm': round(float(Torchfeld.linalg_norm(feld[nummern], dim=1).max()) * 1000.0, 2),
+                'landmarken': len(nutzbar), 'landmarken_mm': {'vorher': round(float(Torchfeld.median(vorher)), 2), 'nachher': round(float(Torchfeld.median(nachher)), 2)},
             }
         return ergebnis
 
@@ -88,21 +89,21 @@ class Meshfigurlandmarkmorphe:
 
     @classmethod
     def _klemmen(cls, reste):
-        laenge = np.linalg.norm(reste, axis=1)
+        laenge = Torchfeld.linalg_norm(reste, dim=1)
         zu_lang = laenge > cls.KLEMME
-        aus = np.array(reste, dtype=float, copy=True)
+        aus = Torchfeld.feld(reste, dtype=torch.float64, copy=True)
         aus[zu_lang] *= (cls.KLEMME / laenge[zu_lang])[:, None]
         return aus
 
     @classmethod
     def _feld(cls, zentren, reste, orte):
         """Gauß-RBF: die Verschiebung an `orte` (M, 3), die an `zentren` (K, 3) die `reste` (K, 3) hervorbringt (mit Regularisierung); 0 jenseits der `REICHWEITE`."""
-        abstand = np.linalg.norm(zentren[:, None] - zentren[None], axis=2)
-        gewichte = np.linalg.solve(np.exp(-((abstand / cls.SIGMA) ** 2)) + cls.REGULARISIERUNG * np.eye(len(zentren)), reste)
-        aus = np.zeros((len(orte), 3))
+        abstand = Torchfeld.linalg_norm(zentren[:, None] - zentren[None], dim=2)
+        gewichte = Torchfeld.linalg_solve(Torchfeld.exp(-((abstand / cls.SIGMA) ** 2)) + cls.REGULARISIERUNG * torch.eye(len(zentren), dtype=torch.float64, device='cuda'), reste)
+        aus = torch.zeros((len(orte), 3), dtype=torch.float64, device='cuda')
         for anfang in range(0, len(orte), 4000):
             stueck = orte[anfang:anfang + 4000]
-            d = np.linalg.norm(stueck[:, None] - zentren[None], axis=2)
-            nah = d.min(axis=1) <= cls.REICHWEITE * cls.SIGMA
-            aus[anfang:anfang + 4000][nah] = np.exp(-((d[nah] / cls.SIGMA) ** 2)) @ gewichte
+            d = Torchfeld.linalg_norm(stueck[:, None] - zentren[None], dim=2)
+            nah = Torchfeld.amin(d, dim=1) <= cls.REICHWEITE * cls.SIGMA
+            aus[anfang:anfang + 4000][nah] = Torchfeld.exp(-((d[nah] / cls.SIGMA) ** 2)) @ gewichte
         return aus

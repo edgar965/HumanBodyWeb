@@ -15,6 +15,10 @@ import json
 from pathlib import Path
 
 import numpy as np
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Fotogenesiszeile2']
 
@@ -63,6 +67,6 @@ class Fotogenesiszeile2:
             return None
         for e in sorted((self.kleider / 'k').glob('*/eintrag.json')):
             if json.loads(e.read_text(encoding='utf-8')).get('art') == art:
-                with np.load(e.parent / 'anzeige' / 'netz.npz') as z:
+                with Npztorch.lesen_numpy(e.parent / 'anzeige' / 'netz.npz') as z:
                     return z['ruhe'].astype(np.float64), z['dreiecke'].astype(np.int64)
         return None

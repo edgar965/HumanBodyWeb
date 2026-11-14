@@ -33,6 +33,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from Genesis9.aehnlichkeit import G9aehnlichkeit
+from Genesis9.bauart import G9bauart
 from Genesis9.drapierung import G9drapierung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
@@ -258,6 +259,8 @@ class G9garderobeapi:
                 # Die Art entscheidet im Browser, ob die Haut darunter
                 # ausgeblendet wird (`Hautverdeckung`, nur `kleidung`).
                 'art': eintrag.get('art'),
+                # Bauart (starr | anliegend | lose), Schuh, am Stück gesetzte Tiefe „Haut gibt nach“ (12.11.2026, `G9bauart`, Browser `Bauart`).
+                **G9bauart.antwort(eintrag, any(getattr(f, 'dynamisch', False) for f, _l, _n in netze)),
                 # Teile der Figur, die das Stück ersetzt (Originalaugen aus einer .blend, `G9stueckersatz`).
                 'ersetzt': ersetzt,
                 # So tief hinter der Haut das Stück sie noch verdeckt (mm; Scham aus einer .blend), 0 = Vorgabe der Hautmaske.

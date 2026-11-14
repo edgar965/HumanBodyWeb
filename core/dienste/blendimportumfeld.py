@@ -21,7 +21,8 @@ Kachel, wie sie ist. Die Treffer des Backens bleiben unverändert — nur die Fe
 (`test_blendimport_umfeld.py`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportumfeld']
 
@@ -42,7 +43,7 @@ class Blendimportumfeld:
     def __init__(self, stueck, figur, original, farbbild):
         """`stueck`: Punkte des Scham-Stücks (Ruhelage, Y oben); `figur`: `{punkte, dreiecke, uv, kachel}` (`Blendimportlage.genesis`);
         `original`: `{punkte (Ruhelage, Y oben), dreiecke, uv_ecken (T, 3, 2)}`; `farbbild`: `(H, W, 3)` uint8."""
-        self.stueck = np.asarray(stueck, dtype=np.float64)
+        self.stueck = Torchfeld.feld(stueck, dtype=torch.float64)
         self.figur = figur
         self.original = original
         self.farbbild = farbbild
@@ -52,10 +53,10 @@ class Blendimportumfeld:
 
     def dreiecke_nahe(self, kachel):
         """Nummern der Figurdreiecke dieser Kachel, deren Ecken irgendwo höchstens `RADIUS_M + AUSLAUF_M` vom Stück liegen."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         f = self.figur
-        je_kachel = np.flatnonzero(f['kachel'] == kachel)
+        je_kachel = torch.flatten(f['kachel'] == kachel).nonzero()[:, 0]
         if not len(je_kachel):
             return je_kachel
         d, _ = cKDTree(self.stueck).query(f['punkte'][f['dreiecke'][je_kachel]].reshape(-1, 3))
@@ -71,63 +72,63 @@ class Blendimportumfeld:
         uv = self.figur['uv'][self.figur['dreiecke'][dreiecke]]
         insel = Blendimportatlas.inseln(uv)
         teile = []
-        for i in np.unique(insel):
-            nr = np.flatnonzero(insel == i)
+        for i in Torchfeld.liste(Torchfeld.unique(insel)):
+            nr = torch.flatten(insel == i).nonzero()[:, 0]
             z, s, e, lam = self._texel_insel(dreiecke[nr], leer)
             teile.append((z, s, nr[e], lam))
         if not teile:
-            return (np.zeros(0, dtype=np.int64),) * 3 + (np.zeros((0, 3)),)
-        return tuple(np.concatenate([t[k] for t in teile]) for k in range(4))
+            return (torch.zeros(0, dtype=torch.int64, device='cuda'),) * 3 + (torch.zeros((0, 3), dtype=torch.float64, device='cuda'),)
+        return tuple(Torchfeld.cat([t[k] for t in teile]) for k in range(4))
 
     def _texel_insel(self, dreiecke, leer):
         """Die Texel einer Insel; Texel innerhalb eines Dreiecks gehen vor Texeln, die nur in der Zugabe `RAND` eines anderen liegen."""
         hoehe, breite = leer.shape
         uv = self.figur['uv'][self.figur['dreiecke'][dreiecke]]                    # (T, 3, 2)
-        px = np.stack([uv[..., 0] * breite, (1.0 - uv[..., 1]) * hoehe], axis=-1)  # (T, 3, 2): x, y
-        z0, z1 = int(np.floor(px[..., 1].min())) - 2, int(np.ceil(px[..., 1].max())) + 3
-        s0, s1 = int(np.floor(px[..., 0].min())) - 2, int(np.ceil(px[..., 0].max())) + 3
+        px = Torchfeld.stack([uv[..., 0] * breite, (1.0 - uv[..., 1]) * hoehe], axis=-1)  # (T, 3, 2): x, y
+        z0, z1 = int(Torchfeld.floor(px[..., 1].min())) - 2, int(Torchfeld.ceil(px[..., 1].max())) + 3
+        s0, s1 = int(Torchfeld.floor(px[..., 0].min())) - 2, int(Torchfeld.ceil(px[..., 0].max())) + 3
         z0, s0, z1, s1 = max(z0, 0), max(s0, 0), min(z1, hoehe), min(s1, breite)
-        eigner = np.full((z1 - z0, s1 - s0), -1, dtype=np.int32)
-        lam = np.zeros((z1 - z0, s1 - s0, 3), dtype=np.float32)
+        eigner = Torchfeld.full((z1 - z0, s1 - s0), -1, dtype=torch.int32)
+        lam = torch.zeros((z1 - z0, s1 - s0, 3), dtype=torch.float32, device='cuda')
         for innen in (False, True):
             for t in range(len(dreiecke)):
                 a, b, c = px[t]
-                x0, x1 = int(np.floor(px[t][:, 0].min())) - 1, int(np.ceil(px[t][:, 0].max())) + 2
-                y0, y1 = int(np.floor(px[t][:, 1].min())) - 1, int(np.ceil(px[t][:, 1].max())) + 2
+                x0, x1 = int(Torchfeld.floor(px[t][:, 0].min())) - 1, int(Torchfeld.ceil(px[t][:, 0].max())) + 2
+                y0, y1 = int(Torchfeld.floor(px[t][:, 1].min())) - 1, int(Torchfeld.ceil(px[t][:, 1].max())) + 2
                 x0, y0, x1, y1 = max(x0, s0), max(y0, z0), min(x1, s1), min(y1, z1)
                 if x0 >= x1 or y0 >= y1:
                     continue
                 det = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
                 if abs(det) < 1e-9:
                     continue
-                gy, gx = np.mgrid[y0:y1, x0:x1]
+                gy, gx = Torchfeld.mgrid[y0:y1, x0:x1]
                 x, y = gx + 0.5, gy + 0.5
                 l1 = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / det
                 l2 = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / det
                 l3 = 1.0 - l1 - l2
-                kleinste = np.minimum(np.minimum(l1, l2), l3)
+                kleinste = Torchfeld.minimum(Torchfeld.minimum(l1, l2), l3)
                 gilt = (kleinste >= 0.0) if innen else ((kleinste >= -self.RAND) & (kleinste < 0.0))
                 ort = (slice(y0 - z0, y1 - z0), slice(x0 - s0, x1 - s0))
                 if not innen:
                     gilt &= eigner[ort] < 0
-                eigner[ort] = np.where(gilt, t, eigner[ort])
-                lam[ort] = np.where(gilt[..., None], np.stack([l1, l2, l3], axis=-1), lam[ort])
-        zeile, spalte = np.nonzero((eigner >= 0) & leer[z0:z1, s0:s1])
-        return zeile + z0, spalte + s0, eigner[zeile, spalte], lam[zeile, spalte].astype(np.float64)
+                eigner[ort] = torch.where(gilt, t, eigner[ort])
+                lam[ort] = torch.where(gilt[..., None], Torchfeld.stack([l1, l2, l3], axis=-1), lam[ort])
+        zeile, spalte = torch.nonzero((eigner >= 0) & leer[z0:z1, s0:s1], as_tuple=True)
+        return zeile + z0, spalte + s0, eigner[zeile, spalte], Torchfeld.astype(lam[zeile, spalte], torch.float64)
 
     def original_farbe(self, orte):
         """`(farbe (n, 3) float, gefunden (n,) bool)`: die Farbe des Originals am nächsten Punkt seiner Fläche zu jedem Ort."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         from .hbdreiecksuche import Hbdreiecksuche
 
         o = self.original
         hoehe, breite = self.farbbild.shape[:2]
-        farbe = np.zeros((len(orte), 3))
-        gefunden = np.zeros(len(orte), dtype=bool)
+        farbe = torch.zeros((len(orte), 3), dtype=torch.float64, device='cuda')
+        gefunden = torch.zeros(len(orte), dtype=torch.bool, device='cuda')
         # Der nächste PUNKT ist schnell: liegt er weiter als `ABSTAND_MAX_M` + Punktabstand weg, liegt auch die Fläche zu weit (Fallout
         # ranger, Kachel 1003: 2,29 Mio. Texel im Umfeld, davon 1,32 Mio. ohne Original — der Weg zur Fläche für alle kostete Minuten).
-        nah_genug = np.flatnonzero(cKDTree(o['punkte']).query(orte)[0] <= self.ABSTAND_MAX_M + self.PUNKTABSTAND_M)
+        nah_genug = torch.flatten(cKDTree(o['punkte']).query(orte)[0] <= self.ABSTAND_MAX_M + self.PUNKTABSTAND_M).nonzero()[:, 0]
         # `Hbdreiecksuche` statt `trimesh.proximity.closest_point` (10.10.2026, Rosemary Kachel 1001): trimesh brauchte je Block von 200.000
         # Texeln 2–3 Minuten (py-spy dump im Lauf: `a` 200.000 → 400.000 → 600.000 im Abstand von 2–3 Minuten). Die Suche nimmt je Punkt die
         # 8 Dreiecke mit dem nächsten Schwerpunkt und rechnet darunter den exakten nächsten Punkt (Ericson), dazu die UV der Ecken dieses
@@ -144,9 +145,9 @@ class Blendimportumfeld:
     def abtasten(self, x, y):
         """Bilinear aus dem Farbbild (Texelmitten bei ganzen Zahlen; außen geklemmt)."""
         hoehe, breite = self.farbbild.shape[:2]
-        x = np.clip(x, 0, breite - 1.0001)
-        y = np.clip(y, 0, hoehe - 1.0001)
-        x0, y0 = np.floor(x).astype(np.int64), np.floor(y).astype(np.int64)
+        x = Torchfeld.clip(x, 0, breite - 1.0001)
+        y = Torchfeld.clip(y, 0, hoehe - 1.0001)
+        x0, y0 = Torchfeld.astype(Torchfeld.floor(x), torch.int64), Torchfeld.astype(Torchfeld.floor(y), torch.int64)
         fx, fy = (x - x0)[:, None], (y - y0)[:, None]
         b = self.farbbild
         oben = b[y0, x0] * (1 - fx) + b[y0, x0 + 1] * fx
@@ -155,10 +156,10 @@ class Blendimportumfeld:
 
     def gewicht(self, orte):
         """Anteil der Originalfarbe 0…1 je Ort: 1 bis `RADIUS_M` vom Stück, danach weich auf 0 über `AUSLAUF_M`."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         d, _ = cKDTree(self.stueck).query(orte)
-        t = np.clip((d - self.RADIUS_M) / self.AUSLAUF_M, 0.0, 1.0)
+        t = Torchfeld.clip((d - self.RADIUS_M) / self.AUSLAUF_M, 0.0, 1.0)
         return 1.0 - t * t * (3.0 - 2.0 * t)
 
     # ----------------------------------------------------------------- Lauf
@@ -176,14 +177,14 @@ class Blendimportumfeld:
         ecken = self.figur['punkte'][self.figur['dreiecke'][dreiecke[eigner]]]      # (n, 3, 3)
         orte = (ecken * lam[..., None]).sum(axis=1)
         gewicht = self.gewicht(orte)
-        wahl = np.flatnonzero(gewicht > 0.002)
+        wahl = torch.flatten(gewicht > 0.002).nonzero()[:, 0]
         if not len(wahl):
             return farbe
         original, gefunden = self.original_farbe(orte[wahl])
         wahl, original = wahl[gefunden], original[gefunden]
         w = gewicht[wahl][:, None]
-        alt = farbe[zeile[wahl], spalte[wahl]].astype(np.float64)
-        farbe[zeile[wahl], spalte[wahl]] = np.clip(np.rint(w * original + (1.0 - w) * alt), 0, 255).astype(np.uint8)
+        alt = Torchfeld.astype(farbe[zeile[wahl], spalte[wahl]], torch.float64)
+        farbe[zeile[wahl], spalte[wahl]] = Torchfeld.astype(Torchfeld.clip(Torchfeld.round(w * original + (1.0 - w) * alt), 0, 255), torch.uint8)
         self.bericht.update(texel=int(len(zeile)), im_umfeld=int(len(gewicht[gewicht > 0.002])), gefuellt=int(len(wahl)),
                             ohne_original=int(len(gefunden) - gefunden.sum()),
                             mittel_alt=[round(float(v), 1) for v in alt.mean(axis=0)] if len(alt) else None,

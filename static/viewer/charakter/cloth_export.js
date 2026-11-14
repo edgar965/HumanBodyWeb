@@ -15,6 +15,7 @@
  */
 import { THREE } from './state.js';
 import { state } from './state.js';
+import { Posenabsatz } from './posenabsatz.js';          // nach jedem von Hand gestellten Bild: Absatz und Fußhaltung der Schuhe (12.11.2026)
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { float32ToBase64, uint32ToBase64 }
@@ -63,7 +64,7 @@ async function _sampleBoneMatrices(inst, duration, fps) {
     for (let f = 0; f < N; f++) {
         const t = Math.min(f * dt, clip.duration);
         state.currentAction.time = t;
-        state.mixer.update(0);
+        state.mixer.update(0); Posenabsatz.nachMixer();
         mesh.updateMatrixWorld(true);
         for (let b = 0; b < bones.length; b++) {
             bones[b].updateMatrixWorld(true);
@@ -73,7 +74,7 @@ async function _sampleBoneMatrices(inst, duration, fps) {
     // restore
     state.currentAction.time = origTime;
     state.currentAction.paused = !wasPlaying;
-    state.mixer.update(0);
+    state.mixer.update(0); Posenabsatz.nachMixer();
     return { matrices: out, frameCount: N };
 }
 

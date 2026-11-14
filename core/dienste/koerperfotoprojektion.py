@@ -35,7 +35,8 @@ Fassung 2 (05.10.2026, Edgar: „Fotohaut nur auf Wunsch ist schlecht, da in den
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
 
 from .fotoabgleich import Fotoabgleich
@@ -88,7 +89,7 @@ class Koerperfotoprojektion:
 
     @classmethod
     def warm(cls, rgb):
-        rgb = np.asarray(rgb, dtype=np.float64)
+        rgb = Torchfeld.feld(rgb, dtype=torch.float64)
         return (rgb[..., 0] > rgb[..., 1]) & (rgb[..., 1] > rgb[..., 2]) & (rgb[..., 0] - rgb[..., 2] > cls.WARM)
 
     # ------------------------------------------------------------ Rechnung
@@ -100,7 +101,7 @@ class Koerperfotoprojektion:
         from .kleidfotoprojektion import Kleidfotoprojektion
         kfp = Kleidfotoprojektion(self.ablage, render, aus)
         kfp.GROESSE = self.GROESSE
-        alle = np.vstack([np.asarray(t['punkte']) for t in teile])
+        alle = Torchfeld.vstack([Torchfeld.feld(t['punkte']) for t in teile])
         kamera = Fotoprojektion.aus_render(alle, render.RAND, self.GROESSE)
         projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE, licht=licht)
         koerper = teile[index].get('art') == 'koerper'
@@ -109,14 +110,14 @@ class Koerperfotoprojektion:
         for r, abbildung, foto, masken in kfp._ansichten(teile, referenzen):
             ausschluss, foto_maske, foto_farbe = None, foto.maske, foto.farbe
             if abgleich:        # das Foto in den Rahmen der Modellsilhouette ziehen (08.10.2026, `Fotoabgleich`)
-                foto_farbe, foto_maske, bericht = Fotoabgleich.abgleichen(foto.farbe, foto.maske, np.any(masken, axis=0))
+                foto_farbe, foto_maske, bericht = Fotoabgleich.abgleichen(foto.farbe, foto.maske, Torchfeld.any(masken, dim=0))
                 self._abgleiche.append(dict(bericht, winkel=r.winkel))
             if koerper:         # Kleidung, Zubehör: ihr Rand nimmt der Haut die Fotofarbe (`RAND_KLEID`); Augen, Mund und Brauen gehören zum Körper
                 andere = [m for i, m in enumerate(masken) if teile[i].get('art') != 'koerper']
                 if andere:
-                    ausschluss = Fotoprojektion.erweitern(np.any(andere, axis=0), self.RAND_KLEID)
+                    ausschluss = Fotoprojektion.erweitern(Torchfeld.any(andere, dim=0), self.RAND_KLEID)
                 # Die Randpixel der Fotofigur tragen Hintergrund: sie ergaben helle Linien an den Seiten der Beine (Rand der Fotofläche in der Kachel).
-                foto_maske = ~Fotoprojektion.erweitern(~np.asarray(foto_maske, dtype=bool), self.RAND_FOTO)
+                foto_maske = ~Fotoprojektion.erweitern(~Torchfeld.feld(foto_maske, dtype=torch.bool), self.RAND_FOTO)
             projektion.ansicht(r.winkel, abbildung, foto_farbe, foto_maske, masken[index], ausschluss)
         return projektion
 
@@ -148,28 +149,28 @@ class Koerperfotoprojektion:
         """Eine Kachel: Fotofarbe (vom Licht befreit, ohne Hand) und Deckung im Raster, mit dem Ton der gebackenen Kachel angeglichen und nahtlos eingearbeitet (`Hautmischung`) → Anteil gedeckter Texel.
         `kopf`: die Kopfkachel — kein Hautton-Test (das Gesichtsoval der Foto-Maske sagt, was Haut ist; der graue Bart ist keine „warme" Farbe) und die Längen der Mischung im Maßstab des Kopfes (`KOPF_MASSSTAB`)."""
         from Genesis9.kleidfototextur import G9kleidfototextur
-        from scipy.ndimage import distance_transform_edt
+        from KoerperKI_alle.kartenbild import distance_transform_edt
         s = self.RASTER
         with Image.open(grund_pfad) as bild:
-            grund = np.asarray(bild.convert('RGB'), dtype=np.float32) / 255.0
-        klein = np.asarray(Image.fromarray((grund * 255).astype(np.uint8)).resize((s, s), Image.BILINEAR), dtype=np.float32) / 255.0
+            grund = Torchfeld.feld(bild.convert('RGB'), dtype=torch.float32) / 255.0
+        klein = Torchfeld.feld(Image.fromarray(Torchfeld.roh(Torchfeld.astype(grund * 255, torch.uint8))).resize((s, s), Image.BILINEAR), dtype=torch.float32) / 255.0
         f, d, _getroffen = proben.farbe(p)
         zeile, spalte = p['index'][:, 0], p['index'][:, 1]
         if not kopf:
             d = d * (self.warm(f) | ~self.warm(klein[zeile, spalte]))    # Fotofarbe ohne Hautton nur, wo auch die Haut keinen hat
-        farbe = np.zeros((s, s, 3), np.float32)
-        deckung = np.zeros((s, s), np.float32)
+        farbe = torch.zeros((s, s, 3), dtype=torch.float32, device='cuda')
+        deckung = torch.zeros((s, s), dtype=torch.float32, device='cuda')
         farbe[zeile, spalte], deckung[zeile, spalte] = f, d
         maske = p['maske']
         if not (deckung > 0).any():
             return 0.0
         voll = G9kleidfototextur._fuellen(farbe, deckung > 0, maske)
         # Zum Rand der UV-Inseln hin blendet die Fotofarbe aus: An den Nähten (Vorder- und Rückseite der Beine) sah die Projektion nur streifende Blickwinkel und legte helle Linien entlang der Beine.
-        deckung = deckung * np.clip(distance_transform_edt(maske) / self.RAND_INSEL, 0.0, 1.0)
+        deckung = deckung * Torchfeld.clip(distance_transform_edt(maske) / self.RAND_INSEL, 0.0, 1.0)
         neu, bericht = Hautmischung.mischen(klein, maske, voll, deckung, massstab=self.KOPF_MASSSTAB if kopf else 1.0)
         gross = grund.shape[1], grund.shape[0]
-        unterschied = np.stack([np.asarray(Image.fromarray((neu - klein)[..., c].astype(np.float32)).resize(gross, Image.BILINEAR)) for c in range(3)], axis=-1)
-        Image.fromarray(np.clip((grund + unterschied) * 255 + 0.5, 0, 255).astype(np.uint8)).save(ziel, quality=92)
+        unterschied = Torchfeld.stack([Torchfeld.feld(Image.fromarray(Torchfeld.roh(Torchfeld.astype((neu - klein)[..., c], torch.float32))).resize(gross, Image.BILINEAR)) for c in range(3)], axis=-1)
+        Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip((grund + unterschied) * 255 + 0.5, 0, 255), torch.uint8))).save(ziel, quality=92)
         logger.info('2D3D Kleider %s: Hautmischung %s', self.job.kennung, bericht)
         return float((deckung[maske] > 0.5).mean())
 

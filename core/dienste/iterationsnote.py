@@ -11,7 +11,8 @@ Zwei Teile, beide auf der gemeinsamen Fläche von `Iterationsbild`:
 Bildauswahl gemittelt (Regler „Gewicht" auf der Seite).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Iterationsnote']
 
@@ -26,8 +27,8 @@ class Iterationsnote:
     @classmethod
     def vergleichen(cls, vorlage, render):
         a, b = vorlage.maske, render.maske
-        vereint = np.count_nonzero(a | b)
-        iou = np.count_nonzero(a & b) / vereint if vereint else 0.0
+        vereint = Torchfeld.count_nonzero(a | b)
+        iou = Torchfeld.count_nonzero(a & b) / vereint if vereint else 0.0
         farbe = cls._farbe(vorlage, render)
         return {
             'iou': round(float(iou), 4),
@@ -58,9 +59,9 @@ class Iterationsnote:
                     continue
                 fa = vorlage.farbe[ys, xs][ma].mean(axis=0)
                 fb = render.farbe[ys, xs][mb].mean(axis=0)
-                diffs.append(float(np.abs(fa - fb).mean()))
+                diffs.append(float(Torchfeld.abs(fa - fb).mean()))
         # Ohne ein einziges gemeinsames Feld ist die Farbe unbekannt — dann zählt sie wie „ganz daneben".
-        return float(np.mean(diffs)) if diffs else 1.0
+        return float(Torchfeld.mean(diffs)) if diffs else 1.0
 
     @classmethod
     def gesamt_getrennt(cls, ansichten):

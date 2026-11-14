@@ -14,7 +14,8 @@ Hier und nicht in `Genesis9/`: jede Änderung dort entwertet die Antwort- und Fr
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -75,7 +76,7 @@ class Meshfigurkaefigfelder:
             arrays['d%d' % nummer] = deltas
         try:
             G9pfade.ablage().mkdir(parents=True, exist_ok=True)
-            np.savez(cls.pfad(gruppe, 'npz'), **arrays)
+            Npztorch.speichern(cls.pfad(gruppe, 'npz'), **arrays, komprimiert=False)
             with open(cls.pfad(gruppe, 'json'), 'w', encoding='utf-8') as datei:      # der Kopf zuletzt: er gilt erst, wenn die Felder da sind
                 json.dump(kopf, datei)
         except (OSError, TypeError, ValueError) as fehler:
@@ -86,7 +87,7 @@ class Meshfigurkaefigfelder:
         from Genesis9.morphablage import G9morphablage
 
         json_pfad, npz_pfad = cls.pfad(gruppe, 'json'), cls.pfad(gruppe, 'npz')
-        if not json_pfad.is_file() or not npz_pfad.is_file():
+        if not json_pfad.is_file() or not Npztorch.da(npz_pfad):
             return None
         try:
             with open(json_pfad, encoding='utf-8') as datei:
@@ -94,7 +95,7 @@ class Meshfigurkaefigfelder:
             if (kopf.get('fassung') != cls.FASSUNG or kopf.get('bestand') != G9morphablage.bestandsschluessel()
                     or list(kopf.get('kanaele') or []) != list(kanaele)):
                 return None
-            with np.load(npz_pfad, allow_pickle=False) as d:
+            with Npztorch.lesen(npz_pfad, allow_pickle=False) as d:
                 return {kanal: (d['n%d' % nummer], d['d%d' % nummer]) for nummer, kanal in enumerate(kopf['mit_feld'])}
         except (OSError, ValueError, KeyError) as fehler:
             logger.warning('Käfigfelder %s unlesbar (%s), werden neu gerechnet', gruppe, fehler)

@@ -23,7 +23,9 @@ import logging
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .blendimportbackenwahl import Blendimportbackenwahl
 from .blendimportblender import Blendimportblender
@@ -81,7 +83,7 @@ class Blendimporthaut:
         pfad = self.ablage.arbeit('scham_punkte.npy')
         materialien = self.inventar[name].get('materialien') or [{}]
         farbe = (materialien[0] or {}).get('farbe')
-        if not pfad.is_file() or not farbe:
+        if not Npztorch.da(pfad) or not farbe:
             return None
         if len(materialien) != 1:
             # Mehrere Hautmaterialien (Character Creator): welches Bild zu welchem Dreieck gehört, entscheidet `Blendimportscham` — hier
@@ -94,21 +96,21 @@ class Blendimporthaut:
         from .blendimportumfeld import Blendimportumfeld
 
         Image.MAX_IMAGE_PIXELS = None
-        with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
-            uv_ecken = np.asarray(d['uv_ecken'], dtype=np.float64)
+        with Npztorch.lesen(self.ablage.export(self.inventar[name]['datei'])) as d:
+            uv_ecken = Torchfeld.feld(d['uv_ecken'], dtype=torch.float64)
         with Image.open(farbe) as bild:
-            farbbild = np.asarray(bild.convert('RGB'))
+            farbbild = Torchfeld.feld(bild.convert('RGB'))
         original = {'punkte': ruhe, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken}
         if self.nach.geraet:
             from .hautnach.hautnachumfeld import Hautnachumfeld     # dieselbe Rechnung auf der GPU (50 s → 3 s an Rosemarys Kachel 1001)
 
-            return Hautnachumfeld(np.load(pfad), figur, original, farbbild, self.nach.geraet)
-        return Blendimportumfeld(np.load(pfad), figur, original, farbbild)
+            return Hautnachumfeld(Npztorch.lesen(pfad), figur, original, farbbild, self.nach.geraet)
+        return Blendimportumfeld(Npztorch.lesen(pfad), figur, original, farbbild)
 
     def _koerper(self):
         name = next(r['name'] for r in self.rollen if r['rolle'] == 'koerper')
-        with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
-            return name, np.asarray(d['punkte'], dtype=np.float64), np.asarray(d['dreiecke'], dtype=np.int64)
+        with Npztorch.lesen(self.ablage.export(self.inventar[name]['datei'])) as d:
+            return name, Torchfeld.feld(d['punkte'], dtype=torch.float64), Torchfeld.feld(d['dreiecke'], dtype=torch.int64)
 
     def abstand(self, ruhe, figur, dreiecke):
         """Abstand jedes Körperpunkts zur FLÄCHE der Figur (mm) — Median, p95, Maximum, RMS und Anteil über 8 mm.
@@ -117,8 +119,8 @@ class Blendimporthaut:
         # `Flaechenabstand` statt `trimesh.proximity.closest_point`: Rosemary (163.810 Körperpunkte, Figur passte nicht) brauchte dort 22,5 Minuten
         # und 28 GB — dasselbe Maß, gleiche Zahlen (Abweichung ≤ 0,015 mm), 164.000 Punkte in wenigen Sekunden.
         d = Flaechenabstand.abstand(ruhe, figur, dreiecke) * 1000.0
-        return {'median_mm': round(float(np.median(d)), 2), 'p95_mm': round(float(np.percentile(d, 95)), 2),
-                'max_mm': round(float(d.max()), 1), 'rms_mm': round(float(np.sqrt((d ** 2).mean())), 2),
+        return {'median_mm': round(float(Torchfeld.median(d)), 2), 'p95_mm': round(float(Torchfeld.percentile(d, 95)), 2),
+                'max_mm': round(float(d.max()), 1), 'rms_mm': round(float(Torchfeld.sqrt((d ** 2).mean())), 2),
                 'ueber_8mm': round(float((d > 8.0).mean()), 4)}
 
     def backen(self, blend, pruefen=None, wahl=None):
@@ -129,7 +131,7 @@ class Blendimporthaut:
         lage = Blendimportlage(self.job, self.zusatz)
         name, punkte, dreiecke = self._koerper()
         ruhe = lage.koerper_ruhelage(punkte, dreiecke)
-        np.save(self.ablage.arbeit('koerper_ruhe.npy'), Blendimportlage.blender(ruhe))
+        Npztorch.speichern_npy(self.ablage.arbeit('koerper_ruhe.npy'), Blendimportlage.blender(ruhe), fuer_numpy=True)          # Blender (`blendbacken.py --lage`) liest mit numpy
         ordner = self.ablage.arbeit('genesis')
         ordner.mkdir(parents=True, exist_ok=True)
         objs = lage.genesis_objs(ordner)
@@ -165,7 +167,7 @@ class Blendimporthaut:
         from .hautbacken.graph import Hautgraphfehler
 
         Image.MAX_IMAGE_PIXELS = None
-        with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
+        with Npztorch.lesen(self.ablage.export(self.inventar[name]['datei'])) as d:
             npz = {k: d[k] for k in d.files}
         lokal = Blendimporthautlokal(self.ablage, self.inventar[name], npz, Blendimportlage.blender(ruhe), figur, self.px, self.melden)
         try:
@@ -218,8 +220,8 @@ class Blendimporthaut:
         self.umfeld = self.nach.umfeld = self._umfeld(lage.genesis(), lage.koerper_ruhelage(punkte, dreiecke), name, dreiecke)
         self.nach.umfeld_bericht = {}
         for k in kacheln:
-            farbe = np.asarray(Image.open(self.ablage.arbeit('farbe_roh_%d.jpg' % k)).convert('RGB'))
-            leer = farbe.max(axis=2) <= self.nach.LEER_BIS
+            farbe = Torchfeld.feld(Image.open(self.ablage.arbeit('farbe_roh_%d.jpg' % k)).convert('RGB'))
+            leer = Torchfeld.amax(farbe, dim=2) <= self.nach.LEER_BIS
             farbe, _saum = self.nach.farbe_fuellen(k, farbe, leer)
             Image.fromarray(farbe).save(self.ablage.ergebnis('haut_%d_farbe.jpg' % k), quality=95)
             self.melden(0.95, 'Farbe der Kachel %d neu' % k)
@@ -240,8 +242,8 @@ class Blendimporthaut:
             shutil.copyfile(farbe_pfad, self.ablage.arbeit('farbe_roh_%d.jpg' % k))
             shutil.copyfile(normal_pfad, self.ablage.arbeit('normalen_roh_%d.png' % k))
             shutil.copyfile(rauh_pfad, self.ablage.arbeit('rauheit_roh_%d.jpg' % k))
-            n = self.nach.kachel(k, np.asarray(Image.open(farbe_pfad).convert('RGB')), np.asarray(Image.open(normal_pfad).convert('RGB')),
-                                 np.asarray(Image.open(rauh_pfad).convert('RGB')))
+            n = self.nach.kachel(k, Torchfeld.feld(Image.open(farbe_pfad).convert('RGB')), Torchfeld.feld(Image.open(normal_pfad).convert('RGB')),
+                                 Torchfeld.feld(Image.open(rauh_pfad).convert('RGB')))
             self._schreiben(k, n, farbe=n['farbe_geaendert'])
             deckung[str(k)] = n['deckung']
         return deckung

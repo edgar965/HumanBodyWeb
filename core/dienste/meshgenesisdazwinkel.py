@@ -8,7 +8,8 @@ die Beine standen falsch. Die Wege (`Meshgenesiswege`) tragen je Knochen die Dre
 
     Meshgenesisdazwinkel.aus_drehungen(dreh (N, 3, 3), knochen aus kinematik.json) -> (N, 3) Grad (Wurzel 0)
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Figurfilm.dazwinkel import Dazwinkel
 
 __all__ = ['Meshgenesisdazwinkel']
@@ -18,39 +19,39 @@ class Meshgenesisdazwinkel:
 
     @staticmethod
     def _verletzung(w, lo, hi):
-        return float((np.maximum(0, lo - w) + np.maximum(0, w - hi)).sum())
+        return float((Torchfeld.maximum(0, lo - w) + Torchfeld.maximum(0, w - hi)).sum())
 
     @classmethod
     def _waehlen(cls, e, reihenfolge, lo, hi):
         a = Dazwinkel.euler_winkel(e[None], reihenfolge)[0]
         o = [Dazwinkel.ACHSE[c] for c in reihenfolge.upper()]
-        b = a.copy()
+        b = Torchfeld.kopie(a)
         b[o[0]] += 180
         b[o[1]] = 180 - b[o[1]]
         b[o[2]] += 180
         b = (b + 180) % 360 - 180
         kandidaten = []
         for w in (a, b):
-            if np.abs(Dazwinkel.euler_matrix(w[None], reihenfolge)[0] - e).max() > 1e-5:
+            if Torchfeld.abs(Dazwinkel.euler_matrix(w[None], reihenfolge)[0] - e).max() > 1e-5:
                 continue
-            w = w.copy()
+            w = Torchfeld.kopie(w)
             for i in range(3):
                 if w[i] < lo[i] and w[i] + 360 <= hi[i]:
                     w[i] += 360
                 elif w[i] > hi[i] and w[i] - 360 >= lo[i]:
                     w[i] -= 360
-            kandidaten.append((cls._verletzung(w, lo, hi), float(np.abs(w).sum()), w))
+            kandidaten.append((cls._verletzung(w, lo, hi), float(Torchfeld.abs(w).sum()), w))
         return min(kandidaten, key=lambda t: (t[0], t[1]))[2] if kandidaten else a
 
     @classmethod
     def aus_drehungen(cls, dreh, knochen):
-        d = np.asarray(dreh, dtype=np.float64)
-        o = Dazwinkel.euler_matrix(np.array([k['o'] for k in knochen], dtype=np.float64), 'XYZ')
-        aus = np.zeros((len(knochen), 3))
+        d = Torchfeld.feld(dreh, dtype=torch.float64)
+        o = Dazwinkel.euler_matrix(Torchfeld.feld([k['o'] for k in knochen], dtype=torch.float64, copy=True), 'XYZ')
+        aus = torch.zeros((len(knochen), 3), dtype=torch.float64, device='cuda')
         for j, k in enumerate(knochen):
             e = int(k['eltern'])
             if e < 0:
                 continue
             lokal = d[e].T @ d[j]
-            aus[j] = cls._waehlen(o[j].T @ lokal @ o[j], k['reihenfolge'], np.asarray(k['min'], dtype=float), np.asarray(k['max'], dtype=float))
+            aus[j] = cls._waehlen(o[j].T @ lokal @ o[j], k['reihenfolge'], Torchfeld.feld(k['min'], dtype=torch.float64), Torchfeld.feld(k['max'], dtype=torch.float64))
         return aus

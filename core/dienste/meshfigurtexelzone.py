@@ -11,7 +11,8 @@ Hier zwei Dinge für jede GROSSE nie getroffene Zone (schmale Löcher und Spalte
 2. Die echte Haut geht über `FEDER_PX` Pixel (Hermite-Kurve) in dieses Feld über: die behaarte Haut endet nicht an einer Kante, sondern blendet aus. Die Texel auf der Zone selbst bekommen das Feld ganz.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurtexelzone']
 
@@ -31,21 +32,21 @@ class Meshfigurtexelzone:
     @staticmethod
     def _hell(rgb):
         """Helligkeit (Y der Rohwerte 0..255) je Zeile oder Pixel."""
-        return rgb @ np.array([0.299, 0.587, 0.114])
+        return rgb @ Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
 
     def anwenden(self, drin, versteckt, gut, farbe, ziel, fuellung):
         """Ändert `farbe` (gute Texel nahe der Zone) und `fuellung` (Texel der Zone) an Ort und Stelle; gibt die Zahl der abgeblendeten Texel zurück.
         `versteckt` (n,): nie getroffene, gefüllte Texel; `gut` (n,): echte Netzhaut; `ziel` (n,): alles, was gefüllt wird."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        zone = np.zeros((self.seite, self.seite), dtype=bool)
+        zone = torch.zeros((self.seite, self.seite), dtype=torch.bool, device='cuda')
         zone[drin] = versteckt
         zone = ndimage.binary_opening(zone, iterations=self.ZONE_MIN_PX // 2)
         if not zone.any():
             return 0
         abstand = ndimage.distance_transform_edt(~zone)[drin]
-        bild = np.zeros((self.seite, self.seite, 3))
-        maske = np.zeros((self.seite, self.seite), dtype=bool)
+        bild = torch.zeros((self.seite, self.seite, 3), dtype=torch.float64, device='cuda')
+        maske = torch.zeros((self.seite, self.seite), dtype=torch.bool, device='cuda')
         bild[drin] = farbe
         quelle = gut & (abstand >= self.FEDER_PX)
         maske[drin] = quelle
@@ -56,11 +57,11 @@ class Meshfigurtexelzone:
         maske[drin] = hell
         feld2, stuetze2 = self.glatt(bild, maske, self.FELD_PX)
         ersatz = stuetze2 <= 1e-3
-        feld, stuetze = np.where(ersatz[..., None], feld, feld2), np.where(ersatz, stuetze, stuetze2)
+        feld, stuetze = torch.where(ersatz[..., None], feld, feld2), torch.where(ersatz, stuetze, stuetze2)
         feld, ok = feld[drin], stuetze[drin] > 1e-3
         auf_zone = zone[drin] & ziel & ok
         fuellung[auf_zone] = feld[auf_zone]
-        t = np.clip(abstand / self.FEDER_PX, 0.0, 1.0)
-        w = np.where(gut & ok, 1.0 - t * t * (3.0 - 2.0 * t), 0.0)[:, None]
+        t = Torchfeld.clip(abstand / self.FEDER_PX, 0.0, 1.0)
+        w = torch.where(gut & ok, 1.0 - t * t * (3.0 - 2.0 * t), 0.0)[:, None]
         farbe[:] = farbe * (1.0 - w) + feld * w
         return int((w > 0.0).sum())

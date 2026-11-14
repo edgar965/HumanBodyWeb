@@ -21,7 +21,9 @@ import logging
 import re
 import zipfile
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdatensatz import Meshgenesisdatensatz
 from .meshgenesisformlaufnamen import Meshgenesisformlaufnamen as N
@@ -54,14 +56,14 @@ class Meshgenesisformvariante:
         """Die Schlüssel der Vorhersagedatei (nur das Verzeichnis des Zip-Archivs), gemerkt je Änderungszeit."""
         datei = lauf / cls.VORHERSAGEN
         try:
-            stand = datei.stat().st_mtime_ns
+            stand = Npztorch.stat(datei).st_mtime_ns
         except OSError:
             return set()
         gemerkt = cls._schluessel.get(str(datei))
         if gemerkt and gemerkt[0] == stand:
             return gemerkt[1]
         try:
-            with np.load(datei) as z:
+            with Npztorch.lesen(datei) as z:
                 namen = set(z.files)
         except (OSError, ValueError, zipfile.BadZipFile) as fehler:
             logger.warning('Meshgenesisformvariante: %s nicht lesbar (%s)', datei, fehler)
@@ -121,7 +123,7 @@ class Meshgenesisformvariante:
             if e.get('gruppe') != gruppe or '%s/%d' % (name, int(e['nr'])) in ausgelassen:
                 continue
             d = ordner / 'proben' / ('%04d' % int(e['nr']))
-            da = [k for k in wolken if (d / ('%s_%d.npz' % (eingang, k))).is_file() and '%s/%d/k%d' % (name, int(e['nr']), k) not in ausgelassen]
+            da = [k for k in wolken if Npztorch.da(d / ('%s_%d.npz' % (eingang, k))) and '%s/%d/k%d' % (name, int(e['nr']), k) not in ausgelassen]
             if da:
                 aus.append((e, da))
         return aus if len(aus) == zeilen else None
@@ -149,7 +151,7 @@ class Meshgenesisformvariante:
         ausgelassen = e.get('ausgelassen') if isinstance(e.get('ausgelassen'), dict) else {}
         dateien = cls._dateien(lauf)
         proben, gruppen = [], {}
-        with np.load(lauf / cls.VORHERSAGEN) as z:
+        with Npztorch.lesen(lauf / cls.VORHERSAGEN) as z:
             for g in cls.GRUPPEN:
                 schluessel = '%s_%s_form' % (name, g)
                 if schluessel not in dateien:
@@ -177,17 +179,17 @@ class Meshgenesisformvariante:
         """Die Regler mit der größten Abweichung Soll ↔ Vorhersage (Mittel aller Proben), geklemmt wie die Figur — nur gesetzte (|Wert| ≥ 0,01 in Soll oder Vorhersage)."""
         if not liste:
             return None
-        soll = z['%s_soll_form' % name].astype(np.float64)
+        soll = Torchfeld.astype(z['%s_soll_form' % name], torch.float64)
         zeilen = [z[k] for k in ('%s_%s_form' % (name, g) for g in cls.GRUPPEN) if k in z.files]
         if len(soll) != len(liste) or not zeilen:
             return None
-        vor = np.concatenate(zeilen).astype(np.float64).mean(axis=0)
-        lo, hi = np.array([r['min'] for r in liste], dtype=float), np.array([r['max'] for r in liste], dtype=float)
-        s, v = np.clip(soll, lo, hi), np.clip(vor, lo, hi)
-        s[np.abs(s) < 0.01] = 0.0
-        v[np.abs(v) < 0.01] = 0.0
-        gesetzt = np.flatnonzero((s != 0) | (v != 0))
-        reihe = gesetzt[np.argsort(-np.abs(v[gesetzt] - s[gesetzt]), kind='stable')][:cls.REGLER_ZEILEN]
+        vor = Torchfeld.astype(Torchfeld.cat(zeilen), torch.float64).mean(axis=0)
+        lo, hi = Torchfeld.feld([r['min'] for r in liste], dtype=torch.float64, copy=True), Torchfeld.feld([r['max'] for r in liste], dtype=torch.float64, copy=True)
+        s, v = Torchfeld.clip(soll, lo, hi), Torchfeld.clip(vor, lo, hi)
+        s[Torchfeld.abs(s) < 0.01] = 0.0
+        v[Torchfeld.abs(v) < 0.01] = 0.0
+        gesetzt = torch.flatten((s != 0) | (v != 0)).nonzero()[:, 0]
+        reihe = gesetzt[torch.argsort(-Torchfeld.abs(v[gesetzt] - s[gesetzt]), stable=True)][:cls.REGLER_ZEILEN]
         return {'gesetzt_soll': int((s != 0).sum()), 'gesetzt_vorhersage': int((v != 0).sum()), 'gesamt': len(liste),
                 'zeilen': [{'name': liste[i]['name'], 'anzeige': liste[i].get('anzeige') or liste[i]['name'], 'bereich': liste[i].get('bereich_titel') or liste[i].get('bereich') or '',
                             'soll': round(float(s[i]), 3), 'vorhersage': round(float(v[i]), 3), 'delta': round(float(v[i] - s[i]), 3)} for i in reihe]}

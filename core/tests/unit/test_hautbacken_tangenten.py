@@ -56,6 +56,10 @@ from django.test import SimpleTestCase
 from core.dienste.hautbacken.hautbackenmikkbau import Hautbackenmikkbau
 from core.dienste.hautbacken.hautbackenmikkfehler import Hautbackenmikkfehler
 from core.dienste.hautbacken.hautbackentangenten import Hautbackentangenten
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 GOLDEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hautbacken_daten',
                       'tangenten_golden.npz')
@@ -80,7 +84,7 @@ class TangentenTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        with np.load(GOLDEN) as daten:
+        with Npztorch.lesen_numpy(GOLDEN) as daten:
             namen = sorted({k.split('__')[0] for k in daten.files})
             cls.netze = {n: {k.split('__', 1)[1]: daten[k] for k in daten.files if k.split('__')[0] == n}
                          for n in namen}

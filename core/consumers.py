@@ -1,7 +1,8 @@
+from KoerperKI_alle.torchfeld import Torchfeld
 import json
 import logging
 
-import numpy as np
+import torch
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .dienste.charakterdaten import Charakterdaten
@@ -112,7 +113,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         grundnetz = vertices
         if cc is not None:
             vertices = cc.subdivide(vertices)
-        await self.send(bytes_data=vertices.astype(np.float32).tobytes())
+        await self.send(bytes_data=Torchfeld.als_bytes(Torchfeld.astype(vertices, torch.float32)))
         await self._send_skelett(grundnetz)
         await self._send_stoff(grundnetz)
 

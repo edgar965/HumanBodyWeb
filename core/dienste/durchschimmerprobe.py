@@ -25,7 +25,9 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Durchschimmerprobe']
 
@@ -34,7 +36,7 @@ class Durchschimmerprobe:
     u"""Stueck × Pose → Zahlen und Bilder."""
 
     POSEN = ('de_g9_base_05_standing', 'g9_base_pose_01_running_g9f')
-    ANSICHTEN = ((0.0, 'vorn'), (np.pi, 'hinten'), (np.pi / 2, 'links'), (-np.pi / 2, 'rechts'))
+    ANSICHTEN = ((0.0, 'vorn'), (math.pi, 'hinten'), (math.pi / 2, 'links'), (-math.pi / 2, 'rechts'))
     BILD_PX = 360
     #: Mindestabstand Haut vor Stoff, damit ein Pixel zaehlt (Meter) — die Tiefen
     #: beider Netze rauschen um ein halbes Texel.
@@ -103,14 +105,14 @@ class Durchschimmerprobe:
             return self._koerper[schluessel]
         netz = G9koerpernetz(formung, stufen=self.stufen)
         fein, normalen, _baum = netz.koerperflaeche()
-        hoch = np.array([0.0, formung.boden(), 0.0])
+        hoch = Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
         fein = fein + hoch
         stufe = G9basisnetz.holen().netzstufe(self.stufen)
         # ALLES im Figurraum (Boden nicht abgezogen): die Knochenmatrizen der
         # Pose rechnen dort, und der Koerper der Pose steht dort auch.
         baum = G9kollision.baum(fein)
         from Genesis9.oberflaechenbindung import G9oberflaechenbindung
-        aus = SimpleNamespace(punkte=fein, normalen=normalen, dreiecke=np.asarray(stufe.dreiecke),
+        aus = SimpleNamespace(punkte=fein, normalen=normalen, dreiecke=Torchfeld.feld(stufe.dreiecke),
                               baum=baum,
                               bindung=G9oberflaechenbindung(fein, normalen, stufe.dreiecke, baum))
         self._koerper[schluessel] = aus
@@ -118,8 +120,8 @@ class Durchschimmerprobe:
 
     def tiefen(self, punkte, koerper):
         from Genesis9.kollision import G9kollision
-        _w, naechster = G9kollision.naechste(koerper.baum, np.asarray(punkte, dtype=np.float64))
-        return np.einsum('ij,ij->i', punkte - koerper.punkte[naechster], koerper.normalen[naechster])
+        _w, naechster = G9kollision.naechste(koerper.baum, Torchfeld.feld(punkte, dtype=torch.float64))
+        return Torchfeld.einsum('ij,ij->i', punkte - koerper.punkte[naechster], koerper.normalen[naechster])
 
     # ---------------------------------------------------------------- Ruhe
 
@@ -145,9 +147,9 @@ class Durchschimmerprobe:
             haut = netz['haut']
             aus.append(SimpleNamespace(
                 name=folger.name,
-                punkte=np.asarray(netz['punkte'], dtype=np.float64),
+                punkte=Torchfeld.feld(netz['punkte'], dtype=torch.float64),
                 haut=haut if haut is None or hasattr(haut, 'knochen') else SimpleNamespace(**haut),
-                dreiecke=np.asarray(netz['dreiecke']), bindung=netz['bindung']))
+                dreiecke=Torchfeld.feld(netz['dreiecke']), bindung=netz['bindung']))
         return aus
 
     # ------------------------------------------------------------- Bewegt
@@ -163,11 +165,11 @@ class Durchschimmerprobe:
         for teil, feld in zip(teile, felder.teile, strict=False):
             if teil is None:
                 continue
-            punkte = np.array(teil.punkte, copy=True)
+            punkte = Torchfeld.feld(teil.punkte, copy=True)
             for kanal, (nummern, deltas) in (feld or {}).items():
                 w = float(werte.get(kanal, 0.0) or 0.0)
                 if abs(w) > 1e-6:
-                    punkte[nummern] += w * np.asarray(deltas, dtype=np.float64)
+                    punkte[nummern] += w * Torchfeld.feld(deltas, dtype=torch.float64)
             gehaeutet = matrizen.anwenden(punkte, teil.haut)
             gebunden = self.binden(gehaeutet, teil.bindung, koerper_p)
             aus.append((teil.name, gehaeutet, gebunden, teil.haut))
@@ -186,22 +188,22 @@ class Durchschimmerprobe:
         Grenzen fuer Tiefe und seitlichen Versatz. Sonst bleibt er gehaeutet."""
         if bindung is None:
             return gehaeutet
-        ecken = np.asarray(bindung['dreieck']).astype(np.int64)
-        bary = np.asarray(bindung['bary'], dtype=np.float64)
-        d = np.asarray(bindung['abstand'], dtype=np.float64)
-        m = np.asarray(bindung['mischung'], dtype=np.float64)
+        ecken = Torchfeld.astype(Torchfeld.feld(bindung['dreieck']), torch.int64)
+        bary = Torchfeld.feld(bindung['bary'], dtype=torch.float64)
+        d = Torchfeld.feld(bindung['abstand'], dtype=torch.float64)
+        m = Torchfeld.feld(bindung['mischung'], dtype=torch.float64)
         dabei = (ecken[:, 0] >= 0) & (m > 0)
-        aus = np.array(gehaeutet, copy=True)
+        aus = Torchfeld.feld(gehaeutet, copy=True)
         e = ecken[dabei]
-        q = np.einsum('kc,kcj->kj', bary[dabei], koerper.punkte[e])
-        n = np.einsum('kc,kcj->kj', bary[dabei], koerper.normalen[e])
-        n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
+        q = Torchfeld.einsum('kc,kcj->kj', bary[dabei], koerper.punkte[e])
+        n = Torchfeld.einsum('kc,kcj->kj', bary[dabei], koerper.normalen[e])
+        n /= Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-9)
         o = aus[dabei] - q
-        hoehe = np.einsum('kj,kj->k', o, n)
-        tief = np.minimum(d[dabei], cls.LUFT_M) - hoehe
-        seitlich = np.linalg.norm(o - hoehe[:, None] * n, axis=1)
+        hoehe = Torchfeld.einsum('kj,kj->k', o, n)
+        tief = Torchfeld.minimum(d[dabei], cls.LUFT_M) - hoehe
+        seitlich = Torchfeld.linalg_norm(o - hoehe[:, None] * n, dim=1)
         schieben = (tief > 0) & (tief < cls.TIEF_GRENZE_M) & (seitlich < cls.SEIT_GRENZE_M)
-        aus[dabei] = aus[dabei] + np.where(schieben, tief, 0.0)[:, None] * n
+        aus[dabei] = aus[dabei] + torch.where(schieben, tief, 0.0)[:, None] * n
         return aus
 
     # --------------------------------------------------------------- Bild
@@ -225,11 +227,11 @@ class Durchschimmerprobe:
             treffer = ((tiefe_s > 0) & (tiefe_k > 0) & (tiefe_k < tiefe_s - self.TIEFENSPIEL_M)
                        & (tiefe_k > tiefe_s - self.DICKE_M))
             summe += int(treffer.sum())
-            bild = np.where((tiefe_k > 0)[..., None], farbe_k, 0)
+            bild = torch.where((tiefe_k > 0)[..., None], farbe_k, 0)
             stoff_vorn = (tiefe_s > 0) & ((tiefe_k <= 0) | (tiefe_s <= tiefe_k + self.TIEFENSPIEL_M))
-            bild = np.where(stoff_vorn[..., None], farbe_s, bild)
+            bild = torch.where(stoff_vorn[..., None], farbe_s, bild)
             bild[treffer] = (255, 0, 0)
-            img = Image.fromarray(bild.astype(np.uint8))
+            img = Image.fromarray(Torchfeld.roh(Torchfeld.astype(bild, torch.uint8)))
             ImageDraw.Draw(img).text((4, 4), '%s %s: %d' % (titel, name, int(treffer.sum())),
                                      fill=(255, 255, 0))
             streifen.append(img)
@@ -251,14 +253,14 @@ class Durchschimmerprobe:
                                                      roughnessFactor=0.8)
         szene = pyrender.Scene(bg_color=(0, 0, 0, 1.0), ambient_light=(0.4, 0.4, 0.4))
         szene.add(pyrender.Mesh.from_trimesh(netz, material=material, smooth=False))
-        kamera = pyrender.PerspectiveCamera(yfov=np.radians(40), aspectRatio=0.5)
+        kamera = pyrender.PerspectiveCamera(yfov=Torchfeld.roh(Torchfeld.radians(40)), aspectRatio=0.5)
         abstand = hoehe * 1.5
-        lage = np.eye(4)
-        c, s = np.cos(winkel), np.sin(winkel)
-        lage[:3, :3] = np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
-        lage[:3, 3] = mitte + abstand * np.array([s, 0, c])
+        lage = torch.eye(4, dtype=torch.float64, device='cuda')
+        c, s = Torchfeld.cos(winkel), Torchfeld.sin(winkel)
+        lage[:3, :3] = Torchfeld.feld([[c, 0, s], [0, 1, 0], [-s, 0, c]], copy=True)
+        lage[:3, 3] = mitte + abstand * Torchfeld.feld([s, 0, c], copy=True)
         szene.add(kamera, pose=lage)
-        szene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=2.5), pose=lage)
+        szene.add(pyrender.DirectionalLight(color=Torchfeld.roh(torch.ones(3, dtype=torch.float64, device='cuda')), intensity=2.5), pose=lage)
         farbe_bild, tiefe = renderer.render(szene)
         return farbe_bild[..., :3], tiefe
 

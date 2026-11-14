@@ -26,6 +26,8 @@ GRENZEN, ehrlich benannt:
 - Sie sagt nicht, WARUM eine Stelle farblos ist. Dafür ist
   `Exportkartenpruefung` da, die in den Karten nachsieht.
 """
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from pathlib import Path
 
 
@@ -49,15 +51,15 @@ class Exportbildpruefung:
         `{punkte, farblos, anteil, streifen: [{nr, von, bis, punkte, farblos,
         anteil}], schlimmster}` — Streifen 0 ist OBEN (Kopf).
         """
-        import numpy as np
+        import torch
         from PIL import Image
 
         bild = Image.open(self.pfad).convert('RGBA')
-        feld = np.asarray(bild, dtype=np.int16)
+        feld = Torchfeld.feld(bild, dtype=torch.int16)
         figur = feld[:, :, 3] > 128
         rgb = feld[:, :, :3]
-        spanne = rgb.max(axis=2) - rgb.min(axis=2)
-        hell = rgb.max(axis=2) >= self.HELL
+        spanne = Torchfeld.amax(rgb, dim=2) - Torchfeld.amin(rgb, dim=2)
+        hell = Torchfeld.amax(rgb, dim=2) >= self.HELL
         farblos = figur & (spanne <= self.SPANNE) & hell
 
         hoehe = feld.shape[0]

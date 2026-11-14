@@ -11,7 +11,8 @@ nicht: das Geograft stand weder innen noch außen, Anhebung und Drapierer liefen
 Zeile „drapiert"), und an Matt0 lag die Hose ganz hinter dem Genital (im Chrome gesehen). Jetzt kommt eine getragene Anatomie auch dann unter das Stück,
 wenn EIN Käfigpunkt des Stücks binnen NAEHE an ihr liegt — ein Hut oder ein Schuh bleibt davon unberührt.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['G9lagenanatomie']
 
@@ -34,14 +35,14 @@ class G9lagenanatomie:
         u"""Die getragenen Anatomien, die die Einordnung überging, aber binnen `naehe` an einem Käfigpunkt liegen."""
         if not len(kaefig):
             return []
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
         baum, dazu = None, []
         for k, punkte, _spaeter in andere:
             if k in innen or k in aussen or not len(punkte) or not ist_anatomie(k):
                 continue
             if baum is None:
-                baum = cKDTree(np.asarray(kaefig, dtype=np.float64))
-            abstand, _i = baum.query(np.asarray(punkte, dtype=np.float64))
+                baum = cKDTree(Torchfeld.feld(kaefig, dtype=torch.float64))
+            abstand, _i = baum.query(Torchfeld.feld(punkte, dtype=torch.float64))
             if (abstand < naehe).any():
                 dazu.append(k)
         return dazu

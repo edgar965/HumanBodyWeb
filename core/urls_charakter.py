@@ -36,6 +36,7 @@ from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
 from .api.g9anatomiekartenapi import G9anatomiekartenapi
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
+from .api.g9bauartapi import G9bauartapi
 from .api.g9garderobepflege import G9garderobepflegeapi
 from .api.g9hautebenen import G9hautebenenapi
 from .api.g9koerperkoordinaten import G9koerperkoordinatenapi
@@ -203,6 +204,9 @@ CHARAKTER = [
     path('api/garmentcode/genesis/<str:stueck>/', Gcgenesisapi.herkunft, name='gcgenesis_herkunft'),
     path('api/character/genesis9-figur/garderobe/kategorien/',
          G9garderobekategorienapi.kategorien, name='g9_figur_garderobe_kategorien'),
+    # Bauart je Stück und „Haut gibt nach“ (12.11.2026, `G9bauartapi`).
+    path('api/character/genesis9-figur/garderobe/bauarten/', G9bauartapi.liste, name='g9_figur_garderobe_bauarten'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/bauart/', G9bauartapi.setzen, name='g9_figur_garderobe_bauart'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/umbenennen/',
          G9garderobepflegeapi.umbenennen, name='g9_figur_garderobe_umbenennen'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/loeschen/',

@@ -10,7 +10,8 @@ Die Konstanten sind die von `Blendimportlage` (an drei Modellen abgestimmt, `ble
 Gemessen am Auftrag „Edgar" (`ProjektTemp/_wegwerf/mesh3d/hose_entposen_ursache.py`): Abstand zum Käfig max 131 → 53 mm, Punkte über 60 mm 627 → 0, Kanten außerhalb 0,75–1,33 5,25 → 1,66 %, größte Streckung 37,4× → 2,2×; `entzerren` allein kostet 29 s.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurkleidungsruhelage']
 
@@ -22,9 +23,9 @@ class Meshfigurkleidungsruhelage:
         from Genesis9.koerperteile import G9koerperteile
         from Kleidung.kleidungsentposen import Kleidungsentposen
 
-        self.posiert = np.asarray(kaefig_posiert, dtype=np.float64)
-        self.teil = None if teil is None else np.asarray(teil)
-        self._kaefig_normalen = None if kaefig_normalen is None else np.asarray(kaefig_normalen, dtype=np.float64)
+        self.posiert = Torchfeld.feld(kaefig_posiert, dtype=torch.float64)
+        self.teil = None if teil is None else Torchfeld.feld(teil)
+        self._kaefig_normalen = None if kaefig_normalen is None else Torchfeld.feld(kaefig_normalen, dtype=torch.float64)
         self.entposen = Kleidungsentposen(
             kaefig_ruhe, self.posiert, self.teil, G9koerperteile.nachbarn() if self.teil is not None else None
         )
@@ -36,9 +37,9 @@ class Meshfigurkleidungsruhelage:
     @property
     def h(self):
         """Punktabstand des posierten Käfigs (m): Median des Abstands zum nächsten Nachbarn (wie `Blendimportlage.h`)."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        return float(np.median(cKDTree(self.posiert).query(self.posiert, k=2)[0][:, 1]))
+        return float(Torchfeld.median(cKDTree(self.posiert).query(self.posiert, k=2)[0][:, 1]))
 
     def kaefig_normalen(self):
         if self._kaefig_normalen is None:
@@ -49,7 +50,7 @@ class Meshfigurkleidungsruhelage:
 
     def punkte(self, netz, dreiecke):
         """(M, 3) — die Punkte des Kleidungsnetzes (Lage des Netzes, Meter) in der Ruhelage der Figur."""
-        netz = np.asarray(netz, dtype=np.float64)
+        netz = Torchfeld.feld(netz, dtype=torch.float64)
         if self.teil is None:
             ruhe = self.entposen.ruhelage(netz)
             self.befund = {'mit_teilen': False}
@@ -57,30 +58,30 @@ class Meshfigurkleidungsruhelage:
             return ruhe
         from .blendimportlage import Blendimportlage as L
 
-        d = np.asarray(dreiecke, dtype=np.int64)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64)
         h = self.h
-        kante = float(np.median(np.linalg.norm(netz[d[:, 0]] - netz[d[:, 1]], axis=1)))
+        kante = float(Torchfeld.median(Torchfeld.linalg_norm(netz[d[:, 0]] - netz[d[:, 1]], dim=1)))
         normalen = L.netz_normalen(netz, d)
         kaefig = self.kaefig_normalen()
         _, nah = self.entposen.baum.query(netz)
-        if float(np.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Netzes gegen den des Käfigs
+        if float(Torchfeld.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Netzes gegen den des Käfigs
             normalen = -normalen
         teile, abstand = self.entposen.teile_von(netz, None, normalen, kaefig, abstand=True)
         je_punkt = 0.87 * max(kante, 1e-6) ** 2
         flaeche = min(max(L.INSEL_E2 * je_punkt, L.INSEL_FLAECHE_H2[0] * h * h), L.INSEL_FLAECHE_H2[1] * h * h)
         teile = self.entposen.teile_inseln(teile, d, max(3, int(round(flaeche / je_punkt))), abstand=abstand, ab=L.INSEL_AB_H * h)
-        haft = np.exp(-(abstand / (L.HAFT_H * h)) ** 2)
+        haft = Torchfeld.exp(-(abstand / (L.HAFT_H * h)) ** 2)
         teile = self.entposen.teile_glaetten(teile, d, haft, runden=L.GLAETTEN_STOFF)
         self.teile_zuletzt = teile
         ruhe = self.entposen.ruhelage(netz, teile)
         ruhe = self.entposen.entzerren(ruhe, netz, d, abstand, min(L.KOPPELN_H * h, L.KOPPELN_E * kante), L.ANKER, L.ANKER_H * h)
-        self.befund = {'mit_teilen': True, 'teile': int(len(np.unique(teile))), 'h_mm': round(h * 1000, 2), 'kante_mm': round(kante * 1000, 2),
+        self.befund = {'mit_teilen': True, 'teile': int(len(Torchfeld.unique(teile))), 'h_mm': round(h * 1000, 2), 'kante_mm': round(kante * 1000, 2),
                        **self._abstand(ruhe)}
         return ruhe
 
     def _abstand(self, ruhe):
         """Abstand der Punkte in Ruhe zum Käfig in Ruhe (Median, größter) — eine Fahne zeigt sich im größten."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         d, _ = cKDTree(self.entposen.ruhe).query(ruhe, workers=-1)
-        return {'abstand_median_mm': round(float(np.median(d)) * 1000, 1), 'abstand_max_mm': round(float(d.max()) * 1000, 1)}
+        return {'abstand_median_mm': round(float(Torchfeld.median(d)) * 1000, 1), 'abstand_max_mm': round(float(d.max()) * 1000, 1)}

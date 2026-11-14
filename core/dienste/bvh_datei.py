@@ -15,7 +15,8 @@ Schleifen — dazu steht die Messung bei `glaetten`.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -53,7 +54,7 @@ class BvhDatei:
         Vektorisiert (Umbau 15.08.2026): Vorher lief `gaussian_filter1d` in zwei
         verschachtelten Schleifen — je Gelenk und je Komponente, bei 176 Gelenken
         also 704 Aufrufe je Datei. `axis=0` macht dasselbe in einem Aufruf."""
-        from scipy.ndimage import gaussian_filter1d
+        from KoerperKI_alle.kartenbild import gaussian_filter1d
 
         sigma = float(sigma)
         if sigma <= 0:
@@ -61,13 +62,13 @@ class BvhDatei:
         self._warnen_bei_grossem_sigma(sigma)
         self._vorzeichen_angleichen()
         self.bvh.quats = gaussian_filter1d(self.bvh.quats, sigma=sigma, axis=0)
-        laengen = np.linalg.norm(self.bvh.quats, axis=2, keepdims=True)
+        laengen = Torchfeld.linalg_norm(self.bvh.quats, dim=2, keepdim=True)
         laengen[laengen < 1e-8] = 1.0
         self.bvh.quats /= laengen
         # Nur Kanaele glaetten, in denen ueberhaupt etwas steht — sonst wandert
         # eine konstante Null durch den Filter und bleibt Null (harmlos), kostet
         # aber Zeit.
-        belegt = np.any(self.bvh.positions != 0, axis=0)
+        belegt = Torchfeld.any(self.bvh.positions != 0, dim=0)
         for ji, gelenk in enumerate(belegt):
             for c, hat_werte in enumerate(gelenk):
                 if hat_werte:
@@ -115,7 +116,7 @@ class BvhDatei:
         zwei Frames waere fuer den Filter ein Sprung ueber die halbe Kugel."""
         q = self.bvh.quats
         for f in range(1, len(q)):
-            falsch = np.einsum('ij,ij->i', q[f], q[f - 1]) < 0
+            falsch = Torchfeld.einsum('ij,ij->i', q[f], q[f - 1]) < 0
             q[f][falsch] = -q[f][falsch]
 
     # ------------------------------------------------------- Wurzel festhalten
@@ -134,9 +135,9 @@ class BvhDatei:
         anker_x, anker_z = p[0, 0, 0], p[0, 0, 2]
         dx = p[:, 0, 0] - anker_x
         dz = p[:, 0, 2] - anker_z
-        abstand = np.sqrt(dx * dx + dz * dz)
+        abstand = Torchfeld.sqrt(dx * dx + dz * dz)
         zu_weit = abstand > radius
-        if np.any(zu_weit):
+        if Torchfeld.any(zu_weit):
             faktor = radius / abstand[zu_weit]
             p[zu_weit, 0, 0] = anker_x + dx[zu_weit] * faktor
             p[zu_weit, 0, 2] = anker_z + dz[zu_weit] * faktor
@@ -152,7 +153,7 @@ class BvhDatei:
 
     def speichern(self):
         """Bewegungsdaten in die Datei zurueckschreiben (Euler, wie im Kopf)."""
-        from scipy.spatial.transform import Rotation
+        from KoerperKI_alle.drehung import Drehung as Rotation
 
         zeilen = self.pfad.read_text(encoding='utf-8').split('\n')
         ordnungen = self._kanalordnungen(zeilen)

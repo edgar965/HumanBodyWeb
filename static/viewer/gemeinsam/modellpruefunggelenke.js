@@ -17,7 +17,9 @@ export class Modellpruefunggelenke {
     static KNOCHEN = /^(hip|pelvis|spine[1-4]|neck[12]|head|(l|r)_(shoulder|upperarm|upperarmtwist[12]|forearm|forearmtwist[12]|hand|thigh|thightwist[12]|shin|foot))$/;
 
     static pruefen(koerper, lage) {
-        const M = Modellpruefunggelenke, idx = koerper.geometry.index?.array;
+        // Gegen den VOLLEN Index (12.11.2026): Die Hautmaske nimmt die Haut unter dem Stoff aus dem Index (`Hautverdeckung`, Olesia1: 11.203 von 201.248 Dreiecken
+        // unter Shirt und Jeans); durch das Loch fiel die Windungszahl an spine3/spine4 unter 0,5, und die Zeile meldete sie 42 und 58 mm „außen“.
+        const M = Modellpruefunggelenke, geo = koerper.geometry, idx = geo.userData?.indexVoll?.index || geo.index?.array;
         if (!idx) return { geprueft: 0, aussen: [] };
         const aus = [], q = new THREE.Vector3();
         const knochen = koerper.skeleton.bones.filter((b) => M.KNOCHEN.test(b.name));

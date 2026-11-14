@@ -22,7 +22,8 @@ ist der Abstand dieses Fußpunkts zum Ring (m, innen negativ).
 Der Schnitt löscht Punkte; damit die Regler des Basis-Stücks („Daz Anatomie Frau", Stufe 1) weiter über die Rohnummern der Unterteilung zugeordnet werden können (`Dazgeograftstufenzuordnung`), behält er
 für jeden Punkt des Stücks die Nummer, die er VOR dem Schnitt hatte (`herkunft`; −1 für die Punkte, die der Schnitt neu auf eine Kante setzt).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftumriss']
 
@@ -57,8 +58,8 @@ class Dazgeograftumriss:
         von = int(angabe['von'])
         if anzahl_dreiecke is not None and von != int(anzahl_dreiecke):
             raise ValueError('das Loch von %s gilt für %d Dreiecke der Haut, die Figur hat %d' % (kennung, von, int(anzahl_dreiecke)))
-        maske = np.zeros(von, dtype=bool)
-        maske[np.asarray(angabe['dreiecke'], dtype=np.int64)] = True
+        maske = torch.zeros(von, dtype=torch.bool, device='cuda')
+        maske[Torchfeld.feld(angabe['dreiecke'], dtype=torch.int64)] = True
         return maske
 
     # ------------------------------------------------------------ Herkunft der Punkte (für die Regler des Basis-Stücks)
@@ -91,7 +92,7 @@ class Dazgeograftumriss:
         daten = json.loads(datei.read_text(encoding='utf-8'))
         if daten.get('herkunft') is None:
             return None
-        daten['herkunft'] = np.asarray(daten['herkunft'], dtype=np.int64)
+        daten['herkunft'] = Torchfeld.feld(daten['herkunft'], dtype=torch.int64)
         return daten
 
     # ------------------------------------------------------------ Abstand zum Ring (auf der Haut)
@@ -101,22 +102,22 @@ class Dazgeograftumriss:
         """Abstand (m) der `punkte` zum Rand des Lochs, gemessen von ihrem Fußpunkt auf der Haut: negativ, wenn der Fußpunkt in einem Dreieck des Lochs liegt. `haut`: die Figur als `trimesh.Trimesh`
         (Stufe 1, alle Dreiecke), `maske`: bool je Dreieck der Haut, `ring`: `(k, 3)` Ecken des Rings (geschlossen)."""
         import trimesh
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        punkte = np.asarray(punkte, dtype=np.float64)
-        zentren = np.asarray(haut.triangles_center)
-        nah = np.all((zentren > punkte.min(axis=0) - cls.KASTEN_RAND_M) & (zentren < punkte.max(axis=0) + cls.KASTEN_RAND_M), axis=1)
-        teil = trimesh.Trimesh(np.asarray(haut.vertices), np.asarray(haut.faces)[nah], process=False)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        zentren = Torchfeld.feld(haut.triangles_center)
+        nah = Torchfeld.all(Torchfeld.feld((zentren > Torchfeld.amin(punkte, dim=0) - cls.KASTEN_RAND_M) & (zentren < Torchfeld.amax(punkte, dim=0) + cls.KASTEN_RAND_M)), dim=1)
+        teil = trimesh.Trimesh(Torchfeld.roh(Torchfeld.feld(haut.vertices)), Torchfeld.roh(Torchfeld.feld(haut.faces)[nah]), process=False)
         fuss, _abstand, dreieck = trimesh.proximity.closest_point(teil, punkte)
-        innen = np.asarray(maske)[np.flatnonzero(nah)[dreieck]]
-        ring = np.asarray(ring, dtype=np.float64)
-        naechste = np.roll(ring, -1, axis=0)
-        teile = np.maximum(1, np.ceil(np.linalg.norm(naechste - ring, axis=1) / cls.RING_PROBE_M).astype(np.int64))
-        t = np.concatenate([np.arange(n) / n for n in teile])
-        von = np.repeat(np.arange(len(ring)), teile)
+        innen = Torchfeld.feld(maske)[torch.flatten(nah).nonzero()[:, 0][dreieck]]
+        ring = Torchfeld.feld(ring, dtype=torch.float64)
+        naechste = torch.roll(ring, -1, dims=0)
+        teile = Torchfeld.maximum(1, Torchfeld.astype(Torchfeld.ceil(Torchfeld.linalg_norm(naechste - ring, dim=1) / cls.RING_PROBE_M), torch.int64))
+        t = Torchfeld.cat([Torchfeld.arange(n) / n for n in Torchfeld.liste(teile)])
+        von = Torchfeld.repeat_interleave(Torchfeld.arange(len(ring)), teile)
         proben = ring[von] + t[:, None] * (naechste[von] - ring[von])
         weg = cKDTree(proben).query(fuss)[0]
-        return np.where(innen, -weg, weg)
+        return torch.where(innen, -weg, weg)
 
     # ------------------------------------------------------------ Schnitt
 
@@ -124,26 +125,26 @@ class Dazgeograftumriss:
     def zuschneiden(cls, punkte, dreiecke, uv_ecken, haut, maske, ring):
         """`(punkte, dreiecke, uv_ecken, herkunft, bericht)`: nur der Teil des Netzes über dem Loch (`maske` der Haut `haut`, Rand `ring`; plus `UEBERSTAND_M`), an der Kontur exakt geteilt, das größte
         zusammenhängende Stück, die Punkte neu gezählt. `herkunft[i]` = Nummer des Punkts `i` im Netz VOR dem Schnitt, −1 für die neuen Schnittpunkte. `ValueError`, wenn zu wenig übrig bleibt."""
-        from scipy import sparse
-        from scipy.sparse import csgraph
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+        from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
         from .blendimportschamschnitt import Blendimportschamschnitt
 
-        punkte = np.asarray(punkte, dtype=np.float64)
-        dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         werte = cls.abstand(haut, maske, ring, punkte) - cls.UEBERSTAND_M
         alle, d, uv = Blendimportschamschnitt.schneiden(punkte, dreiecke, uv_ecken, werte)
         if len(d) < cls.MINDEST_DREIECKE:
             raise ValueError('nach dem Schnitt am Umriss bleiben nur %d Dreiecke: das Geograft liegt nicht über dem Loch' % len(d))
         n = len(alle)
-        a = np.concatenate([d[:, 0], d[:, 1]])
-        b = np.concatenate([d[:, 1], d[:, 2]])
-        _, marke = csgraph.connected_components(sparse.coo_matrix((np.ones(len(a)), (a, b)), shape=(n, n)), directed=False)
+        a = Torchfeld.cat([d[:, 0], d[:, 1]])
+        b = Torchfeld.cat([d[:, 1], d[:, 2]])
+        _, marke = csgraph.connected_components(sparse.coo_matrix((torch.ones(len(a), dtype=torch.float64, device='cuda'), (a, b)), shape=(n, n)), directed=False)
         je_dreieck = marke[d[:, 0]]
-        gross = int(np.bincount(je_dreieck).argmax())
+        gross = int(Torchfeld.bincount(je_dreieck).argmax())
         behalten = je_dreieck == gross
-        benutzt, neu = np.unique(d[behalten], return_inverse=True)
-        herkunft = np.where(benutzt < len(punkte), benutzt, -1).astype(np.int64)
+        benutzt, neu = Torchfeld.unique(d[behalten], return_inverse=True)
+        herkunft = Torchfeld.astype(torch.where(benutzt < len(punkte), benutzt, -1), torch.int64)
         bericht = {'dreiecke_vorher': int(len(dreiecke)), 'dreiecke': int(behalten.sum()), 'punkte_vorher': int(len(punkte)), 'punkte': int(len(benutzt)),
                    'schnittpunkte': int((herkunft < 0).sum()), 'inseln_weg': int((~behalten).sum()), 'ueberstand_mm': cls.UEBERSTAND_M * 1000.0}
         return alle[benutzt], neu.reshape(-1, 3), uv[behalten], herkunft, bericht

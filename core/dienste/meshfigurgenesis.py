@@ -24,7 +24,9 @@ alles, was die Registrierung von Genesis braucht, EINMAL je Runde in ein npz ges
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -76,27 +78,25 @@ class Meshfigurgenesis:
         namen = [k['name'] for k in knochen]
         nummer = {n: i for i, n in enumerate(namen)}
         haut = G9haut.holen()
-        umrechnen = np.array([nummer.get(n, 0) for n in haut.knochen], dtype=np.int32)
-        dreiecke = np.asarray(G9kaefigumriss.dreiecke(), dtype=np.int32)
+        umrechnen = Torchfeld.feld([nummer.get(n, 0) for n in haut.knochen], dtype=torch.int32, copy=True)
+        dreiecke = Torchfeld.feld(G9kaefigumriss.dreiecke(), dtype=torch.int32)
         aus = {
-            'punkte': np.asarray(punkte, np.float32),
+            'punkte': Torchfeld.feld(punkte, dtype=torch.float32),
             'dreiecke': dreiecke,
-            'knochen': np.array(namen),
-            'eltern': np.array(
-                [nummer.get(k['eltern'], -1) if k['eltern'] else -1 for k in knochen], np.int32
-            ),
-            'kopf': np.array([k['kopf'] for k in knochen], np.float32),
-            'orientierung': np.array([np.asarray(roh[n]['orientation'], float) for n in namen], np.float32),
-            'reihenfolge': np.array([roh[n]['reihenfolge'] for n in namen]),
-            'haut_index': umrechnen[np.asarray(haut.index, np.int64)],
-            'haut_gewicht': np.asarray(haut.gewicht, np.float32),
+            'knochen': Torchfeld.feld(namen, copy=True),
+            'eltern': Torchfeld.feld([nummer.get(k['eltern'], -1) if k['eltern'] else -1 for k in knochen], dtype=torch.int32, copy=True),
+            'kopf': Torchfeld.feld([k['kopf'] for k in knochen], dtype=torch.float32, copy=True),
+            'orientierung': Torchfeld.feld([Torchfeld.feld(roh[n]['orientation'], dtype=torch.float64) for n in namen], dtype=torch.float32, copy=True),
+            'reihenfolge': Torchfeld.feld([roh[n]['reihenfolge'] for n in namen], copy=True),
+            'haut_index': umrechnen[Torchfeld.feld(haut.index, dtype=torch.int64)],
+            'haut_gewicht': Torchfeld.feld(haut.gewicht, dtype=torch.float32),
             'bereich': self.bereiche(),
             # Die Textur liest die Lider weiter aus dem Netz (INNEN wäre dort „ohne Farbe").
-            'bereich_textur': G9netzbereiche.bereiche().astype(np.int8),
+            'bereich_textur': Torchfeld.astype(G9netzbereiche.bereiche(), torch.int8),
             'gesichtskern': G9netzbereiche.gesichtskern(),
-            'spiegel': G9netzbereiche.spiegel().astype(np.int32),
-            'teil': G9koerperteile.genesis_punkte(haut).astype(np.int8),
-            'jcm': self.jcm(formung).astype(np.float32),
+            'spiegel': Torchfeld.astype(G9netzbereiche.spiegel(), torch.int32),
+            'teil': Torchfeld.astype(G9koerperteile.genesis_punkte(haut), torch.int8),
+            'jcm': Torchfeld.astype(self.jcm(formung), torch.float32),
         }
         aus.update(self._frei(namen))
         aus.update(self._landmarken(nummer))
@@ -116,7 +116,7 @@ class Meshfigurgenesis:
 
         from .meshfiguraugenhoehle import Meshfiguraugenhoehle
 
-        aus = G9netzbereiche.bereiche().astype(np.int8)
+        aus = Torchfeld.astype(G9netzbereiche.bereiche(), torch.int8)
         maske = Meshfiguraugenhoehle.maske()
         if len(maske) == len(aus):
             aus[maske] = G9netzbereiche.INNEN
@@ -126,8 +126,8 @@ class Meshfigurgenesis:
     def _gleich(pfad, daten):
         """Hat `pfad` schon genau diese Arrays? (Name, Form, Werte — nicht die Bytes: `np.savez` schreibt Zeiten ins Zip.)"""
         try:
-            with np.load(pfad, allow_pickle=False) as d:
-                return set(d.files) == set(daten) and all(np.array_equal(d[k], np.asarray(daten[k])) for k in daten)
+            with Npztorch.lesen(pfad, allow_pickle=False) as d:
+                return set(d.files) == set(daten) and all(Torchfeld.equal(d[k], Torchfeld.feld(daten[k])) for k in daten)
         except Exception:  # noqa: BLE001 — fehlt oder ist unlesbar: schreiben
             return False
 
@@ -136,12 +136,12 @@ class Meshfigurgenesis:
         die Vorschau läuft (`Meshfigurnebenlauf.frueh`) — ein Neuschreiben ließe sie eine halbe Datei lesen."""
         daten = self.daten()
         if not self._gleich(pfad, daten):
-            np.savez(pfad, **daten)
+            Npztorch.speichern(pfad, **daten, komprimiert=False)
         return {
             'punkte': int(len(daten['punkte'])),
             'knochen': int(len(daten['knochen'])),
             'frei': int(len(daten['frei'])),
-            'jcm_mm': round(float(np.linalg.norm(daten['jcm'], axis=1).max()) * 1000.0, 1),
+            'jcm_mm': round(float(Torchfeld.linalg_norm(daten['jcm'], dim=1).max()) * 1000.0, 1),
         }
 
     # --------------------------------------------------------------- Teile
@@ -153,7 +153,7 @@ class Meshfigurgenesis:
             if kurz in self.FREI:
                 frei.append(i)
                 skala.append(self.FREI[kurz])
-        return {'frei': np.array(frei, np.int32), 'frei_skala': np.array(skala, np.float32)}
+        return {'frei': Torchfeld.feld(frei, dtype=torch.int32, copy=True), 'frei_skala': Torchfeld.feld(skala, dtype=torch.float32, copy=True)}
 
     def _landmarken(self, nummer):
         """Die Landmarken-Tabelle (`G9netzlandmarken`, vom Detektor selbst kalibriert) als Arrays:
@@ -167,20 +167,20 @@ class Meshfigurgenesis:
         d = tabelle.daten
         quelle, index, dreieck, bary = [], [], [], []
         for art, praefix in ((0, 'pose'), (1, 'gesicht')):
-            for i in np.flatnonzero(d[praefix + '_dreieck'] >= 0):
+            for i in Torchfeld.liste(torch.flatten(d[praefix + '_dreieck'] >= 0).nonzero()[:, 0]):
                 quelle.append(art)
                 index.append(int(i))
                 dreieck.append(int(d[praefix + '_dreieck'][i]))
                 bary.append(d[praefix + '_bary'][i])
         knochen = [str(k) for k in d['gelenk_knochen']]
         return {
-            'lm_gelenk_nummer': np.asarray(d['gelenk_nummer'], np.int32),
-            'lm_gelenk_knochen': np.array([nummer[k] for k in knochen], np.int32),
-            'lm_gelenk_versatz': np.asarray(d['gelenk_versatz'], np.float32),
-            'lm_flaeche_quelle': np.array(quelle, np.int8),
-            'lm_flaeche_nummer': np.array(index, np.int32),
-            'lm_flaeche_dreieck': np.array(dreieck, np.int32),
-            'lm_flaeche_bary': np.array(bary, np.float32).reshape(-1, 3),
+            'lm_gelenk_nummer': Torchfeld.feld(d['gelenk_nummer'], dtype=torch.int32),
+            'lm_gelenk_knochen': Torchfeld.feld([nummer[k] for k in knochen], dtype=torch.int32, copy=True),
+            'lm_gelenk_versatz': Torchfeld.feld(d['gelenk_versatz'], dtype=torch.float32),
+            'lm_flaeche_quelle': Torchfeld.feld(quelle, dtype=torch.int8, copy=True),
+            'lm_flaeche_nummer': Torchfeld.feld(index, dtype=torch.int32, copy=True),
+            'lm_flaeche_dreieck': Torchfeld.feld(dreieck, dtype=torch.int32, copy=True),
+            'lm_flaeche_bary': Torchfeld.feld(bary, dtype=torch.float32, copy=True).reshape(-1, 3),
         }
 
     # ---------------------------------------------------------------- JCMs
@@ -192,7 +192,7 @@ class Meshfigurgenesis:
         from Genesis9.morphablage import G9morphablage
 
         n = len(G9basisnetz.holen().punkte)
-        feld = np.zeros((n, 3))
+        feld = torch.zeros((n, 3), dtype=torch.float64, device='cuda')
         if not self.drehung:
             return feld
         werte = G9gelenkkorrekturen.werte(self.drehung, regler=G9gelenkkorrekturen.regler(formung))
@@ -203,6 +203,6 @@ class Meshfigurgenesis:
                 continue
             nummern, deltas = paar
             gueltig = nummern < n
-            np.add.at(feld, nummern[gueltig], deltas[gueltig] * wert)
+            Torchfeld.add_at(feld, nummern[gueltig], deltas[gueltig] * wert)
         self.jcm_werte = werte
         return feld

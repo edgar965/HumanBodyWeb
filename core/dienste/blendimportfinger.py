@@ -28,7 +28,9 @@ import json
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -70,8 +72,8 @@ class Blendimportfinger:
         koerper = next((r for r in self.rollen if r['rolle'] == 'koerper'), None)
         if koerper is None:
             return self._nichts('Kein Körper')
-        with np.load(self.ablage.export(self.inventar[koerper['name']]['datei'])) as d:
-            punkte, dreiecke = np.asarray(d['punkte'], dtype=np.float64), np.asarray(d['dreiecke'], dtype=np.int64)
+        with Npztorch.lesen(self.ablage.export(self.inventar[koerper['name']]['datei'])) as d:
+            punkte, dreiecke = Torchfeld.feld(d['punkte'], dtype=torch.float64), Torchfeld.feld(d['dreiecke'], dtype=torch.int64)
         self.melden(0.05, 'Finger: Hände des Originals')
         _, teile = lage.koerper_ruhelage(punkte, dreiecke, mit_teilen=True)
         netz = lage.ins_netz(punkte)
@@ -127,8 +129,8 @@ class Blendimportfinger:
         besser werden. Nur der Median genügt nicht — gemessen an der linken Hand von Rosemary (offene, entspannte Hand): Median 4,79 → 3,38 (0,71),
         p90 11,5 → 10,3 (0,89); das Bild zeigte eine zusammengekrümmte Faust, die die zu langen Genesis-Finger auf die Länge der Originalhand
         kürzt. Die rechte Hand (echter Griff): Median 0,51, p90 0,36."""
-        v50, n50 = float(np.median(vorher)), float(np.median(nachher))
-        v90, n90 = float(np.percentile(vorher, 90)), float(np.percentile(nachher, 90))
+        v50, n50 = float(Torchfeld.median(vorher)), float(Torchfeld.median(nachher))
+        v90, n90 = float(Torchfeld.percentile(vorher, 90)), float(Torchfeld.percentile(nachher, 90))
         return {'vorher_median_mm': round(v50, 2), 'nachher_median_mm': round(n50, 2), 'vorher_p90_mm': round(v90, 2), 'nachher_p90_mm': round(n90, 2),
                 'gilt': bool(n50 < self.RUHE_VORTEIL * v50 and n90 < self.RUHE_VORTEIL * v90)}
 
@@ -143,16 +145,16 @@ class Blendimportfinger:
         arbeit = self.job_ablage().arbeit
         kaefig = arbeit(self.KAEFIG)
         if idx_liste:
-            idx = np.concatenate(idx_liste).astype(np.int32)
-            delta = np.concatenate(delta_liste).astype(np.float32)
+            idx = Torchfeld.astype(Torchfeld.cat(idx_liste), torch.int32)
+            delta = Torchfeld.astype(Torchfeld.cat(delta_liste), torch.float32)
             gesamt = {}
             for i, d in zip(idx, delta, strict=True):
                 gesamt[int(i)] = gesamt.get(int(i), 0.0) + d            # ein Punkt, den beide Hände bewegen (Handgelenk), bekommt die Summe
             neben = kaefig.with_name(kaefig.stem + '.neu.npz')
-            np.savez(neben, idx=np.array(sorted(gesamt), dtype=np.int32), delta=np.array([gesamt[k] for k in sorted(gesamt)], dtype=np.float32))
-            os.replace(neben, kaefig)
-        elif kaefig.is_file():
-            kaefig.unlink()
+            Npztorch.speichern(neben, idx=Torchfeld.feld(sorted(gesamt), dtype=torch.int32, copy=True), delta=Torchfeld.feld([gesamt[k] for k in sorted(gesamt)], dtype=torch.float32, copy=True), komprimiert=False)
+            Npztorch.ersetzen(neben, kaefig)
+        elif Npztorch.da(kaefig):
+            Npztorch.loeschen(kaefig)
         AtomarSchreiber.json_schreiben(arbeit(self.DATEI), {'fassung': self.FASSUNG, 'seiten': bericht})
 
     def job_ablage(self):
@@ -166,10 +168,10 @@ class Blendimportfinger:
     def kaefig(cls, meshablage):
         """`(idx, delta)` der Käfigkorrektur im Auftrag „Mesh to 3D" — `None` ohne Datei (Imports vor dem 10.10.2026, Hände gestreckt)."""
         pfad = meshablage.arbeit(cls.KAEFIG)
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
-            return np.asarray(d['idx'], dtype=np.int64), np.asarray(d['delta'], dtype=np.float64)
+        with Npztorch.lesen(pfad) as d:
+            return Torchfeld.feld(d['idx'], dtype=torch.int64), Torchfeld.feld(d['delta'], dtype=torch.float64)
 
     @classmethod
     def _lesen(cls, meshablage):

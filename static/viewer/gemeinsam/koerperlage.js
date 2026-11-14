@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Stoffkapseln } from './stoffkapseln.js';
 import { Protokoll } from './protokoll.js';
+import { Dqhaut } from './dqhaut.js';
 
 /**
  * Koerperlage — der gehäutete Körper je Bild als Textur, für die
@@ -57,6 +58,7 @@ export class Koerperlage {
         if (s.bild === bild && s.ziele && s.quelle === koerper.geometry) return Koerperlage._ergebnis(s);
         Koerperlage._vorbereiten(s, koerper);
         Koerperlage._attributeNachziehen(s, koerper.geometry);
+        Dqhaut.material(s.punkte.material, koerper);           // wie der Körper gezeichnet wird (halb Dual Quaternion, 12.11.2026) — sonst schöbe die Bindung gegen eine andere Haut
         const zielAlt = renderer.getRenderTarget();
         const autoClearAlt = renderer.autoClear;
         renderer.autoClear = true;

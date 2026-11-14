@@ -15,7 +15,7 @@ was da ist. Werte ausgeschalteter Teile fasst er nicht an — Rechenzeit für et
 
 import hashlib
 
-import numpy as np
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 from .kostuemparameter import Kostuemparameter
 from .iterationsoptimierer import Iterationsoptimierer
@@ -51,7 +51,7 @@ class Kostuemoptimierer:
 
     def _zufall(self, runde):
         saat = int(hashlib.sha256(('%s:%d' % (self.kennung, runde)).encode()).hexdigest()[:12], 16)
-        return np.random.default_rng(saat)
+        return Zufallsstrom.default_rng(saat)
 
     veraenderlich = classmethod(Iterationsoptimierer.veraenderlich.__func__)          # dieselbe Rechnung wie `Iterationsoptimierer.veraenderlich` (bis 08.11.2026 eine Kopie hier)
 

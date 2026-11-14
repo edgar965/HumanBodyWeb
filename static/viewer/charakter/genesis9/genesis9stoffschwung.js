@@ -35,6 +35,7 @@
  * Häutung (`gemeinsam/stofffelder.js`).
  */
 import { THREE, state } from '../state.js';
+import { Posenabsatz } from '../posenabsatz.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 import { base64ToFloat32, base64ToUint32 } from '../../gemeinsam/kodierung.js';
 import { Stoffkapseln, Stoffhaut } from '../../gemeinsam/stoffkapseln.js';
@@ -271,6 +272,7 @@ export class Genesis9stoffschwung {
         const t0 = performance.now();
         for (let i = 0; i < schritte; i++) {
             state.mixer.update(dt);
+            Posenabsatz.nachMixer();          // wie die Szenenschleife: Absatz und Fußhaltung der Schuhe nach dem Mixer (12.11.2026)
             Genesis9stoffschwung.takt(dt);
             const offen = [];
             for (const figur of Genesis9stoffschwung._figuren.values()) {

@@ -14,6 +14,7 @@ umleitet, verliert bei der Haelfte der Stoffpunkte einen Teil des Gewichts
 
 import json
 import os
+import sys
 
 import numpy as np
 from streusumme import Streusumme
@@ -119,7 +120,12 @@ class Figurnetze:
         # `with`, nicht nur `np.load`: die `.npz` bleibt sonst bis zum
         # Aufraeumen des Objekts offen — unter Windows liess das jeden
         # Pruefordner mit dem Stueck darin stehen (60 Ordner, 12.09.2026).
-        with np.load(pfad) as daten:
+        # `figurvideostuecke.py` schreibt über `Npztorch.speichern` — seit 13.11.2026 als `.pt` (bis dahin suchte dieser Leser die .npz und fand
+        # sie nicht); `lesen_numpy` nimmt die `.pt` zum .npz-Namen oder die alte Datei. Erst hier importiert: torch nur, wenn ein Szenenstück kommt.
+        if r'A:\3DTools' not in sys.path:
+            sys.path.append(r'A:\3DTools')
+        from KoerperKI_alle.npztorch import Npztorch
+        with Npztorch.lesen_numpy(pfad) as daten:
             punkte = np.asarray(daten['punkte'], dtype=np.float64)
             dreiecke = np.asarray(daten['dreiecke'], dtype=np.int64)
             namen = [str(n) for n in daten['knochen']]

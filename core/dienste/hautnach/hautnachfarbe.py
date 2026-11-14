@@ -9,7 +9,8 @@ der vollen Kachel anwenden (GPU). Felder als numpy hinein, ein Feld als numpy he
     voll = f.hinten(ersatz_pil, farbe, ungueltig)        # wie `Blendimportfarbangleich.hinten`
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 from ..blendimportfarbangleich import Blendimportfarbangleich
@@ -101,7 +102,7 @@ class Hautnachfarbe:
         self.filter = Hautnachfilter(geraet)
 
     def _auf(self, a, dtype):
-        return wp.array(np.ascontiguousarray(a), dtype=dtype, device=self.geraet)
+        return wp.array(Torchfeld.feld(a), dtype=dtype, device=self.geraet)
 
     def versatz(self, ersatz, farbe, gueltig):
         """Der Versatz Gebackenes − Ersatz auf dem Raster der Ersatzkachel: drei Felder `(h, w)` float32 auf der GPU — wie `Blendimportfarbangleich.versatz`."""
@@ -109,7 +110,7 @@ class Hautnachfarbe:
         g = self.geraet
         faktor = farbe.shape[0] // h
         gewicht, u0, u1, u2 = (wp.empty((h, w), dtype=wp.float32, device=g) for _ in range(4))
-        wp.launch(_bloecke, dim=(h, w), inputs=[self._auf(farbe, wp.uint8), self._auf(gueltig.astype(np.uint8), wp.uint8), faktor, self._auf(ersatz, wp.uint8),
+        wp.launch(_bloecke, dim=(h, w), inputs=[self._auf(farbe, wp.uint8), self._auf(Torchfeld.astype(gueltig, torch.uint8), wp.uint8), faktor, self._auf(ersatz, wp.uint8),
                                                 Blendimportfarbangleich.WEISS, gewicht, u0, u1, u2], device=g)
         ergebnis = [wp.zeros((h, w), dtype=wp.float32, device=g) for _ in range(3)]
         for sigma in sorted(Blendimportfarbangleich.SIGMA, reverse=True):         # von grob nach fein überblenden
@@ -123,13 +124,13 @@ class Hautnachfarbe:
         from PIL import Image
 
         hoehe, breite = farbe.shape[:2]
-        grob = Blendimportfarbangleich.stopfen(np.asarray(ersatz.convert('RGB')))
+        grob = Blendimportfarbangleich.stopfen(Torchfeld.feld(ersatz.convert('RGB')))
         faktor = max(1, hoehe // Blendimportfarbangleich.GROB_PX)
         while hoehe % faktor or breite % faktor:
             faktor -= 1
         if grob.shape[:2] != (hoehe // faktor, breite // faktor):
-            grob = np.asarray(Image.fromarray(grob).resize((breite // faktor, hoehe // faktor), Image.LANCZOS))
+            grob = Torchfeld.feld(Image.fromarray(grob).resize((breite // faktor, hoehe // faktor), Image.LANCZOS))
         ergebnis = self.versatz(grob, farbe, ~ungueltig)
-        voll = self._auf(np.asarray(Image.fromarray(grob).resize((breite, hoehe), Image.LANCZOS)), wp.uint8)
-        wp.launch(_anwenden, dim=(hoehe, breite), inputs=[voll, self._auf(ungueltig.astype(np.uint8), wp.uint8), *ergebnis, faktor, Blendimportfarbangleich.WEISS], device=self.geraet)
+        voll = self._auf(Torchfeld.feld(Image.fromarray(grob).resize((breite, hoehe), Image.LANCZOS)), wp.uint8)
+        wp.launch(_anwenden, dim=(hoehe, breite), inputs=[voll, self._auf(Torchfeld.astype(ungueltig, torch.uint8), wp.uint8), *ergebnis, faktor, Blendimportfarbangleich.WEISS], device=self.geraet)
         return voll.numpy()

@@ -46,7 +46,9 @@ Restmorph 0,49; Testfall Fläche 6,16 → 3,58 mm, RMS 11,32 → 6,10, max
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellrigmasse import Bildmodellrigmasse
@@ -102,7 +104,7 @@ class Bildmodellsilhouettenziel:
         if not s.get('kopf'):
             return None
         pfad = self.ablage.schaetzung() / s['kopf']
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
         from Genesis9.haut import G9haut
         from Genesis9.koerperteile import G9koerperteile
@@ -110,14 +112,14 @@ class Bildmodellsilhouettenziel:
         from Genesis9.zielnetz import G9zielnetz
 
         symmetrisch = self.optionen.get('symmetrie', 'an') == 'an'
-        zielnetz = G9zielnetz.aus(None, np.load(pfad), symmetrisch=symmetrisch)
+        zielnetz = G9zielnetz.aus(None, Npztorch.lesen(pfad), symmetrisch=symmetrisch)
         punkte, gewicht = G9netzpaarung.holen().zielpunkte(zielnetz, hoehe_cm)
         with Wrapperpfad():
-            teil = np.asarray(G9koerperteile.genesis_punkte(G9haut.holen()))
-        maske = (np.asarray(gewicht) > 0) & (teil == G9koerperteile.NUMMER['kopf'])
+            teil = Torchfeld.feld(G9koerperteile.genesis_punkte(G9haut.holen()))
+        maske = (Torchfeld.feld(gewicht) > 0) & (teil == G9koerperteile.NUMMER['kopf'])
         if not maske.any():
             return None
-        return np.asarray(punkte, float), maske
+        return Torchfeld.feld(punkte, dtype=torch.float64), maske
 
     # -------------------------------------------------------------- Runden
 
@@ -126,7 +128,7 @@ class Bildmodellsilhouettenziel:
         from Genesis9.reglerableitung import G9reglerableitung
 
         p, gk, knochen = G9reglerableitung.lage(G9formung(stellung))
-        return np.asarray(p, float), {n: np.asarray(gk[i], float) for i, n in enumerate(knochen)}
+        return Torchfeld.feld(p, dtype=torch.float64), {n: Torchfeld.feld(gk[i], dtype=torch.float64) for i, n in enumerate(knochen)}
 
     def _zielen(self, stellung, hoehe_cm, kopf):
         """Das Ziel dieser Runde: Käfig skaliert, Umriss, Kopf, Eingaben — `(T, gelenke, bericht)`."""
@@ -136,7 +138,7 @@ class Bildmodellsilhouettenziel:
         gelenke = {k: v * f for k, v in gelenke.items()}
         self.job.ergebnis['ziel'] = {'hoehe_ziel_cm': round(hoehe_cm, 1)}  # der Umriss liest die Höhe hier
         t, gelenke, umriss = Bildmodellumriss(self.job, self.optionen).formen(t, gelenke)
-        t = np.asarray(t, float)
+        t = Torchfeld.feld(t, dtype=torch.float64)
         if kopf is not None:
             t = self.kopf_einsetzen(t, *kopf)
         bericht = {}
@@ -157,8 +159,8 @@ class Bildmodellsilhouettenziel:
         if ziele:
             from Genesis9.proportionsformung import G9proportionsformung
 
-            t, gelenke, _ = G9proportionsformung().formen(t, gelenke, ziele, np.ones(len(t), bool))
-        return np.asarray(t, float), gelenke, bericht
+            t, gelenke, _ = G9proportionsformung().formen(t, gelenke, ziele, torch.ones(len(t), dtype=torch.bool, device='cuda'))
+        return Torchfeld.feld(t, dtype=torch.float64), gelenke, bericht
 
     def _melder(self, melder, runde):
         """Fortschritt einer Runde: `(anteil 0..1 innerhalb der Runde, text)` → Band 0,05–0,95."""
@@ -171,7 +173,7 @@ class Bildmodellsilhouettenziel:
     def kopf_einsetzen(t, kp, maske):
         """Die Kopfform des Schätzers an der Stelle des Kopfes im Ziel (Schwerpunkt auf Schwerpunkt) —
         der Schätzer liefert die FORM, die Größe kommt aus der Paarung auf die Körperhöhe."""
-        aus = np.array(t, float)
+        aus = Torchfeld.feld(t, dtype=torch.float64, copy=True)
         aus[maske] = kp[maske] - kp[maske].mean(0) + t[maske].mean(0)
         return aus
 
@@ -201,7 +203,7 @@ class Bildmodellsilhouettenziel:
             melden(0.0, 'Runde %d/%d: Umriss der Fotos' % (runde, self.RUNDEN))
             ziel, gelenke, umriss = self._zielen(stellung, hoehe, kopf)
             fit = G9formanpassung(
-                ableitung, ziel, np.ones(len(ziel)),
+                ableitung, ziel, torch.ones(len(ziel), dtype=torch.float64, device='cuda'),
                 gelenke if self.optionen.get('gelenke', 'an') == 'an' else None,
                 daempfung=Bildmodelloptionen.DAEMPFUNG.get(self.optionen.get('daempfung'), 0.02), fest=fest,
             )
@@ -218,13 +220,7 @@ class Bildmodellsilhouettenziel:
     def _ablegen(self, stellung, hoehe, wahl, mit_kopf, runden):
         p, gelenke = self._kaefig(stellung)
         self.ablage.ergebnis().mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(
-            self.ablage.ergebnis() / self.anpassung.ZIEL,
-            punkte=p.astype(np.float32),
-            gewicht=np.ones(len(p), dtype=np.float32),
-            gelenknamen=np.array(list(gelenke)),
-            gelenke=np.array([gelenke[k] for k in gelenke], dtype=np.float32),
-        )
+        Npztorch.speichern(self.ablage.ergebnis() / self.anpassung.ZIEL, punkte=Torchfeld.astype(p, torch.float32), gewicht=torch.ones(len(p), dtype=torch.float32, device='cuda'), gelenknamen=Torchfeld.feld(list(gelenke), copy=True), gelenke=Torchfeld.feld([gelenke[k] for k in gelenke], dtype=torch.float32, copy=True), komprimiert=True)
         self.job.ergebnis['ziel'] = {
             'weg': self.optionen.get(self.OPTION),
             'quelle': 'silhouette',

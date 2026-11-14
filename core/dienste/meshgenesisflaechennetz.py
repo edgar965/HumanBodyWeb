@@ -30,7 +30,9 @@ import re
 import struct
 import zipfile
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdatensatz import Meshgenesisdatensatz
 
@@ -53,7 +55,7 @@ class Meshgenesisflaechennetz:
     @classmethod
     def _stand(cls, ordner):
         try:
-            return tuple((p.name, p.stat().st_mtime_ns, p.stat().st_size) for p in (ordner / 'netz.npz', ordner / 'materialien.json'))
+            return tuple((p.name, Npztorch.stat(p).st_mtime_ns, Npztorch.stat(p).st_size) for p in (ordner / 'netz.npz', ordner / 'materialien.json'))
         except OSError:
             return None
 
@@ -68,22 +70,22 @@ class Meshgenesisflaechennetz:
         if gemerkt and gemerkt['stand'] == stand:
             return gemerkt['daten']
         try:
-            with np.load(ordner / 'netz.npz') as z:
+            with Npztorch.lesen(ordner / 'netz.npz') as z:
                 fassung = int(z['fassung'])
                 if fassung not in cls.FASSUNGEN:
                     logger.warning('Meshgenesisflaechennetz: %s trägt Fassung %s (bekannt: %s)', ordner, fassung, cls.FASSUNGEN)
                     return None
                 daten = {k: z[k] for k in ('dreiecke', 'etikett', 'knochen', 'gewicht', 'uv', 'material', 'teilfarben')}
                 if 'ruhe' in z.files and len(z['ruhe']) == len(daten['uv']):
-                    daten['ruhe'] = z['ruhe'].astype(np.float32)
+                    daten['ruhe'] = Torchfeld.astype(z['ruhe'], torch.float32)
                 if 'verborgen' in z.files:
-                    daten['verborgen'] = z['verborgen'].astype(np.uint32)
+                    daten['verborgen'] = Torchfeld.astype(z['verborgen'], torch.uint32)
                 # Trainingspaare (19.10.2026): das Anatomie-Stück trägt schon die Karte der Charakter-Seite — `Meshgenesisanatomie` backt dann nicht neu
                 daten['anatomie_fertig'] = bool(z['anatomie_fertig']) if 'anatomie_fertig' in z.files else False
                 if 'normalen' in z.files and len(z['normalen']) == len(daten['uv']):
-                    daten['normalen'] = np.clip(np.round(z['normalen'].astype(np.float32) * 127), -127, 127).astype(np.int8)
+                    daten['normalen'] = Torchfeld.astype(Torchfeld.clip(Torchfeld.round(Torchfeld.astype(z['normalen'], torch.float32) * 127), -127, 127), torch.int8)
                 if 'punktfarbe' in z.files and len(z['punktfarbe']) == len(daten['uv']):
-                    daten['punktfarbe'] = z['punktfarbe'].astype(np.uint8)
+                    daten['punktfarbe'] = Torchfeld.astype(z['punktfarbe'], torch.uint8)
             daten['materialien'] = json.loads((ordner / 'materialien.json').read_text(encoding='utf-8'))
             daten['fassung'] = fassung
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as fehler:
@@ -99,7 +101,23 @@ class Meshgenesisflaechennetz:
     @classmethod
     def paket(cls, modell, stufe=0, matrix=False):
         """`stufe` 1 (09.11.2026, Testseiten, `Meshgenesisflaechennetzfein`): der Körper auf Netzstufe 1, dazu `eltern` (Käfigdreieck je Dreieck, uint32) und mit `matrix` die Unterteilungsmatrix
-        der Körperpunkte (CSR: uint32 Zeilenanfänge, uint16 Käfigpunkte, float32 Gewichte). Ist der Körper nicht der Genesis-Käfig, bleibt es Stufe 0 (`stufe` im Kopf sagt, was kam)."""
+        der Körperpunkte (CSR: uint32 Zeilenanfänge, uint16 Käfigpunkte, float32 Gewichte). Ist der Körper nicht der Genesis-Käfig, bleibt es Stufe 0 (`stufe` im Kopf sagt, was kam).
+        Stufe 1 kommt fertig von der Platte, wenn sie zum Stand passt (`Meshgenesisanzeigeablage`, 13.11.2026), und wird nach jedem Bau dort abgelegt."""
+        if int(stufe) == 1:
+            from .meshgenesisanzeigeablage import Meshgenesisanzeigeablage
+            fertig = Meshgenesisanzeigeablage.lesen(modell, matrix)
+            if fertig is not None:
+                return fertig
+            paket = cls._paket(modell, stufe, matrix)
+            # nur ein echtes Stufe-1-Paket ablegen: fiel der Bau auf den Käfig zurück (Fehler im Log), baut der nächste Abruf neu (13.11.2026: drei Figuren mit `G9halsfalte` warfen
+            # TypeError, die Ablage hätte den Käfig festgehalten)
+            if paket and json.loads(paket[4:4 + struct.unpack('<I', paket[:4])[0]]).get('stufe') == 1:
+                Meshgenesisanzeigeablage.schreiben(modell, matrix, paket)
+            return paket
+        return cls._paket(modell, stufe, matrix)
+
+    @classmethod
+    def _paket(cls, modell, stufe, matrix):
         d = cls.laden(modell)
         if d is None:
             return None
@@ -109,7 +127,7 @@ class Meshgenesisflaechennetz:
             d = fein if fein is not None else d
         haut = int(d['knochen'].shape[1])
         kopf = {'fassung': d['fassung'], 'punkte': int(len(d['uv'])), 'dreiecke': int(len(d['dreiecke'])), 'haut': haut, 'teile': list(cls.TEILE),
-                'teilfarben': d['teilfarben'].astype(int).tolist(),
+                'teilfarben': Torchfeld.astype(d['teilfarben'], torch.int64).tolist(),
                 # Rauheit, Glanz, Metall nur, wenn das Stück sie trägt (21.10.2026 nachts, Stufe 2 der Kleider-KI) — sonst bleibt die Vorgabe der Seite
                 'materialien': [dict({'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')}, **{k: m[k] for k in cls.MATERIALWERTE if isinstance(m.get(k), (int, float))},
                                      **{k: m[k] for k in ('bild_material', 'bild_normal') if isinstance(m.get(k), str)})
@@ -120,22 +138,22 @@ class Meshgenesisflaechennetz:
         text = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         a = cls._auffuellen
-        teile = [struct.pack('<I', len(text)), text, d['dreiecke'].astype('<u4').tobytes(),
-                 a(d['knochen'].astype(np.uint8).tobytes()), a(d['gewicht'].astype(np.uint8).tobytes()), a(d['etikett'].astype(np.uint8).tobytes()),
-                 d['uv'].astype('<f4').tobytes(), a(d['material'].astype('<i2').tobytes())]
+        teile = [struct.pack('<I', len(text)), text, Torchfeld.als_bytes(Torchfeld.astype(d['dreiecke'], Torchfeld.dtype('<u4'))),
+                 a(Torchfeld.als_bytes(Torchfeld.astype(d['knochen'], torch.uint8))), a(Torchfeld.als_bytes(Torchfeld.astype(d['gewicht'], torch.uint8))), a(Torchfeld.als_bytes(Torchfeld.astype(d['etikett'], torch.uint8))),
+                 Torchfeld.als_bytes(Torchfeld.astype(d['uv'], Torchfeld.dtype('<f4'))), a(Torchfeld.als_bytes(Torchfeld.astype(d['material'], Torchfeld.dtype('<i2'))))]
         if 'ruhe' in d:
-            teile.append(d['ruhe'].astype('<f4').tobytes())
+            teile.append(Torchfeld.als_bytes(Torchfeld.astype(d['ruhe'], Torchfeld.dtype('<f4'))))
         if len(d.get('verborgen', ())):
-            teile.append(d['verborgen'].astype('<u4').tobytes())
+            teile.append(Torchfeld.als_bytes(Torchfeld.astype(d['verborgen'], Torchfeld.dtype('<u4'))))
         if 'normalen' in d:
-            teile.append(a(d['normalen'].tobytes()))
+            teile.append(a(Torchfeld.als_bytes(d['normalen'])))
         if 'punktfarbe' in d:
-            teile.append(a(d['punktfarbe'].tobytes()))
+            teile.append(a(Torchfeld.als_bytes(d['punktfarbe'])))
         if 'eltern' in d:
-            teile.append(d['eltern'].astype('<u4').tobytes())
+            teile.append(Torchfeld.als_bytes(Torchfeld.astype(d['eltern'], Torchfeld.dtype('<u4'))))
         if kopf['matrix']:
             w = d['matrix']
-            teile += [w.indptr.astype('<u4').tobytes(), a(w.indices.astype('<u2').tobytes()), w.data.astype('<f4').tobytes()]
+            teile += [Torchfeld.als_bytes(Torchfeld.astype(w.indptr, Torchfeld.dtype('<u4'))), a(Torchfeld.als_bytes(Torchfeld.astype(w.indices, Torchfeld.dtype('<u2')))), Torchfeld.als_bytes(Torchfeld.astype(w.data, Torchfeld.dtype('<f4')))]
         return b''.join(teile)
 
     @classmethod

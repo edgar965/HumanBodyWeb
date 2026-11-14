@@ -16,7 +16,9 @@ denen von Genesis. Das Foto ist für SMPL gebaut (keine Augäpfel): Genesis' Lid
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -37,14 +39,14 @@ class G9bedlamabbildung:
 
     @classmethod
     def vorhanden(cls):
-        return cls.pfad().is_file()
+        return Npztorch.da(cls.pfad())
 
     @classmethod
     def holen(cls):
         if cls._gemerkt is None and cls.vorhanden():
             try:
-                with np.load(cls.pfad()) as d:
-                    cls._gemerkt = {int(k): d['uv_%d' % k].astype(np.float32) / 65535.0 for k in d['kacheln']}
+                with Npztorch.lesen(cls.pfad()) as d:
+                    cls._gemerkt = {int(k): Torchfeld.astype(d['uv_%d' % k], torch.float32) / 65535.0 for k in d['kacheln']}
             except (OSError, KeyError, ValueError) as fehler:
                 logger.warning('BEDLAM-Abbildung %s unlesbar (%s)', cls.pfad(), fehler)
         return cls._gemerkt
@@ -71,19 +73,19 @@ class G9bedlamabbildung:
         teil_g = G9koerperteile.genesis_punkte(G9haut.holen())
         kaefig, _h = G9netzpaarung._normiert(paarung.basis, teil_g)
         smplx, _h2 = G9netzpaarung._normiert(paarung.neutral.punkte, paarung.neutral.teil)
-        faces = np.asarray(G9zielnetz.koerper().faces, dtype=np.int64)
+        faces = Torchfeld.feld(G9zielnetz.koerper().faces, dtype=torch.int64)
         vt, ft = cls._uv()
         if ft.shape != faces.shape:
             raise ValueError('UV-Dreiecke (%s) passen nicht zu den SMPL-X-Dreiecken (%s)' % (ft.shape, faces.shape))
         uvs = vt[ft]
-        teil_dreieck = np.asarray(paarung.neutral.teil)[faces[:, 0]]
+        teil_dreieck = Torchfeld.feld(paarung.neutral.teil)[faces[:, 0]]
         auge = G9koerperteile.NUMMER['auge']
         erlaubt = G9koerperteile.nachbarn()
         suchen = {}
 
         def suche(teil):
             if teil not in suchen:
-                m = np.isin(teil_dreieck, list(erlaubt.get(teil, ())) if teil >= 0 else list(range(len(G9koerperteile.TEILE)))) & (teil_dreieck != auge)
+                m = torch.isin(teil_dreieck, Torchfeld.feld(list(erlaubt.get(teil, ())) if teil >= 0 else list(range(len(G9koerperteile.TEILE))))) & (teil_dreieck != auge)
                 suchen[teil] = Hbdreiecksuche(smplx, faces[m], uvs[m]) if m.sum() >= 4 else None
             return suchen[teil]
 
@@ -91,23 +93,23 @@ class G9bedlamabbildung:
         aus, zahlen = {}, {}
         for kachel in abtastung.kacheln:
             drin, ecken, anteile = abtastung.stellen(kachel)
-            lage = np.einsum('nk,nkc->nc', anteile, kaefig[ecken])
-            teil = teil_g[ecken[np.arange(len(ecken)), anteile.argmax(1)]]
-            uv = np.zeros((len(lage), 2))
-            for t in np.unique(teil):
+            lage = Torchfeld.einsum('nk,nkc->nc', anteile, kaefig[ecken])
+            teil = teil_g[ecken[Torchfeld.arange(len(ecken)), anteile.argmax(1)]]
+            uv = torch.zeros((len(lage), 2), dtype=torch.float64, device='cuda')
+            for t in Torchfeld.liste(Torchfeld.unique(teil)):
                 s = suche(int(t))
                 m = teil == t
                 if s is not None:
                     uv[m], _abstand = s.uv(lage[m])
-            bild = np.zeros((cls.SEITE, cls.SEITE, 2), dtype=np.uint16)
-            bild[drin] = np.clip(uv * 65535.0 + 0.5, 0, 65535).astype(np.uint16)
+            bild = torch.zeros((cls.SEITE, cls.SEITE, 2), dtype=torch.uint16, device='cuda')
+            bild[drin] = Torchfeld.astype(Torchfeld.clip(uv * 65535.0 + 0.5, 0, 65535), torch.uint16)
             aus['uv_%d' % kachel] = bild
             zahlen[int(kachel)] = int(drin.sum())
             logger.info('BEDLAM-Abbildung Kachel %d: %d Texel (%.0f s)', kachel, zahlen[int(kachel)], time.perf_counter() - t0)
         ziel = cls.pfad()
         vorlaeufig = ziel.with_suffix('.neu.npz')
-        np.savez_compressed(vorlaeufig, kacheln=np.asarray(abtastung.kacheln, dtype=np.int64), **aus)
-        vorlaeufig.replace(ziel)
+        Npztorch.speichern(vorlaeufig, kacheln=Torchfeld.feld(abtastung.kacheln, dtype=torch.int64), **aus, komprimiert=True)
+        Npztorch.ersetzen(vorlaeufig, ziel)
         cls.vergessen()
         return zahlen
 
@@ -117,7 +119,7 @@ class G9bedlamabbildung:
         from Genesis9.pfade import G9pfade
         for name in ('meshcapade_uv.npz', 'smplx_uv.npz'):
             pfad = G9pfade.smplx() / name
-            if pfad.is_file():
-                with np.load(pfad) as d:
-                    return np.asarray(d['vt'], dtype=np.float64), np.asarray(d['ft'], dtype=np.int64)
+            if Npztorch.da(pfad):
+                with Npztorch.lesen(pfad) as d:
+                    return Torchfeld.feld(d['vt'], dtype=torch.float64), Torchfeld.feld(d['ft'], dtype=torch.int64)
         raise FileNotFoundError('meshcapade_uv.npz fehlt in %s' % G9pfade.smplx())

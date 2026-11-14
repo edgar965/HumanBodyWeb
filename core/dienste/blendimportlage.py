@@ -18,7 +18,9 @@ Kachel an der Gruppe: Head/Mouth Cavity 1001, Body 1002, Legs 1003, Arms 1004, N
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .blendimportkoerper import Blendimportkoerper
 
@@ -45,21 +47,21 @@ class Blendimportlage:
         #: Weitere Regler der Stellung (die Nachformung der Scham, `Blendimportnachformung.zusatzregler`) — `{eigen:…: 1.0}`.
         self.zusatz = dict(zusatz or {})
         self.ablage = Meshfigurablage(job.kennung)
-        with np.load(self.ablage.arbeit('scan_lage.npz')) as d:
-            self.matrix = np.asarray(d['matrix'], dtype=np.float64)
-        with np.load(self.ablage.arbeit('genesis_ende.npz')) as d:
-            self.kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
-            self.teil = np.asarray(d['teil'])
-        self.kaefig_posiert = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
+        with Npztorch.lesen(self.ablage.arbeit('scan_lage.npz')) as d:
+            self.matrix = Torchfeld.feld(d['matrix'], dtype=torch.float64)
+        with Npztorch.lesen(self.ablage.arbeit('genesis_ende.npz')) as d:
+            self.kaefig_ruhe = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+            self.teil = Torchfeld.feld(d['teil'])
+        self.kaefig_posiert = Torchfeld.astype(Npztorch.lesen(self.ablage.arbeit('posiert.npy')), torch.float64)
         #: Fingerhaltung der Hände im Original (10.10.2026): die Käfigpunkte, die sie bewegt (mehr als 1 mm), und ihre Winkel `{knochen: {kanal: Grad}}`.
         #: Die Ruhelage bleibt die gestreckte Hand; `kaefig_posiert` trägt die Finger, wie das Original sie hält — das Entposen führt sie zurück.
-        self.finger_bewegt = np.zeros(len(self.kaefig_posiert), dtype=bool)
+        self.finger_bewegt = torch.zeros(len(self.kaefig_posiert), dtype=torch.bool, device='cuda')
         self.finger_drehung = {}
         korrektur = Blendimportfinger.kaefig(self.ablage) if finger else None
-        if korrektur is not None and len(self.kaefig_posiert) > int(korrektur[0].max(initial=-1)):
+        if korrektur is not None and len(self.kaefig_posiert) > int(Torchfeld.amax(korrektur[0], initial=-1)):
             idx, delta = korrektur
             self.kaefig_posiert[idx] += delta
-            self.finger_bewegt[idx] = np.linalg.norm(delta, axis=1) > 0.001
+            self.finger_bewegt[idx] = Torchfeld.linalg_norm(delta, dim=1) > 0.001
             self.finger_drehung = Blendimportfinger.haltung(self.ablage)
         self._entposen = None
         self._kaefig_normalen = None
@@ -110,15 +112,15 @@ class Blendimportlage:
     def h(self):
         """Der Punktabstand des posierten Käfigs (m): Median des Abstands zum nächsten Nachbarn."""
         if self._h is None:
-            from scipy.spatial import cKDTree
+            from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-            self._h = float(np.median(cKDTree(self.kaefig_posiert).query(self.kaefig_posiert, k=2)[0][:, 1]))
+            self._h = float(Torchfeld.median(cKDTree(self.kaefig_posiert).query(self.kaefig_posiert, k=2)[0][:, 1]))
         return self._h
 
     def insel_punkte(self, netz, dreiecke):
         """Inselgrenze (Punkte) für ein Netz in Lage des Käfigs — siehe `INSEL_E2`."""
-        d = np.asarray(dreiecke, dtype=np.int64)
-        kante = float(np.median(np.linalg.norm(netz[d[:, 0]] - netz[d[:, 1]], axis=1)))
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64)
+        kante = float(Torchfeld.median(Torchfeld.linalg_norm(netz[d[:, 0]] - netz[d[:, 1]], dim=1)))
         je_punkt = 0.87 * max(kante, 1e-6) ** 2                      # Fläche je Punkt eines Dreiecksnetzes (2 Dreiecke, ½ · e² · sin 60°)
         flaeche = min(max(self.INSEL_E2 * je_punkt, self.INSEL_FLAECHE_H2[0] * self.h ** 2), self.INSEL_FLAECHE_H2[1] * self.h ** 2)
         return max(3, int(round(flaeche / je_punkt)))
@@ -134,12 +136,12 @@ class Blendimportlage:
     @staticmethod
     def netz_normalen(punkte, dreiecke):
         """Punktnormalen eines Dreiecksnetzes, nach Fläche gewichtet."""
-        d = np.asarray(dreiecke, dtype=np.int64)
-        n = np.cross(punkte[d[:, 1]] - punkte[d[:, 0]], punkte[d[:, 2]] - punkte[d[:, 0]])
-        aus = np.zeros_like(punkte)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64)
+        n = Torchfeld.cross(punkte[d[:, 1]] - punkte[d[:, 0]], punkte[d[:, 2]] - punkte[d[:, 0]])
+        aus = torch.zeros_like(punkte)
         for ecke in range(3):
-            np.add.at(aus, d[:, ecke], n)
-        laenge = np.linalg.norm(aus, axis=1, keepdims=True)
+            Torchfeld.add_at(aus, d[:, ecke], n)
+        laenge = Torchfeld.linalg_norm(aus, dim=1, keepdim=True)
         laenge[laenge < 1e-12] = 1.0
         return aus / laenge
 
@@ -152,7 +154,7 @@ class Blendimportlage:
         normalen = self.netz_normalen(netz, dreiecke)
         kaefig = self.kaefig_normalen()
         _, nah = ent.baum.query(netz)
-        if float(np.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Exports gegen den des Käfigs
+        if float(Torchfeld.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Exports gegen den des Käfigs
             normalen = -normalen
         teile = ent.teile_von(netz, None, normalen, kaefig)
         teile = ent.teile_inseln(teile, dreiecke, self.insel_punkte(netz, dreiecke))
@@ -194,23 +196,23 @@ class Blendimportlage:
         normalen = self.netz_normalen(netz, dreiecke)
         kaefig = self.kaefig_normalen()
         _, nah = ent.baum.query(netz)
-        if float(np.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Exports gegen den des Käfigs
+        if float(Torchfeld.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Exports gegen den des Käfigs
             normalen = -normalen
         h = self.h
-        d = np.asarray(dreiecke, dtype=np.int64)
-        kante = float(np.median(np.linalg.norm(netz[d[:, 0]] - netz[d[:, 1]], axis=1)))
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64)
+        kante = float(Torchfeld.median(Torchfeld.linalg_norm(netz[d[:, 0]] - netz[d[:, 1]], dim=1)))
         teile, abstand = ent.teile_von(netz, erlaubt, normalen, kaefig, abstand=True)
         insel = self.insel_punkte(netz, dreiecke)
         teile = ent.teile_inseln(teile, dreiecke, insel, abstand=abstand, ab=self.INSEL_AB_H * h)
-        haft = np.exp(-(abstand / (self.HAFT_H * h)) ** 2)
+        haft = Torchfeld.exp(-(abstand / (self.HAFT_H * h)) ** 2)
         teile = ent.teile_glaetten(teile, dreiecke, haft, runden=self.GLAETTEN_STOFF)
         ruhe = ent.ruhelage(netz, teile)
         if entzerren:
             ruhe = ent.entzerren(ruhe, netz, dreiecke, abstand, min(self.KOPPELN_H * h, self.KOPPELN_E * kante), self.ANKER, self.ANKER_H * h)
         frei = abstand > self.INSEL_AB_H * h
-        self.befund = {'h_mm': round(h * 1000.0, 2), 'kante_mm': round(kante * 1000.0, 2), 'insel_punkte': insel, 'abstand_median_mm': round(float(np.median(abstand)) * 1000.0, 1),
+        self.befund = {'h_mm': round(h * 1000.0, 2), 'kante_mm': round(kante * 1000.0, 2), 'insel_punkte': insel, 'abstand_median_mm': round(float(Torchfeld.median(abstand)) * 1000.0, 1),
                        'frei_anteil': round(float(frei.mean()), 3),
-                       'frei_median_mm': round(float(np.median(abstand[frei])) * 1000.0, 1) if frei.any() else None}
+                       'frei_median_mm': round(float(Torchfeld.median(abstand[frei])) * 1000.0, 1) if frei.any() else None}
         return (ruhe, teile) if mit_teilen else ruhe
 
     def kopf_starr(self, punkte_blender):
@@ -220,11 +222,11 @@ class Blendimportlage:
         kopf = self.teil == G9koerperteile.NUMMER['kopf']
         a, b = self.kaefig_posiert[kopf], self.kaefig_ruhe[kopf]
         ma, mb = a.mean(axis=0), b.mean(axis=0)
-        u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))
-        d = np.sign(np.linalg.det(vt.T @ u.T)) or 1.0
-        r = vt.T @ np.diag([1.0, 1.0, d]) @ u.T
-        rest = np.linalg.norm((a - ma) @ r.T + mb - b, axis=1) * 1000.0
-        self.kopf_befund = {'punkte': int(kopf.sum()), 'rest_rms_mm': round(float(np.sqrt((rest ** 2).mean())), 2)}
+        u, _, vt = Torchfeld.linalg_svd(Torchfeld.feld((a - ma).T @ (b - mb)))
+        d = Torchfeld.sign(Torchfeld.linalg_det(vt.T @ u.T)) or 1.0
+        r = vt.T @ Torchfeld.diag(Torchfeld.feld([1.0, 1.0, d])) @ u.T
+        rest = Torchfeld.linalg_norm(Torchfeld.feld((a - ma) @ r.T + mb - b), dim=1) * 1000.0
+        self.kopf_befund = {'punkte': int(kopf.sum()), 'rest_rms_mm': round(float(Torchfeld.sqrt((rest ** 2).mean())), 2)}
         return (self.ins_netz(punkte_blender) - ma) @ r.T + mb
 
     # ----------------------------------------------------------------- Figur
@@ -237,13 +239,13 @@ class Blendimportlage:
 
         kaefig, _, _ = G9reglerableitung.lage(G9formung(self.stellung()))
         stufe = G9basisnetz.holen().netzstufe(self.STUFE)
-        punkte = np.asarray(stufe.punkte(np.asarray(kaefig, dtype=np.float64)), dtype=np.float64)
-        dreiecke = np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3)
-        kachel = np.zeros(len(dreiecke), dtype=np.int64)
+        punkte = Torchfeld.feld(stufe.punkte(Torchfeld.feld(kaefig, dtype=torch.float64)), dtype=torch.float64)
+        dreiecke = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).reshape(-1, 3)
+        kachel = torch.zeros(len(dreiecke), dtype=torch.int64, device='cuda')
         for g in stufe.gruppen:
             ab = int(g['index_ab']) // 3
             kachel[ab:ab + int(g['dreiecke'])] = int(g['kachel'])
-        uv = np.asarray(stufe.uv, dtype=np.float64)
+        uv = Torchfeld.feld(stufe.uv, dtype=torch.float64)
         return {'punkte': punkte, 'dreiecke': dreiecke, 'uv': uv, 'kachel': kachel,
                 'gruppen': [(g['name'], int(g['kachel'])) for g in stufe.gruppen]}
 
@@ -255,7 +257,7 @@ class Blendimportlage:
         aus = {}
         for kachel in sorted({int(k) for k in g['kachel']} - set(self.NICHT_GEBACKEN)):
             dreiecke = g['dreiecke'][g['kachel'] == kachel]
-            genutzt, neu = np.unique(dreiecke.reshape(-1), return_inverse=True)
+            genutzt, neu = Torchfeld.unique(dreiecke.reshape(-1), return_inverse=True)
             uv = g['uv'][dreiecke.reshape(-1)]
             zeilen = ['o Genesis_%d' % kachel] + ['v %.6f %.6f %.6f' % tuple(v) for v in blender[genutzt]]
             zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
@@ -269,5 +271,5 @@ class Blendimportlage:
     @staticmethod
     def blender(punkte_ruhe):
         """Ruhelage (Y oben) → Blender-Achsen (Z oben): die Umkehr von `Blendimportkoerper.gltf`."""
-        p = np.asarray(punkte_ruhe, dtype=np.float64)
-        return np.column_stack([p[:, 0], -p[:, 2], p[:, 1]])
+        p = Torchfeld.feld(punkte_ruhe, dtype=torch.float64)
+        return Torchfeld.column_stack([p[:, 0], -p[:, 2], p[:, 1]])

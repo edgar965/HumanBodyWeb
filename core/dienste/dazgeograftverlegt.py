@@ -21,7 +21,8 @@ Keine Anpassung der FORM an ein Original (kein Strahl, keine Laplace): das Origi
 """
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .dazgeograft import Dazgeograft
 
@@ -66,7 +67,7 @@ class Dazgeograftverlegt(Dazgeograft):
         haut = Blendimportschamloch(figur['punkte'], figur['dreiecke'])
         ring_punkte = haut.ringpunkte(haut.ring(maske))
         # `Dazgeograftanpassung` verlangt ein Ziel (das Original); `verlegen` braucht es nicht — ein Platzhalter-Dreieck genügt.
-        platzhalter = SimpleNamespace(punkte=np.zeros((3, 3)), dreiecke=np.array([[0, 1, 2]]))
+        platzhalter = SimpleNamespace(punkte=torch.zeros((3, 3), dtype=torch.float64, device='cuda'), dreiecke=Torchfeld.feld([[0, 1, 2]], copy=True))
         anpassung = Dazgeograftanpassung(Dazgeografthaut.grundfigur(), figur, ring_punkte, platzhalter, stufe=self.STUFE)
         verlegt = anpassung.verlegen(punkte, dreiecke)
         bericht['verlegen'] = anpassung.bericht
@@ -140,6 +141,6 @@ class Dazgeograftverlegt(Dazgeograft):
         tiefenfeld = {}
         if Schamtiefenfeld.STAERKE > 0:
             punkte, tiefenfeld = Schamtiefenfeld.anwenden(punkte, dreiecke, rand_vorher)
-        loch = {'dreiecke': np.flatnonzero(maske).astype(np.int64), 'von': int(len(figur['dreiecke'])), 'ring': lage,
+        loch = {'dreiecke': Torchfeld.astype(torch.flatten(maske).nonzero()[:, 0], torch.int64), 'von': int(len(figur['dreiecke'])), 'ring': lage,
                 'ring_punkte': ring_punkte, 'verschiebung': verschiebung, 'ring_d': lage - lage0}
         return punkte, dreiecke, uv_ecken, loch, dict(haut.bericht(maske, ring), **naht, tiefenfeld=tiefenfeld)

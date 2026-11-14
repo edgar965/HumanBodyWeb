@@ -27,7 +27,8 @@ import hashlib
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 
 logger = logging.getLogger('core')
@@ -68,17 +69,17 @@ class Smplvarianten:
 
     @classmethod
     def name(cls, geschlecht, betas):
-        betas = np.asarray(betas if betas is not None else [], dtype=np.float64)
-        b = np.zeros(max(10, len(betas)))
+        betas = Torchfeld.feld(betas if betas is not None else [], dtype=torch.float64)
+        b = torch.zeros(max(10, len(betas)), dtype=torch.float64, device='cuda')
         b[: len(betas)] = betas
-        if not np.any(np.abs(b) >= 0.0005):
+        if not Torchfeld.any(Torchfeld.abs(b) >= 0.0005):
             return cls.DURCHSCHNITT[geschlecht]
         # Fingerabdruck ueber zehn Betas, solange 10.. leer sind — so behalten
         # alle Varianten von vor den Massreglern (25.09.2026) ihren Namen und
         # ihre abgelegte Datei; mit Massreglern ueber alle.
-        if not np.any(np.abs(b[10:]) >= 0.0005):
+        if not Torchfeld.any(Torchfeld.abs(b[10:]) >= 0.0005):
             b = b[:10]
-        rohbytes = np.round(b, 3).astype(np.float32).tobytes()
+        rohbytes = Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.round(b, 3), torch.float32))
         kennung = hashlib.sha1(rohbytes).hexdigest()[:12]
         return '%s%s_%s' % (cls.PRAEFIX, geschlecht[0], kennung)
 
@@ -210,9 +211,9 @@ class Smplvarianten:
         betas = Smplform.betas(geschlecht, groesse, fuelle, weitere)
         if masse and any(abs(float(w or 0)) >= 0.5 for w in masse.values()):
             zusatz = Smplxmassregler.betas(cls.massregler(geschlecht), masse, Smplxmassregler.BETAS)
-            voll = np.zeros(Smplxmassregler.BETAS)
+            voll = torch.zeros(Smplxmassregler.BETAS, dtype=torch.float64, device='cuda')
             voll[: len(betas)] = betas
-            betas = [float(x) for x in np.round(voll + zusatz, 4)]
+            betas = [float(x) for x in Torchfeld.liste(Torchfeld.round(voll + zusatz, 4))]
         return cls.erzeugen(geschlecht, betas)
 
     _massregler = {}

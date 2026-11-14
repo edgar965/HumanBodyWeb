@@ -9,7 +9,9 @@ des Haars im Kopfausschnitt war 0,30 (Foto: Haar oben, Geheimratsecken, hoher An
 `haar`: bool (Höhe, Breite) der Felder mit Haar (`Haarkappe`: Zeile 0 = −90°, Spalte j = Azimut 360° · j ÷ Breite von +z nach +x). Reine NumPy-Funktion, kein Django.
 """
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Haaransatz']
 
@@ -25,18 +27,18 @@ class Haaransatz:
     @classmethod
     def anheben(cls, haar, grad, feld):
         """Kopie von `haar` ohne die untersten `grad` Grad (`feld` = Grad je Zeile) jeder Spalte vorn, vom ersten Haarfeld über `AB_EL` an; ohne Anhebung (`grad` ≤ 0) unverändert."""
-        aus = np.array(haar, dtype=bool)
+        aus = Torchfeld.feld(haar, dtype=torch.bool, copy=True)
         if not grad or float(grad) <= 0.0:
             return aus
         grad = min(float(grad), cls.HOECHSTENS)
         hoehe, breite = aus.shape
-        hoch = (-90.0 + (np.arange(hoehe) + 0.5) * feld) >= cls.AB_EL
-        azimut = ((np.arange(breite) + 0.5) * 360.0 / breite + 180.0) % 360.0 - 180.0
-        for spalte in np.flatnonzero(np.abs(azimut) < cls.AZIMUT):
-            zeilen = np.flatnonzero(aus[:, spalte] & hoch)
+        hoch = (-90.0 + (Torchfeld.arange(hoehe) + 0.5) * feld) >= cls.AB_EL
+        azimut = ((Torchfeld.arange(breite) + 0.5) * 360.0 / breite + 180.0) % 360.0 - 180.0
+        for spalte in Torchfeld.liste(torch.flatten(Torchfeld.abs(azimut) < cls.AZIMUT).nonzero()[:, 0]):
+            zeilen = torch.flatten(aus[:, spalte] & hoch).nonzero()[:, 0]
             if not len(zeilen):
                 continue
-            anteil = 0.5 * (1.0 + np.cos(np.pi * abs(float(azimut[spalte])) / cls.AZIMUT))           # 1 in der Mitte, 0 an der Grenze
+            anteil = 0.5 * (1.0 + Torchfeld.cos(math.pi * abs(float(azimut[spalte])) / cls.AZIMUT))           # 1 in der Mitte, 0 an der Grenze
             n = int(round(grad / feld * anteil))
             aus[zeilen[0]:zeilen[0] + n, spalte] = False
         return aus

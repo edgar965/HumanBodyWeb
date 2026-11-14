@@ -21,7 +21,8 @@ import logging
 from pathlib import Path
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -40,7 +41,7 @@ class Eigenstueckprobe:
         formung = G9figur.formung({'regler': {}}, {})
         koerper = self.probe.koerper(formung)
         teile = [t for t in self.probe.ruhe(kennung, formung, koerper) if t is not None]
-        stoff = [(t.punkte, np.asarray(t.dreiecke).reshape(-1, 3)) for t in teile]
+        stoff = [(t.punkte, Torchfeld.feld(t.dreiecke).reshape(-1, 3)) for t in teile]
         return self._bild(koerper, stoff, 'Genesis 9', Path(ziel) / 'probe_genesis9.png')
 
     def humanbody(self, kennung, ziel, geschlecht='female'):
@@ -54,16 +55,16 @@ class Eigenstueckprobe:
             # Eine JsonResponse heißt: der Endpunkt lehnt ab — die Probe sagt, warum.
             raise ValueError(antwort.content.decode('utf-8', 'ignore'))
         figur = G9aufhumanbody(geschlecht, None).figur()
-        koerper = SimpleNamespace(punkte=np.asarray(figur['fein'], dtype=np.float64),
-                                  dreiecke=np.asarray(figur['fein_dreiecke']).reshape(-1, 3))
-        stoff = [(self._feld(t['vertices'], np.float32).astype(np.float64).reshape(-1, 3),
-                  self._feld(t['faces'], np.uint32).astype(np.int64).reshape(-1, 3))
+        koerper = SimpleNamespace(punkte=Torchfeld.feld(figur['fein'], dtype=torch.float64),
+                                  dreiecke=Torchfeld.feld(figur['fein_dreiecke']).reshape(-1, 3))
+        stoff = [(Torchfeld.astype(self._feld(t['vertices'], torch.float32), torch.float64).reshape(-1, 3),
+                  Torchfeld.astype(self._feld(t['faces'], torch.uint32), torch.int64).reshape(-1, 3))
                  for t in antwort['teile']]
         return self._bild(koerper, stoff, 'HumanBody', Path(ziel) / 'probe_humanbody.png')
 
     @staticmethod
     def _feld(text, typ):
-        return np.frombuffer(base64.b64decode(text), dtype=typ)
+        return torch.frombuffer(bytearray(base64.b64decode(text)), dtype=typ).to(Torchfeld.KARTE)
 
     def _bild(self, koerper, stoff, titel, pfad):
         u"""Alle Teile zu einem Netz, vier Ansichten, als PNG nach `pfad`."""
@@ -72,10 +73,10 @@ class Eigenstueckprobe:
         punkte, dreiecke, versatz = [], [], 0
         for p, d in stoff:
             punkte.append(p)
-            dreiecke.append(d.astype(np.int64) + versatz)
+            dreiecke.append(Torchfeld.astype(d, torch.int64) + versatz)
             versatz += len(p)
-        pixel, bild = self.probe.pixel(koerper, np.concatenate(punkte),
-                                       np.concatenate(dreiecke), titel)
+        pixel, bild = self.probe.pixel(koerper, Torchfeld.cat(punkte),
+                                       Torchfeld.cat(dreiecke), titel)
         pfad.parent.mkdir(parents=True, exist_ok=True)
         bild.save(pfad)
         logger.info('Eigenes Stück, Probe %s: %d Teile, %d Hautpixel vor dem Stoff, %s',

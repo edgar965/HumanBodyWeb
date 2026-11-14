@@ -12,7 +12,8 @@ Ein Schuh ist ein fester Koerper: Er wird mit EINER affinen Abbildung vom Genesi
 ueber die gepaarten Fusspunkte der Paarung, `paarung['zu']`), Sohle und Kappe behalten ihre Lage zueinander. Hoeher als `VOLL_BIS` ueber
 dem Boden (Stiefelschaft) geht die Passung in die Punkt-fuer-Punkt-Uebertragung ueber (`AUS_AB`), `hinaus` hebt den Rest aus der Haut.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['G9hbschuhpassung']
 
@@ -34,12 +35,12 @@ class G9hbschuhpassung:
     @classmethod
     def passen(cls, traeger, punkte, bindung=None):
         u"""Die Schuhpunkte (Genesis-Grundkoerper) auf der HumanBody-Figur: Passung des Fusses je Seite, oben die Uebertragung."""
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         punktweise = traeger.uebertragen(p, bindung=bindung)
         if not len(p):
             return punktweise
-        gewicht = np.clip((cls.AUS_AB - p[:, 1]) / (cls.AUS_AB - cls.VOLL_BIS), 0.0, 1.0)
-        fest = punktweise.copy()
+        gewicht = Torchfeld.clip((cls.AUS_AB - p[:, 1]) / (cls.AUS_AB - cls.VOLL_BIS), 0.0, 1.0)
+        fest = Torchfeld.kopie(punktweise)
         for seite in (1.0, -1.0):
             maske = (p[:, 0] * seite > 0.0) & (gewicht > 0.0)
             if not maske.any():
@@ -56,22 +57,22 @@ class G9hbschuhpassung:
     def merkmale(p):
         u"""(n, 6) Basis der Abbildung: 1, x, y, z, z², x·z — affin, dazu die Streckung der Zehen (z²) und ihr Schwenk nach innen (x·z)."""
         x, y, z = p[:, 0], p[:, 1], p[:, 2]
-        return np.stack([np.ones_like(x), x, y, z, z * z, x * z], axis=1)
+        return Torchfeld.stack([torch.ones_like(x), x, y, z, z * z, x * z], axis=1)
 
     @classmethod
     def abbildung(cls, traeger, seite):
         u"""(6, 3) Abbildung Genesis-Fuss -> HumanBody-Fuss dieser Seite (+1 = links, x > 0), None ohne genug Paare."""
         paar = traeger.paarung
-        g9 = np.asarray(paar['g9_punkte'])
-        zu = np.asarray(paar['zu'])
+        g9 = Torchfeld.feld(paar['g9_punkte'])
+        zu = Torchfeld.feld(paar['zu'])
         wahl = (g9[:, 1] < cls.FUSS_HOEHE) & (g9[:, 0] * seite > cls.SEITE_AB) & (zu >= 0)
         if int(wahl.sum()) < cls.MINDESTPUNKTE:
             return None
         von = cls.merkmale(g9[wahl])
-        nach = np.asarray(traeger.figur()['punkte'])[zu[wahl]]
-        abb = np.linalg.lstsq(von, nach, rcond=None)[0]
-        rest = np.linalg.norm(von @ abb - nach, axis=1)
-        behalten = rest <= cls.AUSREISSER * max(float(np.median(rest)), 1e-6)
+        nach = Torchfeld.feld(traeger.figur()['punkte'])[zu[wahl]]
+        abb = Torchfeld.lstsq(von, nach, rcond=None)[0]
+        rest = Torchfeld.linalg_norm(von @ abb - nach, dim=1)
+        behalten = rest <= cls.AUSREISSER * max(float(Torchfeld.median(rest)), 1e-6)
         if int(behalten.sum()) >= cls.MINDESTPUNKTE:
-            abb = np.linalg.lstsq(von[behalten], nach[behalten], rcond=None)[0]
+            abb = Torchfeld.lstsq(von[behalten], nach[behalten], rcond=None)[0]
         return abb

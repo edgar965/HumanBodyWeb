@@ -16,7 +16,10 @@ Objekt) — daraus wird sie gerechnet. Fehlt beides, klemmt nichts. Aufgerufen v
 
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -37,14 +40,14 @@ class Haarklemme:
     def __init__(self, karte, mitte):
         from Haar.haarhuelle import Haarhuelle
 
-        self.mitte = np.asarray(mitte, dtype=np.float64)
+        self.mitte = Torchfeld.feld(mitte, dtype=torch.float64)
         self.feld = float(Haarhuelle.FELD_GRAD)
-        roh = np.asarray(karte, dtype=np.float64)
+        roh = Torchfeld.feld(karte, dtype=torch.float64)
         self.roh = roh                                  # die Hülle des Netzhaars je Feld, NaN ohne Netzhaar (die Haarkappe, `Haarkappe`, liest sie ungeglättet)
         # Die Hülle nach außen wie ein Haarfeld glätten (das Maximum der Nachbarn): einzelne Felder mit zu wenig Proben dürfen kein Loch in die Grenze schneiden.
-        from scipy import ndimage
-        groesst = ndimage.maximum_filter(np.where(np.isnan(roh), -np.inf, roh), size=3, mode=('nearest', 'wrap'))
-        self.grenze = np.where(np.isfinite(groesst), groesst, self.OFFEN)
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
+        groesst = ndimage.maximum_filter(torch.where(Torchfeld.isnan(roh), -math.inf, roh), size=3, mode=('nearest', 'wrap'))
+        self.grenze = torch.where(Torchfeld.isfinite(groesst), groesst, self.OFFEN)
 
     # ------------------------------------------------------------------ Laden
 
@@ -53,8 +56,8 @@ class Haarklemme:
         """Die Klemme eines Auftrags — None, wenn weder `haar_huelle.npz` noch `haar.glb` da sind. `koerper`: Punkte der Haut (N, 3) in der Lage der Bühne; nur für die Rechnung aus `haar.glb` gebraucht."""
         try:
             pfad = ablage.ergebnis(cls.DATEI)
-            if pfad.is_file():
-                with np.load(pfad) as d:
+            if Npztorch.da(pfad):
+                with Npztorch.lesen(pfad) as d:
                     return cls(d['karte'], d['mitte'])
             glb = ablage.ergebnis('haar.glb')
             if glb.is_file() and koerper is not None:
@@ -66,10 +69,10 @@ class Haarklemme:
     @staticmethod
     def kopfmitte(koerper):
         """Kopfmittelpunkt aus den Hautpunkten: x und z aus der Spanne des Kopfes (0,20 m unter dem Scheitel), y = Scheitel − 0,10 m (wie `Meshfigurfrisur._messung`)."""
-        p = np.asarray(koerper, dtype=np.float64)
+        p = Torchfeld.feld(koerper, dtype=torch.float64)
         scheitel = float(p[:, 1].max())
         kopf = p[p[:, 1] > scheitel - 0.20]
-        return np.array([0.5 * float(kopf[:, 0].min() + kopf[:, 0].max()), scheitel - 0.10, 0.5 * float(kopf[:, 2].min() + kopf[:, 2].max())])
+        return Torchfeld.feld([0.5 * float(kopf[:, 0].min() + kopf[:, 0].max()), scheitel - 0.10, 0.5 * float(kopf[:, 2].min() + kopf[:, 2].max())], copy=True)
 
     @classmethod
     def _aus_glb(cls, glb, koerper):
@@ -79,46 +82,46 @@ class Haarklemme:
         szene = trimesh.load(str(glb), force='scene')
         punkte, flaechen, ab = [], [], 0
         for g in szene.geometry.values():
-            punkte.append(np.asarray(g.vertices, dtype=np.float64))
-            flaechen.append(np.asarray(g.faces, dtype=np.int64) + ab)
+            punkte.append(Torchfeld.feld(g.vertices, dtype=torch.float64))
+            flaechen.append(Torchfeld.feld(g.faces, dtype=torch.int64) + ab)
             ab += len(g.vertices)
         mitte = cls.kopfmitte(koerper)
-        karte = Haarhuelle(mitte).karte(Haarhuelle.proben(np.vstack(punkte), np.vstack(flaechen), cls.PROBEN))
+        karte = Haarhuelle(mitte).karte(Haarhuelle.proben(Torchfeld.vstack(punkte), Torchfeld.vstack(flaechen), cls.PROBEN))
         return cls(karte, mitte)
 
     @classmethod
     def ablegen(cls, ablage, mitte, karte):
         """Die Hülle des Netzhaars für später ablegen (Schritt „Frisur")."""
-        np.savez_compressed(ablage.ergebnis(cls.DATEI), mitte=np.asarray(mitte, dtype=np.float64), karte=np.asarray(karte, dtype=np.float64))
+        Npztorch.speichern(ablage.ergebnis(cls.DATEI), mitte=Torchfeld.feld(mitte, dtype=torch.float64), karte=Torchfeld.feld(karte, dtype=torch.float64), komprimiert=True)
 
     # ------------------------------------------------------------------ Anwenden
 
     def _grenze_je_punkt(self, d, r, karte=None):
         """Radius der Hülle in der Richtung jedes Punkts (bilinear zwischen den Feldern, Azimut umlaufend); `karte`: eine andere Karte derselben Felder (Vorgabe: die geklemmte Grenze)."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         grenze = self.grenze if karte is None else karte
         hoehe, breite = grenze.shape
-        az = np.degrees(np.arctan2(d[:, 0], d[:, 2])) % 360.0
-        el = np.degrees(np.arcsin(np.clip(d[:, 1] / np.maximum(r, 1e-12), -1.0, 1.0)))
-        zeile = np.clip((el + 90.0) / self.feld - 0.5, 0.0, hoehe - 1.0)
+        az = Torchfeld.degrees(Torchfeld.arctan2(d[:, 0], d[:, 2])) % 360.0
+        el = Torchfeld.degrees(Torchfeld.arcsin(Torchfeld.clip(d[:, 1] / Torchfeld.maximum(r, 1e-12), -1.0, 1.0)))
+        zeile = Torchfeld.clip((el + 90.0) / self.feld - 0.5, 0.0, hoehe - 1.0)
         spalte = az / self.feld - 0.5 + 1.0                      # +1: eine Spalte Umlauf vorn
-        rund = np.concatenate([grenze[:, -1:], grenze, grenze[:, :1]], axis=1)
+        rund = Torchfeld.cat([grenze[:, -1:], grenze, grenze[:, :1]], axis=1)
         return ndimage.map_coordinates(rund, [zeile, spalte], order=1, mode='nearest')
 
     def klemmen(self, punkte):
         """`(neue Punkte, Anzahl bewegt, größte Bewegung in m)` für Punkte (N, 3) in der Lage der Bühne."""
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         d = p - self.mitte
-        r = np.linalg.norm(d, axis=1)
+        r = Torchfeld.linalg_norm(d, dim=1)
         h = self._grenze_je_punkt(d, r)
         ueber = r - h
         wirkt = (ueber > 0.0) & (h < self.OFFEN)
         if not wirkt.any():
             return p, 0, 0.0
-        neu_r = h[wirkt] + self.TOLERANZ_M * np.tanh(ueber[wirkt] / self.TOLERANZ_M)
-        aus = p.copy()
-        aus[wirkt] = self.mitte + d[wirkt] * (neu_r / np.maximum(r[wirkt], 1e-12))[:, None]
+        neu_r = h[wirkt] + self.TOLERANZ_M * Torchfeld.tanh(ueber[wirkt] / self.TOLERANZ_M)
+        aus = Torchfeld.kopie(p)
+        aus[wirkt] = self.mitte + d[wirkt] * (neu_r / Torchfeld.maximum(r[wirkt], 1e-12))[:, None]
         return aus, int(wirkt.sum()), float((r[wirkt] - neu_r).max())
 
     def anwenden(self, teile):
@@ -132,7 +135,7 @@ class Haarklemme:
             neu = dict(t, punkte=punkte)
             if t.get('kurven'):
                 kp, _n2, _w2 = self.klemmen(t['kurven']['punkte'])
-                neu['kurven'] = dict(t['kurven'], punkte=kp.astype(np.asarray(t['kurven']['punkte']).dtype))
+                neu['kurven'] = dict(t['kurven'], punkte=kp.to(Torchfeld.feld(t['kurven']['punkte']).dtype))
             logger.info('Haarklemme %s: %d von %d Punkten an die Hülle des Fotohaars gerückt (am weitesten %.1f mm)', t.get('sorte'), n, len(punkte), weit * 1000.0)
             aus.append(neu)
         return aus

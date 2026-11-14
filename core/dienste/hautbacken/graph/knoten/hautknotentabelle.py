@@ -5,7 +5,8 @@ Die Tabellen (257 Einträge) wertet BLENDER im Export aus (`blendmaterialknoten.
 `colorramp_to_array` / `curvemapping_*_to_array`) — der lokale Backer interpoliert nur darin, wie der Kernel es tut.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 from ..hautwert import Hautwert
@@ -109,11 +110,11 @@ class Hautknotentabelle(Hautknoten):
 
     def _tabelle(self, graph):
         if not hasattr(self, '_dev'):
-            roh = np.asarray(self.eig['tabelle'], dtype=np.float32)
+            roh = Torchfeld.feld(self.eig['tabelle'], dtype=torch.float32)
             if self.typ == 'CURVE_FLOAT':
                 self._dev = wp.array(roh.reshape(-1), dtype=wp.float32, device=graph.geraet)
             else:
-                vier = np.zeros((len(roh), 4), dtype=np.float32)
+                vier = torch.zeros((len(roh), 4), dtype=torch.float32, device='cuda')
                 vier[:, :roh.shape[1]] = roh
                 self._dev = wp.array(vier, dtype=wp.vec4, device=graph.geraet)
         return self._dev

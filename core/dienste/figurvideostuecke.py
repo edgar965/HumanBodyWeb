@@ -23,7 +23,9 @@ am Boden neben der Figur (dieselbe Falle wie am 06.09.2026 beim Anziehen).
 
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 
 class Figurvideostuecke:
@@ -72,32 +74,25 @@ class Figurvideostuecke:
                 'Stueck „%s": %d Bytes, erwartet %d '
                 '(%d Punkte, %d Dreiecke).' % (name, len(roh), erwartet, n, m)
             )
-        punkte = np.frombuffer(roh, dtype=np.float32, count=n * 3).reshape(n, 3)
+        punkte = torch.frombuffer(bytearray(roh), dtype=torch.float32, count=n * 3).to(Torchfeld.KARTE).reshape(n, 3)
         versatz = n * 12
-        dreiecke = np.frombuffer(roh, dtype=np.uint32, count=m * 3, offset=versatz).reshape(m, 3)
+        dreiecke = torch.frombuffer(bytearray(roh), dtype=torch.uint32, count=m * 3, offset=versatz).to(Torchfeld.KARTE).reshape(m, 3)
         versatz += m * 12
-        nummern = np.frombuffer(roh, dtype=np.uint16, count=n * 4, offset=versatz).reshape(n, 4)
+        nummern = torch.frombuffer(bytearray(roh), dtype=torch.uint16, count=n * 4, offset=versatz).to(Torchfeld.KARTE).reshape(n, 4)
         versatz += n * 8
-        gewichte = np.frombuffer(roh, dtype=np.float32, count=n * 4, offset=versatz).reshape(n, 4)
-        if dreiecke.size and int(dreiecke.max()) >= n:
+        gewichte = torch.frombuffer(bytearray(roh), dtype=torch.float32, count=n * 4, offset=versatz).to(Torchfeld.KARTE).reshape(n, 4)
+        if Torchfeld.groesse(dreiecke) and int(dreiecke.max()) >= n:
             raise ValueError(
                 'Stueck „%s": Dreieck zeigt auf Punkt %d von %d.' % (name, int(dreiecke.max()), n)
             )
         belegt = nummern[gewichte > 0]
-        if belegt.size and int(belegt.max()) >= len(knochen):
+        if Torchfeld.groesse(belegt) and int(belegt.max()) >= len(knochen):
             raise ValueError(
                 'Stueck „%s": Knochennummer %d, aber nur %d Namen.' % (name, int(belegt.max()), len(knochen))
             )
         # Three.js (Y oben) -> Blender (Z oben).
-        blender = np.column_stack([punkte[:, 0], -punkte[:, 2], punkte[:, 1]])
-        np.savez(
-            pfad,
-            punkte=blender.astype(np.float64),
-            dreiecke=dreiecke.astype(np.int64),
-            skin_index=nummern.astype(np.int32),
-            skin_weight=gewichte.astype(np.float64),
-            knochen=np.array([str(k) for k in knochen]),
-        )
+        blender = Torchfeld.column_stack([punkte[:, 0], -punkte[:, 2], punkte[:, 1]])
+        Npztorch.speichern(pfad, punkte=Torchfeld.astype(blender, torch.float64), dreiecke=Torchfeld.astype(dreiecke, torch.int64), skin_index=Torchfeld.astype(nummern, torch.int32), skin_weight=Torchfeld.astype(gewichte, torch.float64), knochen=Torchfeld.feld([str(k) for k in knochen], copy=True), komprimiert=False)
 
     @classmethod
     def farbe(cls, wert):

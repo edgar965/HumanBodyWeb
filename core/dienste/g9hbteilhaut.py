@@ -23,7 +23,8 @@ NAH_M zur Haut die Nachbarteile (folgt der Haut), ab FERN_M nur das eigene
 Daz-Teil (der Rock haengt am Becken, das Bein geht durch), dazwischen linear.
 Der Abstand ist der zur Projektion auf die erlaubten Dreiecke (`versatz`).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.koerperteile import G9koerperteile
 
 __all__ = ['G9hbteilhaut']
@@ -60,8 +61,8 @@ class G9hbteilhaut:
         Grenze Becken/Schenkel traegt zu zwei Dritteln den Schenkel."""
         if erlaubt is None:
             return None
-        alle = np.asarray(self.figur['dreiecke'], dtype=np.int64)
-        drin = np.isin(self.teile[alle], [int(t) for t in erlaubt])
+        alle = Torchfeld.feld(self.figur['dreiecke'], dtype=torch.int64)
+        drin = torch.isin(self.teile[alle], Torchfeld.feld([int(t) for t in erlaubt]))
         erlaubte = alle[drin.all(axis=1) if ganz else drin.any(axis=1)]
         return erlaubte if len(erlaubte) >= self.MINDESTDREIECKE else None
 
@@ -74,7 +75,7 @@ class G9hbteilhaut:
             from GarmentCode.anziehen import Anziehen
             dreiecke = self.dreiecke(erlaubt, ganz)
             if dreiecke is None:
-                dreiecke = np.asarray(self.figur['dreiecke'], dtype=np.int64)
+                dreiecke = Torchfeld.feld(self.figur['dreiecke'], dtype=torch.int64)
             anziehen = Anziehen(self.figur['punkte'], dreiecke, self.figur['gewichte'],
                                 self.figur['knochen'])
             self._anziehen[schluessel] = anziehen
@@ -84,21 +85,21 @@ class G9hbteilhaut:
         u"""Gewichte je Punkt; `bindung` ist die `G9teilbindung` DIESER Punkte —
         None: der ganze Koerper (wie `G9aufhumanbody.haut`)."""
         from GarmentCode.gewichtssumme import Gewichtssumme   # GarmentCode kommt zur Laufzeit ueber sys.path
-        punkte = np.asarray(punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         if bindung is not None:
             # Nur eine Karte, wo der Stoff auch liegt (Sandale ganz an `pelvis`).
             bindung = bindung.geprueft(self.figur['punkte'], self.teile, punkte)
-        index = np.zeros((len(punkte), self.JE_PUNKT), dtype=np.int64)
-        gewicht = np.zeros((len(punkte), self.JE_PUNKT), dtype=np.float64)
+        index = torch.zeros((len(punkte), self.JE_PUNKT), dtype=torch.int64, device='cuda')
+        gewicht = torch.zeros((len(punkte), self.JE_PUNKT), dtype=torch.float64, device='cuda')
         gruppen = (bindung.teilgruppen() if bindung is not None and len(bindung.teile) == len(punkte)
-                   else [(None, None, np.ones(len(punkte), dtype=bool))])
+                   else [(None, None, torch.ones(len(punkte), dtype=torch.bool, device='cuda'))])
         for teil, erlaubt, maske in gruppen:
             if not maske.any():
                 continue
             rig = self.anziehen(erlaubt).felder(punkte[maske])
             knochen, gewicht_je = rig['knochen'], rig['gewicht']
             if erlaubt is not None and len(erlaubt) > 1 and self.dreiecke({teil}, True) is not None:
-                anteil = np.clip((np.linalg.norm(rig['versatz'], axis=1)
+                anteil = Torchfeld.clip((Torchfeld.linalg_norm(rig['versatz'], dim=1)
                                   - self.NAH_M) / (self.FERN_M - self.NAH_M), 0.0, 1.0)
                 weiter = anteil > 0
                 if weiter.any():
@@ -117,7 +118,7 @@ class G9hbteilhaut:
         Summe absteigend (noch nicht auf 1 gebracht). `nah`/`fern` sind (knochen, gewicht) je (N, 4); eine
         Stelle mit Gewicht 0 ist leer."""
         from GarmentCode.gewichtssumme import Gewichtssumme
-        ids =np.concatenate([np.where(g > 0, k, -1) for k, g in (nah, fern)], axis=1)
-        beitrag = np.concatenate([(1.0 - anteil)[:, None] * nah[1], anteil[:, None] * fern[1]], axis=1)
+        ids =Torchfeld.cat([torch.where(g > 0, k, -1) for k, g in (nah, fern)], axis=1)
+        beitrag = Torchfeld.cat([(1.0 - anteil)[:, None] * nah[1], anteil[:, None] * fern[1]], axis=1)
         knochen, summen, _drin = Gewichtssumme.staerkste(ids, beitrag, 0.0, cls.JE_PUNKT)
         return knochen, summen

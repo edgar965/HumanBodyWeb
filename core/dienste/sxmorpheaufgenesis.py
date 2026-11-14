@@ -20,7 +20,8 @@ Bauen: `manage.py sxmorphe_bauen`.
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.feldputz import G9feldputz
 from Genesis9.gelenkversatz import G9gelenkversatz
 from Genesis9.kollision import G9kollision
@@ -61,14 +62,14 @@ class Sxmorpheaufgenesis:
         self.paarung = G9netzpaarung.holen()
         self.modell = Smplxkoerper.laden(self.MODELL, str(G9pfade.smplx()))
         self.arm = G9zielnetz.ARMWINKEL
-        self.null = self.modell.a40(np.zeros(self.modell.BETAS_MAX), grad=self.arm)
+        self.null = self.modell.a40(torch.zeros(self.modell.BETAS_MAX, dtype=torch.float64, device='cuda'), grad=self.arm)
         self.massstab = self.paarung.hoehe_basis / self.paarung.hoehe_neutral
         self.ungueltig = (self.paarung.zuordnung < 0) | (self.paarung.gewicht < self.GEWICHT_AB)
         self.putz = G9feldputz.vom_kaefig()
         from Genesis9.basisnetz import G9basisnetz
         punkte = G9basisnetz.holen().punkte
         _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=self.GLAETTUNG)
-        self.nachbar = np.asarray(nachbar, dtype=np.int64)
+        self.nachbar = Torchfeld.feld(nachbar, dtype=torch.int64)
         return self
 
     def auftraege(self):
@@ -81,11 +82,11 @@ class Sxmorpheaufgenesis:
         for schluessel, anzeige, _ziel, links, rechts in Smplxmassregler.REGLER:
             plus, minus = gespeichert['richtungen'][schluessel]
             aus.append({'kennung': 'Mass_' + schluessel, 'anzeige': u'%s (%s … %s)' % (anzeige, links, rechts), 'kategorie': 'Mass',
-                        'bereich': 'sx_mass', 'reihe': len(aus), 'plus': np.asarray(plus, dtype=np.float64), 'minus': np.asarray(minus, dtype=np.float64),
+                        'bereich': 'sx_mass', 'reihe': len(aus), 'plus': Torchfeld.feld(plus, dtype=torch.float64), 'minus': Torchfeld.feld(minus, dtype=torch.float64),
                         'wirkung': gespeichert['wirkung'].get(schluessel)})
         namen = {0: u'Größe', 1: u'Fülle'}
         for k in range(self.FORMEN):
-            b = np.zeros(self.modell.BETAS_MAX)
+            b = torch.zeros(self.modell.BETAS_MAX, dtype=torch.float64, device='cuda')
             b[k] = self.BETA_VOLL
             titel = u'Form %d' % (k + 1) + (u' (%s)' % namen[k] if k in namen else u' (nicht benannt)')
             aus.append({'kennung': 'Form_%02d' % (k + 1), 'anzeige': titel, 'kategorie': 'Form', 'bereich': 'sx_form', 'reihe': len(aus),
@@ -102,22 +103,22 @@ class Sxmorpheaufgenesis:
     def uebertragen(self, delta):
         u"""(25182, 3) Kaefigfeld aus einer SMPL-X-Verschiebung."""
         zu = self.paarung.zuordnung
-        feld = np.zeros((len(zu), 3))
+        feld = torch.zeros((len(zu), 3), dtype=torch.float64, device='cuda')
         gueltig = ~self.ungueltig
         feld[gueltig] = delta[zu[gueltig]]
         feld = self.putz.fuellen(feld, self.ungueltig)
         feld = feld[self.nachbar].mean(axis=1)
         feld, _zacken = self.putz.putzen(feld)
-        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
+        feld[Torchfeld.linalg_norm(feld, dim=1) < self.NULL_M] = 0.0
         return feld
 
     def mass(self, gelenk_delta):
         u"""`{kopf_mm, laenge_mm}` an SMPL-X' eigenen Gelenken (Kopf = Gelenk 15, Knochen nach `parents`)."""
         p = self.modell.parents
         grund = self.modell.J_regressor @ self.null
-        alt = np.linalg.norm(grund[1:] - grund[p[1:]], axis=1)
-        neu = np.linalg.norm((grund + gelenk_delta)[1:] - (grund + gelenk_delta)[p[1:]], axis=1)
-        return {'kopf_mm': round(float(np.linalg.norm(gelenk_delta[15])) * 1000, 2), 'laenge_mm': round(float(np.abs(neu - alt).max()) * 1000, 2)}
+        alt = Torchfeld.linalg_norm(grund[1:] - grund[p[1:]], dim=1)
+        neu = Torchfeld.linalg_norm(Torchfeld.feld((grund + gelenk_delta)[1:] - (grund + gelenk_delta)[p[1:]]), dim=1)
+        return {'kopf_mm': round(float(Torchfeld.linalg_norm(gelenk_delta[15])) * 1000, 2), 'laenge_mm': round(float(Torchfeld.abs(neu - alt).max()) * 1000, 2)}
 
     def gelenkversatz(self):
         if self._gelenke is None:
@@ -137,7 +138,7 @@ class Sxmorpheaufgenesis:
             d_plus, j_plus = self.verschiebung(a['plus'])
             d_minus, j_minus = self.verschiebung(a['minus'])
             plus, minus = self.uebertragen(d_plus), self.uebertragen(d_minus)
-            nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
+            nummern = torch.nonzero((Torchfeld.amax(Torchfeld.abs(plus), dim=1) > 0) | (Torchfeld.amax(Torchfeld.abs(minus), dim=1) > 0), as_tuple=True)[0]
             if not len(nummern):
                 self.melden(nr, len(auftraege), a['kennung'], None)
                 continue

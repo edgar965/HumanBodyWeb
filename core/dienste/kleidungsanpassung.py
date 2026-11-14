@@ -20,7 +20,8 @@ mh_proxy_fit).
 import base64
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.anpassungsergebnis import Anpassungsergebnis
 from ..daten.netzantwort import Netzantwort
@@ -113,7 +114,7 @@ class Kleidungsanpassung:
         """
         from GarmentFitter.fitter.koordinaten import Quellsystem
 
-        punkte = np.asarray(self.vorlage.vertices, dtype=np.float64)
+        punkte = Torchfeld.feld(self.vorlage.vertices, dtype=torch.float64)
         system = self.koordinatensystem
         if system == 'auto':
             system = Quellsystem.erkennen(punkte)
@@ -169,7 +170,7 @@ class Kleidungsanpassung:
             roh = daten.get('hull_vertices')
             if not roh:
                 return None
-            return np.frombuffer(base64.b64decode(roh), dtype=np.float32).reshape(-1, 3).astype(np.float64)
+            return Torchfeld.astype(torch.frombuffer(bytearray(base64.b64decode(roh)), dtype=torch.float32).to(Torchfeld.KARTE).reshape(-1, 3), torch.float64)
         except Exception as e:  # noqa: BLE001
             logger.error('Huellvertices nicht lesbar: %s', e)
             return None

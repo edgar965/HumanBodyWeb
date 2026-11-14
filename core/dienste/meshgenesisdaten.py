@@ -21,7 +21,10 @@ import json
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 from .meshgenesisapose import Meshgenesisapose
 from .meshgenesisaposewahl import Meshgenesisaposewahl
@@ -70,7 +73,7 @@ class Meshgenesisdaten:
         ordner = Meshgenesisdatensatz.ordner(modell) / '_laeufe'
         if not ordner.is_dir():
             return None
-        fertig = [p for p in sorted(ordner.iterdir()) if (p / 'lauf_ergebnis.json').is_file() and (p / 'vorhersagen.npz').is_file()]
+        fertig = [p for p in sorted(ordner.iterdir()) if Npztorch.da(p / 'lauf_ergebnis.json') and Npztorch.da(p / 'vorhersagen.npz')]
         return fertig[-1] if fertig else None
 
     @classmethod
@@ -111,27 +114,27 @@ class Meshgenesisdaten:
     @staticmethod
     def _quaternionen(m):
         """(N, 3, 3) Drehmatrizen → (N, 4) Quaternionen (x, y, z, w), wie three.js `Quaternion.setFromRotationMatrix` (Fallunterscheidung nach der Spur)."""
-        aus = np.zeros((len(m), 4))
+        aus = torch.zeros((len(m), 4), dtype=torch.float64, device='cuda')
         for i, r in enumerate(m):
             spur = r[0, 0] + r[1, 1] + r[2, 2]
             if spur > 0:
-                s = 0.5 / np.sqrt(spur + 1.0)
-                aus[i] = ((r[2, 1] - r[1, 2]) * s, (r[0, 2] - r[2, 0]) * s, (r[1, 0] - r[0, 1]) * s, 0.25 / s)
+                s = 0.5 / Torchfeld.sqrt(spur + 1.0)
+                aus[i] = Torchfeld.feld(((r[2, 1] - r[1, 2]) * s, (r[0, 2] - r[2, 0]) * s, (r[1, 0] - r[0, 1]) * s, 0.25 / s))
             elif r[0, 0] > r[1, 1] and r[0, 0] > r[2, 2]:
-                s = 2.0 * np.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2])
-                aus[i] = (0.25 * s, (r[0, 1] + r[1, 0]) / s, (r[0, 2] + r[2, 0]) / s, (r[2, 1] - r[1, 2]) / s)
+                s = 2.0 * Torchfeld.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2])
+                aus[i] = Torchfeld.feld((0.25 * s, (r[0, 1] + r[1, 0]) / s, (r[0, 2] + r[2, 0]) / s, (r[2, 1] - r[1, 2]) / s))
             elif r[1, 1] > r[2, 2]:
-                s = 2.0 * np.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2])
-                aus[i] = ((r[0, 1] + r[1, 0]) / s, 0.25 * s, (r[1, 2] + r[2, 1]) / s, (r[0, 2] - r[2, 0]) / s)
+                s = 2.0 * Torchfeld.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2])
+                aus[i] = Torchfeld.feld(((r[0, 1] + r[1, 0]) / s, 0.25 * s, (r[1, 2] + r[2, 1]) / s, (r[0, 2] - r[2, 0]) / s))
             else:
-                s = 2.0 * np.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1])
-                aus[i] = ((r[0, 2] + r[2, 0]) / s, (r[1, 2] + r[2, 1]) / s, 0.25 * s, (r[1, 0] - r[0, 1]) / s)
+                s = 2.0 * Torchfeld.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1])
+                aus[i] = Torchfeld.feld(((r[0, 2] + r[2, 0]) / s, (r[1, 2] + r[2, 1]) / s, 0.25 * s, (r[1, 0] - r[0, 1]) / s))
         return aus
 
     @staticmethod
     def _plan(ordner):
         datei = Meshgenesisdatensatz.ordner(ordner) / 'proben.json'
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
         return {e['nr']: e for e in json.loads(datei.read_text(encoding='utf-8'))}
 
@@ -142,7 +145,7 @@ class Meshgenesisdaten:
             return None
         ordner = Meshgenesisdatensatz.ordner(job['ordner'])
         try:
-            stand = (str(lauf), (lauf / 'vorhersagen.npz').stat().st_mtime_ns, (ordner / 'proben.json').stat().st_mtime_ns, Meshgenesisautorig.stand(ordner), Meshgenesiswege.stand(lauf),
+            stand = (str(lauf), Npztorch.stat(lauf / 'vorhersagen.npz').st_mtime_ns, Npztorch.stat(ordner / 'proben.json').st_mtime_ns, Meshgenesisautorig.stand(ordner), Meshgenesiswege.stand(lauf),
                      str(Meshgenesisapose.datei(lauf)))
             # Je Job gemerkt (seit Ursula_Pose1 gibt es zwei; ein gemeinsamer Platz würde bei jedem Wechsel neu bauen).
             gemerkt = cls._ablage.get(job['id'])
@@ -160,8 +163,8 @@ class Meshgenesisdaten:
         namen = [k['name'] for k in beschr['knochen']]
         gruppen = [k['gruppe'] for k in beschr['knochen']]
         ergebnis = json.loads((lauf / 'lauf_ergebnis.json').read_text(encoding='utf-8'))
-        vor = np.load(lauf / 'vorhersagen.npz')
-        soll = {int(nr): np.load(ordner / 'proben' / ('%04d' % int(nr)) / 'soll.npz')['rig'].astype(float)
+        vor = Npztorch.lesen(lauf / 'vorhersagen.npz')
+        soll = {int(nr): Torchfeld.astype(Npztorch.lesen(ordner / 'proben' / ('%04d' % int(nr)) / 'soll.npz')['rig'], torch.float64)
                 for gruppe in cls.GRUPPEN if gruppe + '_nr' in vor.files for nr in vor[gruppe + '_nr']}
         # Maßstäbe der Tabelle unter dem Ergebnis (16.10.2026): mittlere und nächste Trainingspose, je Zeile.
         vergleich = Meshgenesisvergleich({nr: soll[nr] for nr in vor['training_nr'].tolist()} if 'training_nr' in vor.files else {})
@@ -170,11 +173,11 @@ class Meshgenesisdaten:
         gruppen_da = [g for g in cls.GRUPPEN if g + '_nr' in vor.files]
         if ergebnis.get('ausgabe') == 'kanaele' and all(g + '_dreh' in vor.files for g in gruppen_da) and 'ruhezentren' in vor.files:
             # Tripo-Job (19.10.2026 abends, `meshgenesis_paar_lauf.py`): Drehungen und Ruhezentren der VORHERGESAGTEN Figur (seit 19.10.2026 spätabends) — gezeichnet wird das Ergebnis als Genesis-Figur.
-            haltung = {'art': 'kanaele', 'ruhezentren': np.round(vor['ruhezentren'].astype(float), 6).tolist()}
-        elif ergebnis.get('ausgabe') == 'kanaele' and all(g + '_dreh' in vor.files for g in gruppen_da) and (ordner / 'kinematik.json').is_file():
+            haltung = {'art': 'kanaele', 'ruhezentren': Torchfeld.round(Torchfeld.astype(vor['ruhezentren'], torch.float64), 6).tolist()}
+        elif ergebnis.get('ausgabe') == 'kanaele' and all(g + '_dreh' in vor.files for g in gruppen_da) and Npztorch.da(ordner / 'kinematik.json'):
             kin = json.loads((ordner / 'kinematik.json').read_text(encoding='utf-8'))['knochen']
             if [k['name'] for k in kin] == namen:
-                haltung = {'art': 'kanaele', 'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist()}
+                haltung = {'art': 'kanaele', 'ruhezentren': Torchfeld.round(Torchfeld.feld([k['zentrum'] for k in kin], copy=True), 6).tolist()}
             else:
                 logger.warning('Meshgenesisdaten: kinematik.json von %s passt nicht zum Rig — das Ergebnis wird mit der Näherung gehäutet', ordner)
         proben = []
@@ -184,7 +187,7 @@ class Meshgenesisdaten:
         for gruppe in gruppen_da:
             dreh = vor[gruppe + '_dreh'] if haltung else [None] * len(vor[gruppe + '_nr'])
             for nr, ausgabe, d in zip(vor[gruppe + '_nr'], vor[gruppe + '_rig'], dreh, strict=True):
-                p = cls._probe(plan[int(nr)], gruppe, soll[int(nr)], ausgabe.astype(float), namen, gruppen, vergleich, d)
+                p = cls._probe(plan[int(nr)], gruppe, soll[int(nr)], Torchfeld.astype(ausgabe, torch.float64), namen, gruppen, vergleich, d)
                 if wege and int(nr) in wege['proben']:
                     cls._wege(p, wege, plan[int(nr)], gruppe, soll[int(nr)], namen, gruppen, vergleich, haltung is not None)
                     p['apose'] = apose and int(nr) == Meshgenesisapose.PROBE
@@ -219,10 +222,10 @@ class Meshgenesisdaten:
         k = Meshgenesisbild._kennzahlen(soll, ausgabe, namen, gruppen, cls.SCHWELLE_MM)
         k.update(vergleich.werte(int(e['nr']), soll, list(range(len(namen)))))
         # `datei`: die OBJ-Datei, aus der der Datensatz diese Probe liest (Ursula_Pose1, Probe 1) — sonst None (die Probe entsteht im Datenskript aus Pose und Modell).
-        rig = {'soll': np.round(soll, 4).tolist(), 'ausgabe': np.round(ausgabe, 4).tolist(), 'je_mm': k['je_gelenk_mm'],
+        rig = {'soll': Torchfeld.round(soll, 4).tolist(), 'ausgabe': Torchfeld.round(ausgabe, 4).tolist(), 'je_mm': k['je_gelenk_mm'],
                'kennzahlen': {'mittel_mm': k['mittel_mm'], 'groesster_mm': k['groesster_mm'], 'groesster_knochen': k['groesster_gelenk'], 'knochen': len(namen)}}
         if dreh is not None:
-            rig['dreh'] = np.round(cls._quaternionen(np.asarray(dreh, dtype=float)), 5).tolist()
+            rig['dreh'] = Torchfeld.round(cls._quaternionen(Torchfeld.feld(dreh, dtype=torch.float64)), 5).tolist()
         # `start`: bei einem Trainingspaar ist der Start ein ANDERES Netz als das Ziel (Tripo) — das Feld zeigt die Wolke, nicht die Außenfläche des Ziels (`Meshgenesisechtzeichner`).
         return {'id': int(e['nr']), 'name': e['name'], 'quelle': e['quelle'], 'gruppe': gruppe, 'aufteilung': 'training' if gruppe == 'training' else 'pruefung',
                 'start': 'wolke' if e.get('paar') else None,
@@ -234,15 +237,15 @@ class Meshgenesisdaten:
     def eingabe(cls, job, nr):
         """4.096 Punkte der Außenfläche dieser Probe mit ihren Farben (0–255) — eine feste Auswahl je Probe, damit die Wolke beim Wiederkommen gleich aussieht."""
         datei = Meshgenesisdatensatz.ordner(job['ordner']) / 'proben' / ('%04d' % int(nr)) / 'eingabe.npz'
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
-        e = np.load(datei)
+        e = Npztorch.lesen(datei)
         anzahl = cls.EINGABE_ANZEIGE_PAAR if job.get('paar') else cls.EINGABE_ANZEIGE
-        wahl = np.sort(np.random.default_rng(int(nr)).choice(len(e['punkte']), min(anzahl, len(e['punkte'])), replace=False))
+        wahl = torch.sort(Zufallsstrom.default_rng(int(nr)).choice(len(e['punkte']), min(anzahl, len(e['punkte'])), replace=False), stable=True).values
         # float64 vor dem Runden: float32 gerundet ergibt in JSON `-0.0020000000949949026` statt `-0.002` (gemessen: 326 KB je Wolke).
         # `etikett` = Teil je Punkt (`Meshgenesisflaeche.TEILE`) — die Zeilen „Nur Körper" und „Kleider" zeigen nur ihre Teile der Wolke.
-        return {'nr': int(nr), 'von': int(len(e['punkte'])), 'punkte': np.round(e['punkte'][wahl].astype(float), 3).tolist(),
-                'farbe': np.clip(np.round(e['farbe'][wahl] * 255), 0, 255).astype(int).tolist(), 'etikett': e['etikett'][wahl].astype(int).tolist()}
+        return {'nr': int(nr), 'von': int(len(e['punkte'])), 'punkte': Torchfeld.round(Torchfeld.astype(e['punkte'][wahl], torch.float64), 3).tolist(),
+                'farbe': Torchfeld.astype(Torchfeld.clip(Torchfeld.round(e['farbe'][wahl] * 255), 0, 255), torch.int64).tolist(), 'etikett': Torchfeld.astype(e['etikett'][wahl], torch.int64).tolist()}
 
     @classmethod
     def animation(cls, job):

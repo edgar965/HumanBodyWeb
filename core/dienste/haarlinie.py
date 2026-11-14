@@ -16,7 +16,8 @@ Hier steht die Haarlinie als Regeln, die an der FIGUR hängen statt an festen Wi
 `ausschluss(...)` gibt die Felder ohne Haar; `Haarkappe._linienfeld` zieht sie von der Abdeckung des Netzhaars ab.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Haarlinie']
 
@@ -50,35 +51,35 @@ class Haarlinie:
     @classmethod
     def _felder(cls, v, r, hoehe, breite):
         """Zeile und Spalte des Felds je Richtung (`Haarklemme`: Azimut von +z nach +x, Höhenwinkel von der Waagerechten)."""
-        az = np.degrees(np.arctan2(v[:, 0], v[:, 2])) % 360.0
-        el = np.degrees(np.arcsin(np.clip(v[:, 1] / np.maximum(r, 1e-12), -1.0, 1.0)))
-        zeile = np.clip(((el + 90.0) * hoehe / 180.0).astype(int), 0, hoehe - 1)
-        spalte = np.clip((az * breite / 360.0).astype(int), 0, breite - 1)
+        az = Torchfeld.degrees(Torchfeld.arctan2(v[:, 0], v[:, 2])) % 360.0
+        el = Torchfeld.degrees(Torchfeld.arcsin(Torchfeld.clip(v[:, 1] / Torchfeld.maximum(r, 1e-12), -1.0, 1.0)))
+        zeile = Torchfeld.clip(Torchfeld.astype((el + 90.0) * hoehe / 180.0, torch.int64), 0, hoehe - 1)
+        spalte = Torchfeld.clip(Torchfeld.astype(az * breite / 360.0, torch.int64), 0, breite - 1)
         return zeile, spalte
 
     @classmethod
     def ohrfelder(cls, netz, mitte, hoehe, breite):
         """Bool (hoehe, breite): Felder mit Ohr — Hautpunkte mit Gewicht auf `l_ear`/`r_ear`, geschlossen und um `OHR_RAND` Felder erweitert (Azimut umlaufend). Leer ohne Ohrknochen in der Haut."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
         haut = (netz or {}).get('haut') or {}
         namen = [str(n) for n in haut.get('knochen') or []]
         ohren = [i for i, n in enumerate(namen) if n in ('l_ear', 'r_ear')]
-        felder = np.zeros((hoehe, breite), dtype=bool)
+        felder = torch.zeros((hoehe, breite), dtype=torch.bool, device='cuda')
         if not ohren:
             return felder
-        index = np.asarray(haut['index']).reshape(-1, 4)
-        gewicht = np.asarray(haut['gewicht'], dtype=np.float64).reshape(-1, 4)
+        index = Torchfeld.feld(haut['index']).reshape(-1, 4)
+        gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64).reshape(-1, 4)
         w = sum((gewicht * (index == i)).sum(axis=1) for i in ohren)
-        punkte = np.asarray(netz['punkte'], dtype=np.float64)
+        punkte = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
         m = w >= cls.OHR_GEWICHT
         if not m.any():
             return felder
-        v = punkte[m] - np.asarray(mitte, dtype=np.float64)
-        zeile, spalte = cls._felder(v, np.linalg.norm(v, axis=1), hoehe, breite)
+        v = punkte[m] - Torchfeld.feld(mitte, dtype=torch.float64)
+        zeile, spalte = cls._felder(v, Torchfeld.linalg_norm(v, dim=1), hoehe, breite)
         felder[zeile, spalte] = True
         rand = cls.OHR_RAND + 2
-        z = np.pad(felder, ((rand, rand), (rand, rand)), mode='wrap')
-        eins = np.ones((3, 3), dtype=bool)
+        z = Torchfeld.pad(felder, ((rand, rand), (rand, rand)), mode='wrap')
+        eins = torch.ones((3, 3), dtype=torch.bool, device='cuda')
         z = ndimage.binary_closing(z, eins, iterations=2)
         z = ndimage.binary_dilation(z, eins, iterations=cls.OHR_RAND)
         return z[rand:-rand, rand:-rand]
@@ -86,8 +87,8 @@ class Haarlinie:
     @classmethod
     def nacken(cls, el, az):
         """Bool (hoehe, breite): unterhalb des Nackenrands, der von `UNTEN_MITTE` (hinten) zu `UNTEN_SEITE` (an den Ohren) ansteigt — glatt (Hermite)."""
-        abstand = np.abs(az - 180.0)[None, :]
-        t = np.clip(abstand / cls.NACKEN_BREITE, 0.0, 1.0)
+        abstand = Torchfeld.abs(az - 180.0)[None, :]
+        t = Torchfeld.clip(abstand / cls.NACKEN_BREITE, 0.0, 1.0)
         rand = cls.UNTEN_MITTE + (cls.UNTEN_SEITE - cls.UNTEN_MITTE) * t * t * (3.0 - 2.0 * t)
         return el <= rand
 
@@ -98,34 +99,34 @@ class Haarlinie:
         namen = [str(n) for n in haut.get('knochen') or []]
         ohren = [i for i, n in enumerate(namen) if n in ('l_ear', 'r_ear')]
         if not ohren:
-            return np.zeros((0, 3))
-        index = np.asarray(haut['index']).reshape(-1, 4)
-        gewicht = np.asarray(haut['gewicht'], dtype=np.float64).reshape(-1, 4)
+            return torch.zeros((0, 3), dtype=torch.float64, device='cuda')
+        index = Torchfeld.feld(haut['index']).reshape(-1, 4)
+        gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64).reshape(-1, 4)
         w = sum((gewicht * (index == i)).sum(axis=1) for i in ohren)
-        v = np.asarray(netz['punkte'], dtype=np.float64)[w >= cls.OHR_GEWICHT] - np.asarray(mitte, dtype=np.float64)
-        return v / np.maximum(np.linalg.norm(v, axis=1, keepdims=True), 1e-12)
+        v = Torchfeld.feld(netz['punkte'], dtype=torch.float64)[w >= cls.OHR_GEWICHT] - Torchfeld.feld(mitte, dtype=torch.float64)
+        return v / Torchfeld.maximum(Torchfeld.linalg_norm(v, dim=1, keepdim=True), 1e-12)
 
     @classmethod
     def rund(cls, grob, netz, mitte):
         """`(bereich, zelle)` — der Haarbereich (`grob`: Bool (hoehe, breite) auf dem 5°-Raster, OHNE Ohr: `ausschluss(…, mit_ohr=False)`) auf dem Feinraster (`FEIN`, `zelle` Grad je Zelle), das Ohr als Scheiben
         von `OHR_ABSTAND` Grad um seine Hautpunkte herausgenommen, das Ganze mit `RUNDUNG` Grad gerundet. Azimut umlaufend."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         hoehe, breite = grob.shape
-        fein = ndimage.zoom(grob.astype(np.float64), cls.FEIN, order=1, mode='grid-wrap', grid_mode=True) > 0.5
+        fein = ndimage.zoom(Torchfeld.astype(grob, torch.float64), cls.FEIN, order=1, mode='grid-wrap', grid_mode=True) > 0.5
         zelle = 180.0 / fein.shape[0]
         ohr = cls.ohrpunkte(netz, mitte)
         if len(ohr):
-            el = np.radians((np.arange(fein.shape[0]) + 0.5) * zelle - 90.0)[:, None]
-            az = np.radians((np.arange(fein.shape[1]) + 0.5) * zelle)[None, :]
-            richtung = np.stack([np.cos(el) * np.sin(az), np.sin(el) * np.ones_like(az), np.cos(el) * np.cos(az)], axis=-1).reshape(-1, 3)     # wie `_felder`: Azimut von +z nach +x
-            kleinster = np.zeros(len(richtung))
+            el = Torchfeld.radians((Torchfeld.arange(fein.shape[0]) + 0.5) * zelle - 90.0)[:, None]
+            az = Torchfeld.radians((Torchfeld.arange(fein.shape[1]) + 0.5) * zelle)[None, :]
+            richtung = Torchfeld.stack([Torchfeld.cos(el) * Torchfeld.sin(az), Torchfeld.sin(el) * torch.ones_like(az), Torchfeld.cos(el) * Torchfeld.cos(az)], axis=-1).reshape(-1, 3)     # wie `_felder`: Azimut von +z nach +x
+            kleinster = torch.zeros(len(richtung), dtype=torch.float64, device='cuda')
             for anfang in range(0, len(richtung), 8000):
-                kleinster[anfang:anfang + 8000] = (richtung[anfang:anfang + 8000] @ ohr.T).max(axis=1)
-            nah = (kleinster >= np.cos(np.radians(cls.OHR_ABSTAND))).reshape(fein.shape)
+                kleinster[anfang:anfang + 8000] = Torchfeld.amax(richtung[anfang:anfang + 8000] @ ohr.T, dim=1)
+            nah = (kleinster >= Torchfeld.cos(Torchfeld.radians(cls.OHR_ABSTAND))).reshape(fein.shape)
             fein = fein & ~nah
         sigma = cls.RUNDUNG / zelle
-        return ndimage.gaussian_filter(fein.astype(np.float64), sigma, mode=('nearest', 'wrap')) > 0.5, zelle
+        return ndimage.gaussian_filter(Torchfeld.astype(fein, torch.float64), sigma, mode=('nearest', 'wrap')) > 0.5, zelle
 
     @classmethod
     def ausschluss(cls, netz, mitte, roh, mit_ohr=True):
@@ -133,18 +134,18 @@ class Haarlinie:
         mit genug Haar belegt, also Haar sein dürfen, auch wenn die Abdeckung Lücken hat. `mit_ohr=False`: das Ohr bleibt draußen (die Haarkappe nimmt es als runde Scheiben auf dem Feinraster, `rund`)."""
         hoehe, breite = roh.shape
         feld = 180.0 / hoehe
-        el = ((np.arange(hoehe) + 0.5) * feld - 90.0)[:, None]
-        az = (np.arange(breite) + 0.5) * (360.0 / breite)
-        von_vorn = np.minimum(az, 360.0 - az)[None, :]
+        el = ((Torchfeld.arange(hoehe) + 0.5) * feld - 90.0)[:, None]
+        az = (Torchfeld.arange(breite) + 0.5) * (360.0 / breite)
+        von_vorn = Torchfeld.minimum(az, 360.0 - az)[None, :]
         ohr = cls.ohrfelder(netz, mitte, hoehe, breite)
         if ohr.any():
-            vorn = float(np.where(ohr, von_vorn, 360.0).min())      # der vordere Rand des Ohrs (von vorn gezählt)
+            vorn = float(torch.where(ohr, von_vorn, 360.0).min())      # der vordere Rand des Ohrs (von vorn gezählt)
         else:
             vorn = 100.0                                            # ohne Ohrknochen: ein Ohr mittig an der Seite annehmen
         gesicht = (von_vorn <= cls.GESICHT_AZ) & (el < cls.GESICHT_EL)
         zone = (von_vorn > cls.GESICHT_AZ) & (von_vorn <= vorn) & (el >= cls.KOTELETT_EL) & (el < cls.GESICHT_EL)
-        kotelett = np.zeros(roh.shape, dtype=bool)
-        if zone.any() and float((~np.isnan(roh))[zone].mean()) >= cls.KOTELETT_ANTEIL:
+        kotelett = torch.zeros(roh.shape, dtype=torch.bool, device='cuda')
+        if zone.any() and float((~Torchfeld.isnan(roh))[zone].mean()) >= cls.KOTELETT_ANTEIL:
             kotelett = zone
         unter = (von_vorn > cls.GESICHT_AZ) & (von_vorn <= vorn) & (el < cls.KOTELETT_EL)      # unter den Koteletten: Wange und Kiefer
         return gesicht | unter | (ohr if mit_ohr else False) | cls.nacken(el, az), kotelett

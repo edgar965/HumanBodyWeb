@@ -12,7 +12,8 @@ import hashlib
 import logging
 import threading
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
 
 from Genesis9.pfade import G9pfade
@@ -69,8 +70,8 @@ class G9texturablage:
         if modus in ('RGB', 'RGBA', 'L'):
             return bild
         if modus.startswith('I'):
-            werte = np.asarray(bild, dtype=np.uint32)
-            return Image.fromarray(np.clip(werte >> 8 if werte.max() > 255 else werte, 0, 255).astype(np.uint8), 'L')
+            werte = Torchfeld.feld(bild, dtype=torch.uint32)
+            return Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(werte >> 8 if werte.max() > 255 else werte, 0, 255), torch.uint8)), 'L')
         if modus in ('LA', 'PA') or (modus == 'P' and 'transparency' in bild.info):
             return bild.convert('RGBA')
         if modus in ('1', 'F'):

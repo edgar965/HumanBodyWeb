@@ -10,7 +10,8 @@ Blender v5.2.2, `blenkernel/intern/mesh_normals.cc` (gelesen 10.10.2026):
   * `mix_normals_corner_to_face`: Summe der Eckennormalen des Polygons (`std::accumulate` ab 0), `math::normalize` (→ `Mesh::face_normals`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .hautbackenblendermathe import Hautbackenblendermathe as M
 
@@ -21,12 +22,12 @@ class Hautbackenblenderflaechen:
     @staticmethod
     def flaechennormalen(p, poly_start, poly_punkte):
         """`normals_calc_faces` — (P,3) float32."""
-        ps = np.asarray(poly_start, dtype=np.int64)
-        pp = np.asarray(poly_punkte, dtype=np.int64)
-        start, groesse = ps[:-1], np.diff(ps)
-        n = np.zeros((len(start), 3), dtype=np.float32)
+        ps = Torchfeld.feld(poly_start, dtype=torch.int64)
+        pp = Torchfeld.feld(poly_punkte, dtype=torch.int64)
+        start, groesse = ps[:-1], Torchfeld.diff(ps)
+        n = torch.zeros((len(start), 3), dtype=torch.float32, device='cuda')
         for k in range(int(groesse.max()) if len(groesse) else 0):
-            aktiv = np.flatnonzero(groesse > k)
+            aktiv = torch.flatten(groesse > k).nonzero()[:, 0]
             vor = p[pp[start[aktiv] + (groesse[aktiv] - 1 if k == 0 else k - 1)]]
             aktuell = p[pp[start[aktiv] + k]]
             n[aktiv, 0] += (vor[:, 1] - aktuell[:, 1]) * (vor[:, 2] + aktuell[:, 2])
@@ -61,10 +62,10 @@ class Hautbackenblenderflaechen:
     @staticmethod
     def ecken_zu_flaechen(poly_start, ecken_normalen):
         """`mix_normals_corner_to_face` — (P,3) float32."""
-        ps = np.asarray(poly_start, dtype=np.int64)
-        start, groesse = ps[:-1], np.diff(ps)
-        summe = np.zeros((len(start), 3), dtype=np.float32)
+        ps = Torchfeld.feld(poly_start, dtype=torch.int64)
+        start, groesse = ps[:-1], Torchfeld.diff(ps)
+        summe = torch.zeros((len(start), 3), dtype=torch.float32, device='cuda')
         for k in range(int(groesse.max()) if len(groesse) else 0):
-            aktiv = np.flatnonzero(groesse > k)
+            aktiv = torch.flatten(groesse > k).nonzero()[:, 0]
             summe[aktiv] += ecken_normalen[start[aktiv] + k]
         return M.normalisieren(summe)

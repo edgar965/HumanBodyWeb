@@ -9,7 +9,7 @@ Kopfmaße; hier der Median über die Bilder, dann auf die Körpergröße gerechn
 
 import logging
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .bildmodellumriss import Bildmodellumriss
 
@@ -34,7 +34,7 @@ class Bildmodellrigmasse:
         for b in self.bilder():
             for k, v in G9rigmasse(b).gelenkhoehen().items():
                 werte.setdefault(k, []).append(v)
-        return {k: float(np.median(v)) for k, v in werte.items()}
+        return {k: float(Torchfeld.median(v)) for k, v in werte.items()}
 
     def gelenke(self, gelenke, hoehe_m):
         """Die Gelenke des Modells mit den Höhen der Fotos — und der Bericht in cm."""
@@ -57,7 +57,7 @@ class Bildmodellrigmasse:
         for b in self.bilder():
             for k, v in G9rigmasse(b).kopfmasse(hoehe_m).items():
                 werte.setdefault(k, []).append(v)
-        aus = {k: float(np.median(v)) for k, v in werte.items()}
+        aus = {k: float(Torchfeld.median(v)) for k, v in werte.items()}
         if aus:
             logger.info('Bildmodell %s: Kopfmaße aus dem Körperfoto: %s',
                         self.job.kennung, {k: round(v * 100, 1) for k, v in aus.items()})

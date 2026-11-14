@@ -32,6 +32,10 @@ from django.test import SimpleTestCase
 from core.dienste.figurvideostuecke import Figurvideostuecke
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 MODELPHYSIK = os.path.join(str(settings.BASE_DIR), 'TheatreJS', 'ModelPhysik')
 
@@ -76,7 +80,7 @@ class FigurvideostueckeTest(SimpleTestCase):
             self.assertEqual(aus[0]['name'], 'Hose')
             self.assertEqual(aus[0]['farbe'], [1.0, 128 / 255.0, 0.0])
             # `with`: sonst haelt die offene .npz den Pruefordner fest (Windows).
-            with np.load(aus[0]['pfad']) as daten:
+            with Npztorch.lesen_numpy(aus[0]['pfad']) as daten:
                 np.testing.assert_allclose(daten['punkte'][0], [0.1, 0.3, 1.2], atol=1e-6)
                 np.testing.assert_array_equal(daten['dreiecke'], DREIECKE)
                 self.assertEqual(list(daten['knochen']), PAKET_KNOCHEN)

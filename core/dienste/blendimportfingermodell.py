@@ -20,8 +20,10 @@ MAẞ: Abstand der Originalpunkte zur FLÄCHE der Figurhand (Käfigdreiecke, vie
 `STUTZ_M` gekappt. **Nicht gegen die Käfigpunkte:** sie liegen nur alle 5 mm; ein zusammengeballter Käfig lag dichter und „verbesserte" das Maß.
 """
 
-import numpy as np
-from scipy.spatial import cKDTree
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
+from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
 __all__ = ['Blendimportfingermodell']
 
@@ -30,7 +32,7 @@ class Blendimportfingermodell:
     TEILE = ('hand', 'thumb', 'index', 'mid', 'ring', 'pinky', 'metacarpal', 'carpal')
     FINGER = ('index', 'mid', 'ring', 'pinky')
     #: Schwerpunkt und Kantenmitten eines Dreiecks.
-    PROBEN = np.array([[1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0.0], [0.5, 0.0, 0.5], [0.0, 0.5, 0.5]])
+    PROBEN = Torchfeld.feld([[1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0.0], [0.5, 0.0, 0.5], [0.0, 0.5, 0.5]], copy=True)
     #: Beugung: −10 % … +110 % der Greif-/Faustpose (Grundglied ≤ 90°, Mittelglied ≤ 110°, Endglied ≤ 99°). Vorher −25 % … +130 %: die Suche
     #: stellte das Mittelglied der linken Hand auf 130° (anatomisch unmöglich).
     BEUGUNG_UNTEN = 0.1
@@ -57,26 +59,26 @@ class Blendimportfingermodell:
         figur = halt.figur()
         self.morph = figur.morphpunkte()
         self.posen, self.versatz = figur.formeln.posen(), figur.formeln.knochen()
-        self.boden = np.array([0.0, bereit['boden'], 0.0])
+        self.boden = Torchfeld.feld([0.0, bereit['boden'], 0.0], copy=True)
         self.koerper = halt.drehung()
         haut = G9haut.holen()
         namen = list(haut.knochen)
-        index, gewicht = np.asarray(haut.index), np.asarray(haut.gewicht, dtype=np.float64)
+        index, gewicht = Torchfeld.feld(haut.index), Torchfeld.feld(haut.gewicht, dtype=torch.float64)
         hand = [i for i, n in enumerate(namen) if n.startswith(seite + '_') and 'toe' not in n and any(s in n for s in self.TEILE)]
-        anteil = np.zeros(len(self.morph))
+        anteil = torch.zeros(len(self.morph), dtype=torch.float64, device='cuda')
         for k in range(index.shape[1]):
-            anteil += np.where(np.isin(index[:, k], hand), gewicht[:, k], 0.0)
+            anteil += torch.where(torch.isin(index[:, k], Torchfeld.feld(hand)), gewicht[:, k], 0.0)
         #: Alle Käfigpunkte, die ein Hand-/Fingerknochen bewegt, und davon die Mehrheit (Hand, Finger — Grundlage des Maßes).
-        self.idx = np.flatnonzero(anteil > 0.0)
+        self.idx = torch.flatten(anteil > 0.0).nonzero()[:, 0]
         im_fit = anteil[self.idx] > 0.5
         self.teilhaut = type('Teilhaut', (), {'knochen': namen, 'index': index[self.idx], 'gewicht': gewicht[self.idx]})
         #: Stelle von `idx`, an der die Punkte des Maßes stehen, und die Käfigdreiecke aus lauter solchen Punkten (Nummern in dieser Reihenfolge).
-        self.fit_nach_idx = np.flatnonzero(im_fit)
-        nummer = -np.ones(len(self.morph), dtype=np.int64)
-        nummer[self.idx[self.fit_nach_idx]] = np.arange(len(self.fit_nach_idx))
-        dreiecke = np.asarray(G9kaefigumriss.dreiecke(), dtype=np.int64)
+        self.fit_nach_idx = torch.flatten(im_fit).nonzero()[:, 0]
+        nummer = -torch.ones(len(self.morph), dtype=torch.int64, device='cuda')
+        nummer[self.idx[self.fit_nach_idx]] = Torchfeld.arange(len(self.fit_nach_idx))
+        dreiecke = Torchfeld.feld(G9kaefigumriss.dreiecke(), dtype=torch.int64)
         self.flaechen = nummer[dreiecke[(nummer[dreiecke] >= 0).all(axis=1)]]
-        rng = np.random.default_rng(1)
+        rng = Zufallsstrom.default_rng(1)
         self.ziel = ziel
         self.ziel_s = ziel[rng.choice(len(ziel), min(len(ziel), self.PUNKTE), replace=False)]
         self.baum_ziel = cKDTree(ziel)
@@ -84,14 +86,14 @@ class Blendimportfingermodell:
         self.n = len(self.parameter)
         self.anzahl = self.n + 1
         self.schluessel = [(p['knochen'], p['kanal']) for p in self.parameter]
-        self.unten = np.array([p['unten'] for p in self.parameter] + [self.SKALA[0]])
-        self.oben = np.array([p['oben'] for p in self.parameter] + [self.SKALA[1]])
-        self.griffpose = np.array([p['griff'] for p in self.parameter] + [0.0])
-        self.spiel = np.maximum(np.abs(self.unten), np.abs(self.oben))
+        self.unten = Torchfeld.feld([p['unten'] for p in self.parameter] + [self.SKALA[0]], copy=True)
+        self.oben = Torchfeld.feld([p['oben'] for p in self.parameter] + [self.SKALA[1]], copy=True)
+        self.griffpose = Torchfeld.feld([p['griff'] for p in self.parameter] + [0.0], copy=True)
+        self.spiel = Torchfeld.maximum(Torchfeld.abs(self.unten), Torchfeld.abs(self.oben))
         # Drehpunkt der Größe: der Handteller (Käfigpunkte ohne Finger- und Daumenknochen) bei gestreckten Fingern.
-        dominant = index[self.idx][np.arange(len(self.idx)), np.argmax(gewicht[self.idx], axis=1)]
-        teller = np.array([not any(s in namen[b] for s in ('thumb', 'index', 'mid', 'ring', 'pinky')) for b in dominant])
-        self.pivot = self.posiert(np.zeros(self.anzahl))[teller].mean(axis=0)
+        dominant = index[self.idx][Torchfeld.arange(len(self.idx)), Torchfeld.argmax(gewicht[self.idx], dim=1)]
+        teller = Torchfeld.feld([not any(s in namen[b] for s in ('thumb', 'index', 'mid', 'ring', 'pinky')) for b in dominant], copy=True)
+        self.pivot = self.posiert(torch.zeros(self.anzahl, dtype=torch.float64, device='cuda'))[teller].mean(axis=0)
 
     # ------------------------------------------------------------- Parameter
 
@@ -142,7 +144,7 @@ class Blendimportfingermodell:
     def proben(self, x):
         """Punkte auf den Käfigdreiecken der Hand (vier je Dreieck) aus den posierten Punkten `x`."""
         ecken = x[self.fit_nach_idx][self.flaechen]
-        return np.einsum('pk,tkc->tpc', self.PROBEN, ecken).reshape(-1, 3)
+        return Torchfeld.einsum('pk,tkc->tpc', self.PROBEN, ecken).reshape(-1, 3)
 
     def abstaende(self, phi):
         """`(Original → Fläche, Fläche → Original)` in m, auf `STUTZ_M` gekappt; die Fläche in der Größe `phi[-1]` Prozent um den Handteller."""
@@ -152,26 +154,26 @@ class Blendimportfingermodell:
         # ohne Ausbalancieren (19.10.2026): derselbe nächste Abstand, schneller gebaut (`griff_kdbaum_pruefen.py`: bitgleich, je Auswertung 19,4 → 14,1 ms)
         d1, _ = cKDTree(s, balanced_tree=False, compact_nodes=False).query(self.ziel_s, workers=-1)
         d2, _ = self.baum_ziel.query(s[::schritt], workers=-1)
-        return np.minimum(d1, self.STUTZ_M), np.minimum(d2, self.STUTZ_M)
+        return Torchfeld.minimum(d1, self.STUTZ_M), Torchfeld.minimum(d2, self.STUTZ_M)
 
     def wert(self, phi):
         d1, d2 = self.abstaende(phi)
-        return float(np.mean(d1 ** 2) + np.mean(d2 ** 2))
+        return float(Torchfeld.mean(d1 ** 2) + Torchfeld.mean(d2 ** 2))
 
     def reste(self, phi):
         """Der Rest für die kleinsten Quadrate: beide Abstände plus die Vorliebe für die gestreckte, unskalierte Hand."""
         d1, d2 = self.abstaende(phi)
-        return np.concatenate([d1, d2, self.VORLIEBE_M * np.asarray(phi) / self.spiel])
+        return Torchfeld.cat([d1, d2, self.VORLIEBE_M * Torchfeld.feld(phi) / self.spiel])
 
     def kennzahlen(self, phi):
         """`{original_median_mm, original_p90_mm, modell_median_mm, skala_prozent}` — für den Bericht."""
         d1, d2 = self.abstaende(phi)
-        return {'original_median_mm': round(float(np.median(d1)) * 1000.0, 2), 'original_p90_mm': round(float(np.percentile(d1, 90)) * 1000.0, 2),
-                'modell_median_mm': round(float(np.median(d2)) * 1000.0, 2), 'skala_prozent': round(float(phi[self.n]), 1)}
+        return {'original_median_mm': round(float(Torchfeld.median(d1)) * 1000.0, 2), 'original_p90_mm': round(float(Torchfeld.percentile(d1, 90)) * 1000.0, 2),
+                'modell_median_mm': round(float(Torchfeld.median(d2)) * 1000.0, 2), 'skala_prozent': round(float(phi[self.n]), 1)}
 
     def kaefig(self, phi):
         """`(idx, delta)`: um wie viel sich jeder Käfigpunkt, den ein Handknochen bewegt, durch `phi` gegen die gestreckte Hand verschiebt (Lage des Netzes, m)."""
-        return self.idx, self.posiert(phi) - self.posiert(np.zeros(self.anzahl))
+        return self.idx, self.posiert(phi) - self.posiert(torch.zeros(self.anzahl, dtype=torch.float64, device='cuda'))
 
     def als_griff(self, phi, mindest_grad=0.5):
         """`{knochen: {'rotation/z': Grad}}` — das Format von `G9stueckersatz.griff`; Drehungen unter `mindest_grad` fallen weg."""
@@ -183,4 +185,4 @@ class Blendimportfingermodell:
 
     def vektor(self, griff):
         """Die Umkehrung von `als_griff`: der Vektor aller Winkel (Größe 0) zu einem Griff."""
-        return np.array([griff.get(b, {}).get(k, 0.0) for b, k in self.schluessel] + [0.0])
+        return Torchfeld.feld([griff.get(b, {}).get(k, 0.0) for b, k in self.schluessel] + [0.0], copy=True)

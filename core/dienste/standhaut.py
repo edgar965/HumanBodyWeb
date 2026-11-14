@@ -20,7 +20,8 @@ Auf den Armen liegt das Handrelief (`Handhaut`) über der Daz-Karte (`verrechnen
 import io
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -71,7 +72,7 @@ class Standhaut:
         try:
             with Image.open(datei) as roh:
                 bild = roh.convert('RGB')
-            if max(bild.size) > cls.KANTE_NORMALE:
+            if max(Torchfeld.groesse(bild)) > cls.KANTE_NORMALE:
                 bild = bild.resize((cls.KANTE_NORMALE, cls.KANTE_NORMALE), Image.LANCZOS)
             return bild
         except (OSError, ValueError) as fehler:
@@ -85,13 +86,13 @@ class Standhaut:
         `unten` ist die Daz-Karte der Haut, `oben` das Handrelief (`Handhaut`); gleiche Größe wird hergestellt (`oben` gibt sie vor)."""
         from PIL import Image
 
-        if unten.size != oben.size:
-            unten = unten.resize(oben.size, Image.BICUBIC)
-        a = np.asarray(unten, dtype=np.float32) / 127.5 - 1.0
-        b = np.asarray(oben, dtype=np.float32) / 127.5 - 1.0
-        n = np.stack([a[..., 0] + b[..., 0], a[..., 1] + b[..., 1], a[..., 2]], axis=-1)
-        n /= np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-6)
-        return Image.fromarray(np.rint(np.clip((n * 0.5 + 0.5) * 255.0, 0, 255)).astype(np.uint8), 'RGB')
+        if Torchfeld.groesse(unten) != Torchfeld.groesse(oben):
+            unten = unten.resize(Torchfeld.groesse(oben), Image.BICUBIC)
+        a = Torchfeld.feld(unten, dtype=torch.float32) / 127.5 - 1.0
+        b = Torchfeld.feld(oben, dtype=torch.float32) / 127.5 - 1.0
+        n = Torchfeld.stack([a[..., 0] + b[..., 0], a[..., 1] + b[..., 1], a[..., 2]], axis=-1)
+        n /= Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=-1, keepdim=True), 1e-6)
+        return Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.round(Torchfeld.clip((n * 0.5 + 0.5) * 255.0, 0, 255)), torch.uint8)), 'RGB')
 
     @staticmethod
     def ablegen(glb, bild, qualitaet, **optionen):
@@ -121,9 +122,9 @@ class Standhaut:
         from .standhautdetail import Standhautdetail
         glb._koerper = netz
         durchlicht = Standdurchlicht.karten(netz)              # Dünnheit der Haut je Kachel (Ohren, Nase, Lippen, Finger): der Film lässt dort Licht hindurch
-        dreiecke = np.asarray(netz['dreiecke'], dtype=np.int64).reshape(-1, 3)
+        dreiecke = Torchfeld.feld(netz['dreiecke'], dtype=torch.int64).reshape(-1, 3)
         uv = glb._uv(netz['uv'])
-        uv[:, 0] = np.clip(uv[:, 0], 0.0, 1.0)
+        uv[:, 0] = Torchfeld.clip(uv[:, 0], 0.0, 1.0)
         haut = glb._haut(netz['haut'], len(netz['punkte']))
         je_kachel = {}
         for g in netz['gruppen']:
@@ -134,7 +135,7 @@ class Standhaut:
             foto = kacheln.get(kachel)
             albedo = foto or (G9material.datei(bilder['albedo']) if bilder.get('albedo') else None)
             faktor = (1.0, 1.0, 1.0) if foto else glb._zahl(bilder.get('farbe'), (1.0, 1.0, 1.0))
-            wahl = np.concatenate([dreiecke[a:b] for a, b, _ in stuecke])
+            wahl = Torchfeld.cat([dreiecke[a:b] for a, b, _ in stuecke])
             karte = cls.normalenbild(bilder)
             hand = Standhandhaut(glb).karten(netz, albedo, detail=glb.hautdetail, basisnormale=karte) if kachel == Standhandhaut.KACHEL and albedo else None     # Arme, Hände: Hautlinien, Falten, Sehnen und Farbe (`Handhaut`)
             detail = (Standhautdetail.karte(glb, albedo) if glb.hautdetail and albedo and kachel != Standhandhaut.KACHEL and Standhautdetail.gilt(kachel, albedo)

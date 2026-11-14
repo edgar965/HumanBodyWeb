@@ -20,6 +20,10 @@ import numpy as np
 
 from ._pruefablage import Pruefablage
 from ._wrappersuchpfad import Wrappersuchpfad
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 Wrappersuchpfad.setzen()
 
@@ -303,7 +307,7 @@ class StandUndStempelTest(unittest.TestCase):
         with zipfile.ZipFile(os.path.join(ordner, name), 'w') as z:
             for schluessel, a in arrays.items():
                 puffer = io.BytesIO()
-                np.save(puffer, a)
+                Npztorch.speichern_npy(puffer, a)
                 z.writestr(zipfile.ZipInfo(schluessel + '.npy', date_time=zeit), puffer.getvalue())
 
     def test_stempel_ist_der_inhalt_nicht_die_datei(self):
@@ -325,7 +329,7 @@ class StandUndStempelTest(unittest.TestCase):
             r = self._runner(ordner)
             self._figur(ordner)
             self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))               # kein Vermerk, kein Zustand
-            np.savez(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
+            Npztorch.speichern(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
             self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))               # Zustand ohne Vermerk
             with open(os.path.join(ordner, r.GENESIS_STAND), 'w', encoding='utf-8') as f:
                 json.dump({'datei': 'genesis_ende.npz', 'sha1': r._genesis_stempel('genesis_ende.npz')}, f)
@@ -338,7 +342,7 @@ class StandUndStempelTest(unittest.TestCase):
         with Pruefablage.ordner() as ordner:
             r = self._runner(ordner)
             self._figur(ordner)
-            np.savez(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
+            Npztorch.speichern(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
             with open(os.path.join(ordner, r.GENESIS_STAND), 'w', encoding='utf-8') as f:
                 f.write('{kaputt')
             self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))
@@ -349,7 +353,7 @@ class StandUndStempelTest(unittest.TestCase):
         with Pruefablage.ordner() as ordner:
             r = self._runner(ordner)
             self._figur(ordner)
-            np.savez(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
+            Npztorch.speichern(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
             with open(os.path.join(ordner, r.GENESIS_STAND), 'w', encoding='utf-8') as f:
                 json.dump({'datei': 'genesis_ende.npz', 'sha1': r._genesis_stempel('genesis_ende.npz'), 'sha1_haltung': r._genesis_stempel('genesis_ende.npz', ohne=r.FORM)}, f)
             voll, haltung = r._genesis_stempel('genesis_ende.npz'), r._genesis_stempel('genesis_ende.npz', ohne=r.FORM)
@@ -358,7 +362,7 @@ class StandUndStempelTest(unittest.TestCase):
             self.assertEqual(haltung, r._genesis_stempel('genesis_ende.npz', ohne=r.FORM))
             self.assertTrue(r._stand_gehoert_zu('genesis_ende.npz'))
             arrays = {'punkte': np.arange(30, dtype=np.float32).reshape(10, 3), 'namen': np.array(['a', 'bb']), 'eltern': np.array([-1, 1])}   # andere Gelenkkette
-            np.savez(os.path.join(ordner, 'genesis_ende.npz'), **arrays)
+            Npztorch.speichern(os.path.join(ordner, 'genesis_ende.npz'), **arrays)
             self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))
 
     def test_ein_vermerk_ohne_haltungsstempel_gilt_nur_bei_gleichem_inhalt(self):
@@ -366,7 +370,7 @@ class StandUndStempelTest(unittest.TestCase):
         with Pruefablage.ordner() as ordner:
             r = self._runner(ordner)
             self._figur(ordner)
-            np.savez(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
+            Npztorch.speichern(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
             with open(os.path.join(ordner, r.GENESIS_STAND), 'w', encoding='utf-8') as f:
                 json.dump({'datei': 'genesis_ende.npz', 'sha1': r._genesis_stempel('genesis_ende.npz')}, f)
             self.assertTrue(r._stand_gehoert_zu('genesis_ende.npz'))

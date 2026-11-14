@@ -25,7 +25,8 @@ zwischen Kappe und Rest. Diese Messung fragt die Fotos:
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
 
 logger = logging.getLogger('core')
@@ -66,7 +67,7 @@ class Haarabgleich:
     @classmethod
     def schwelle(cls, bunt, werte):
         """Otsu über die Buntheit `werte` (64 Stufen bis 0,64), begrenzt auf `BUNT`."""
-        hist, kanten = np.histogram(werte, bins=64, range=(0.0, 0.64))
+        hist, kanten = Torchfeld.histogram(werte, bins=64, range=(0.0, 0.64))
         mitten = kanten[:-1]
         best, aus = -1.0, cls.BUNT[0]
         for t in range(1, 64):
@@ -81,14 +82,14 @@ class Haarabgleich:
     @classmethod
     def haar(cls, rgb, maske, bis):
         """Haar auf dem Foto: in der Figur, nicht hautfarben, geglättet — `bis` ist die Halszeile (für die Schwelle)."""
-        from scipy.ndimage import uniform_filter
-        f = np.asarray(rgb, dtype=np.float32)[..., :3] / 255.0
-        hoch, tief = f.max(axis=2), f.min(axis=2)
-        bunt = (hoch - tief) / np.maximum(hoch, 1e-3)
+        from KoerperKI_alle.kartenbild import uniform_filter
+        f = Torchfeld.feld(rgb, dtype=torch.float32)[..., :3] / 255.0
+        hoch, tief = Torchfeld.amax(f, dim=2), Torchfeld.amin(f, dim=2)
+        bunt = (hoch - tief) / Torchfeld.maximum(hoch, 1e-3)
         grenze = cls.schwelle(bunt, bunt[:bis][maske[:bis]])
         warm = (f[..., 0] >= f[..., 1]) & (f[..., 1] >= f[..., 2] - cls.WARM)
         haar = maske & ~(warm & (bunt >= grenze) & (hoch > cls.HELL))
-        return (uniform_filter(haar.astype(np.float32), cls.GLAETTEN) > 0.5) & maske, grenze
+        return (uniform_filter(Torchfeld.astype(haar, torch.float32), cls.GLAETTEN) > 0.5) & maske, grenze
 
     @classmethod
     def ist_bart(cls, teil):
@@ -99,7 +100,7 @@ class Haarabgleich:
         haare = [t for t in teile if t.get('art') == 'haar']
         if not haare or not referenzen:
             return None
-        scheitel = max(float(np.asarray(t['punkte'])[:, 1].max()) for t in teile)
+        scheitel = max(float(Torchfeld.feld(t['punkte'])[:, 1].max()) for t in teile)
         ansichten = []
         for r in referenzen:
             try:
@@ -120,20 +121,20 @@ class Haarabgleich:
         self.render.bild_kopf([(t['punkte'], t['dreiecke'], f) for t, f in zip(teile, farben, strict=True)],
                               r.winkel, pfad, groesse=(g, g), kennung=True)
         with Image.open(pfad) as bild:
-            kenn = np.asarray(bild.convert('RGB')).astype(np.int16)
-        art = np.zeros((g, g), np.int8)
+            kenn = Torchfeld.astype(Torchfeld.feld(bild.convert('RGB')), torch.int16)
+        art = torch.zeros((g, g), dtype=torch.int8, device='cuda')
         for wert, kanal in ((self.HAAR, 0), (self.BART, 1), (self.SONST, 2)):
             andere = [k for k in range(3) if k != kanal]
             art[(kenn[..., kanal] > 200) & (kenn[..., andere[0]] < 60) & (kenn[..., andere[1]] < 60)] = wert
         rgb, maske = Pruefbilder(self.ablage, g).kopfausschnitt(r.datei, modell_hoehe, self.render, g)
         oben = int(round(g / 2 - self.render.KOPF_UNTER_SCHEITEL * self.je_m))
         dx = self._versatz(art, oben)
-        rgb, maske = np.roll(rgb, dx, axis=1), np.roll(maske, dx, axis=1)
+        rgb, maske = torch.roll(rgb, dx, dims=1), torch.roll(maske, dx, dims=1)
         zeilen = maske.sum(axis=1)
         von, bis = (int(oben + h * self.je_m) for h in self.HALS)
-        bereich = np.arange(max(von, 0), min(bis, g))
+        bereich = Torchfeld.arange(max(von, 0), min(bis, g))
         bereich = bereich[zeilen[bereich] > 0]
-        hals = int(bereich[np.argmin(zeilen[bereich])]) if len(bereich) else g
+        hals = int(bereich[Torchfeld.argmin(zeilen[bereich])]) if len(bereich) else g
         haar, grenze = self.haar(rgb, maske, hals)
         return {'winkel': float(r.winkel), 'haar': haar, 'maske': maske, 'art': art, 'hals': hals, 'grenze': grenze,
                 'farbe': self._farbe(r, teile, rgb, haar, art == self.HAAR, aus)}
@@ -146,7 +147,7 @@ class Haarabgleich:
         try:
             self.render.bild_kopf([(t['punkte'], t['dreiecke'], t['farbe'], Genesishaarrender.extra(t)) for t in teile], r.winkel, pfad, groesse=(self.GROESSE, self.GROESSE))
             with Image.open(pfad) as bild:
-                return Haarfarbmessung.ansicht(np.asarray(bild.convert('RGB')), rgb, haar, render_haar)
+                return Haarfarbmessung.ansicht(Torchfeld.feld(bild.convert('RGB')), rgb, haar, render_haar)
         except (OSError, ValueError, RuntimeError) as fehler:
             logger.warning('Haarabgleich: Haarfarbe %+d° nicht gemessen (%s)', round(r.winkel), fehler)
             return None
@@ -158,14 +159,14 @@ class Haarabgleich:
         spalten = kopf.sum(axis=0)
         if not spalten.any():
             return 0
-        return int(round(np.average(np.arange(len(spalten)), weights=spalten) - len(spalten) / 2))
+        return int(round(Torchfeld.average(Torchfeld.arange(len(spalten)), weights=spalten) - len(spalten) / 2))
 
     def _auswerten(self, haare, ansichten, scheitel):
         g = self.GROESSE
         aus = {'fassung': self.FASSUNG, 'teile': {}, 'ansichten': {}}
         ious = []
         for a in ansichten:
-            gilt = np.arange(g)[:, None] < a['hals']
+            gilt = Torchfeld.arange(g)[:, None] < a['hals']
             foto = a['haar'] & gilt & (a['art'] != self.BART)
             modell = (a['art'] == self.HAAR) & gilt
             vereint, schnitt = int((foto | modell).sum()), int((foto & modell).sum())
@@ -178,15 +179,15 @@ class Haarabgleich:
         treffer, gesehen = 0, 0
         mitte_y = scheitel - self.render.KOPF_UNTER_SCHEITEL
         for t in haare:
-            p = np.asarray(t['punkte'], dtype=np.float64)
-            haut, leer, n = np.zeros(len(p)), np.zeros(len(p)), np.zeros(len(p))
+            p = Torchfeld.feld(t['punkte'], dtype=torch.float64)
+            haut, leer, n = torch.zeros(len(p), dtype=torch.float64, device='cuda'), torch.zeros(len(p), dtype=torch.float64, device='cuda'), torch.zeros(len(p), dtype=torch.float64, device='cuda')
             radial = p[:, [0, 2]] - p[:, [0, 2]].mean(axis=0)
-            radial /= np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-9)
+            radial /= Torchfeld.maximum(Torchfeld.linalg_norm(radial, dim=1, keepdim=True), 1e-9)
             for a in ansichten:
-                b = np.radians(a['winkel'])
-                c, s = np.cos(b), np.sin(b)
-                u = np.round(g / 2 + (p[:, 0] * c - p[:, 2] * s) * self.je_m).astype(int)
-                v = np.round(g / 2 - (p[:, 1] - mitte_y) * self.je_m).astype(int)
+                b = Torchfeld.radians(a['winkel'])
+                c, s = Torchfeld.cos(b), Torchfeld.sin(b)
+                u = Torchfeld.astype(Torchfeld.round(g / 2 + (p[:, 0] * c - p[:, 2] * s) * self.je_m), torch.int64)
+                v = Torchfeld.astype(Torchfeld.round(g / 2 - (p[:, 1] - mitte_y) * self.je_m), torch.int64)
                 im = (radial[:, 0] * s + radial[:, 1] * c >= self.BLICK) & (u >= 0) & (u < g) & (v >= 0) & \
                     (v < a['hals'])
                 uu, vv = u[im], v[im]
@@ -210,9 +211,8 @@ class Haarabgleich:
         from Genesis9.ortsmorph import G9ortsmorph
         y = p[:, 1]
         y0, y1 = float(y.min()), float(y.max())
-        j = np.clip(((G9ortsmorph._winkel(p, p.mean(axis=0)) + 180.0) / (360.0 / self.SEKTOREN)).astype(int), 0,
-                    self.SEKTOREN - 1)
-        i = np.clip(((y - y0) / max(y1 - y0, 1e-9) * self.BAENDER).astype(int), 0, self.BAENDER - 1)
+        j = Torchfeld.clip(Torchfeld.astype((G9ortsmorph._winkel(p, p.mean(axis=0)) + 180.0) / (360.0 / self.SEKTOREN), torch.int64), 0, self.SEKTOREN - 1)
+        i = Torchfeld.clip(Torchfeld.astype((y - y0) / max(y1 - y0, 1e-9) * self.BAENDER, torch.int64), 0, self.BAENDER - 1)
         aus = []
         for band in range(self.BAENDER):
             zeile = []

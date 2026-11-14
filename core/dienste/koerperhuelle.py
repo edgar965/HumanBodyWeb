@@ -22,7 +22,8 @@ Dieselbe Ausgabe: Die Prüfung vergleicht gegen die alte Fassung, nicht gegen
 sich selbst.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from humanbody_core.koerperabstand import Koerperabstand
 
 
@@ -65,9 +66,9 @@ class Koerperhuelle:
         punkte = Koerperhuelle._verfeinern(punkte, gedehnt, dreiecke, offset, stiffness)
         # Dictionary gewollt: dasselbe Format wie `fit_garment` liefert.
         return {
-            'vertices': punkte.astype(np.float32),
+            'vertices': Torchfeld.astype(punkte, torch.float32),
             'faces': dreiecke,
-            'normals': _compute_vertex_normals(punkte, dreiecke).astype(np.float32),
+            'normals': Torchfeld.astype(_compute_vertex_normals(punkte, dreiecke), torch.float32),
             'color': color,
         }
 
@@ -76,12 +77,12 @@ class Koerperhuelle:
         """Koordinatensystem klären und in Dreiecke zerlegen."""
         from GarmentFitter.fitter import _detect_coordinate_system, _triangulate, mh_to_blender
 
-        werte = punkte.copy().astype(np.float64)
+        werte = Torchfeld.astype(Torchfeld.kopie(punkte), torch.float64)
         if koordinatensystem == 'auto':
             koordinatensystem = _detect_coordinate_system(werte)
         if koordinatensystem == 'makehuman':
             werte = mh_to_blender(werte)
-        return werte, _triangulate(flaechen.copy())
+        return werte, _triangulate(Torchfeld.kopie(flaechen))
 
     @classmethod
     def _einpassen(cls, punkte, ziel):
@@ -91,10 +92,10 @@ class Koerperhuelle:
         eine andere Figur gebaut, und ein gleichförmiger Maßstab macht sie dann
         entweder zu kurz oder zu weit.
         """
-        klein, gross = punkte.min(axis=0), punkte.max(axis=0)
-        z_klein, z_gross = ziel.min(axis=0), ziel.max(axis=0)
+        klein, gross = Torchfeld.amin(punkte, dim=0), Torchfeld.amax(punkte, dim=0)
+        z_klein, z_gross = Torchfeld.amin(ziel, dim=0), Torchfeld.amax(ziel, dim=0)
         laenge, z_laenge = gross - klein, z_gross - z_klein
-        mass = np.ones(3)
+        mass = torch.ones(3, dtype=torch.float64, device='cuda')
         genug = laenge > cls.MINDESTLAENGE
         mass[genug] = z_laenge[genug] / laenge[genug]
         return (punkte - (klein + gross) * 0.5) * mass + (z_klein + z_gross) * 0.5
@@ -103,7 +104,7 @@ class Koerperhuelle:
     def _radialnormalen(punkte):
         """Normalen aus der Richtung zum Schwerpunkt — ohne Flächen."""
         richtung = punkte - punkte.mean(axis=0)
-        laenge = np.linalg.norm(richtung, axis=1, keepdims=True)
+        laenge = Torchfeld.linalg_norm(richtung, dim=1, keepdim=True)
         laenge[laenge < 1e-8] = 1.0
         return richtung / laenge
 
@@ -154,7 +155,7 @@ class Koerperhuelle:
         2. Inflating outward along normals
         3. Heavy Laplacian smoothing to create a blobby envelope
         """
-        punkte = body_verts.copy().astype(np.float64)
+        punkte = Torchfeld.astype(Torchfeld.kopie(body_verts), torch.float64)
         normalen = Koerperhuelle._flaechennormalen(punkte, body_faces)
         punkte += normalen * (inflate_mm / 1000.0)
         if body_faces is None or len(body_faces) == 0:
@@ -169,10 +170,10 @@ class Koerperhuelle:
         ((0,1,2) und (0,2,3)), weil hier keine Fläche gezeichnet wird. Wo es
         gezeichnet wird, dreht `Materialgruppen.aus_flaechen` die Wicklung.
         """
-        felder = np.asarray(flaechen)
+        felder = Torchfeld.feld(flaechen)
         if felder.ndim == 2 and felder.shape[1] == 4:
-            return np.concatenate([felder[:, [0, 1, 2]], felder[:, [0, 2, 3]]], axis=0).astype(np.int32)
-        return felder[:, :3].astype(np.int32)
+            return Torchfeld.astype(Torchfeld.cat([felder[:, [0, 1, 2]], felder[:, [0, 2, 3]]], axis=0), torch.int32)
+        return Torchfeld.astype(felder[:, :3], torch.int32)
 
     @classmethod
     def _flaechennormalen(cls, punkte, flaechen):
@@ -181,7 +182,7 @@ class Koerperhuelle:
             return cls._radialnormalen(punkte)
         dreiecke = cls.dreiecke(flaechen)
         ecke = [punkte[dreiecke[:, i]] for i in range(3)]
-        flaechennormalen = np.cross(ecke[1] - ecke[0], ecke[2] - ecke[0])
+        flaechennormalen = Torchfeld.cross(ecke[1] - ecke[0], ecke[2] - ecke[0])
         # `np.add.at` und nicht `np.bincount`: Lehre gilt hier nicht
         # („bincount-statt-add-at"). Gemessen am 27.08.2026
         # unter numpy 2.4 mit denselben Zahlen (bitgleiches Ergebnis,
@@ -189,20 +190,20 @@ class Koerperhuelle:
         # 12 ms, bei 70.000 Punkten 29 ms gegen 31 ms fuer bincount. Die
         # bincount-Fassung braucht zusaetzlich ein `np.repeat` ueber alle
         # Dreiecksecken — mehr Speicher, kein Zeitgewinn.
-        normalen = np.zeros_like(punkte)
+        normalen = torch.zeros_like(punkte)
         for i in range(3):
-            np.add.at(normalen, dreiecke[:, i], flaechennormalen)
-        laenge = np.linalg.norm(normalen, axis=1, keepdims=True)
+            Torchfeld.add_at(normalen, dreiecke[:, i], flaechennormalen)
+        laenge = Torchfeld.linalg_norm(normalen, dim=1, keepdim=True)
         laenge[laenge < 1e-8] = 1.0
         return normalen / laenge
 
     @classmethod
     def _glaetten(cls, punkte, flaechen, durchgaenge, staerke=0.5):
         """Laplace-Glättung über die Nachbarschaftsmatrix der Flächen."""
-        from scipy.sparse import diags
+        from KoerperKI_alle.kartenduenn import diags
 
         nachbarn = cls._nachbarschaft(flaechen, len(punkte))
-        grade = np.asarray(nachbarn.sum(axis=1)).flatten()
+        grade = Torchfeld.feld(nachbarn.sum(axis=1)).flatten()
         grade[grade == 0] = 1
         mittel = diags(1.0 / grade) @ nachbarn
         for _ in range(durchgaenge):
@@ -218,17 +219,17 @@ class Koerperhuelle:
         bei 17.288 Vierecken über hunderttausend Einzelzuweisungen. Jetzt werden
         die Kanten in einem Zug erzeugt und die Matrix in einem Aufruf gebaut.
         """
-        from scipy.sparse import coo_matrix
+        from KoerperKI_alle.kartenduenn import coo_matrix
 
-        felder = np.asarray(flaechen)
+        felder = Torchfeld.feld(flaechen)
         ecken = felder.shape[1]
         paare = [(i, j) for i in range(ecken) for j in range(i + 1, ecken)]
-        von = np.concatenate([felder[:, i] for i, _ in paare])
-        nach = np.concatenate([felder[:, j] for _, j in paare])
+        von = Torchfeld.cat([felder[:, i] for i, _ in paare])
+        nach = Torchfeld.cat([felder[:, j] for _, j in paare])
         # Beide Richtungen: Die Matrix muss symmetrisch sein.
-        zeilen = np.concatenate([von, nach])
-        spalten = np.concatenate([nach, von])
-        werte = np.ones(len(zeilen), dtype=np.float64)
+        zeilen = Torchfeld.cat([von, nach])
+        spalten = Torchfeld.cat([nach, von])
+        werte = torch.ones(len(zeilen), dtype=torch.float64, device='cuda')
         matrix = coo_matrix((werte, (zeilen, spalten)), shape=(anzahl, anzahl)).tocsr()
         # Doppelte Kanten (geteilt zwischen zwei Flächen) auf 1 setzen — die
         # `lil`-Fassung hat zugewiesen, nicht addiert.

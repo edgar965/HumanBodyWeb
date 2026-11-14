@@ -34,7 +34,7 @@ beiden Seiten getrennt gepflegt zu werden.
 """
 import base64
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Netzfeld']
 
@@ -42,31 +42,34 @@ __all__ = ['Netzfeld']
 class Netzfeld:
     u"""Rohe Bytes eines Zahlenfeldes plus der Typ, mit dem sie zu lesen sind."""
 
-    __slots__ = ('rohdaten', 'typ', 'anzahl')
+    __slots__ = ('rohdaten', 'typ', 'anzahl', 'genau')
 
     #: Typen, die der Browser lesen kann (`gemeinsam/netzpaket.js`). Was hier
     #: nicht steht, hat drüben kein `TypedArray` — dann lieber jetzt ein Fehler
     #: als später ein zerrissenes Netz.
     ERLAUBT = ('float32', 'uint32', 'uint16', 'uint8', 'int32')
 
-    def __init__(self, rohdaten, typ, anzahl):
+    def __init__(self, rohdaten, typ, anzahl, genau=False):
         self.rohdaten = rohdaten
         self.typ = typ
         self.anzahl = anzahl
+        #: Das Feld trägt NUMMERN (Punkt- oder Knochennummern als float32), keine Messwerte: `Netzpaket` kürzt es nie auf 16 Bit
+        #: (`netzkurz.py`, 12.11.2026 — eine halbe Rasterstufe daneben ist ein anderer Punkt).
+        self.genau = bool(genau)
 
     @classmethod
-    def aus(cls, werte, typ):
+    def aus(cls, werte, typ, genau=False):
         u"""Ein numpy-Feld (oder eine Liste) als Netzfeld.
 
         `ravel()` und `ascontiguousarray` gehören zusammen: Ein (N, 3)-Feld und
         ein flaches 3N-Feld liefern dieselben Bytes — aber nur, wenn das Feld
         C-zusammenhängend ist. Nach einem `[:, [0, 2, 1]]` ist es das nicht.
         """
-        ziel = np.dtype(typ)
-        if ziel.name not in cls.ERLAUBT:
-            raise ValueError('Netzfeld: Typ %s kann der Browser nicht lesen' % ziel.name)
-        flach = np.ascontiguousarray(np.asarray(werte).ravel(), dtype=ziel)
-        return cls(flach.tobytes(), ziel.name, int(flach.size))
+        ziel = Torchfeld.dtype(typ)
+        if Torchfeld.typname(ziel) not in cls.ERLAUBT:
+            raise ValueError('Netzfeld: Typ %s kann der Browser nicht lesen' % Torchfeld.typname(ziel))
+        flach = Torchfeld.feld(Torchfeld.feld(werte).ravel(), dtype=ziel)
+        return cls(Torchfeld.als_bytes(flach), Torchfeld.typname(ziel), int(Torchfeld.groesse(flach)), genau=genau)
 
     def base64(self):
         u"""Für den JSON-Rückfall — dieselben Bytes, ein Drittel größer."""

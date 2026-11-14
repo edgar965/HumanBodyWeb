@@ -21,7 +21,8 @@ import logging
 import shutil
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.core.files import File
 
 from core.atomic_write import AtomarSchreiber
@@ -83,9 +84,9 @@ class Fotogenesisgenesisstart:
         ohne_uv = v is not None and v.kind == 'texture' and getattr(v, 'uv', None) is None
         if not ohne_uv or 'color' not in v.vertex_attributes:
             return netz
-        lin = np.clip(np.asarray(v.vertex_attributes['color'], dtype=np.float64)[:, :3], 0, 1)
-        srgb = np.where(lin <= 0.0031308, 12.92 * lin, 1.055 * lin ** (1 / 2.4) - 0.055)
-        farben = np.concatenate([np.round(srgb * 255), np.full((len(srgb), 1), 255)], 1).astype(np.uint8)
+        lin = Torchfeld.clip(Torchfeld.feld(v.vertex_attributes['color'], dtype=torch.float64)[:, :3], 0, 1)
+        srgb = torch.where(lin <= 0.0031308, 12.92 * lin, 1.055 * lin ** (1 / 2.4) - 0.055)
+        farben = Torchfeld.astype(Torchfeld.cat([Torchfeld.round(srgb * 255), Torchfeld.full((len(srgb), 1), 255)], 1), torch.uint8)
         ziel = netz.with_name(netz.stem + '_punktfarben.glb')
         trimesh.Trimesh(g[0].vertices, g[0].faces, vertex_colors=farben, process=False).export(ziel)
         return ziel
@@ -110,6 +111,15 @@ class Fotogenesisgenesisstart:
         datei = Meshgenesistest.ordner() / kennung / 'einstellung.json'
         AtomarSchreiber.json_schreiben(datei, dict(json.loads(datei.read_text(encoding='utf-8')), koerpergroesse_m=float(groesse)))
 
+    @staticmethod
+    def _genesis_zuerst_setzen(kennung, job):
+        """Häkchen „Genesis zuerst“ des Jobs (`pshuman.genesis_zuerst`, `Fotogenesispshuman`) an den Test: `einstellung.json` → `genesis_zuerst` (12.11.2026). Die Kette liest es in
+        `Meshgenesisrechenlauf.schritte`. Vor dem Einreihen, wie `_groesse_setzen`."""
+        if not (job.get('pshuman') or {}).get('genesis_zuerst'):
+            return
+        datei = Meshgenesistest.ordner() / kennung / 'einstellung.json'
+        AtomarSchreiber.json_schreiben(datei, dict(json.loads(datei.read_text(encoding='utf-8')), genesis_zuerst=True))
+
     @classmethod
     def _gelenke_mitgeben(cls, kennung, ordner):
         """Die Gelenke aus den sechs Ansichten an den Test: Die Einpassung startet dann an ihnen statt an MIA. Vor dem Einreihen, wie `_groesse_setzen`."""
@@ -130,6 +140,7 @@ class Fotogenesisgenesisstart:
             raise ValueError('Erst das Geschlecht der Genesis-Figur wählen')
         kennung = cls.anlegen(Meshgenesisjobtest.TESTNAME % ordner.name, netz, job['geschlecht'], foto, maske)
         cls._groesse_setzen(kennung, job.get('koerpergroesse_m'))
+        cls._genesis_zuerst_setzen(kennung, job)
         cls._gelenke_mitgeben(kennung, ordner)
         Meshgenesisrechenschlange.starten(kennung)
         datei = ordner / 'job.json'

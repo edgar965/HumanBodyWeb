@@ -17,7 +17,8 @@ Rig-Punkte je Zeile (`zeilen`: Gesicht auf die Kopfmitte, Hände und Füße in i
 import math
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .meshgenesisgeruest import Meshgenesisgeruest
 
@@ -106,7 +107,7 @@ class Meshgenesisrig:
     @classmethod
     def _pose(cls, matrizen):
         tanz, _f = cls._modell()
-        pos = np.array([matrizen[k['name']][:3, 3] for k in tanz.knochen], dtype=float)
+        pos = Torchfeld.feld([matrizen[k['name']][:3, 3] for k in tanz.knochen], dtype=torch.float64, copy=True)
         kopf = matrizen['head'][:3, :3] @ tanz.ruhe['head'][:3, :3].T            # Drehung des Kopfes gegen die Ruhelage (Weltraum)
         return {'pos': pos, 'kopf': kopf}
 
@@ -137,7 +138,7 @@ class Meshgenesisrig:
             links = pos[ix['l_thigh']] - pos[ix['r_thigh']]
             heading = math.atan2(links[2], links[0])
         c, s = math.cos(heading), math.sin(heading)
-        r = np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]])
+        r = Torchfeld.feld([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]], copy=True)
         neu = pos @ r.T
         if zentrum is None:
             zentrum = (neu[ix['hip'], 0], neu[ix['hip'], 2])
@@ -168,50 +169,50 @@ class Meshgenesisrig:
         """Die 22 Gelenke des Dummy-Gerüsts (`Meshgenesisgeruest.GELENKE`) aus den Knochenpunkten — Scheitel = Kopf + `SCHEITEL_M` in Richtung Hals → Kopf."""
         n = cls.namen()
         pos = pose['pos']
-        lagen = np.zeros((len(Meshgenesisgeruest.GELENKE), 3))
+        lagen = torch.zeros((len(Meshgenesisgeruest.GELENKE), 3), dtype=torch.float64, device='cuda')
         for i, (name, _e, _v, _g) in enumerate(Meshgenesisgeruest.GELENKE):
             if name in cls.ZUORDNUNG:
                 lagen[i] = pos[n.index(cls.ZUORDNUNG[name])]
         kopf, hals, scheitel = (Meshgenesisgeruest.index(x) for x in ('Kopf', 'Hals', 'Scheitel'))
         achse = lagen[kopf] - lagen[hals]
-        lagen[scheitel] = lagen[kopf] + cls.SCHEITEL_M * achse / max(float(np.linalg.norm(achse)), 1e-9)
+        lagen[scheitel] = lagen[kopf] + cls.SCHEITEL_M * achse / max(float(Torchfeld.linalg_norm(achse)), 1e-9)
         return lagen
 
     @staticmethod
     def _norm(v):
-        return v / max(float(np.linalg.norm(v)), 1e-9)
+        return v / max(float(Torchfeld.linalg_norm(v)), 1e-9)
 
     @classmethod
     def _senkrecht(cls, richtung, bezug, ersatz):
-        r = bezug - np.dot(bezug, richtung) * richtung
-        if np.linalg.norm(r) < 1e-3:
-            r = ersatz - np.dot(ersatz, richtung) * richtung
+        r = bezug - Torchfeld.dot(bezug, richtung) * richtung
+        if Torchfeld.linalg_norm(r) < 1e-3:
+            r = ersatz - Torchfeld.dot(ersatz, richtung) * richtung
         return cls._norm(r)
 
     @staticmethod
     def _zeilen(spalten):
-        return tuple(tuple(float(w) for w in zeile) for zeile in np.stack(spalten, axis=1))
+        return tuple(tuple(float(w) for w in zeile) for zeile in Torchfeld.liste(Torchfeld.stack(spalten, axis=1)))
 
     @classmethod
     def drehungen(cls, lagen, kopf):
         """Die Drehungen von Kopf, Handgelenken und Knöcheln (alle anderen Einheit), wie `Meshgenesisgesicht` und `Meshgenesishaende` sie brauchen. Der Kopf ist die echte Drehung des Kopfknochens gegen die
         Ruhelage; Hand und Fuß folgen den Punkten (Unterarm bzw. Schienbein, dazu der Körperblick), nicht den Knochenachsen — die Dummy-Hand hat ihre eigene Achsenwahl."""
         ix = Meshgenesisgeruest.index
-        punkt = lambda name: np.asarray(lagen[ix(name)], dtype=float)  # noqa: E731
+        punkt = lambda name: Torchfeld.feld(lagen[ix(name)], dtype=torch.float64)  # noqa: E731
         einheit = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
         r = [einheit] * len(Meshgenesisgeruest.GELENKE)
-        oben = np.array([0.0, 1.0, 0.0])
+        oben = Torchfeld.feld([0.0, 1.0, 0.0], copy=True)
         rumpf_hoch = cls._norm(punkt('Brust') - punkt('Becken'))
-        rumpf_links = cls._senkrecht(rumpf_hoch, punkt('Hüfte L') - punkt('Hüfte R'), np.array([1.0, 0.0, 0.0]))
-        blick = np.cross(rumpf_links, rumpf_hoch)
+        rumpf_links = cls._senkrecht(rumpf_hoch, punkt('Hüfte L') - punkt('Hüfte R'), Torchfeld.feld([1.0, 0.0, 0.0], copy=True))
+        blick = Torchfeld.cross(rumpf_links, rumpf_hoch)
         r[ix('Kopf')] = tuple(tuple(float(w) for w in zeile) for zeile in kopf)
         for seite, vorzeichen in (('L', 1.0), ('R', -1.0)):
             x = vorzeichen * cls._norm(punkt('Handgelenk ' + seite) - punkt('Ellbogen ' + seite))
             y = cls._senkrecht(x, oben, blick)
-            r[ix('Handgelenk ' + seite)] = cls._zeilen([x, y, np.cross(x, y)])
+            r[ix('Handgelenk ' + seite)] = cls._zeilen([x, y, Torchfeld.cross(x, y)])
             h = cls._norm(punkt('Knie ' + seite) - punkt('Knöchel ' + seite))
             z = cls._senkrecht(h, blick, rumpf_links)
-            r[ix('Knöchel ' + seite)] = cls._zeilen([np.cross(h, z), h, z])
+            r[ix('Knöchel ' + seite)] = cls._zeilen([Torchfeld.cross(h, z), h, z])
         return r
 
     @classmethod
@@ -224,9 +225,9 @@ class Meshgenesisrig:
         pos = pose['pos']
         aus = {}
         for schluessel, indizes in beschr['zeilen'].items():
-            p = pos[indizes].copy()
+            p = Torchfeld.kopie(pos[indizes])
             if schluessel == 'gesicht':
-                mitte = pos[n.index('head')] + pose['kopf'] @ np.array(cls.KOPFMITTE_M)
+                mitte = pos[n.index('head')] + pose['kopf'] @ Torchfeld.feld(cls.KOPFMITTE_M, copy=True)
                 p = p - mitte
             elif schluessel == 'haende':
                 gruppen = {'Hand L': 'l_', 'Hand R': 'r_'}
@@ -237,6 +238,6 @@ class Meshgenesisrig:
                     zeilen = [j for j, i in enumerate(indizes) if passt(n[i])]
                     mitte = p[zeilen].mean(axis=0)
                     platz = Meshgenesishaende.PLAETZE[name]
-                    p[zeilen] = p[zeilen] - mitte + np.array([platz[0], platz[1], 0.0])
+                    p[zeilen] = p[zeilen] - mitte + Torchfeld.feld([platz[0], platz[1], 0.0], copy=True)
             aus[schluessel] = p
         return aus

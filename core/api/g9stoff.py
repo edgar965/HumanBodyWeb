@@ -3,6 +3,7 @@
 
     GET /api/character/genesis9-figur/garderobe/<kennung>/stoff/<nummer>/?stufen=1
         {punkte, zeilen, kanten, indptr, indices, data, hautgewichte}
+    … &glaetten=1   auch fuer anliegende Stuecke (Glaettung je Bild, `stoffglaettung.js`, 12.11.2026)
 
 `nummer` ist die Stelle des Teils in `G9garderobe.teile(kennung)` — dieselbe
 Ordnung wie `teile` in der Netzantwort. Die Antwort haengt nur am Stueck und
@@ -41,7 +42,10 @@ class G9stoffapi:
             folger, _lage = teile[int(nummer)]
         except (ValueError, IndexError, OSError, KeyError) as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=404)
-        if not getattr(folger, 'dynamisch', False):
+        # `?glaetten=1` (12.11.2026): derselbe Bauplan fuer anliegende Stuecke — die Glaettung je Bild
+        # (`Stoffglaettung`) braucht Kanten, Unterteilungsmatrix und Kaefighaut wie der Stoffschwung.
+        glaetten = request.GET.get('glaetten') == '1' and getattr(folger, 'koerperhaut', False)
+        if not getattr(folger, 'dynamisch', False) and not glaetten:
             return JsonResponse({'fehler': 'Kein dForce-Stück'}, status=404)
         try:
             stufen = int(request.GET.get('stufen', G9netzstufe.browser()))

@@ -29,7 +29,9 @@ import subprocess
 import time
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..atomic_write import AtomarSchreiber
@@ -71,8 +73,8 @@ class Haardynamik:
         argumente.setdefault('abstand', self._abstand_m(mindestabstand_mm))
         deltas, berichte, straenge, umgedreht, fern = [], [], 0, 0, 0
         for nummer, ((folger, _lage), punkte) in enumerate(zip(teile, kaefige, strict=True)):
-            punkte = np.asarray(punkte, dtype=np.float64)
-            deltas.append(np.zeros_like(punkte))
+            punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+            deltas.append(torch.zeros_like(punkte))
             if getattr(folger, 'ART', None) != 'strang':
                 continue
             ketten = G9haarzusatz.ketten(folger.segmente, len(punkte))
@@ -82,7 +84,7 @@ class Haardynamik:
             stamm = self.ordner / ('%s_%d' % (sorte, nummer))
             auftrag = self._schreiben(stamm, fasern, k_punkte, k_dreiecke, bilder, material, material_felder, argumente)
             bericht = self._laufen(Path(str(stamm) + '_auftrag.json'), Path(auftrag['bericht']))
-            with np.load(auftrag['aus']) as d:
+            with Npztorch.lesen(auftrag['aus']) as d:
                 deltas[-1] = fasern.delta(d['punkte'])
             bericht['wurzel_abstand_max_mm'] = fasern.wurzel_abstand_max_mm
             berichte.append(bericht)
@@ -107,10 +109,8 @@ class Haardynamik:
 
     def _schreiben(self, stamm, fasern, k_punkte, k_dreiecke, bilder, material, material_felder, argumente):
         """Strähnen und Körper als `.npz` (Reihenfolge der Punkte bleibt) und der Auftrag — die Schlüssel von `Haarauftrag`."""
-        np.savez_compressed(str(stamm) + '_straehnen.npz', punkte=fasern.punkte.astype(np.float32), laengen=fasern.laengen,
-                            normalen=fasern.normalen.astype(np.float32))
-        np.savez_compressed(str(stamm) + '_koerper.npz', punkte=np.asarray(k_punkte, dtype=np.float32),
-                            dreiecke=np.asarray(k_dreiecke, dtype=np.int32))
+        Npztorch.speichern(str(stamm) + '_straehnen.npz', punkte=Torchfeld.astype(fasern.punkte, torch.float32), laengen=fasern.laengen, normalen=Torchfeld.astype(fasern.normalen, torch.float32), komprimiert=True, fuer_numpy=True)          # `Haarauftrag` (Stoffsolver) liest mit numpy
+        Npztorch.speichern(str(stamm) + '_koerper.npz', punkte=Torchfeld.feld(k_punkte, dtype=torch.float32), dreiecke=Torchfeld.feld(k_dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)
         auftrag = {'straehnen': str(stamm) + '_straehnen.npz', 'koerper': str(stamm) + '_koerper.npz',
                    'aus': str(stamm) + '_nachher.npz', 'bericht': str(stamm) + '_bericht.json', 'bilder': int(bilder),
                    'schwerkraft': self.SCHWERKRAFT, 'material': str(material), 'dicke': 0.0, 'rechner': 'warp',
@@ -125,7 +125,7 @@ class Haardynamik:
         if not skript.is_file():
             raise RuntimeError('Stoffsolver fehlt: %s' % skript)
         t0 = time.perf_counter()
-        bericht.unlink(missing_ok=True)
+        Npztorch.loeschen(bericht)
         prozess = subprocess.Popen([str(settings.PYTHON14), str(skript), '--auftrag', str(auftrag)], stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, cwd=str(skript.parent))
         try:
@@ -133,7 +133,7 @@ class Haardynamik:
         except subprocess.TimeoutExpired:
             prozess.kill()
             raise RuntimeError('Haar-Dynamik: Zeitgrenze %d s' % self.ZEIT_S) from None
-        if not bericht.is_file():
+        if not Npztorch.da(bericht):
             letzte = '\n'.join((aus or b'').decode('utf-8', errors='replace').splitlines()[-15:])
             raise RuntimeError('Haar-Dynamik ohne Bericht (Code %s):\n%s' % (prozess.returncode, letzte))
         daten = json.loads(bericht.read_text(encoding='utf-8'))

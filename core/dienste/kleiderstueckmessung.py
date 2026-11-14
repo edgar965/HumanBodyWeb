@@ -13,7 +13,8 @@ Der ANKER: eine Zahl ohne Maßstab sagt wenig. Dieselbe Messung für das Bibliot
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .kleiderstueckobjekt import Kleiderstueckobjekt
 from .kleiderstuecknote import Kleiderstuecknote
@@ -70,12 +71,12 @@ class Kleiderstueckmessung:
                          if t.get('art') == 'kleidung' and t.get('sorte') == sorte]       # das Standardhemd bleibt bei `kleid_nur` sonst stehen
                 if not teile:
                     continue
-                punkte = np.vstack([np.asarray(t['punkte'], dtype=np.float64) for t in teile])
+                punkte = Torchfeld.vstack([Torchfeld.feld(t['punkte'], dtype=torch.float64) for t in teile])
                 flaechen, versatz = [], 0
                 for t in teile:
-                    flaechen.append(np.asarray(t['dreiecke'], dtype=np.int64).reshape(-1, 3) + versatz)
+                    flaechen.append(Torchfeld.feld(t['dreiecke'], dtype=torch.int64).reshape(-1, 3) + versatz)
                     versatz += len(t['punkte'])
-                note = Kleiderstuecknote.vergleichen(bezug.stueck(nummern[name]), (punkte, np.vstack(flaechen)))
+                note = Kleiderstuecknote.vergleichen(bezug.stueck(nummern[name]), (punkte, Torchfeld.vstack(flaechen)))
                 aus[name] = {'sorte': sorte, 'abweichung': note['abweichung'], 'f': note['f']}
             except Exception as fehler:  # noqa: BLE001 — der Anker ist Beiwerk, die Messung der Stücke zählt
                 logger.warning('2D3D Kleider %s: Bibliotheksanker %s nicht gerechnet (%s)', job.kennung, sorte, fehler)

@@ -31,6 +31,10 @@ from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG
 
 from .retargetsperre import Retargetsperre
 from .skelettgeometrie import Skelettgeometrie
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -154,7 +158,7 @@ class Retargetdaten:
         gemischt, nicht hier.
         """
         stamm = self.bvh_pfad.rsplit('.', 1)[0]
-        if self.ziel != self.ZIEL_DEF or not os.path.isfile(stamm + self.SMPLX_MARKE):
+        if self.ziel != self.ZIEL_DEF or not Npztorch.da(stamm + self.SMPLX_MARKE):
             return ergebnis
         from .gesichtsspuren import Gesichtsspuren
 

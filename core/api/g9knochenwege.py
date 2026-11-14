@@ -23,7 +23,8 @@ dazwischen bildet einen alten Browserpunkt auf den neuen ab.
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -68,7 +69,7 @@ class G9knochenwegeapi:
         boden = formung.boden()
         aus = {}
         for name, matrix in formung.matrizen().matrizen().items():
-            lage = np.array(matrix, dtype=np.float64)
+            lage = Torchfeld.feld(matrix, dtype=torch.float64, copy=True)
             lage[:3, 3] *= cls.CM
             lage[1, 3] -= boden
             aus[name] = lage
@@ -78,9 +79,9 @@ class G9knochenwegeapi:
     def wege_zwischen(cls, alt, neu):
         u"""`{knoten: 4×4}` mit `neu · alt⁻¹` — bildet einen Punkt der alten Stellung auf die neue ab."""
         lagen_alt, lagen_neu = cls.lagen(alt), cls.lagen(neu)
-        return {name: lage @ np.linalg.inv(lagen_alt[name])
+        return {name: lage @ Torchfeld.linalg_inv(lagen_alt[name])
                 for name, lage in lagen_neu.items() if name in lagen_alt}
 
     @staticmethod
     def _spaltenweise(matrix):
-        return [round(float(v), 7) for v in np.asarray(matrix).T.ravel()]
+        return [round(float(v), 7) for v in Torchfeld.liste(Torchfeld.feld(matrix).T.ravel())]

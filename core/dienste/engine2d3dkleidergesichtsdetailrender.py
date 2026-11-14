@@ -13,7 +13,8 @@ GL-Rendern gehört in einen eigenen Prozess (`manage.py engine2d3dkleider_gesich
 
 import json
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import pyrender
 import trimesh
 from Genesis9.pyrenderreihenfolge import G9pyrenderreihenfolge
@@ -84,8 +85,8 @@ class Engine2d3dKleiderGesichtsdetailrender:
     def _bereich(cls, bereich, netz, modell, lage, werk, auftragsname):
         r = cls.REGIONEN[bereich]
         indizes = sorted({i for ring in r['ringe'] for i in ring} | {i for linie in r['linien'] for i in linie} | set(r['punkte']))
-        gueltig = [i for i in indizes if np.isfinite(lage['gesicht'][i]).all() and np.isfinite(lage['modell_gesicht'][i]).all()]
-        mitte = np.nanmean(lage['gesicht'][gueltig], axis=0)
+        gueltig = [i for i in indizes if Torchfeld.isfinite(lage['gesicht'][i]).all() and Torchfeld.isfinite(lage['modell_gesicht'][i]).all()]
+        mitte = Torchfeld.nanmean(lage['gesicht'][gueltig], dim=0)
         kopfzeile = 30
         tafel = Image.new('RGB', (3 * cls.KANTE, kopfzeile + len(cls.ANSICHTEN) * cls.KANTE), cls.GRUND)
         zeichner = ImageDraw.Draw(tafel)
@@ -95,7 +96,7 @@ class Engine2d3dKleiderGesichtsdetailrender:
         for zeile, (azimut, text) in enumerate(cls.ANSICHTEN):
             kamera = cls._kamera(azimut, mitte, r['fenster'])
             bilder = [cls._rendern(werk, szene, kamera) for szene in (netz, modell)]
-            ueber = Image.blend(Image.new('RGB', bilder[1].size, cls.GRUND), bilder[1], 0.6)
+            ueber = Image.blend(Image.new('RGB', Torchfeld.roh(Torchfeld.groesse(bilder[1])), cls.GRUND), bilder[1], 0.6)
             lauf = ImageDraw.Draw(ueber)
             for quelle, farbe in ((lage['gesicht'], cls.ROT), (lage['modell_gesicht'], cls.BLAU)):
                 cls._zeichnen(lauf, quelle, r, kamera, farbe)
@@ -120,15 +121,15 @@ class Engine2d3dKleiderGesichtsdetailrender:
             return cls._projizieren(punkte[i], kamera)
 
         for ring in region['ringe']:
-            xy = [px(i) for i in ring if np.isfinite(punkte[i]).all()]
+            xy = [px(i) for i in ring if Torchfeld.isfinite(punkte[i]).all()]
             if len(xy) > 2:
                 zeichner.line(xy + [xy[0]], fill=farbe, width=2)
         for linie in region['linien']:
-            xy = [px(i) for i in linie if np.isfinite(punkte[i]).all()]
+            xy = [px(i) for i in linie if Torchfeld.isfinite(punkte[i]).all()]
             if len(xy) > 1:
                 zeichner.line(xy, fill=farbe, width=2)
         for i in region['punkte']:
-            if np.isfinite(punkte[i]).all():
+            if Torchfeld.isfinite(punkte[i]).all():
                 x, y = px(i)
                 zeichner.ellipse([x - 3, y - 3, x + 3, y + 3], outline=farbe, width=2)
 
@@ -139,23 +140,23 @@ class Engine2d3dKleiderGesichtsdetailrender:
         geladen = trimesh.load(str(pfad), process=False)
         szene = geladen if isinstance(geladen, trimesh.Scene) else trimesh.Scene(geladen)
         if matrix is not None:
-            szene.apply_transform(np.asarray(matrix, dtype=float))
+            szene.apply_transform(Torchfeld.feld(matrix, dtype=torch.float64))
         return szene
 
     @classmethod
     def _kamera(cls, azimut, mitte, fenster):
-        a = np.radians(azimut)
-        drehung = np.array([[np.cos(a), 0, np.sin(a)], [0, 1, 0], [-np.sin(a), 0, np.cos(a)]])
-        lage = np.eye(4)
+        a = Torchfeld.radians(azimut)
+        drehung = Torchfeld.feld([[Torchfeld.cos(a), 0, Torchfeld.sin(a)], [0, 1, 0], [-Torchfeld.sin(a), 0, Torchfeld.cos(a)]], copy=True)
+        lage = torch.eye(4, dtype=torch.float64, device='cuda')
         lage[:3, :3] = drehung
-        lage[:3, 3] = np.asarray(mitte) + drehung @ np.array([0.0, 0.0, 3.0])
+        lage[:3, 3] = Torchfeld.feld(mitte) + drehung @ Torchfeld.feld([0.0, 0.0, 3.0], copy=True)
         return {'lage': lage, 'fenster': float(fenster)}
 
     @classmethod
     def _projizieren(cls, p, kamera):
         """Weltpunkt → Pixel (orthografisch, `fenster` Meter über `KANTE` Pixel)."""
         lage = kamera['lage']
-        kam = lage[:3, :3].T @ (np.asarray(p, dtype=float) - lage[:3, 3])
+        kam = lage[:3, :3].T @ (Torchfeld.feld(p, dtype=torch.float64) - lage[:3, 3])
         halb = kamera['fenster'] / 2.0
         return (kam[0] / halb + 1.0) / 2.0 * cls.KANTE, (1.0 - (kam[1] / halb + 1.0) / 2.0) * cls.KANTE
 

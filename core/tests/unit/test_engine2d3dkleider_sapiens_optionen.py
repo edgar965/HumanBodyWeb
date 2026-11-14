@@ -44,6 +44,10 @@ from Kleidung.sapienszuordnung import Sapienszuordnung  # noqa: E402
 from sapiens_klassen import Sapiensklassen  # noqa: E402
 from sapiens_stand import Sapiensstand  # noqa: E402
 from scipy.sparse import diags  # noqa: E402
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class DieOptionen(SimpleTestCase):
@@ -211,8 +215,7 @@ class DieMaskeMitHaar(SimpleTestCase):
             with open(netz, 'wb') as f:
                 f.write(b'netz')
             stat = os.stat(netz)
-            np.savez_compressed(os.path.join(ordner, Sapiensmaske.DATEI), klassen=np.ones((4, 28)), flaechen=4, fassung=Sapiensmaske.FASSUNG,
-                                netz=np.array([stat.st_size, stat.st_mtime_ns]), optionen=np.array(json.dumps(stand, sort_keys=True)))
+            Npztorch.speichern(os.path.join(ordner, Sapiensmaske.DATEI), klassen=np.ones((4, 28)), flaechen=4, fassung=Sapiensmaske.FASSUNG, netz=np.array([stat.st_size, stat.st_mtime_ns]), optionen=np.array(json.dumps(stand, sort_keys=True)), komprimiert=True)
             self.assertEqual(Sapiensmaske.laden(ordner, netz, 4, stand).shape, (4, 28))
             with self.assertRaisesRegex(Sapiensmaske.Unbrauchbar, 'Einstellungen'):
                 Sapiensmaske.laden(ordner, netz, 4, dict(stand, modell='0.3b'))
@@ -253,8 +256,7 @@ class DasHaar(SimpleTestCase):
         klassen[10:20, Sapienszuordnung.NAMEN.index('Face_Neck')] = 10    # Sapiens: Haut auf 10–19
         # 20–39: kein Foto sieht sie
         stand = Optionen.rechenoptionen(einstellungen or {})
-        np.savez_compressed(os.path.join(ordner, Sapiensmaske.DATEI), klassen=datei.get('klassen', klassen), flaechen=self.N, fassung=Sapiensmaske.FASSUNG,
-                            netz=np.array([stat.st_size, stat.st_mtime_ns]), optionen=np.array(json.dumps(stand, sort_keys=True)))
+        Npztorch.speichern(os.path.join(ordner, Sapiensmaske.DATEI), klassen=datei.get('klassen', klassen), flaechen=self.N, fassung=Sapiensmaske.FASSUNG, netz=np.array([stat.st_size, stat.st_mtime_ns]), optionen=np.array(json.dumps(stand, sort_keys=True)), komprimiert=True)
         ablage = SimpleNamespace(arbeit=lambda *a: ordner, netzdatei=lambda original=False: netz)
         return SimpleNamespace(job=SimpleNamespace(kennung='x'), ablage=ablage, sapiens_haar=quelle, sapiens_einstellungen=Optionen.pruefen(einstellungen or {}))
 

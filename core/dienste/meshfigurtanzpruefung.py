@@ -17,7 +17,8 @@ import os
 import threading
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -131,12 +132,12 @@ class Meshfigurtanzpruefung:
 
         verformung = self._verformung(gewichte.knochen)
         kanten = Dehnungsmessung.kanten(dreiecke)
-        abstand, _ = ruhelage.entposen.baum.query(np.asarray(netz, dtype=np.float64), workers=-1)
+        abstand, _ = ruhelage.entposen.baum.query(Torchfeld.feld(netz, dtype=torch.float64), workers=-1)
         from .meshfigurhautgewichte import Meshfigurhautgewichte
 
         ruhe_abstand = Meshfigurhautgewichte.abstand_ruhe(ruhelage, ruhe)
         if ruhe_abstand is not None:
-            abstand = np.minimum(abstand, ruhe_abstand)                      # anliegend in der Haltung des Netzes ODER in der Ruhelage (an der Hüfte liegt die Figur unter der Hose tiefer als das Netz)
+            abstand = Torchfeld.minimum(abstand, ruhe_abstand)                      # anliegend in der Haltung des Netzes ODER in der Ruhelage (an der Hüfte liegt die Figur unter der Hose tiefer als das Netz)
         kandidaten = {'basis': (index, gewicht)}
         for adaptiv in self.ADAPTIV:
             n = Hautnaehe(ruhelage.entposen.posiert, gewichte.index, gewichte.gewicht, gewichte.knochen, adaptiv=adaptiv)

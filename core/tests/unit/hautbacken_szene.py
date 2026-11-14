@@ -13,6 +13,10 @@ import numpy as np
 from PIL import Image
 
 from core.dienste.hautbacken.hautbackenflaeche import Hautbackenflaeche
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Hautbackenszene']
 
@@ -82,8 +86,8 @@ class Hautbackenszene:
         ordner = Path(ordner)
         (ordner / 'genesis').mkdir(parents=True, exist_ok=True)
         q, f = self.quelle(), self.figur()
-        np.savez(ordner / 'szene.npz', punkte=q.punkte, dreiecke=q.dreiecke, uv_ecken=q.uv_ecken)
-        np.save(ordner / 'lage.npy', q.punkte)
+        Npztorch.speichern(ordner / 'szene.npz', punkte=q.punkte, dreiecke=q.dreiecke, uv_ecken=q.uv_ecken, fuer_numpy=True)          # Blender liest mit numpy
+        Npztorch.speichern_npy(ordner / 'lage.npy', q.punkte, fuer_numpy=True)
         for name, bild in self.bilder().items():
             Image.fromarray(bild).save(ordner / ('%s.png' % name))
         # Die Figur wie `Blendimportlage.genesis_objs`: genutzte Punkte, UV je Ecke, Dreiecke `Punkt/UV`

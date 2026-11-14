@@ -12,7 +12,8 @@ Die Netzstufe 0 trägt UV (je Browserpunkt, Kachel-lokal 0…1) und Materialgrup
 Gruppe bleibt sie bei `HAUT` (Faktor = Hautfarbe, kein Bild).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Koerpertextur']
 
@@ -30,8 +31,8 @@ class Koerpertextur:
     @staticmethod
     def teil(punkte, stufe, haut, hautfarbe, kacheln=None):
         """Das Körperteil im Format von `Kleidermodellbau.teile` — mit UV und Textur, wenn es Kacheln gibt."""
-        teil = {'punkte': punkte, 'dreiecke': np.asarray(stufe.dreiecke, dtype=np.int64),
-                'farbe': np.asarray(hautfarbe), 'haut': haut, 'art': 'koerper', 'sorte': 'koerper', 'uv': None,
+        teil = {'punkte': punkte, 'dreiecke': Torchfeld.feld(stufe.dreiecke, dtype=torch.int64),
+                'farbe': Torchfeld.feld(hautfarbe), 'haut': haut, 'art': 'koerper', 'sorte': 'koerper', 'uv': None,
                 'normalen': None, 'gruppen': [], 'textur': []}
         if not kacheln:
             return teil
@@ -40,10 +41,10 @@ class Koerpertextur:
             pfad = kacheln.get(int(g.get('kachel') or 1001))
             textur.append({'ab': int(g['index_ab']) // 3, 'anzahl': int(g['index_anzahl']) // 3, 'albedo': pfad,
                            'normalen': None, 'normalenachse': 1,
-                           'faktor': np.ones(3) if pfad else np.asarray(hautfarbe, dtype=np.float64)})
+                           'faktor': torch.ones(3, dtype=torch.float64, device='cuda') if pfad else Torchfeld.feld(hautfarbe, dtype=torch.float64)})
         if not any(t['albedo'] for t in textur):
             return teil
-        uv = np.asarray(stufe.uv, dtype=np.float64).reshape(-1, 2).copy()
-        uv[:, 0] = np.clip(uv[:, 0], 0.0, 1.0)
+        uv = Torchfeld.kopie(Torchfeld.feld(stufe.uv, dtype=torch.float64).reshape(-1, 2))
+        uv[:, 0] = Torchfeld.clip(uv[:, 0], 0.0, 1.0)
         teil.update(uv=uv, textur=textur)
         return teil

@@ -23,6 +23,8 @@ Zwei Fallen, beide gemessen am Auftrag 2026.10.04.11.11.44:
 Gilt nur ohne `kreislauf.modell`: mit Iterationen bestimmt deren Modell die Kleider und das Haar wie bisher. Das Standmodell nimmt aus dem Vorab-Modell die Arten `ARTEN` (`Kleidung`, `Haar`).
 """
 
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import json
 
 __all__ = ['Standvorabkleider']
@@ -93,7 +95,7 @@ class Standvorabkleider:
     @classmethod
     def hemdfarbe(cls, job):
         """Die Farbe des Hemds im Foto (RGB 0–1): Mittel der Textur des Fotostücks `oberteil` — None ohne dieses Stück oder ohne Bild."""
-        import numpy as np
+        import torch
         from Genesis9.garderobe import G9garderobe
         from Genesis9.material import G9material
         from PIL import Image
@@ -107,7 +109,7 @@ class Standvorabkleider:
                 if pfad is None:
                     continue
                 with Image.open(pfad) as bild:
-                    a = np.asarray(bild.convert('RGBA'), dtype=np.float64)
+                    a = Torchfeld.feld(bild.convert('RGBA'), dtype=torch.float64)
                 sicht = a[..., 3] > 10
                 if sicht.any():
                     return [round(float(c) / 255.0, 4) for c in a[sicht][:, :3].mean(axis=0)]

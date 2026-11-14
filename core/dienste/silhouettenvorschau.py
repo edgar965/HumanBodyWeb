@@ -8,7 +8,8 @@ und Speichern; der Endpunkt muss davon nichts wissen ausser dem Ergebnispfad.
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 
 logger = logging.getLogger('core')
@@ -55,7 +56,7 @@ class Silhouettenvorschau:
         if not kontur or len(kontur) <= 2:
             return
         punkte = cls._punkte(kontur, faktor)
-        ueberlagerung = bild.copy()
+        ueberlagerung = Torchfeld.kopie(bild)
         cv2.fillPoly(ueberlagerung, [punkte], cls.KOERPER)
         cv2.addWeighted(ueberlagerung, 0.25, bild, 0.75, 0, bild)
         cv2.polylines(bild, [punkte], True, cls.KOERPER, 2, cv2.LINE_AA)
@@ -68,4 +69,4 @@ class Silhouettenvorschau:
 
     @staticmethod
     def _punkte(kontur, faktor):
-        return np.array([[int(p[0] * faktor), int(p[1] * faktor)] for p in kontur], dtype=np.int32)
+        return Torchfeld.feld([[int(p[0] * faktor), int(p[1] * faktor)] for p in kontur], dtype=torch.int32, copy=True)

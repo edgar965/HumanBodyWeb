@@ -39,7 +39,9 @@ import os
 import subprocess
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 from django.utils import timezone
 
@@ -171,30 +173,30 @@ class Bildmodellkopf:
         for b in bilder:
             name = mischung._flame(b)
             g = b.get('gesichtsschaetzung') or {}
-            ok = bool(name) and (self.ablage.schaetzung() / name).is_file()
+            ok = bool(name) and Npztorch.da(self.ablage.schaetzung() / name)
             aus['bilder'].append({'datei': b['datei'], 'ok': ok, 'netz': name if ok else None,
                                   'fehler': None if ok else (g.get('fehler') or 'kein FLAME-Kopf')})
             if ok:
-                netze.append(np.load(self.ablage.schaetzung() / name).astype(np.float32))
+                netze.append(Torchfeld.astype(Npztorch.lesen(self.ablage.schaetzung() / name), torch.float32))
         if not netze:
             raise RuntimeError('PyMAF-X hat auf keinem Foto einen FLAME-Kopf abgelegt')
-        np.save(self.ablage.schaetzung() / 'kopf_pymafx_flame.npy', self.mitteln(netze))
+        Npztorch.speichern_npy(self.ablage.schaetzung() / 'kopf_pymafx_flame.npy', self.mitteln(netze))
         self._uebernehmen(aus, 'kopf_pymafx_flame.npy')
 
     @classmethod
     def mitteln(cls, netze):
         """Mittel mehrerer FLAME-Köpfe: jeden per Procrustes (Drehung, Verschiebung — kein Maßstab,
         die Köpfe sind metrisch) auf den ersten legen, dann Punkt für Punkt mitteln."""
-        erster = np.asarray(netze[0], dtype=np.float64)
+        erster = Torchfeld.feld(netze[0], dtype=torch.float64)
         gelegt = [erster]
         for k in netze[1:]:
-            k = np.asarray(k, dtype=np.float64)
+            k = Torchfeld.feld(k, dtype=torch.float64)
             mq, mz = k.mean(0), erster.mean(0)
-            u, _, vt = np.linalg.svd((k - mq).T @ (erster - mz))
-            d = np.sign(np.linalg.det(vt.T @ u.T))
-            r = vt.T @ np.diag([1.0, 1.0, d]) @ u.T
+            u, _, vt = Torchfeld.linalg_svd(Torchfeld.feld((k - mq).T @ (erster - mz)))
+            d = Torchfeld.sign(Torchfeld.linalg_det(vt.T @ u.T))
+            r = vt.T @ Torchfeld.diag(Torchfeld.feld([1.0, 1.0, d])) @ u.T
             gelegt.append((k - mq) @ r.T + mz)
-        return np.mean(np.stack(gelegt), axis=0).astype(np.float32)
+        return Torchfeld.astype(Torchfeld.mean(Torchfeld.stack(gelegt), axis=0), torch.float32)
 
     # ---------------------------------------------------------- Mehrbild
 
@@ -222,7 +224,7 @@ class Bildmodellkopf:
 
     def _uebernehmen(self, aus, name):
         pfad = self.ablage.schaetzung() / name
-        punkte = np.load(pfad)
+        punkte = Npztorch.lesen(pfad)
         if punkte.shape != (self.PUNKTE, 3):
             raise RuntimeError('%s hat %s Punkte, erwartet (%d, 3)' % (name, punkte.shape, self.PUNKTE))
         aus['netz'] = name
@@ -249,13 +251,13 @@ class Bildmodellkopf:
         k = (self.job.ergebnis or {}).get(self.FELD) or {}
         if not k.get('netz'):
             raise FileNotFoundError(k.get('fehler') or k.get('hinweis') or 'Kopf noch nicht berechnet')
-        punkte = np.load(self.ablage.schaetzung() / k['netz'])
+        punkte = Npztorch.lesen(self.ablage.schaetzung() / k['netz'])
         dreiecke = Bildmodellflame(self.job, self.ablage, self.optionen).dreiecke()
         fototextur = (self.job.ergebnis or {}).get('fototextur') or {}
         hautton = fototextur.get('hautton') or Bildmodelltextur.hautton(self.job.bilder).get('hautton')
         return {
             'ok': True, 'anzahl': int(punkte.shape[0]),
-            'punkte': self._b64(punkte, np.float32), 'dreiecke': self._b64(dreiecke, np.uint32),
+            'punkte': self._b64(punkte, torch.float32), 'dreiecke': self._b64(dreiecke, torch.uint32),
             'hoehe_cm': k.get('hoehe_cm'), 'verfahren': k.get('verfahren'), 'mischung': k.get('mischung'),
             'dauer_s': k.get('dauer_s'), 'stand': k.get('stand'), 'bilder': k.get('bilder'),
             'anpassung': k.get('anpassung'), 'hautton': hautton,
@@ -263,7 +265,7 @@ class Bildmodellkopf:
 
     @staticmethod
     def _b64(feld, art):
-        return base64.b64encode(np.ascontiguousarray(feld, dtype=art).tobytes()).decode('ascii')
+        return base64.b64encode(Torchfeld.als_bytes(Torchfeld.feld(feld, dtype=art))).decode('ascii')
 
     def _runner(self, art, *argumente):
         skript = os.path.join(Wrapperpfad.pfad(), self.RUNNER[art])

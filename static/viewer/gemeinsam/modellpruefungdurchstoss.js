@@ -25,7 +25,9 @@ export class Modellpruefungdurchstoss {
 
     /** Kleidungsnetze unter den sichtbaren Netzen: Katalogstücke der Art „kleidung“, Eigenkleider, gebackene Eigenschalen, Eigenröcke — ohne Haar und Requisiten. */
     static kleider(netze) {
-        return netze.filter((o) => o.userData?.art === 'kleidung' || o.userData?.eigenkleid || o.userData?.eigenGebacken || /^eigenrock_/.test(o.name || ''));
+        // Ein Stück, das Teile der Figur ERSETZT (Originalaugen, `Genesis9ersatz`), sitzt IN der Figur — keine Kleidung (12.11.2026, Fallout Ranger: Augen 1.380 Punkte „außen“).
+        return netze.filter((o) => !o.userData?.ersetzt?.length
+            && (o.userData?.art === 'kleidung' || o.userData?.eigenkleid || o.userData?.eigenGebacken || /^eigenrock_/.test(o.name || '')));
     }
 
     static pruefen(koerper, lage, netze, nrm) {

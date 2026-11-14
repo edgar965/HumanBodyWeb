@@ -25,6 +25,10 @@ from core.dienste.mesh3dmesswerte import Mesh3dmesswerte
 from core.dienste.mesh3dpruefreihe import Mesh3dpruefreihe as P
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 WEB = Path(__file__).resolve().parents[3]
 
@@ -251,8 +255,8 @@ class HandTest(SimpleTestCase):
     def _messen(self, rest, mindest, teil):
         tmp = Path(tempfile.mkdtemp(prefix='handmessung_', dir=Pruefablage.wurzel()))
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
-        np.savez(tmp / 'rest.npz', rest=rest, gewicht=np.zeros(len(rest)), mindest=mindest)
-        np.savez(tmp / 'genesis_ende.npz', teil=teil)
+        Npztorch.speichern(tmp / 'rest.npz', rest=rest, gewicht=np.zeros(len(rest)), mindest=mindest)
+        Npztorch.speichern(tmp / 'genesis_ende.npz', teil=teil)
         m = Mesh3dmesswerte.__new__(Mesh3dmesswerte)
         m.ordner = SimpleNamespace(arbeit=lambda name: tmp / name)
         return m._hand()

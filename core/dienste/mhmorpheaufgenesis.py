@@ -17,7 +17,8 @@ Bauen: `manage.py mhmorphe_bauen`. Gemessen wird im Lauf (Zahlen in `bestand.jso
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.gelenkversatz import G9gelenkversatz
 from Genesis9.mhmorphe import G9mhmorphe
 
@@ -60,10 +61,10 @@ class Mhmorpheaufgenesis:
             return Mhformung({**gender, **spec['makro']}).punkte()
         if 'regler' in spec:
             return Mhformung(gender, spec['regler']).punkte()
-        punkte = self.vorgabe.copy()
+        punkte = Torchfeld.kopie(self.vorgabe)
         nummern, verschiebung = Mhzielablage.ziel(spec['ziel'])
         gueltig = nummern < len(punkte)
-        np.add.at(punkte, nummern[gueltig], verschiebung[gueltig])
+        Torchfeld.add_at(punkte, nummern[gueltig], verschiebung[gueltig])
         return punkte
 
     def delta(self, spec):
@@ -79,21 +80,21 @@ class Mhmorpheaufgenesis:
             rig = Mhskelett.rig()
             namen = [j for j, v in rig['joints'].items() if v]
             index = {j: i for i, j in enumerate(namen)}
-            verts = [np.array([n for n in rig['joints'][j] if 0 <= n < len(self.vorgabe)], dtype=np.int64) for j in namen]
-            pos = np.array([self.vorgabe[v].mean(axis=0) * self.METER for v in verts])
+            verts = [Torchfeld.feld([n for n in rig['joints'][j] if 0 <= n < len(self.vorgabe)], dtype=torch.int64, copy=True) for j in namen]
+            pos = Torchfeld.feld([self.vorgabe[v].mean(axis=0) * self.METER for v in verts], copy=True)
             knochen = [(b['head'], b['tail']) for b in rig['bones'].values() if b.get('head') in index and b.get('tail') in index]
-            self._skelett = (verts, np.array([index[h] for h, _t in knochen]), np.array([index[t] for _h, t in knochen]), pos,
+            self._skelett = (verts, Torchfeld.feld([index[h] for h, _t in knochen], copy=True), Torchfeld.feld([index[t] for _h, t in knochen], copy=True), pos,
                              index.get(rig['bones'].get('head', {}).get('head'), 0))
         return self._skelett
 
     def mass(self, delta_dm):
         u"""`{kopf_mm, laenge_mm}` — wie weit MakeHumans eigene Gelenke bei diesem Delta wandern (Kopfgelenk, groesste Aenderung eines Knochenabstands)."""
         verts, kopf, schwanz, pos, kopfgelenk = self.skelett()
-        bewegt = np.array([delta_dm[v].mean(axis=0) * self.METER for v in verts])
-        alt = np.linalg.norm(pos[schwanz] - pos[kopf], axis=1)
-        neu = np.linalg.norm((pos + bewegt)[schwanz] - (pos + bewegt)[kopf], axis=1)
-        return {'kopf_mm': round(float(np.linalg.norm(bewegt[kopfgelenk])) * 1000, 2),
-                'laenge_mm': round(float(np.abs(neu - alt).max()) * 1000, 2)}
+        bewegt = Torchfeld.feld([delta_dm[v].mean(axis=0) * self.METER for v in verts], copy=True)
+        alt = Torchfeld.linalg_norm(pos[schwanz] - pos[kopf], dim=1)
+        neu = Torchfeld.linalg_norm(Torchfeld.feld((pos + bewegt)[schwanz] - (pos + bewegt)[kopf]), dim=1)
+        return {'kopf_mm': round(float(Torchfeld.linalg_norm(bewegt[kopfgelenk])) * 1000, 2),
+                'laenge_mm': round(float(Torchfeld.abs(neu - alt).max()) * 1000, 2)}
 
     def gelenkversatz(self):
         if self._gelenke is None:
@@ -107,11 +108,11 @@ class Mhmorpheaufgenesis:
         `ProjektTemp/_wegwerf/familien/mh_baby_hoehe.py`). Ein einziger Faktor je Seite haelt die Proportionen des Felds."""
         from Genesis9.basisnetz import G9basisnetz
         koerper = self.uebertragung.koerper
-        basis = np.asarray(G9basisnetz.holen().punkte)[:, 1]
-        mh0 = float(np.ptp(self.vorgabe[koerper][:, 1]))
-        mh1 = float(np.ptp((self.vorgabe + delta_dm)[koerper][:, 1]))
-        h0 = float(np.ptp(basis))
-        ist = float(np.ptp(basis + feld[:, 1]))
+        basis = Torchfeld.feld(G9basisnetz.holen().punkte)[:, 1]
+        mh0 = float(Torchfeld.ptp(self.vorgabe[koerper][:, 1]))
+        mh1 = float(Torchfeld.ptp((self.vorgabe + delta_dm)[koerper][:, 1]))
+        h0 = float(Torchfeld.ptp(basis))
+        ist = float(Torchfeld.ptp(basis + feld[:, 1]))
         soll = h0 * mh1 / mh0
         if abs(soll - h0) < self.HOEHE_AB_M or abs(ist - h0) < self.HOEHE_AB_M:
             return feld, 1.0
@@ -125,9 +126,9 @@ class Mhmorpheaufgenesis:
         alle anderen durch die Rahmen der Glieder, mit der Höhe an MakeHuman angeglichen. `rest`/`aehnlich = (s, zentrum, unter)` sind für Gelenke und Steckbrief (sonst None)."""
         if Mhaehnlichkeit.ist(auftrag['kennung']) and not auftrag['minus']:
             plus, rest, s, unter, zentrum = Mhaehnlichkeit(self).feld(d_plus)
-            return plus, np.zeros_like(plus), 1.0, 1.0, rest, (s, zentrum, unter)
+            return plus, torch.zeros_like(plus), 1.0, 1.0, rest, (s, zentrum, unter)
         plus = self.uebertragung.uebertragen(d_plus * self.METER)
-        minus = self.uebertragung.uebertragen(d_minus * self.METER) if auftrag['minus'] else np.zeros_like(plus)
+        minus = self.uebertragung.uebertragen(d_minus * self.METER) if auftrag['minus'] else torch.zeros_like(plus)
         plus, f_plus = self.hoehe_angleichen(plus, d_plus)
         minus, f_minus = (self.hoehe_angleichen(minus, d_minus) if auftrag['minus'] else (minus, 1.0))
         return plus, minus, f_plus, f_minus, None, None
@@ -142,9 +143,9 @@ class Mhmorpheaufgenesis:
         aus, skelett = [], []
         for nr, auftrag in enumerate(auftraege, 1):
             d_plus = self.delta(auftrag['plus'])
-            d_minus = self.delta(auftrag['minus']) if auftrag['minus'] else np.zeros_like(d_plus)
+            d_minus = self.delta(auftrag['minus']) if auftrag['minus'] else torch.zeros_like(d_plus)
             plus, minus, f_plus, f_minus, rest, aehnlich = self.feld(auftrag, d_plus, d_minus)
-            nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
+            nummern = torch.nonzero((Torchfeld.amax(Torchfeld.abs(plus), dim=1) > 0) | (Torchfeld.amax(Torchfeld.abs(minus), dim=1) > 0), as_tuple=True)[0]
             if not len(nummern):
                 logger.info('MH-Morphs: %s erreicht keinen Kaefigpunkt — uebergangen', auftrag['kennung'])
                 self.melden(nr, len(auftraege), auftrag['kennung'], None)

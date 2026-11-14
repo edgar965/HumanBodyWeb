@@ -15,7 +15,8 @@ dieselben Griffe wie Dazs `Penile Length`/`Penile Width`. Eigene Regler für das
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -156,14 +157,14 @@ class Dazgeograft:
 
     def stufe_punkte(self, quelle, kaefig):
         """`(P, 3)` Punkte der Stufe 1 (UV-Nähte doppelt) für den Käfig `kaefig` (m) in Dazs Default Pose (`Dazgeograftquelle.gepostet`) — gleiche Reihenfolge für jeden Käfig."""
-        return np.asarray(self._stufe_von(quelle).punkte(quelle.gepostet(kaefig)), dtype=np.float64)
+        return Torchfeld.feld(self._stufe_von(quelle).punkte(quelle.gepostet(kaefig)), dtype=torch.float64)
 
     def stufe1(self, quelle, kaefig):
         """`(punkte, dreiecke, uv_ecken)`: der Käfig `kaefig` (m) auf Stufe 1, an UV-Nähten verschweißt, UV je Ecke `(T, 3, 2)`."""
         stufe = self._stufe_von(quelle)
         roh = self.stufe_punkte(quelle, kaefig)
-        dreiecke = np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3)
-        uv_ecken = np.asarray(stufe.uv, dtype=np.float64)[dreiecke]
+        dreiecke = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).reshape(-1, 3)
+        uv_ecken = Torchfeld.feld(stufe.uv, dtype=torch.float64)[dreiecke]
         erste, rep = self.nahtfrei(roh)
         self.nahtfrei_punkte = int(len(erste))
         return roh[erste], rep[dreiecke], uv_ecken
@@ -171,8 +172,8 @@ class Dazgeograft:
     def nahtfrei(self, roh):
         """`(erste, rep)`: welche Rohpunkte nach dem Verschweißen der UV-Nähte bleiben (`erste`, nach Lage sortiert — die Nummer eines Punkts im Stück hängt also an der Lage des Käfigs, nicht an
         der Unterteiler-Reihenfolge) und auf welchen Punkt jeder Rohpunkt fällt (`rep`). `Dazgeograftstufenzuordnung` rechnet damit von einer Stufe auf die andere."""
-        schluessel = np.round(roh / self.LAGE_M).astype(np.int64)
-        _, erste, rep = np.unique(schluessel, axis=0, return_index=True, return_inverse=True)
+        schluessel = Torchfeld.astype(Torchfeld.round(roh / self.LAGE_M), torch.int64)
+        _, erste, rep = Torchfeld.unique(schluessel, axis=0, return_index=True, return_inverse=True)
         return erste, rep.ravel()
 
     def verschweissen(self, figur, maske, punkte, dreiecke, uv_ecken):
@@ -190,7 +191,7 @@ class Dazgeograft:
         punkte, dreiecke, uv_ecken, naht = Blendimportschamnaht(lage).anlegen(punkte, dreiecke, uv_ecken)
         if naht['rand_weg_max_mm'] > self.MAX_RAND_WEG_MM:
             raise ValueError('der Rand des Geografts liegt bis %.1f mm neben dem Ring (Grenze %.0f mm)' % (naht['rand_weg_max_mm'], self.MAX_RAND_WEG_MM))
-        loch = {'dreiecke': np.flatnonzero(maske).astype(np.int64), 'von': int(len(figur['dreiecke'])), 'ring': lage,
+        loch = {'dreiecke': Torchfeld.astype(torch.flatten(maske).nonzero()[:, 0], torch.int64), 'von': int(len(figur['dreiecke'])), 'ring': lage,
                 'ring_punkte': ring_punkte, 'verschiebung': verschiebung, 'ring_d': lage - lage0}
         return punkte, dreiecke, uv_ecken, loch, dict(haut.bericht(maske, ring), **naht)
 
@@ -231,11 +232,11 @@ class Dazgeograft:
             material.update(farbe=(1.0, 1.0, 1.0), bild=str(self.bilder['farbe']), normalen=str(self.bilder['normalen']),
                             rauheit_bild=str(self.bilder['rauheit']), shininess=None)
         netz = G9objleser.lesen(str(Blendimportbilder.obj(ordner, punkte, dreiecke, uv_ecken, material)))
-        roh = np.asarray(netz['punkte'], dtype=np.float64)
-        gewichte = self.gewichte(figur, roh, np.asarray(netz['flaechen'], dtype=np.int64), loch['ring'], loch['ring_punkte'])
+        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
+        gewichte = self.gewichte(figur, roh, Torchfeld.feld(netz['flaechen'], dtype=torch.int64), loch['ring'], loch['ring_punkte'])
         bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, self.KATEGORIE, material, heben=False, wicklung=False, gewichte=gewichte)
         flaeche = trimesh.Trimesh(figur['punkte'], figur['dreiecke'], process=False)
-        hoehe = np.round(Blendimportschamhoehe.ueber_figur(roh, flaeche), 1).tolist()
+        hoehe = Torchfeld.round(Blendimportschamhoehe.ueber_figur(roh, flaeche), 1).tolist()
         G9stueckersatz.schreiben(bilanz['duf'], [], haut_tiefe_mm=Blendimportscham.HAUT_TIEFE_MM, anatomie=anatomie, eigene_gewichte=True,
                                  loch=Blendimportstuecke.loch_angabe(loch), hoehe_mm=hoehe)
         bilanz['roh'] = roh                      # die Punkte des Stücks in Dateireihenfolge (für gerade Form und Morphe), kein Teil der Bilanz auf der Platte

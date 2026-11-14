@@ -7,7 +7,9 @@ Der Import baut das Scham-Stück im Schritt „stuecke", die Hautkacheln aber er
     nachtragen  am Ende von `Blendimporthaut.backen`: die Farbe am Ring gegen die gebackene Haut-Kachel daneben (`Schammessung.sicher_farbe`)
 Beide laufen IMMER; ohne Scham-Stück (`scham = figur`, Figur trifft das Original) melden sie das.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Schammessungablage']
 
@@ -25,9 +27,7 @@ class Schammessungablage:
         bericht = Schammessung.sicher(ordner=ordner, punkte=d['punkte'], dreiecke=d['dreiecke'], uv_ecken=d['uv_ecken'], figur=figur, loch=d.get('loch'),
                                       vorgabe=vorgabe, farbe_pfad=material.get('bild'))
         loch = d.get('loch') or {}
-        np.savez(ablage.arbeit(cls.DATEI), punkte=d['punkte'], dreiecke=d['dreiecke'], uv_ecken=d['uv_ecken'], farbe_pfad=np.array(str(material.get('bild') or '')),
-                 loch_dreiecke=np.asarray(loch.get('dreiecke', []), dtype=np.int64), ring=np.asarray(loch.get('ring', np.zeros((0, 3))), dtype=np.float64),
-                 ring_punkte=np.asarray(loch.get('ring_punkte', []), dtype=np.int64), hat_loch=np.array(bool(loch)))
+        Npztorch.speichern(ablage.arbeit(cls.DATEI), punkte=d['punkte'], dreiecke=d['dreiecke'], uv_ecken=d['uv_ecken'], farbe_pfad=Torchfeld.feld(str(material.get('bild') or ''), copy=True), loch_dreiecke=Torchfeld.feld(loch.get('dreiecke', []), dtype=torch.int64), ring=Torchfeld.feld(loch.get('ring', torch.zeros((0, 3), dtype=torch.float64, device='cuda')), dtype=torch.float64), ring_punkte=Torchfeld.feld(loch.get('ring_punkte', []), dtype=torch.int64), hat_loch=Torchfeld.feld(bool(loch), copy=True), komprimiert=False)
         return bericht
 
     @classmethod
@@ -36,9 +36,9 @@ class Schammessungablage:
         from .schammessung import Schammessung
 
         pfad = ablage.arbeit(cls.DATEI)
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return {'hinweis': 'kein Scham-Stück in diesem Import — gemessen wird die Figur selbst: ergebnis.figur.schammessung (`Meshfigurschammessung`)'}
-        with np.load(pfad) as a:
+        with Npztorch.lesen(pfad) as a:
             loch = {'dreiecke': a['loch_dreiecke'], 'ring': a['ring'], 'ring_punkte': a['ring_punkte']} if bool(a['hat_loch']) else None
             farbe = str(a['farbe_pfad']) or None
             return Schammessung.sicher_farbe(punkte=a['punkte'], dreiecke=a['dreiecke'], uv_ecken=a['uv_ecken'], figur=figur, loch=loch, farbe_pfad=farbe,

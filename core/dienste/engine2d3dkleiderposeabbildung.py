@@ -13,8 +13,21 @@ Maßstab: SAM 3D Body schätzt den Abstand der Person zur Kamera (`Z = k3.z + ca
 Pixel je Netzeinheit sind `sqrt(sx · sy)`. Meter je Netzeinheit = Meter je Pixel × Pixel je Netzeinheit. Das ist SAMs Vorstellung von der Größe der Person (ein Formmodell für Erwachsene), keine Messung am Gemälde.
 """
 
-import numpy as np
-from PIL import Image, ImageDraw
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from PIL import Image
+
+
+def _flaechenbild():
+    """`Flaechenbild` aus `VideoToBVH/wrappers` (beim Laden von Django nicht im Suchpfad — erst beim Gebrauch eingehängt)."""
+    import sys
+    from django.conf import settings
+    pfad = str(settings.TOOLS_ROOT / 'VideoToBVH' / 'wrappers')
+    if pfad not in sys.path:
+        sys.path.append(pfad)
+    from flaechenbild import Flaechenbild
+    return Flaechenbild
 
 __all__ = ['Engine2d3dKleiderposeabbildung']
 
@@ -42,8 +55,8 @@ class Engine2d3dKleiderposeabbildung:
     def __init__(self, scan, alpha):
         """`scan`: `Meshfigurscan.laden(netz)` (Koordinaten wie die Körper-Kette sie lädt); `alpha`: Alphakanal des vorbereiteten Fotos (H × W)."""
         self.scan = scan
-        self.person = np.asarray(alpha) > 127
-        ys, xs = np.nonzero(self.person)
+        self.person = Torchfeld.feld(alpha) > 127
+        ys, xs = torch.nonzero(self.person, as_tuple=True)
         if not len(xs):
             raise ValueError('Die Person im vorbereiteten Foto ist leer (Alpha)')
         self.kasten = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
@@ -62,7 +75,7 @@ class Engine2d3dKleiderposeabbildung:
         """`(u0, v0, sx, sy)`: Netzumriss auf den Alphakasten der Person gestreckt."""
         u, v = self._uv(self.scan.punkte, variante)
         x0, y0, x1, y1 = self.kasten
-        return float(u.min()), float(v.min()), (x1 - x0) / float(np.ptp(u)), (y1 - y0) / float(np.ptp(v))
+        return float(u.min()), float(v.min()), (x1 - x0) / float(Torchfeld.ptp(u)), (y1 - y0) / float(Torchfeld.ptp(v))
 
     def _iou(self, variante):
         h, b = self.person.shape
@@ -70,12 +83,13 @@ class Engine2d3dKleiderposeabbildung:
         u0, v0, sx, sy = self._strecken(variante)
         u, v = self._uv(self.scan.punkte, variante)
         px, py = ((u - u0) * sx + self.kasten[0]) * k, ((v - v0) * sy + self.kasten[1]) * k
-        bild = Image.new('L', (max(1, int(b * k)), max(1, int(h * k))), 0)
-        zeichner = ImageDraw.Draw(bild)
-        for f in self.scan.flaechen[::3]:
-            zeichner.polygon([(px[f[0]], py[f[0]]), (px[f[1]], py[f[1]]), (px[f[2]], py[f[2]])], fill=255)
-        netz = np.asarray(bild) > 0
-        person = np.asarray(Image.fromarray(self.person.astype(np.uint8) * 255).resize(bild.size, Image.NEAREST)) > 0
+        breite, hoehe = max(1, int(b * k)), max(1, int(h * k))
+        # jedes dritte Dreieck, alle zugleich auf der Karte, Pixel für Pixel wie `ImageDraw.polygon` (13.11.2026: vorher je Dreieck ein PIL-Aufruf, am Zauberer 778.059 im Schritt „rig“;
+        # Gegenprobe `ProjektTemp/_wegwerf/kartenwaechter/iou_probe.py`)
+        px, py = Torchfeld.feld(px), Torchfeld.feld(py)
+        netz = _flaechenbild().zeichnen(px, py, torch.zeros_like(px), Torchfeld.feld(self.scan.flaechen)[::3], breite, hoehe) > 0
+        bild = Image.new('L', (breite, hoehe), 0)                                          # nur noch für die Größe der Personenmaske
+        person = Torchfeld.feld(Image.fromarray(Torchfeld.roh(Torchfeld.astype(self.person, torch.uint8) * 255)).resize(Torchfeld.roh(Torchfeld.groesse(bild)), Image.NEAREST)) > 0
         return float((netz & person).sum() / max(1, (netz | person).sum()))
 
     def ausrichten(self):
@@ -92,14 +106,14 @@ class Engine2d3dKleiderposeabbildung:
 
     def auf_foto(self, punkte):
         """Netzpunkte (N, 3) → Pixel des vorbereiteten Fotos (N, 2) — Gegenstück zu `landmarken` (für die Kontrollbilder)."""
-        u, v = self._uv(np.asarray(punkte, dtype=np.float64), self.variante)
-        return np.stack([(u - self.u0) * self.sx + self.kasten[0], (v - self.v0) * self.sy + self.kasten[1]], axis=1)
+        u, v = self._uv(Torchfeld.feld(punkte, dtype=torch.float64), self.variante)
+        return Torchfeld.stack([(u - self.u0) * self.sx + self.kasten[0], (v - self.v0) * self.sy + self.kasten[1]], axis=1)
 
     # ------------------------------------------------------------- Landmarken
 
     def _baum_und_punkte(self):
         if self._baum is None:
-            from scipy.spatial import cKDTree
+            from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
             self._punkte = self.scan.abtasten(300000)[0]
             self._baum = cKDTree(self._punkte[:, :2])
         return self._baum, self._punkte
@@ -114,7 +128,7 @@ class Engine2d3dKleiderposeabbildung:
             return None
         from .engine2d3dkleiderposetiefe import Engine2d3dKleiderposetiefe
         index = {n: i for i, n in enumerate(namen)}
-        k3 = np.asarray(k3, dtype=np.float64)
+        k3 = Torchfeld.feld(k3, dtype=torch.float64)
         alle = list(zuordnung.values())
         massstab = Engine2d3dKleiderposetiefe.massstab_aus([self._xy(*(float(w) for w in k2[index[n]])) for n in alle], k3[[index[n] for n in alle], :2])
         return Engine2d3dKleiderposetiefe(k3, namen, radius, massstab)
@@ -124,7 +138,7 @@ class Engine2d3dKleiderposeabbildung:
         schulter = kette.RUMPF[name]
         if schulter not in index:
             return None
-        h, s = np.asarray(k2[index[name]], dtype=np.float64), np.asarray(k2[index[schulter]], dtype=np.float64)
+        h, s = Torchfeld.feld(k2[index[name]], dtype=torch.float64), Torchfeld.feld(k2[index[schulter]], dtype=torch.float64)
         nah = baum.query_ball_point(self._xy(*(h + kette.RUMPF_ANTEIL * (s - h))), radius)
         return punkte[nah, 2] if len(nah) >= self.MIN_PUNKTE else None
 
@@ -136,10 +150,10 @@ class Engine2d3dKleiderposeabbildung:
         (`innen`, `ausserhalb` = auf die nächsten Netzpunkte gezogen, `weggelassen`, `verworfen` = die Tiefe aus SAM trifft keine Schicht im Strahl), bei der Kette dazu `tiefe` (`mitte`/`sam`)."""
         baum, punkte = self._baum_und_punkte()
         index = {n: i for i, n in enumerate(namen)}
-        ausdehnung = max(float(np.ptp(self.scan.punkte[:, 0])), float(np.ptp(self.scan.punkte[:, 1])))
+        ausdehnung = max(float(Torchfeld.ptp(self.scan.punkte[:, 0])), float(Torchfeld.ptp(self.scan.punkte[:, 1])))
         radius = self.RADIUS * ausdehnung
         kette = self._tiefenkette(k2, k3, namen, zuordnung, radius)
-        roh, treffer, liste = np.full((33, 3), np.nan), np.zeros(33), []
+        roh, treffer, liste = Torchfeld.full((33, 3), math.nan), torch.zeros(33, dtype=torch.float64, device='cuda'), []
         strahlen = {}
         for mp, name in sorted(zuordnung.items()):
             px, py = (float(w) for w in k2[index[name]])
@@ -160,7 +174,7 @@ class Engine2d3dKleiderposeabbildung:
                 ziel = punkte[nn].mean(0)
                 roh[mp], treffer[mp], stand = ziel, 4.0, 'ausserhalb'
             else:
-                tiefe = float(np.median(z)) if self.TIEFE == 'median' else float((np.percentile(z, 2) + np.percentile(z, 98)) / 2.0)
+                tiefe = float(Torchfeld.median(z)) if self.TIEFE == 'median' else float((Torchfeld.percentile(z, 2) + Torchfeld.percentile(z, 98)) / 2.0)
                 rumpf = kette.rumpf(self._rumpfstrahl(k2, index, name, kette, baum, punkte, radius)) if kette is not None and name in kette.RUMPF else None
                 if rumpf is not None:
                     tiefe = rumpf
@@ -183,13 +197,13 @@ class Engine2d3dKleiderposeabbildung:
     def masstab(self, k3, cam_t, brennweite, namen, verwendet):
         """Meter je Netzeinheit aus SAMs Abstand zur Kamera (siehe Kopf der Datei) — über die Gelenke `verwendet` (MHR-Namen). `{faktor, meter_je_pixel, pixel_je_einheit, abstand_m, laengste_achse_m}`."""
         index = {n: i for i, n in enumerate(namen)}
-        abstand = np.array([float(k3[index[n]][2]) + float(cam_t[2]) for n in verwendet], dtype=np.float64)
+        abstand = Torchfeld.feld([float(k3[index[n]][2]) + float(cam_t[2]) for n in verwendet], dtype=torch.float64, copy=True)
         abstand = abstand[abstand > 0.05]
         if not len(abstand) or not brennweite:
             raise ValueError('Kein Abstand aus SAM 3D Body — Maßstab nicht bestimmbar')
-        meter_je_pixel = float(np.median(abstand)) / float(brennweite)
-        pixel_je_einheit = float(np.sqrt(self.sx * self.sy))
+        meter_je_pixel = float(Torchfeld.median(abstand)) / float(brennweite)
+        pixel_je_einheit = float(Torchfeld.sqrt(self.sx * self.sy))
         faktor = meter_je_pixel * pixel_je_einheit
-        laengste = float(np.ptp(self.scan.punkte, axis=0).max())
-        return {'faktor': faktor, 'meter_je_pixel': meter_je_pixel, 'pixel_je_einheit': pixel_je_einheit, 'abstand_m': float(np.median(abstand)),
+        laengste = float(Torchfeld.ptp(self.scan.punkte, axis=0).max())
+        return {'faktor': faktor, 'meter_je_pixel': meter_je_pixel, 'pixel_je_einheit': pixel_je_einheit, 'abstand_m': float(Torchfeld.median(abstand)),
                 'laengste_achse_m': laengste * faktor}

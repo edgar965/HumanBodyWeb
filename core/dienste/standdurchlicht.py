@@ -17,7 +17,8 @@ Die Dünnheit hängt nur an der Basisfigur und nicht an den Reglern (`stufe.skal
 import hashlib
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -35,26 +36,26 @@ class Standdurchlicht:
     def _schluessel(cls, netz):
         h = hashlib.md5(('%d|%d' % (cls.VERSION, cls.GROESSE)).encode())
         for feld in ('dreiecke', 'uv', 'dicke'):
-            a = np.ascontiguousarray(np.round(np.asarray(netz[feld], dtype=np.float64), 5))
-            h.update(a.tobytes())
+            a = Torchfeld.feld(Torchfeld.round(Torchfeld.feld(netz[feld], dtype=torch.float64), 5))
+            h.update(Torchfeld.als_bytes(a))
         return h.hexdigest()[:12]
 
     @classmethod
     def _backen(cls, netz):
         """`{kachel: (H, W) float32}` — die Dünnheit je Texel der Kachel, außerhalb der Inseln fortgesetzt."""
         from Genesis9.uvraster import G9uvraster
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         n = cls.GROESSE
-        dicke = np.asarray(netz['dicke'], dtype=np.float64)
-        raster = G9uvraster(np.column_stack([dicke, np.zeros_like(dicke), np.zeros_like(dicke)]), netz['dreiecke'], netz['uv'], netz['gruppen'], netz['normalen'], n)
+        dicke = Torchfeld.feld(netz['dicke'], dtype=torch.float64)
+        raster = G9uvraster(Torchfeld.column_stack([dicke, torch.zeros_like(dicke), torch.zeros_like(dicke)]), netz['dreiecke'], netz['uv'], netz['gruppen'], netz['normalen'], n)
         je = {}
         for g in netz['gruppen']:
             if int(g.get('index_anzahl') or 0) < 3:
                 continue
             kachel = int(g.get('kachel') or 1001)
             karte = raster.karte(g)
-            bild = je.setdefault(kachel, {'wert': np.zeros((n, n), dtype=np.float32), 'maske': np.zeros((n, n), dtype=bool)})
+            bild = je.setdefault(kachel, {'wert': torch.zeros((n, n), dtype=torch.float32, device='cuda'), 'maske': torch.zeros((n, n), dtype=torch.bool, device='cuda')})
             neu = karte['maske'] & ~bild['maske']
             bild['wert'][neu] = karte['lage'][..., 0][neu]
             bild['maske'] |= karte['maske']
@@ -62,9 +63,9 @@ class Standdurchlicht:
         for kachel, b in je.items():
             abstand, (iy, ix) = ndimage.distance_transform_edt(~b['maske'], return_indices=True)
             rand = (~b['maske']) & (abstand <= cls.RAND)
-            wert = b['wert'].copy()
+            wert = Torchfeld.kopie(b['wert'])
             wert[rand] = b['wert'][iy[rand], ix[rand]]
-            aus[kachel] = np.clip(wert, 0.0, 1.0)
+            aus[kachel] = Torchfeld.clip(wert, 0.0, 1.0)
         return aus
 
     @classmethod
@@ -86,7 +87,7 @@ class Standdurchlicht:
                 pfad = ordner / ('%s_%d.png' % (schluessel, kachel))
                 if pfad.is_file():
                     with Image.open(pfad) as bild:
-                        aus[kachel] = bild.convert('L').copy()
+                        aus[kachel] = Torchfeld.kopie(bild.convert('L'))
                 else:
                     fehlt = True
                     break
@@ -95,7 +96,7 @@ class Standdurchlicht:
             aus = {}
             ordner.mkdir(parents=True, exist_ok=True)
             for kachel, wert in cls._backen(netz).items():
-                bild = Image.fromarray(np.rint(wert * 255.0).astype(np.uint8), 'L')
+                bild = Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.round(wert * 255.0), torch.uint8)), 'L')
                 bild.save(str(ordner / ('%s_%d.png.teil' % (schluessel, kachel))), format='PNG')
                 (ordner / ('%s_%d.png.teil' % (schluessel, kachel))).replace(ordner / ('%s_%d.png' % (schluessel, kachel)))
                 aus[kachel] = bild

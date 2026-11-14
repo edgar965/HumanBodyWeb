@@ -25,7 +25,8 @@ Dateien. `kennung=True` (Teilmasken) liefert die Kennfarben unbeleuchtet und ohn
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -66,10 +67,10 @@ class Genesishaarrender:
         if koerper is None:
             return None
         if isinstance(koerper, tuple):
-            return (np.asarray(koerper[0], dtype=np.float64), np.asarray(koerper[1], dtype=np.int64))
+            return (Torchfeld.feld(koerper[0], dtype=torch.float64), Torchfeld.feld(koerper[1], dtype=torch.int64))
         import trimesh
         netz = trimesh.load(str(koerper), force='mesh', process=False)
-        return (np.asarray(netz.vertices, dtype=np.float64), np.asarray(netz.faces, dtype=np.int64))
+        return (Torchfeld.feld(netz.vertices, dtype=torch.float64), Torchfeld.feld(netz.faces, dtype=torch.int64))
 
     def renderer(self):
         if self._renderer is None:
@@ -107,10 +108,10 @@ class Genesishaarrender:
                 return None
             gruppen = tuple((int(g['ab']), int(g['anzahl']), str(g.get('albedo')), str(g.get('normalen')),
                              str(g.get('alpha')),
-                             tuple(np.round(np.asarray(g.get('faktor', (1, 1, 1)), dtype=np.float64), 4)))
+                             tuple(Torchfeld.round(Torchfeld.feld(g.get('faktor', (1, 1, 1)), dtype=torch.float64), 4).tolist()))
                             for g in e.get('gruppen') or [])
             return (id(e.get('uv')), gruppen, id(e.get('kurven')))
-        return (bool(kennung),) + tuple((id(t[0]), id(t[1]), tuple(np.round(t[2], 4)), extra(t[3])) for t in teile)
+        return (bool(kennung),) + tuple((id(t[0]), id(t[1]), tuple(Torchfeld.round(t[2], 4).tolist()), extra(t[3])) for t in teile)
 
     def _mitsuba(self, teile, mitte, halb, winkel, kennung):
         """(H, B, 4) aus Mitsuba — oder None (dann rendert pyrender)."""
@@ -148,8 +149,8 @@ class Genesishaarrender:
 
     def _flach(self, pyrender, szene, punkte, dreiecke, farbe):
         import trimesh
-        netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64),
-                               faces=np.asarray(dreiecke, dtype=np.int64), process=False)
+        netz = trimesh.Trimesh(vertices=Torchfeld.roh(Torchfeld.feld(punkte, dtype=torch.float64)),
+                               faces=Torchfeld.roh(Torchfeld.feld(dreiecke, dtype=torch.int64)), process=False)
         material = pyrender.MetallicRoughnessMaterial(
             baseColorFactor=(*farbe, 1.0), metallicFactor=0.0, roughnessFactor=0.75, doubleSided=True)
         szene.add(pyrender.Mesh.from_trimesh(netz, material=material, smooth=False))
@@ -159,9 +160,9 @@ class Genesishaarrender:
         faktor); Dreiecke ohne Bild flach. pyrender legt Zeile 0 des Bildes auf v = 1 — wie Daz' UV (OBJ)."""
         import trimesh
         from PIL import Image
-        uv = np.asarray(textur['uv'], dtype=np.float64)
-        dreiecke = np.asarray(dreiecke, dtype=np.int64)
-        belegt = np.zeros(len(dreiecke), dtype=bool)
+        uv = Torchfeld.feld(textur['uv'], dtype=torch.float64)
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64)
+        belegt = torch.zeros(len(dreiecke), dtype=torch.bool, device='cuda')
         for g in textur['gruppen']:
             if g.get('albedo') is None:
                 continue
@@ -169,18 +170,18 @@ class Genesishaarrender:
             if not len(wahl):
                 continue
             belegt[g['ab']:g['ab'] + g['anzahl']] = True
-            nummern, neu = np.unique(wahl.ravel(), return_inverse=True)
-            netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64)[nummern], faces=neu.reshape(-1, 3),
+            nummern, neu = Torchfeld.unique(wahl.ravel(), return_inverse=True)
+            netz = trimesh.Trimesh(vertices=Torchfeld.roh(Torchfeld.feld(punkte, dtype=torch.float64)[nummern]), faces=neu.reshape(-1, 3),
                                    process=False)
             with Image.open(g['albedo']) as roh:
-                bild = np.asarray(roh.convert('RGB'))
+                bild = Torchfeld.feld(roh.convert('RGB'))
             netz.visual = trimesh.visual.TextureVisuals(uv=uv[nummern])
             # Die Normalkarte (Daz, Falten aus der Simulation) wie unter Mitsuba — pyrender rechnet die Tangenten im
             # Shader (Probe 01.10.2026: flach 30, zum Licht gekippt 35, weg 2); DirectX-Karten mit gespiegeltem Grün.
             karte = None
             if g.get('normalen') is not None:
                 with Image.open(g['normalen']) as roh:
-                    karte = np.asarray(roh.convert('RGB')).copy()
+                    karte = Torchfeld.kopie(Torchfeld.feld(roh.convert('RGB')))
                 if int(g.get('normalenachse') or 1) < 0:
                     karte[..., 1] = 255 - karte[..., 1]
             material = pyrender.MetallicRoughnessMaterial(
@@ -203,13 +204,13 @@ class Genesishaarrender:
         # Orthografisch: die halbe Bildhöhe in Metern ist `ymag`; die Breite folgt dem Seitenverhältnis.
         halb = 0.5 * hoehe * (1.0 + 2.0 * self.RAND)
         kamera = pyrender.OrthographicCamera(xmag=halb * self.BREITE / self.HOEHE, ymag=halb)
-        bogen = np.radians(float(winkel))
-        c, s = np.cos(bogen), np.sin(bogen)
-        lage = np.eye(4)
-        lage[:3, :3] = np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]])
-        lage[:3, 3] = mitte + max(2.0 * hoehe, 2.0) * np.array([s, 0.0, c])
+        bogen = Torchfeld.radians(float(winkel))
+        c, s = Torchfeld.cos(bogen), Torchfeld.sin(bogen)
+        lage = torch.eye(4, dtype=torch.float64, device='cuda')
+        lage[:3, :3] = Torchfeld.feld([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]], copy=True)
+        lage[:3, 3] = mitte + max(2.0 * hoehe, 2.0) * Torchfeld.feld([s, 0.0, c], copy=True)
         szene.add(kamera, pose=lage)
-        szene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=self.LICHT), pose=lage)
+        szene.add(pyrender.DirectionalLight(color=Torchfeld.roh(torch.ones(3, dtype=torch.float64, device='cuda')), intensity=self.LICHT), pose=lage)
         return szene
 
     def bild(self, punkte, dreiecke, farbe, winkel, pfad):
@@ -234,11 +235,11 @@ class Genesishaarrender:
         if not teile:
             raise ValueError('Nichts zu rendern')
         self._groesse(groesse)
-        scheitel = max(float(np.asarray(t[0])[:, 1].max()) for t in teile)
-        mitte = np.array([0.0, scheitel - self.KOPF_UNTER_SCHEITEL, 0.0])
+        scheitel = max(float(Torchfeld.feld(t[0])[:, 1].max()) for t in teile)
+        mitte = Torchfeld.feld([0.0, scheitel - self.KOPF_UNTER_SCHEITEL, 0.0], copy=True)
         rgba = self._rgba(teile, mitte, self.KOPF_HOEHE / (1.0 + 2.0 * self.RAND), winkel, kennung)
         self.saat = 0
-        rgb = rgba[..., :3].copy()
+        rgb = Torchfeld.kopie(rgba[..., :3])
         rgb[rgba[..., 3] == 0] = 255              # weißer Grund: der Detektor sieht Fotos, keine Alphakanäle
         pfad.parent.mkdir(parents=True, exist_ok=True)
         Image.fromarray(rgb, mode='RGB').save(pfad)
@@ -258,19 +259,19 @@ class Genesishaarrender:
 
     @staticmethod
     def _teile(teile):
-        return [(t[0], t[1], tuple(float(c) for c in np.asarray(t[2])[:3]), t[3] if len(t) > 3 else None)
+        return [(t[0], t[1], tuple(float(c) for c in Torchfeld.liste(Torchfeld.feld(t[2])[:3])), t[3] if len(t) > 3 else None)
                 for t in teile if t[0] is not None]
 
     def _rgba(self, teile, mitte, hoehe, winkel, kennung):
         """(H, B, 4) uint8 — Mitsuba, sonst pyrender (Alpha aus der Tiefe)."""
         feld = self._mitsuba(teile, mitte, 0.5 * hoehe * (1.0 + 2.0 * self.RAND), winkel, kennung)
         if feld is not None:
-            return np.clip(np.round(feld * 255.0), 0, 255).astype(np.uint8)
+            return Torchfeld.astype(Torchfeld.clip(Torchfeld.round(feld * 255.0), 0, 255), torch.uint8)
         import pyrender
         self.motor = 'pyrender'
         farbbild, tiefe = self.renderer().render(self._szene(pyrender, teile, mitte, hoehe, winkel))
-        alpha = (np.asarray(tiefe) > 0).astype(np.uint8) * 255
-        return np.dstack([np.asarray(farbbild)[..., :3], alpha])
+        alpha = Torchfeld.astype(Torchfeld.feld(tiefe) > 0, torch.uint8) * 255
+        return Torchfeld.dstack([Torchfeld.feld(farbbild)[..., :3], alpha])
 
     def bild_teile(self, teile, winkel, pfad, groesse=None, kennung=False):
         """Beliebig viele Teile `[(punkte, dreiecke, farbe rgb 0…1[, textur])]` — „2D3D Kleider" (Körper, Kleider,
@@ -285,8 +286,8 @@ class Genesishaarrender:
         if not teile:
             raise ValueError('Nichts zu rendern — weder Körper noch Frisur')
         self._groesse(groesse)
-        alle = np.vstack([t[0] for t in teile])
-        mitte = np.array([0.0, 0.5 * (alle[:, 1].min() + alle[:, 1].max()), 0.0])
+        alle = Torchfeld.vstack([t[0] for t in teile])
+        mitte = Torchfeld.feld([0.0, 0.5 * (alle[:, 1].min() + alle[:, 1].max()), 0.0], copy=True)
         hoehe = float(alle[:, 1].max() - alle[:, 1].min()) or 1.0
         rgba = self._rgba(teile, mitte, hoehe, winkel, kennung)
         pfad.parent.mkdir(parents=True, exist_ok=True)

@@ -15,7 +15,9 @@ import json
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -69,9 +71,9 @@ class Mhproxy:
 
     @staticmethod
     def _netzantwort(anpassung, punkte, koerper):
-        f32 = punkte.astype(np.float32)
+        f32 = Torchfeld.astype(punkte, torch.float32)
         dreiecke = anpassung.dreiecke()
-        flaechen = dreiecke.astype(np.uint32) if len(dreiecke) else np.zeros((0, 3), dtype=np.uint32)
+        flaechen = Torchfeld.astype(dreiecke, torch.uint32) if len(dreiecke) else torch.zeros((0, 3), dtype=torch.uint32, device='cuda')
         return {
             'vertex_count': int(len(f32)),
             'vertices': Netzantwort.feld(f32, 'vertices'),
@@ -90,9 +92,9 @@ class Mhproxy:
     def tpose_punkte(request):
         """Die vorberechneten T-Pose-Punkte des Koerpers als base64."""
         pfad = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'vertices_tpose.npy')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return JsonResponse({'error': 'T-pose vertices not found'}, status=404)
-        punkte = np.load(pfad).astype(np.float32)
+        punkte = Torchfeld.astype(Npztorch.lesen(pfad), torch.float32)
         return Netzausgabe.antwort(
             {'vertices': Netzantwort.feld(punkte, 'vertices'), 'vertex_count': int(len(punkte))},
             request)
@@ -142,4 +144,4 @@ class Mhproxy:
         """base64-Float32 aus dem POST-Rumpf als (N, 3)-Feld in float64."""
         daten = json.loads(rumpf)
         roh = base64.b64decode(daten['vertices'])
-        return np.frombuffer(roh, dtype=np.float32).reshape(-1, 3).astype(np.float64)
+        return Torchfeld.astype(torch.frombuffer(bytearray(roh), dtype=torch.float32).to(Torchfeld.KARTE).reshape(-1, 3), torch.float64)

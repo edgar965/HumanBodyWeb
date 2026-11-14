@@ -30,6 +30,10 @@ from core.dienste.haardynamik import Haardynamik
 
 from ._haarablauf import Haarablauf
 from ._haardaten import Haardaten
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 STRANG, KARTE = Haardaten.Strang, Haardaten.Karte
 
@@ -47,11 +51,11 @@ class HaardynamikTest(SimpleTestCase):
         self.assertEqual(auftrag['schwerkraft'], [0.0, -9.81, 0.0])
         self.assertEqual((auftrag['bilder'], auftrag['rechner'], auftrag['material'], auftrag['dicke']),
                          (12, 'warp', 'vorgabe', 0.0))
-        with np.load(auftrag['straehnen']) as d:
+        with Npztorch.lesen_numpy(auftrag['straehnen']) as d:
             np.testing.assert_allclose(d['punkte'], Haardaten.punkte()[[4, 1, 7, 2, 9, 0, 5]], atol=1e-6)   # Wurzel zuerst
             self.assertEqual(d['laengen'].tolist(), [4, 3])
             np.testing.assert_allclose(d['normalen'], [(0.0, 1.0, 0.0)] * 2, atol=1e-6)
-        with np.load(auftrag['koerper']) as d:
+        with Npztorch.lesen_numpy(auftrag['koerper']) as d:
             self.assertEqual(d['dreiecke'].shape, (2, 3))
         self.assertEqual(a.abgelegt[0][2], ['geometry'])
 

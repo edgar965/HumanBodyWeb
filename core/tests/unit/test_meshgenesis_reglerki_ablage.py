@@ -20,6 +20,10 @@ import numpy as np
 from django.conf import settings
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))
 
@@ -80,7 +84,7 @@ class ReglerkiablageTest(unittest.TestCase):
                 self.assertEqual(m.Reglerkiablage.schreiben(ordner, daten, vor, ergebnis), 1)
             finally:
                 m.WURZEL = alt
-            with np.load(ordner / 'formen_vorhersagen.npz') as z:
+            with Npztorch.lesen_numpy(ordner / 'formen_vorhersagen.npz') as z:
                 np.testing.assert_array_equal(z['FormX_pruefung_form'][:, 0], [1.0, 3.0])
                 np.testing.assert_array_equal(z['FormX_training_form'][:, 0], [2.0])
                 np.testing.assert_array_equal(z['FormX_soll_form'], [1.0, 1.0, 1.0])

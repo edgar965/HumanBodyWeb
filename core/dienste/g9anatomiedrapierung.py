@@ -12,7 +12,8 @@ liegt flach auf der Haut. Ob der Drapierer dort schadet oder nützt, ist nicht g
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.drapierer import G9drapierer
 from Genesis9.drapierhindernis import G9drapierhindernis
 from Genesis9.drapierung import G9drapierung
@@ -65,9 +66,9 @@ class G9anatomiedrapierung:
     def anwenden(self, punkte, flaechen, normalen, regler):
         u"""`(punkte (N, 3), bilanz)`: der Stoff mit `flaechen` (Dreiecke oder Vierecke des Browsernetzes) und seinen Normalen `normalen` (N, 3),
         über das Hindernis drapiert; `regler`: `regler_stueck` des Rumpfs (`G9drapierung.werte`)."""
-        punkte = np.asarray(punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         dreiecke = G9hbstoffkorrektur.dreiecke(flaechen, len(punkte))
         if not len(punkte) or not len(dreiecke) or normalen is None:
             return punkte, {'gehoben': 0}
         abstand, ausbreitung, glaettung = G9drapierung.werte(regler)
-        return G9drapierer.drapieren(punkte, dreiecke, np.asarray(normalen, dtype=np.float64), self.hindernis, abstand, ausbreitung, glaettung)
+        return G9drapierer.drapieren(punkte, dreiecke, Torchfeld.feld(normalen, dtype=torch.float64), self.hindernis, abstand, ausbreitung, glaettung)

@@ -48,6 +48,8 @@ nicht auf den Schuh) macht er allein 6 % aus. Deshalb wird die Silhouette vor
 der Auswertung um `RAND_PX` erodiert — ein echter Fund (17,3 % in der Fläche,
 nicht am Rand) bleibt davon unberührt, siehe `test_5_...` unten.
 """
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from pathlib import Path
 
 
@@ -81,12 +83,12 @@ class Exportfleckenpruefung:
         eigentlich überall zeigen sollte). `fleckenanteil` = Anteil der
         Silhouetten-Punkte, die weiter als `GLEICH` davon abweichen.
         """
-        import numpy as np
+        import torch
         from PIL import Image
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        voll = np.asarray(Image.open(self.vollbild_pfad).convert('RGBA'), dtype=np.int16)
-        sil = np.asarray(Image.open(self.silhouette_pfad).convert('RGBA'), dtype=np.int16)
+        voll = Torchfeld.feld(Image.open(self.vollbild_pfad).convert('RGBA'), dtype=torch.int16)
+        sil = Torchfeld.feld(Image.open(self.silhouette_pfad).convert('RGBA'), dtype=torch.int16)
         if voll.shape[:2] != sil.shape[:2]:
             raise ValueError(
                 'Vollbild (%s) und Silhouette (%s) haben verschiedene Größen — '
@@ -107,7 +109,7 @@ class Exportfleckenpruefung:
 
         farben = voll[:, :, :3][maske]
         hauptfarbe = self._haeufigste(farben)
-        abstand = np.abs(farben - hauptfarbe).sum(axis=1)
+        abstand = Torchfeld.abs(farben - hauptfarbe).sum(axis=1)
         fleckig_n = int((abstand > self.GLEICH).sum())
         fleckenanteil = fleckig_n / punkte
 
@@ -124,13 +126,13 @@ class Exportfleckenpruefung:
         u"""Die häufigste Farbe — gerundet auf 4er-Schritte, damit
         Antialiasing-Nachbarn (149,62,58 / 150,63,58 / …) nicht als lauter
         eigene Einzelfarben zählen und die echte Mehrheit verdecken."""
-        import numpy as np
+        import torch
 
         grob = (farben // 4 * 4)
-        eindeutig, anzahl = np.unique(grob, axis=0, return_counts=True)
+        eindeutig, anzahl = Torchfeld.unique(grob, axis=0, return_counts=True)
         grobfarbe = eindeutig[anzahl.argmax()]
         # Zurück zur ECHTEN Mehrheitsfarbe unter den Punkten, die in diesen
         # groben Kübel fallen — sonst wäre `hauptfarbe` selbst schon gerundet.
         in_kuebel = (grob == grobfarbe).all(axis=1)
-        echte, echte_n = np.unique(farben[in_kuebel], axis=0, return_counts=True)
+        echte, echte_n = Torchfeld.unique(farben[in_kuebel], axis=0, return_counts=True)
         return echte[echte_n.argmax()]

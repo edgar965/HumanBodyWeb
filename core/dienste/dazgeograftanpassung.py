@@ -12,7 +12,9 @@ Vier Schritte, jeder mit Zahlen im Bericht:
     glätten       die Verschiebungen werden über die Nachbarn gemittelt (Rauschen der Strahlen), der Rand bleibt
 Die Topologie bleibt die des Geografts (Dreiecke, UV), nur die Lage ändert sich — Regler, Loch und Naht laufen danach wie beim unveränderten Stück.
 """
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftanpassung']
 
@@ -59,40 +61,40 @@ class Dazgeograftanpassung:
         """`figur0`, `figur`: `{punkte, dreiecke}` der Grundfigur und der Figur des Imports (Stufe 1, gleiche Topologie); `ring_punkte`: Nummern der Hautpunkte auf dem Ring des
         Lochs (in beiden Figuren dieselben); `ziel`: `Dazgeograftziel`; `stufe`: Unterteilungsstufe des Geografts, das angepasst wird (1 = Punktabstand ≈ 4 mm, 2 = ≈ 2 mm)."""
         import trimesh
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         self.stufe = int(stufe)
         #: Faktor auf Steifigkeit und Glättung und auf die Umklapp-Toleranz (1 bei Stufe 1).
         self.steif_faktor, self.toleranz_faktor = self.STUFE_STEIF ** (self.stufe - 1), self.STUFE_TOLERANZ ** (self.stufe - 1)
         #: Faktor auf `RING_AN_M` und `BAND_M` (1 bei Stufe 1).
         self.ring_faktor = self.STUFE_RING ** (self.stufe - 1)
-        self.p0 = np.asarray(figur0['punkte'], dtype=np.float64)
-        self.p1 = np.asarray(figur['punkte'], dtype=np.float64)
-        self.haut = trimesh.Trimesh(self.p1, np.asarray(figur['dreiecke'], dtype=np.int64), process=False)
-        self.normalen = np.asarray(self.haut.vertex_normals, dtype=np.float64)
+        self.p0 = Torchfeld.feld(figur0['punkte'], dtype=torch.float64)
+        self.p1 = Torchfeld.feld(figur['punkte'], dtype=torch.float64)
+        self.haut = trimesh.Trimesh(self.p1, Torchfeld.roh(Torchfeld.feld(figur['dreiecke'], dtype=torch.int64)), process=False)
+        self.normalen = Torchfeld.feld(self.haut.vertex_normals, dtype=torch.float64)
         self.baum0, self.baum1 = cKDTree(self.p0), cKDTree(self.p1)
-        self.ring = self.p1[np.asarray(ring_punkte, dtype=np.int64)]
+        self.ring = self.p1[Torchfeld.feld(ring_punkte, dtype=torch.int64)]
         self.ring_baum = cKDTree(self.ring)
         self.ziel = ziel
         self.ziel_netz = trimesh.Trimesh(ziel.punkte, ziel.dreiecke, process=False)
-        f = self.normalen[np.asarray(ring_punkte, dtype=np.int64)].mean(axis=0)
-        self.vorne = f / np.linalg.norm(f)
-        e1 = np.cross([0.0, 1.0, 0.0], self.vorne)
-        self.e1 = e1 / np.linalg.norm(e1)
-        self.e2 = np.cross(self.vorne, self.e1)
+        f = self.normalen[Torchfeld.feld(ring_punkte, dtype=torch.int64)].mean(axis=0)
+        self.vorne = f / Torchfeld.linalg_norm(f)
+        e1 = Torchfeld.cross([0.0, 1.0, 0.0], self.vorne)
+        self.e1 = e1 / Torchfeld.linalg_norm(e1)
+        self.e2 = Torchfeld.cross(self.vorne, self.e1)
         self.bericht = {}
 
     # ------------------------------------------------------------ Hilfen
 
     @staticmethod
     def _hermite(t):
-        t = np.clip(t, 0.0, 1.0)
+        t = Torchfeld.clip(t, 0.0, 1.0)
         return t * t * (3.0 - 2.0 * t)
 
     def hoehe(self, punkte):
         """Höhe über der Haut der Figur (m, plus = außen): Abstand zum nächsten Hautpunkt längs dessen Normale."""
         _d, i = self.baum1.query(punkte)
-        return np.einsum('ij,ij->i', punkte - self.p1[i], self.normalen[i])
+        return Torchfeld.einsum('ij,ij->i', punkte - self.p1[i], self.normalen[i])
 
     def ringabstand(self, punkte):
         return self.ring_baum.query(punkte)[0]
@@ -107,47 +109,47 @@ class Dazgeograftanpassung:
         d, i = self.baum0.query(punkte, k=6)
         w = 1.0 / (d * d + 1e-8)
         w /= w.sum(axis=1, keepdims=True)
-        verschiebung = np.einsum('nk,nkj->nj', w, (self.p1 - self.p0)[i])
+        verschiebung = Torchfeld.einsum('nk,nkj->nj', w, (self.p1 - self.p0)[i])
         glaettung = self.GLAETTUNG * self.steif_faktor
         if dreiecke is not None and glaettung > 0:
-            import scipy.sparse as sp
-            import scipy.sparse.linalg as spl
+            from KoerperKI_alle.kartenduenn import Kartenduenn as sp
+            from KoerperKI_alle.duennloeser import Duennloeser as spl
 
             lhs = (sp.identity(len(punkte)) + glaettung * self._laplace(dreiecke, len(punkte))).tocsc()
             verschiebung = spl.splu(lhs).solve(verschiebung)
-        self.bericht['verlegt_mm'] = {'median': round(float(np.median(np.linalg.norm(verschiebung, axis=1)) * 1000), 1),
-                                      'max': round(float(np.linalg.norm(verschiebung, axis=1).max() * 1000), 1), 'glaettung': glaettung if dreiecke is not None else 0.0}
+        self.bericht['verlegt_mm'] = {'median': round(float(Torchfeld.median(Torchfeld.linalg_norm(verschiebung, dim=1)) * 1000), 1),
+                                      'max': round(float(Torchfeld.linalg_norm(verschiebung, dim=1).max() * 1000), 1), 'glaettung': glaettung if dreiecke is not None else 0.0}
         return punkte + verschiebung
 
     def ausrichten(self, punkte):
         """Die Erhebungen aufeinanderlegen (Verschiebung und Maßstab je Achse der Hautebene) → neue Punkte. Ohne genug Erhebung bleibt alles stehen."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         hg = self.hoehe(punkte)
         ht = self.hoehe(self.ziel.punkte)
-        g, t = np.flatnonzero(hg > self.ANBAU_M), np.flatnonzero(ht > self.ANBAU_M)
+        g, t = torch.flatten(hg > self.ANBAU_M).nonzero()[:, 0], torch.flatten(ht > self.ANBAU_M).nonzero()[:, 0]
         if len(g) < 30 or len(t) < 30:
             self.bericht['ausrichten'] = {'uebersprungen': 'zu wenig Erhebung (%d / %d Punkte)' % (len(g), len(t))}
             return punkte
-        uv = np.column_stack([punkte @ self.e1, punkte @ self.e2])
-        ziel_uv = np.column_stack([self.ziel.punkte[t] @ self.e1, self.ziel.punkte[t] @ self.e2])
+        uv = Torchfeld.column_stack([punkte @ self.e1, punkte @ self.e2])
+        ziel_uv = Torchfeld.column_stack([self.ziel.punkte[t] @ self.e1, self.ziel.punkte[t] @ self.e2])
         baum = cKDTree(ziel_uv)
         gew = hg[g]
-        s, v = np.ones(2), np.zeros(2)
+        s, v = torch.ones(2, dtype=torch.float64, device='cuda'), torch.zeros(2, dtype=torch.float64, device='cuda')
         for _ in range(40):
             bild = uv[g] * s + v
             _d, nach = baum.query(bild)
             for a in range(2):
-                A = np.column_stack([uv[g, a], np.ones(len(g))]) * np.sqrt(gew)[:, None]
-                loesung = np.linalg.lstsq(A, ziel_uv[nach, a] * np.sqrt(gew), rcond=None)[0]
-                s[a], v[a] = np.clip(loesung[0], *self.MASSSTAB), loesung[1]
+                A = Torchfeld.column_stack([uv[g, a], torch.ones(len(g), dtype=torch.float64, device='cuda')]) * Torchfeld.sqrt(gew)[:, None]
+                loesung = Torchfeld.lstsq(A, ziel_uv[nach, a] * Torchfeld.sqrt(gew), rcond=None)[0]
+                s[a], v[a] = Torchfeld.clip(loesung[0], *self.MASSSTAB), loesung[1]
         abgebildet = uv * s + v
         w = self._hermite(self.ringabstand(punkte) / self.RING_AUS_M)
         d_uv = (abgebildet - uv) * w[:, None]
         self.bericht['ausrichten'] = {'massstab': [round(float(x), 3) for x in s], 'verschiebung_mm': [round(float(x) * 1000, 1) for x in v],
                                       'erhebung_punkte': [int(len(g)), int(len(t))],
-                                      'rest_mm': round(float(np.median(baum.query(abgebildet[g])[0]) * 1000), 1)}
-        return punkte + np.outer(d_uv[:, 0], self.e1) + np.outer(d_uv[:, 1], self.e2)
+                                      'rest_mm': round(float(Torchfeld.median(baum.query(abgebildet[g])[0]) * 1000), 1)}
+        return punkte + Torchfeld.outer(d_uv[:, 0], self.e1) + Torchfeld.outer(d_uv[:, 1], self.e2)
 
     def anpassen(self, punkte, dreiecke, steifigkeit=None, verfeinern=True, fest=True):
         """Das Netz auf das Original ziehen, ohne es zu zerknittern → neue Punkte. `fest`: die Ringreihen (und das Randband) bleiben bei ihrer verlegten Lage — richtig, wenn der Rand des Netzes auf
@@ -158,25 +160,25 @@ class Dazgeograftanpassung:
         ganzen Netzes aus `(W + a·L) D = W (Treffer − Punkt)`: `W` = 1 an Punkten mit Treffer, `RAND_GEWICHT` auf dem Ring (dort bleibt die Haut), sonst 0; `L` der Graph-Laplace des
         Netzes. Ohne Treffer füllen die Nachbarn die Verschiebung weich auf; je größer `a` (Steifigkeit), desto mehr bleibt das Netz glatt. Die Treffer werden von der neuen Lage
         aus noch `DURCHGAENGE`-mal gesucht."""
-        import scipy.sparse as sp
-        import scipy.sparse.linalg as spl
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sp
+        from KoerperKI_alle.duennloeser import Duennloeser as spl
 
         a = self.STEIFIGKEIT * self.steif_faktor if steifigkeit is None else float(steifigkeit)
         _d, i = self.baum1.query(punkte)
         n = self.normalen[i]
-        keine = np.zeros(len(punkte), dtype=bool)
+        keine = torch.zeros(len(punkte), dtype=torch.bool, device='cuda')
         rand = self.ringabstand(punkte) < self.RING_AN_M * self.ring_faktor if fest else keine
-        band = (self.ringabstand(punkte) < self.BAND_M * self.ring_faktor) & ~rand if fest and self.BAND_GEWICHT > 0 else keine.copy()
+        band = (self.ringabstand(punkte) < self.BAND_M * self.ring_faktor) & ~rand if fest and self.BAND_GEWICHT > 0 else Torchfeld.kopie(keine)
         laplace = self._laplace(dreiecke, len(punkte))
         q, treffer_zahl = punkte, 0
         for _ in range(self.DURCHGAENGE):
             ziel = self._treffer(q, n)
-            hat = ~np.isnan(ziel[:, 0])
-            w = hat.astype(np.float64)
+            hat = ~Torchfeld.isnan(ziel[:, 0])
+            w = Torchfeld.astype(hat, torch.float64)
             ziel[~hat] = punkte[~hat]
             w[rand], ziel[rand] = self.RAND_GEWICHT, punkte[rand]
             if band.any():
-                alt = w[band].copy()
+                alt = Torchfeld.kopie(w[band])
                 w[band] = alt + self.BAND_GEWICHT
                 ziel[band] = (alt[:, None] * ziel[band] + self.BAND_GEWICHT * punkte[band]) / w[band][:, None]
             lhs = (sp.diags(w) + a * laplace + 1e-9 * sp.identity(len(punkte))).tocsc()
@@ -189,21 +191,21 @@ class Dazgeograftanpassung:
             toleranz = int(round(Dazgeograftverfeinerung.UMKLAPP_TOLERANZ * self.toleranz_faktor))
             q, self.bericht['verfeinern'] = Dazgeograftverfeinerung.verfeinern(punkte, q, dreiecke, rand, laplace, self.ziel_netz, n, plan=plan, band=band, band_gewicht=self.BAND_GEWICHT,
                                                                                toleranz=toleranz)
-        betrag = np.linalg.norm(q - punkte, axis=1)
+        betrag = Torchfeld.linalg_norm(q - punkte, dim=1)
         self.bericht['anpassen'] = {'steifigkeit': a, 'treffer_original': treffer_zahl, 'ohne_treffer': int(len(punkte) - treffer_zahl),
-                                    'verschiebung_mm': {'median': round(float(np.median(betrag) * 1000), 1), 'max': round(float(betrag.max() * 1000), 1)}}
+                                    'verschiebung_mm': {'median': round(float(Torchfeld.median(betrag) * 1000), 1), 'max': round(float(betrag.max() * 1000), 1)}}
         return q
 
     def _treffer(self, punkte, n):
         """`(P, 3)`: der Treffer des Strahls durch jeden Punkt längs `n` auf dem Original, der dem Punkt am nächsten liegt — NaN ohne Treffer in `SUCHE_M`."""
-        aus = np.full(punkte.shape, np.nan)
+        aus = Torchfeld.full(punkte.shape, math.nan)
         orte, strahl, _tri = self.ziel_netz.ray.intersects_location(punkte - self.SUCHE_M * n, n, multiple_hits=True)
         if not len(orte):
             return aus
-        abstand = np.linalg.norm(orte - punkte[strahl], axis=1)
-        for r in np.unique(strahl):
-            alle = np.flatnonzero(strahl == r)
-            beste = alle[np.argmin(abstand[alle])]
+        abstand = Torchfeld.linalg_norm(orte - punkte[strahl], dim=1)
+        for r in Torchfeld.liste(Torchfeld.unique(strahl)):
+            alle = torch.flatten(strahl == r).nonzero()[:, 0]
+            beste = alle[Torchfeld.argmin(abstand[alle])]
             if abstand[beste] <= self.SUCHE_M:
                 aus[r] = orte[beste]
         return aus
@@ -211,9 +213,9 @@ class Dazgeograftanpassung:
     @staticmethod
     def _laplace(dreiecke, n):
         """Der Graph-Laplace `L = Grad − Nachbarschaft` des Netzes (dünn besetzt, jede Kante einmal)."""
-        import scipy.sparse as sp
+        from KoerperKI_alle.kartenduenn import Kartenduenn as sp
 
-        kanten = np.concatenate([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]])
-        nachbar = sp.coo_matrix((np.ones(len(kanten)), (kanten[:, 0], kanten[:, 1])), shape=(n, n)).tocsr()
-        nachbar = ((nachbar + nachbar.T) > 0).astype(np.float64)
-        return sp.diags(np.asarray(nachbar.sum(axis=1)).ravel()) - nachbar
+        kanten = Torchfeld.cat([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]])
+        nachbar = sp.coo_matrix((torch.ones(len(kanten), dtype=torch.float64, device='cuda'), (kanten[:, 0], kanten[:, 1])), shape=(n, n)).tocsr()
+        nachbar = Torchfeld.astype((nachbar + nachbar.T) > 0, torch.float64)
+        return sp.diags(Torchfeld.feld(nachbar.sum(axis=1)).ravel()) - nachbar

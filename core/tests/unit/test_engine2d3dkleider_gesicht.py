@@ -11,6 +11,10 @@ from core.dienste.meshfigurlandmarkmorphe import Meshfigurlandmarkmorphe
 from django.test import SimpleTestCase
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 def _drehung_y(grad):
@@ -40,7 +44,7 @@ class DieGesichtslage(SimpleTestCase):
         r, t = _drehung_y(10.0), np.array([0.2, 0.0, 0.05])
         posiert = ruhe @ r.T + t
         with Pruefablage.ordner('gesicht_') as ordner:
-            np.save(Path(ordner) / 'posiert.npy', posiert)
+            Npztorch.speichern_npy(Path(ordner) / 'posiert.npy', posiert)
             ablage = SimpleNamespace(arbeit=lambda name: Path(ordner) / name)
             zurueck, befund = Lage._haltung(ablage, posiert[:478], ruhe)
         self.assertAlmostEqual(befund['drehung_grad'], 10.0, places=1)

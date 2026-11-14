@@ -26,6 +26,10 @@ from humanbody_core.skeleton.formats import SkeletonAIST_SMPL, SkeletonCMU, Skel
 from humanbody_core.skeleton.formats.mh_zuordnung import DEF_ZU_MH, Mhzuordnung
 from humanbody_core.skeleton.formats.smpl_knochen import DEF_ZU_SMPL, Smplzuordnung
 from SMPL.skelett import Smplskelett
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class SmplzuordnungTest(unittest.TestCase):
@@ -110,7 +114,7 @@ class SmplhautTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ordner = str(settings.SMPL_MODELS_DIR)
-        if not os.path.isfile(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
+        if not Npztorch.da(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
             raise unittest.SkipTest('SMPL-Modelle fehlen')
         from SMPL.haut import Smplhaut
 

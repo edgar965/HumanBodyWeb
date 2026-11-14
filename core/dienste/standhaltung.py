@@ -14,7 +14,8 @@ Nur die Drehung der Knoten wird gesetzt, ihre Verschiebung bleibt (eine reine Ge
 Bewegung (BVH) schreibt absolute Drehungen auf dieselben Knoten und überstimmt die Haltung — die Haltung gilt, solange nichts spielt.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Standhaltung']
 
@@ -23,12 +24,12 @@ class Standhaltung:
     @staticmethod
     def anwenden(glb, haltung, boden):
         """Setzt die Drehung der Gelenkknoten von `glb` (`Standmodellglb`) → Zahl der gedrehten Knoten. `haltung`: `G9haltungshaut`."""
-        from scipy.spatial.transform import Rotation
+        from KoerperKI_alle.drehung import Drehung as Rotation
 
         verformung = haltung.verformungen()
         if not verformung:
             return 0
-        hin, zurueck = np.eye(4), np.eye(4)
+        hin, zurueck = torch.eye(4, dtype=torch.float64, device='cuda'), torch.eye(4, dtype=torch.float64, device='cuda')
         hin[1, 3], zurueck[1, 3] = float(boden), -float(boden)
         knoten = glb.gltf['nodes']
         ruhe = glb.welt(glb.gelenke)
@@ -39,10 +40,10 @@ class Standhaltung:
         for i in glb.gelenke:
             if namen[i] not in verformung:
                 continue
-            lokal = np.linalg.inv(pose[eltern[i]]) @ pose[i] if eltern.get(i) in pose else pose[i]
+            lokal = Torchfeld.linalg_inv(pose[eltern[i]]) @ pose[i] if eltern.get(i) in pose else pose[i]
             drehung = lokal[:3, :3]
-            laenge = np.linalg.norm(drehung, axis=0)
-            quaternion = Rotation.from_matrix(drehung / np.where(laenge > 0, laenge, 1.0)).as_quat()   # x, y, z, w wie glTF
+            laenge = Torchfeld.linalg_norm(drehung, dim=0)
+            quaternion = Rotation.from_matrix(drehung / torch.where(laenge > 0, laenge, 1.0)).as_quat()   # x, y, z, w wie glTF
             knoten[i]['rotation'] = [float(x) for x in quaternion]
             gesetzt += 1
         return gesetzt

@@ -37,6 +37,10 @@ from core.dienste.meshfigurobjektflaechen import Meshfigurobjektflaechen
 from core.dienste.ordnerkopie import Ordnerkopie
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 WEB = Path(__file__).resolve().parents[3]
 KENNUNG = '2026.10.13.10.00.00'
@@ -229,8 +233,8 @@ class FlaechenTest(SimpleTestCase):
 
     def test_doppelte_waisen_und_hut(self):
         n = 20
-        np.savez_compressed(self.ablage.arbeit('haar_maske.npz'), haar=self._maske(n, (0, 3)), kopfbedeckung=self._maske(n, (10, 16)), langer_bart=self._maske(n))
-        np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz'), kleidung=self._maske(n, (3, 10)))
+        Npztorch.speichern(self.ablage.arbeit('haar_maske.npz'), haar=self._maske(n, (0, 3)), kopfbedeckung=self._maske(n, (10, 16)), langer_bart=self._maske(n), komprimiert=True)
+        Npztorch.speichern(self.ablage.arbeit('kleidung_maske.npz'), kleidung=self._maske(n, (3, 10)), komprimiert=True)
         Meshfigurobjektflaechen.schreiben(self.ablage, 'haar', self._maske(n, (0, 4)))                 # Fläche 3 steht auch in der Kleidung: doppelt
         Meshfigurobjektflaechen.schreiben(self.ablage, 'kleidung', self._maske(n, (3, 9)))             # Fläche 9 fehlt: Waise der Kleidung
         Meshfigurobjektflaechen.schreiben(self.ablage, 'teil_hat', self._maske(n, (10, 13)))           # vom Hut nur drei von sechs Flächen: drei Waisen
@@ -244,8 +248,8 @@ class FlaechenTest(SimpleTestCase):
 
     def test_das_hautband_ist_keine_waise_aus_versehen(self):
         n = 200
-        np.savez_compressed(self.ablage.arbeit('haar_maske.npz'), haar=self._maske(n), kopfbedeckung=self._maske(n), langer_bart=self._maske(n))
-        np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz'), kleidung=self._maske(n, (0, 100)))
+        Npztorch.speichern(self.ablage.arbeit('haar_maske.npz'), haar=self._maske(n), kopfbedeckung=self._maske(n), langer_bart=self._maske(n), komprimiert=True)
+        Npztorch.speichern(self.ablage.arbeit('kleidung_maske.npz'), kleidung=self._maske(n, (0, 100)), komprimiert=True)
         Meshfigurobjektflaechen.schreiben(self.ablage, 'kleidung', self._maske(n, (0, 99)))            # eine Fläche fehlt: das Hautband am Rand
         a = Meshfigurabnahmeobjekte(self._lauf({'kleidung': {'objekt_hautrand': {'flaechen': 1}}})).messen(_Netz(n))
         self.assertEqual((a['waisen'], a['davon_hautrand'], a['waisen_rest']), (1, 1, 0))

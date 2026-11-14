@@ -26,7 +26,8 @@ Morphs: ein Zentimeter am Drehpunkt macht bei 26 Grad 4 mm am Zeh.
 """
 import math
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from Genesis9.garderobe import G9garderobe
 
@@ -55,7 +56,7 @@ class G9hbfusspose:
         winkel = float(fuss.get('rotation/x', 0.0))
         zehen = griff.get('l_toes') or griff.get('r_toes') or {}
         zehen_x = float(zehen.get('rotation/x', -winkel))
-        tiefster = min((float(np.asarray(k)[:, 1].min()) for k in kaefige if len(k)), default=0.0)
+        tiefster = min((float(Torchfeld.feld(k)[:, 1].min()) for k in kaefige if len(k)), default=0.0)
         return {'winkel_grad': round(winkel, 2), 'sprengung_grad': round(-(zehen_x + winkel), 2),
                 'hebung_cm': round(max(0.0, -tiefster * 100.0), 2), 'plateau_cm': 0.0,
                 'quelle': 'schuh:%s' % kennung}
@@ -76,7 +77,7 @@ class G9hbfusspose:
                                                   str(ordner / 'skin_weights_base.json')).compute_world_transforms()
             else:
                 welt = Skelettgeometrie.holen().compute_world_transforms()
-            cls._koepfe[geschlecht] = {n: np.asarray(welt[n]['world_pos'], dtype=np.float64)
+            cls._koepfe[geschlecht] = {n: Torchfeld.feld(welt[n]['world_pos'], dtype=torch.float64)
                                        for n in Absatzpose.FUSS + Absatzpose.ZEHEN if n in welt}
         return cls._koepfe[geschlecht]
 
@@ -84,16 +85,16 @@ class G9hbfusspose:
     def um_x(grad):
         u"""Drehmatrix um die Querachse x (Three: y oben, z vorn) — positiv senkt die Zehen."""
         c, s = math.cos(math.radians(grad)), math.sin(math.radians(grad))
-        return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
+        return Torchfeld.feld([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]], copy=True)
 
     @classmethod
     def gebeugt(cls, punkte, haut, absatz, koepfe):
         u"""(M, 3) Punkte unter dem Absatz — lineares Blend-Skinning ueber Fuss- und
         Zehenknochen, alle anderen Knochen stehen still."""
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         namen = list(haut['knochen'])
-        index = np.asarray(haut['index'], dtype=np.int64)
-        gewicht = np.asarray(haut['gewicht'], dtype=np.float64)
+        index = Torchfeld.feld(haut['index'], dtype=torch.int64)
+        gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64)
         r_fuss = cls.um_x(absatz['winkel_grad'])
         r_zeh = cls.um_x(-(absatz['winkel_grad'] + absatz['sprengung_grad']))
         bewegt = {}
@@ -104,7 +105,7 @@ class G9hbfusspose:
             if fuss in koepfe and zeh in koepfe:
                 bewegt[zeh] = lambda q, hf=koepfe[fuss], hz=koepfe[zeh]: (
                     ((q - hz) @ r_zeh.T + hz - hf) @ r_fuss.T + hf)
-        aus = p.copy()
+        aus = Torchfeld.kopie(p)
         for spalte in range(index.shape[1]):
             for nr, name in enumerate(namen):
                 if name not in bewegt:
@@ -117,14 +118,14 @@ class G9hbfusspose:
     @classmethod
     def ruhelage(cls, punkte, haut, absatz, geschlecht='female'):
         u"""Die Lage, die unter dem Absatz auf `punkte` faellt (Fixpunkt, DURCHGAENGE)."""
-        ziel = np.asarray(punkte, dtype=np.float64)
+        ziel = Torchfeld.feld(punkte, dtype=torch.float64)
         koepfe = cls.koepfe(geschlecht)
         if not koepfe:
             return ziel
-        ruhe = ziel.copy()
+        ruhe = Torchfeld.kopie(ziel)
         for _ in range(cls.DURCHGAENGE):
             rest = cls.gebeugt(ruhe, haut, absatz, koepfe) - ziel
             ruhe -= rest
-            if np.abs(rest).max() < 1e-5:
+            if Torchfeld.abs(rest).max() < 1e-5:
                 break
         return ruhe

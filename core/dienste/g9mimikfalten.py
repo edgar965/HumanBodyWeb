@@ -17,7 +17,8 @@ import json
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .g9hautfalten import G9hautfalten
 
@@ -55,20 +56,20 @@ class G9mimikfalten(G9hautfalten):
         """`(drin (S, S) bool, ecken (n, 3) Punkte der Stufe, anteile (n, 3), lage (S, S, 3))` der Kopfkachel auf der Stufe — Texel → Dreieck der Stufe."""
         from Genesis9.texturabtastung import G9texturabtastung
         s = self.ZELLE
-        dreieck = np.full((s, s), -1, dtype=np.int32)
-        bary = np.zeros((s, s, 2), dtype=np.float16)
-        uv = np.asarray(stufe.uv, dtype=np.float64) * s
+        dreieck = Torchfeld.full((s, s), -1, dtype=torch.int32)
+        bary = torch.zeros((s, s, 2), dtype=torch.float16, device='cuda')
+        uv = Torchfeld.feld(stufe.uv, dtype=torch.float64) * s
         for g in stufe.gruppen:
             if int(g['kachel']) != self.KACHEL:
                 continue
             for t in range(int(g['index_ab']) // 3, (int(g['index_ab']) + int(g['index_anzahl'])) // 3):
                 G9texturabtastung._dreieck(dreieck, bary, t, uv[stufe.dreiecke[t]])
         drin = dreieck >= 0
-        ecken = np.asarray(stufe.dreiecke, dtype=np.int64)[dreieck[drin]]
-        b = bary[drin].astype(np.float64)
-        anteile = np.clip(np.concatenate([b, 1.0 - b.sum(1, keepdims=True)], axis=1), 0.0, 1.0)
-        lage = np.zeros((s, s, 3))
-        lage[drin] = np.einsum('nk,nkc->nc', anteile, fein[ecken])
+        ecken = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64)[dreieck[drin]]
+        b = Torchfeld.astype(bary[drin], torch.float64)
+        anteile = Torchfeld.clip(Torchfeld.cat([b, 1.0 - b.sum(1, keepdims=True)], axis=1), 0.0, 1.0)
+        lage = torch.zeros((s, s, 3), dtype=torch.float64, device='cuda')
+        lage[drin] = Torchfeld.einsum('nk,nkc->nc', anteile, fein[ecken])
         return drin, ecken, anteile, lage
 
     def bauen(self):
@@ -80,34 +81,34 @@ class G9mimikfalten(G9hautfalten):
 
         t0 = time.perf_counter()
         formung = G9formung({})
-        punkte0 = np.asarray(formung.punkte(), dtype=np.float64) - np.array([0.0, formung.boden(), 0.0])
+        punkte0 = Torchfeld.feld(formung.punkte(), dtype=torch.float64) - Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
         basis = G9basisnetz.holen()
         s1, s2 = basis.netzstufe(1), basis.netzstufe(2)
         if s2.stufen < 2:
             raise ValueError('Stufe 2 nicht verfügbar')
         fein = s2.punkte(punkte0)
-        normalen = np.asarray(s2.normalen(punkte0, fein), dtype=np.float64)
+        normalen = Torchfeld.feld(s2.normalen(punkte0, fein), dtype=torch.float64)
         drin, ecken, anteile, lage = self.raster(s2, fein)
         kx, ky = self._kante(lage, drin, 1), self._kante(lage, drin, 0)
         kanaele = self.kanaele()
         namen = list(kanaele)
         zeilen = -(-len(namen) // self.SPALTEN)
         z = self.ZELLE
-        atlas = np.full((zeilen * z, self.SPALTEN * z, 3), 128, dtype=np.uint8)
+        atlas = Torchfeld.full((zeilen * z, self.SPALTEN * z, 3), 128, dtype=torch.uint8)
         steigung_max = {}
         for nr, name in enumerate(namen):
             hd = G9hdmorphe.beitrag(None, s1, s2, punkte0, aktive={name: (1.0, kanaele[name])})
-            hoehe = np.zeros((z, z))
+            hoehe = torch.zeros((z, z), dtype=torch.float64, device='cuda')
             if hd is not None:
-                punkthoehe = (np.asarray(hd, dtype=np.float64) * normalen).sum(axis=1)
-                hoehe[drin] = np.einsum('nk,nk->n', anteile, punkthoehe[ecken])
+                punkthoehe = (Torchfeld.feld(hd, dtype=torch.float64) * normalen).sum(axis=1)
+                hoehe[drin] = Torchfeld.einsum('nk,nk->n', anteile, punkthoehe[ecken])
             bild, steigung = self.normalen(hoehe, kx, ky)
             zeile, spalte = divmod(nr, self.SPALTEN)
-            zelle = np.full((z, z, 3), 128, dtype=np.uint8)
+            zelle = Torchfeld.full((z, z, 3), 128, dtype=torch.uint8)
             zelle[drin, 0], zelle[drin, 1], zelle[drin, 2] = bild[drin, 0], bild[drin, 1], 0
             atlas[zeile * z:(zeile + 1) * z, spalte * z:(spalte + 1) * z] = zelle
             steigung_max[name] = round(float(steigung[drin].max()), 3) if drin.any() else 0.0
-            logger.info('Mimikfalten %s: Steigung max %.3f, Höhe max %.2f mm (%.0f s)', name, steigung_max[name], float(np.abs(hoehe).max()) * 1000, time.perf_counter() - t0)
+            logger.info('Mimikfalten %s: Steigung max %.3f, Höhe max %.2f mm (%.0f s)', name, steigung_max[name], float(Torchfeld.abs(hoehe).max()) * 1000, time.perf_counter() - t0)
         Image.fromarray(atlas, 'RGB').save(self.bildpfad(None, self.KACHEL), 'PNG')
         liste = {'geschlecht': 'alle', 'fassung': self.FASSUNG, 'seite': z,
                  'kacheln': {str(self.KACHEL): {'kanaele': namen, 'spalten': self.SPALTEN, 'zeilen': zeilen, 'zelle': z, 'steigung_max': steigung_max}},

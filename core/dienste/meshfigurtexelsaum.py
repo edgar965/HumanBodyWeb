@@ -12,7 +12,8 @@ Nur in der Armkachel (UDIM 1004): an den behaarten Beinen (1003) änderte die Re
 als zusammenhängender Fleck mit einem Kern von `FLECK_PX` Pixeln Halbbreite, die Fremdfläche ab `GROESSE_PX` (mit 6 blieb ein Teil des Streifens, weil das Armband in der UV aus schmalen Streifen besteht).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurtexelsaum']
 
@@ -39,18 +40,18 @@ class Meshfigurtexelsaum:
     def schatten(self, drin, fremd, hell, farbe, gut):
         """(n,) bool: gute Texel im Schatten eines Fremdkörpers. `fremd` (n,): Treffer, die keine Haut sind; `hell` (n,): ihre Helligkeit (Y); `farbe` (n, 3): RGB; `gut` (n,): die echte Netzhaut."""
         if not self.PX or not fremd.any():
-            return np.zeros_like(gut)
-        from scipy import ndimage
+            return torch.zeros_like(gut)
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         marke = self._bild(drin, fremd)
         marke = ndimage.binary_opening(marke, iterations=self.GROESSE_PX)
         if not marke.any():
-            return np.zeros_like(gut)
+            return torch.zeros_like(gut)
         nah = ndimage.distance_transform_edt(~marke)[drin] <= self.PX
-        bild = np.zeros((self.seite, self.seite, 3))
+        bild = torch.zeros((self.seite, self.seite, 3), dtype=torch.float64, device='cuda')
         bild[drin] = farbe
         feld, stuetze = self.glatt(bild, self._bild(drin, gut & ~nah), self.FELD_PX)
-        dunkel = gut & nah & (stuetze[drin] > 1e-3) & (hell < self.FAKTOR * (feld[drin] @ np.array([0.299, 0.587, 0.114])))
+        dunkel = gut & nah & (stuetze[drin] > 1e-3) & (hell < self.FAKTOR * (feld[drin] @ Torchfeld.feld([0.299, 0.587, 0.114], copy=True)))
         return self._flecken(drin, dunkel)
 
     def grund(self, drin, gut, farbe, fuellung, ziel=None):
@@ -59,9 +60,9 @@ class Meshfigurtexelsaum:
         `fuellung` (n, 3) wird an Ort und Stelle ersetzt, wo das neue Feld Stütze hat und `ziel` (n,) bool gilt (die zu füllenden Texel; None: alle); gibt die Zahl der geänderten Texel zurück. `FUELL_GRUND` False: unverändert."""
         if not self.FUELL_GRUND or not gut.any():
             return 0
-        bild = np.zeros((self.seite, self.seite, 3))
+        bild = torch.zeros((self.seite, self.seite, 3), dtype=torch.float64, device='cuda')
         bild[drin] = farbe
-        gewicht = np.array([0.299, 0.587, 0.114])
+        gewicht = Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
         erste = self._feld(bild, self._bild(drin, gut))
         hell = gut & ((farbe @ gewicht) >= (erste[drin] @ gewicht))
         if not hell.any():
@@ -77,11 +78,11 @@ class Meshfigurtexelsaum:
         """Fein (`FEIN_PX`), wo genug Stütze da ist, sonst grob (`FELD_PX`) — wie die Füllung der Texelprüfung."""
         fein, m_fein = self.glatt(bild, maske, self.FEIN_PX)
         grob, m_grob = self.glatt(bild, maske, self.FELD_PX)
-        feld = np.where((m_fein > 0.15)[..., None], fein, grob)
+        feld = torch.where((m_fein > 0.15)[..., None], fein, grob)
         return (feld, m_grob) if mit_stuetze else feld
 
     def _bild(self, drin, werte):
-        bild = np.zeros((self.seite, self.seite), dtype=bool)
+        bild = torch.zeros((self.seite, self.seite), dtype=torch.bool, device='cuda')
         bild[drin] = werte
         return bild
 
@@ -89,10 +90,10 @@ class Meshfigurtexelsaum:
         """Nur zusammenhängende Flecken: dunkle Härchen (1–3 Pixel breit) bleiben, ein Schatten mit dickem Kern geht ganz (Rekonstruktion vom Kern aus). `FLECK_PX` 0: alles."""
         if not self.FLECK_PX or not dunkel.any():
             return dunkel
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         bild = self._bild(drin, dunkel)
         kern = ndimage.binary_opening(bild, iterations=self.FLECK_PX)
         if not kern.any():
-            return np.zeros_like(dunkel)
-        return ndimage.binary_propagation(kern, mask=bild, structure=np.ones((3, 3), dtype=bool))[drin]
+            return torch.zeros_like(dunkel)
+        return ndimage.binary_propagation(kern, mask=bild, structure=torch.ones((3, 3), dtype=torch.bool, device='cuda'))[drin]

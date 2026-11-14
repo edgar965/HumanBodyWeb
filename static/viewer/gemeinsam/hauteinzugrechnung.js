@@ -41,7 +41,15 @@ export class Hauteinzugrechnung {
         const abstaende = Saumband.abstaende(pos, maske, dreiecke);
         // Nie tiefer als ein Teil der Körperdicke — sonst tritt ein Punkt an einer dünnen Stelle drüben wieder aus
         // (`hautdicke.js`). Nur für die Haut; Stoff unter Stoff bringt die Hautnormalen mit.
-        const dicken = optionen.normalen ? null : Hautdicke.dicken(pos, N, maske);
+        // Je Punkt die Tiefe, bis zu der die Haut unter dem deckenden Stück nachgibt (`Bauart`, `Hautmaske.verdeckt`); 0 = keine Angabe → `Saumband.TIEFE_M`.
+        const nachgeben = optionen.nachgeben || null;
+        // Gesucht wird so weit, wie die Dicke den Einzug noch begrenzen kann (`bis / ANTEIL`).
+        let reichweiten = null;
+        if (nachgeben && !optionen.normalen) {
+            reichweiten = new Float32Array(n);
+            for (let i = 0; i < n; i++) if (maske[i] && nachgeben[i] > 0) reichweiten[i] = nachgeben[i] / Hautdicke.ANTEIL;
+        }
+        const dicken = optionen.normalen ? null : Hautdicke.dicken(pos, N, maske, reichweiten);
         for (let i = 0; i < n; i++) {
             if (!maske[i]) continue;
             const nx = N[3 * i], ny = N[3 * i + 1], nz = N[3 * i + 2];
@@ -52,9 +60,10 @@ export class Hauteinzugrechnung {
                 werte[3 * i] = schnapp[0]; werte[3 * i + 1] = schnapp[1]; werte[3 * i + 2] = schnapp[2];
                 stand.geschnappt += 1;
             } else {
+                const bis = (nachgeben && nachgeben[i] > 0) ? nachgeben[i] : Saumband.TIEFE_M;
                 const tiefe = dicken
-                    ? Math.min(Saumband.tiefe(abstaende[i]), Hautdicke.grenze(dicken[i]))
-                    : Saumband.tiefe(abstaende[i]);
+                    ? Math.min(Saumband.tiefe(abstaende[i], bis), Hautdicke.grenze(dicken[i]))
+                    : Saumband.tiefe(abstaende[i], bis);
                 werte[3 * i] = -tiefe * nx;
                 werte[3 * i + 1] = -tiefe * ny;
                 werte[3 * i + 2] = -tiefe * nz;

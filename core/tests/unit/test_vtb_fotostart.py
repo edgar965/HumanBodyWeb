@@ -45,6 +45,10 @@ from pymafxausgabe import Pymafxausgabe  # noqa: E402
 from pymafxlauf import Pymafxlauf  # noqa: E402
 
 from ._sicher import Sicher
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class DerHmr2Start(unittest.TestCase):
@@ -213,7 +217,7 @@ class DiePymafxAusgabe(unittest.TestCase):
         with Pruefablage.ordner() as ordner:
             pfad = Sicher.wert(ausgabe.netz_speichern(os.path.join(ordner, 'foto.jpg')), 'Pfad')
             self.assertEqual(os.path.basename(pfad), Pymafxausgabe.VERTEXDATEI)
-            self.assertEqual(np.load(pfad).shape, (7, 3))
+            self.assertEqual(Npztorch.lesen_numpy(pfad).shape, (7, 3))
 
 
 class Personenattrappe:

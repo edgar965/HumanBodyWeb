@@ -31,6 +31,10 @@ from Genesis9.stueckersatz import G9stueckersatz
 from core.dienste.blendimportstuecke import Blendimportstuecke
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class AugenstueckTest(SimpleTestCase):
@@ -41,8 +45,7 @@ class AugenstueckTest(SimpleTestCase):
         self.ordner = Path(gebaut.__enter__())
         self.addCleanup(gebaut.__exit__, None, None, None)
         for name, punkte in (('03.npz', 4), ('04.npz', 5)):
-            np.savez(self.ordner / name, punkte=np.arange(punkte * 3, dtype=float).reshape(punkte, 3),
-                     dreiecke=np.array([[0, 1, 2], [1, 2, 3]]), uv_ecken=np.full((6, 2), float(punkte)))
+            Npztorch.speichern(self.ordner / name, punkte=np.arange(punkte * 3, dtype=float).reshape(punkte, 3), dreiecke=np.array([[0, 1, 2], [1, 2, 3]]), uv_ecken=np.full((6, 2), float(punkte)))
         self.inventar = {'netze': [{'name': 'L_eyes', 'datei': '03.npz', 'materialien': [{'name': 'eyes'}]},
                                    {'name': 'R_eyes', 'datei': '04.npz', 'materialien': [{'name': 'eyes'}]}]}
         self.ablage = SimpleNamespace(export=lambda name='': self.ordner / name, kennung='2026.10.08.00.00.00')

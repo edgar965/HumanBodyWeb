@@ -14,7 +14,9 @@ import json
 import logging
 import shutil
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +46,11 @@ class Meshgenesistesteigenstueck:
     def _marke(self):
         h = hashlib.sha1()
         for datei in ('netz.npz', 'materialien.json'):
-            h.update((self.ordner / 'anzeige' / datei).read_bytes())
+            h.update((Npztorch.datei(self.ordner / 'anzeige' / datei) or self.ordner / 'anzeige' / datei).read_bytes())          # die echte Datei (.pt seit 13.11.2026)  # npz geprüft: echte Datei über Npztorch.datei
         h.update(json.dumps(self.regler, sort_keys=True).encode('utf-8'))
         h.update(self.praefix.encode('utf-8'))
-        with np.load(self.ordner / 'anzeige' / 'netz.npz') as z:                # seit 31.10.2026 gebacken (`_gebacken`): ein früher einfarbig geschriebenes Stück passt nicht mehr
-            if 'punktfarbe' in z.files and not np.ptp(z['uv'], axis=0).any():
+        with Npztorch.lesen(self.ordner / 'anzeige' / 'netz.npz') as z:                # seit 31.10.2026 gebacken (`_gebacken`): ein früher einfarbig geschriebenes Stück passt nicht mehr
+            if 'punktfarbe' in z.files and not Torchfeld.ptp(z['uv'], axis=0).any():
                 h.update(b'gebacken %d' % self.BACKEN_KANTE)
         return '%d:%s' % (self.FASSUNG, h.hexdigest()[:16])
 
@@ -77,7 +79,7 @@ class Meshgenesistesteigenstueck:
         erg = Uvabwicklung(punkte, dreiecke).rechnen()
         bild = arbeit / ('%s_farbe.png' % kennung)
         Texturbacker.als_png(Texturbacker(punkte, dreiecke, erg.uv, groesse=self.BACKEN_KANTE).farbe_je_punkt(farben), str(bild))
-        return bild, np.asarray(erg.uv, dtype=np.float64).reshape(-1, 2)
+        return bild, Torchfeld.feld(erg.uv, dtype=torch.float64).reshape(-1, 2)
 
     def _art(self):
         """(Kategorie, Ordnerart, Knochen) — Haar und starre Bestandteile an EINEM Knochen."""
@@ -100,10 +102,10 @@ class Meshgenesistesteigenstueck:
         from .blendimportbilder import Blendimportbilder
 
         anzeige = self.ordner / 'anzeige'
-        with np.load(anzeige / 'netz.npz') as z:
-            punkte = np.asarray(z['ruhe'], dtype=np.float64)
-            dreiecke = np.asarray(z['dreiecke'], dtype=np.int64)
-            uv = np.asarray(z['uv'], dtype=np.float64)
+        with Npztorch.lesen(anzeige / 'netz.npz') as z:
+            punkte = Torchfeld.feld(z['ruhe'], dtype=torch.float64)
+            dreiecke = Torchfeld.feld(z['dreiecke'], dtype=torch.int64)
+            uv = Torchfeld.feld(z['uv'], dtype=torch.float64)
             punktfarbe = z['punktfarbe'] if 'punktfarbe' in z.files else None
         mat = json.loads((anzeige / 'materialien.json').read_text(encoding='utf-8'))[0]
         kennung, anzeige_name = G9eigenstueck.kennung_und_name('%s %s' % (self.praefix, self.stueck.get('name')))
@@ -113,15 +115,15 @@ class Meshgenesistesteigenstueck:
         if mat.get('bild'):
             bild = arbeit / ('%s_farbe.jpg' % kennung)
             shutil.copyfile(anzeige / 'bilder' / mat['bild'], bild)
-        elif punktfarbe is not None and not np.ptp(uv, axis=0).any():
+        elif punktfarbe is not None and not Torchfeld.ptp(uv, axis=0).any():
             bild, uv_ecken = self._gebacken(arbeit, kennung, punkte, dreiecke, punktfarbe)
-        lin = np.asarray(mat.get('farbe') or [1.0, 1.0, 1.0], dtype=np.float64)
-        farbe = tuple(round(float(Blendimportbilder.srgb(w)), 4) for w in lin) if bild is None else (1.0, 1.0, 1.0)
+        lin = Torchfeld.feld(mat.get('farbe') or [1.0, 1.0, 1.0], dtype=torch.float64)
+        farbe = tuple(round(float(Blendimportbilder.srgb(w)), 4) for w in Torchfeld.liste(lin)) if bild is None else (1.0, 1.0, 1.0)
         material = {'name': kennung + '_Mat', 'farbe': farbe, 'bild': str(bild) if bild else None, 'normalen': None, 'rauheit_bild': None, 'alpha_bild': None,
                     'detailnormalen': None, 'detail_kachel': None, 'alpha_schwelle': None, 'shininess': None, 'opacity': None}
         obj = Blendimportbilder.obj(arbeit, punkte, dreiecke, uv_ecken, material)
         netz = G9objleser.lesen(str(obj))
-        roh = np.asarray(netz['punkte'], dtype=np.float64)
+        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
         kategorie, art, knochen = self._art()
 
         def schreiben(lage):

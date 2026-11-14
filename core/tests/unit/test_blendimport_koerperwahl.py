@@ -25,6 +25,10 @@ from django.test import SimpleTestCase
 
 from core.dienste.blendimportkoerperergaenzung import Blendimportkoerperergaenzung
 from core.dienste.blendimportrollen import Blendimportrollen
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 WEGWERF = Path(__file__).resolve().parent / '_wegwerf'
 
@@ -88,7 +92,7 @@ class Beinergaenzung(SimpleTestCase):
             for k in range(len(winkel)):
                 a, b = r * 24 + k, r * 24 + (k + 1) % 24
                 dreiecke += [[a, b, a + 24], [b, b + 24, a + 24]]
-        np.savez(ordner / (name + '.npz'), punkte=punkte, dreiecke=np.array(dreiecke), uv_ecken=np.zeros((len(dreiecke), 3, 2)), material=np.zeros(len(dreiecke), dtype=int))
+        Npztorch.speichern(ordner / (name + '.npz'), punkte=punkte, dreiecke=np.array(dreiecke), uv_ecken=np.zeros((len(dreiecke), 3, 2)), material=np.zeros(len(dreiecke), dtype=int))
         return {'name': name, 'datei': name + '.npz', 'punkte': len(punkte), 'min': list(punkte.min(axis=0)), 'max': list(punkte.max(axis=0)), 'materialien': []}
 
     def _lauf(self, breiten):

@@ -29,7 +29,8 @@ from core.dienste.g9lagenanfrage import G9lagenanfrage  # noqa: E402
 
 from .test_genesis9_lagen import Kunsthaut, gitter  # noqa: E402
 
-ARTEN = {'shirt': 'kleidung', 'hose': 'kleidung', 'haar': 'haar', 'bart': 'haar', 'schwert': 'requisit'}
+ARTEN = {'shirt': 'kleidung', 'hose': 'kleidung', 'hut': 'kleidung', 'haar': 'haar', 'bart': 'haar', 'schwert': 'requisit'}
+KOPF = {'hut'}
 
 
 class HaarAussen(SimpleTestCase):
@@ -38,9 +39,19 @@ class HaarAussen(SimpleTestCase):
     def setUp(self):
         self._patch = mock.patch.object(G9lagenanfrage, '_art', classmethod(lambda cls, k: ARTEN.get(k)))
         self._patch.start()
+        self._kopf = mock.patch.object(G9lagenanfrage, '_kopfbedeckung', classmethod(lambda cls, k: k in KOPF))
+        self._kopf.start()
 
     def tearDown(self):
+        self._kopf.stop()
         self._patch.stop()
+
+    def test_hut_hebt_sich_ueber_das_haar(self):
+        u"""13.11.2026 (`G9lagenhaar`): Der Hut des Zauberers lag sonst ganz im Haar."""
+        self.assertEqual(G9lagenanfrage._haar_aussen('hut', ['shirt'], ['haar', 'schwert']), (['shirt', 'haar'], ['schwert']))
+
+    def test_haar_bleibt_unter_dem_hut(self):
+        self.assertEqual(G9lagenanfrage._haar_aussen('haar', ['hut', 'bart'], ['shirt']), (['bart', 'shirt'], ['hut']))
 
     def test_kleidung_hebt_sich_nicht_ueber_haar(self):
         self.assertEqual(G9lagenanfrage._haar_aussen('shirt', ['hose', 'haar', 'bart'], ['schwert']),

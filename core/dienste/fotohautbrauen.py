@@ -27,9 +27,10 @@ import os
 import re
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
-from scipy import ndimage
+from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
 logger = logging.getLogger('core')
 
@@ -82,19 +83,19 @@ class Fotohautbrauen:
     @staticmethod
     def _glatt(feld, gueltig, sigma):
         """Gauß über die gültigen Pixel (Normalisierung durch die Gültigkeit) — `(Feld, Gewicht)`; `feld` (H, W) oder (H, W, 3)."""
-        gewicht = ndimage.gaussian_filter(gueltig.astype(np.float32), sigma, mode='nearest')
+        gewicht = ndimage.gaussian_filter(Torchfeld.astype(gueltig, torch.float32), sigma, mode='nearest')
         if feld.ndim == 3:
-            zaehler = np.stack([ndimage.gaussian_filter(feld[..., k] * gueltig, sigma, mode='nearest') for k in range(3)], axis=-1)
-            return zaehler / np.maximum(gewicht, 1e-4)[..., None], gewicht
-        return ndimage.gaussian_filter(feld * gueltig, sigma, mode='nearest') / np.maximum(gewicht, 1e-4), gewicht
+            zaehler = Torchfeld.stack([ndimage.gaussian_filter(feld[..., k] * gueltig, sigma, mode='nearest') for k in range(3)], axis=-1)
+            return zaehler / Torchfeld.maximum(gewicht, 1e-4)[..., None], gewicht
+        return ndimage.gaussian_filter(feld * gueltig, sigma, mode='nearest') / Torchfeld.maximum(gewicht, 1e-4), gewicht
 
     @classmethod
     def hintergrund(cls, licht, breite):
         """Die Leuchtdichte der Haut der Zone ohne Dunkles (Brauen, Augen, Haar)."""
         sigma = cls.SIGMA_HINTERGRUND * breite
         rand = max(1, int(round(cls.WACHSEN * breite)))
-        gueltig = licht > 0.8 * np.median(licht)
-        grund = np.full_like(licht, np.median(licht))
+        gueltig = licht > 0.8 * Torchfeld.median(licht)
+        grund = torch.full_like(licht, Torchfeld.median(licht))
         for _ in range(3):
             if not gueltig.any():
                 break
@@ -107,9 +108,9 @@ class Fotohautbrauen:
         """Die Pixel der Zone, die zu den Augen der Genesis-UV zählen (`AUGEN`, `AUGEN_UNTEN`, `AUGEN_OBEN`)."""
         u0, u1, v0, v1 = cls.ZONE
         hoehe, breite = form
-        u = u0 + (np.arange(breite) + 0.5) / breite * (u1 - u0)
-        v = v1 - (np.arange(hoehe) + 0.5) / hoehe * (v1 - v0)
-        spalten = np.zeros(breite, dtype=bool)
+        u = u0 + (Torchfeld.arange(breite) + 0.5) / breite * (u1 - u0)
+        v = v1 - (Torchfeld.arange(hoehe) + 0.5) / hoehe * (v1 - v0)
+        spalten = torch.zeros(breite, dtype=torch.bool, device='cuda')
         for von, bis in cls.AUGEN:
             spalten |= (u >= von) & (u <= bis)
         return (v < cls.AUGEN_UNTEN)[:, None] | ((v < cls.AUGEN_OBEN)[:, None] & spalten[None, :])
@@ -121,18 +122,18 @@ class Fotohautbrauen:
         zu = ndimage.grey_closing(licht, size=(seite, seite))
         strich = (zu - licht) > cls.KONTRAST * grund
         # Große tief dunkle Flächen (Haar an den Schläfen) und ihr Umfeld: ihre Strähnen sind keine Brauen.
-        tief = (licht < 0.5 * grund).astype(np.uint8)
+        tief = Torchfeld.astype(licht < 0.5 * grund, torch.uint8)
         gross = ndimage.maximum_filter(ndimage.minimum_filter(tief, size=seite), size=seite) > 0
         strich &= ~ndimage.binary_dilation(gross, iterations=max(1, int(round(cls.HAARRAND * breite))))
         strich &= ~cls.augenmaske(strich.shape)
         marken, anzahl = ndimage.label(strich)
         orte = ndimage.find_objects(marken)
-        braue = np.zeros_like(strich)
+        braue = torch.zeros_like(strich)
         for nummer, ort in enumerate(orte, start=1):
             if ort is None or cls._am_rand(ort, strich.shape):
                 continue
             fleck = marken[ort] == nummer
-            if ort[1].stop - ort[1].start >= cls.LAENGE * breite and fleck.sum() >= cls.MINDEST * licht.size:
+            if ort[1].stop - ort[1].start >= cls.LAENGE * breite and fleck.sum() >= cls.MINDEST * Torchfeld.groesse(licht):
                 braue[ort] |= fleck
         # Die dünnen Enden einer Braue (Schwanz, einzelne Haare) sind kürzer als `LAENGE`: sie zählen mit, wenn sie nahe an einer Braue liegen.
         if braue.any():
@@ -141,7 +142,7 @@ class Fotohautbrauen:
                 if ort is None or cls._am_rand(ort, strich.shape) or braue[ort][marken[ort] == nummer].any():
                     continue
                 fleck = marken[ort] == nummer
-                if fleck.sum() >= cls.ENDE_MINDEST * licht.size and nahe[ort][fleck].any():
+                if fleck.sum() >= cls.ENDE_MINDEST * Torchfeld.groesse(licht) and nahe[ort][fleck].any():
                     braue[ort] |= fleck
         return braue
 
@@ -155,9 +156,9 @@ class Fotohautbrauen:
         """Die Haut ohne Maske, in zwei Maßstäben: fein, wo genug Haut daneben liegt, sonst grob, sonst das Mittel."""
         fein, gewicht = cls._glatt(zone, gueltig, cls.SIGMA_FUELLUNG * breite)
         grob, gewicht_grob = cls._glatt(zone, gueltig, 3 * cls.SIGMA_FUELLUNG * breite)
-        mittel = np.array([np.median(zone[..., k][gueltig]) for k in range(3)], dtype=np.float32)
-        grob = np.where((gewicht_grob > 0.02)[..., None], grob, mittel)
-        anteil = np.clip(gewicht / 0.25, 0, 1)[..., None]
+        mittel = Torchfeld.feld([Torchfeld.median(zone[..., k][gueltig]) for k in range(3)], dtype=torch.float32, copy=True)
+        grob = torch.where((gewicht_grob > 0.02)[..., None], grob, mittel)
+        anteil = Torchfeld.clip(gewicht / 0.25, 0, 1)[..., None]
         return fein * anteil + grob * (1 - anteil)
 
     @classmethod
@@ -175,22 +176,22 @@ class Fotohautbrauen:
         wachsen = max(1, int(round(cls.WACHSEN * zbreite)))
         maske = ndimage.binary_dilation(braue, iterations=wachsen)
         gueltig = ~ndimage.binary_dilation(maske, iterations=wachsen) & (licht > 0.6 * grund)
-        if gueltig.sum() < 0.05 * gueltig.size:
+        if gueltig.sum() < 0.05 * Torchfeld.groesse(gueltig):
             return None, None, dict(bericht, hinweis='zu wenig Haut zum Füllen')
-        weich = np.clip(ndimage.gaussian_filter(maske.astype(np.float32), cls.SIGMA_RAND * zbreite), 0, 1)[..., None]
+        weich = Torchfeld.clip(ndimage.gaussian_filter(Torchfeld.astype(maske, torch.float32), cls.SIGMA_RAND * zbreite), 0, 1)[..., None]
         bericht['maske_px'] = int(maske.sum())
         return weich, cls.fuellung(zone, gueltig, zbreite), bericht
 
     @staticmethod
     def _gross(feld, groesse):
         """Ein Gleitkomma-Feld (H, W) oder (H, W, 3) mit Werten 0–255 auf `groesse` = (Breite, Höhe) bringen (glatt, ohne Treppen)."""
-        return np.asarray(Image.fromarray(np.clip(feld + 0.5, 0, 255).astype(np.uint8)).resize(groesse, Image.BICUBIC), dtype=np.float32)
+        return Torchfeld.feld(Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(feld + 0.5, 0, 255), torch.uint8))).resize(groesse, Image.BICUBIC), dtype=torch.float32)
 
     @classmethod
     def retuschieren(cls, bild):
         """`(Bild, Bericht)` — `bild` ist die ganze Kachel (PIL, RGB); ohne gefundene Braue dasselbe Bild.
         Gesucht und gefüllt wird auf einer Zone von höchstens `ARBEIT_PX` Breite (bei 8192 px sonst über eine Minute), angewandt auf die volle."""
-        breite, hoehe = bild.size
+        breite, hoehe = Torchfeld.groesse(bild)
         u0, u1, v0, v1 = cls.ZONE
         box = (int(u0 * breite), int((1 - v1) * hoehe), int(u1 * breite), int((1 - v0) * hoehe))
         zone_bild = bild.crop(box)
@@ -198,17 +199,17 @@ class Fotohautbrauen:
             klein = zone_bild.resize((cls.ARBEIT_PX, max(1, round(zone_bild.height * cls.ARBEIT_PX / zone_bild.width))), Image.LANCZOS)
         else:
             klein = zone_bild
-        weich, fuell, bericht = cls.masken(np.asarray(klein, dtype=np.float32))
+        weich, fuell, bericht = cls.masken(Torchfeld.feld(klein, dtype=torch.float32))
         if weich is None:
             return bild, bericht
-        zone = np.asarray(zone_bild, dtype=np.float32)
+        zone = Torchfeld.feld(zone_bild, dtype=torch.float32)
         if klein is not zone_bild:
-            weich = cls._gross(weich[..., 0] * 255, zone_bild.size)[..., None] / 255
-            fuell = cls._gross(fuell, zone_bild.size)
+            weich = cls._gross(weich[..., 0] * 255, Torchfeld.groesse(zone_bild))[..., None] / 255
+            fuell = cls._gross(fuell, Torchfeld.groesse(zone_bild))
         neu = zone * (1 - weich) + fuell * weich
-        ergebnis = bild.copy()
-        ergebnis.paste(Image.fromarray(np.clip(neu + 0.5, 0, 255).astype(np.uint8)), box[:2])
-        return ergebnis, dict(bericht, voll_px=list(zone_bild.size))
+        ergebnis = Torchfeld.kopie(bild)
+        ergebnis.paste(Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(neu + 0.5, 0, 255), torch.uint8))), box[:2])
+        return ergebnis, dict(bericht, voll_px=list(Torchfeld.groesse(zone_bild)))
 
     # --------------------------------------------------------------- Ablage
 

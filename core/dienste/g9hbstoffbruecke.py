@@ -33,7 +33,8 @@ das Mittel fest. Ohne Länge gibt es keinen Zug.
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['G9hbstoffbruecke']
 
@@ -65,49 +66,49 @@ class G9hbstoffbruecke:
                 a.append(ecke)
                 b.append(ecken[(i + 1) % len(ecken)])
         if not a:
-            return np.zeros((0, 2), dtype=np.int64)
-        k = np.unique(np.sort(np.column_stack([a, b]), axis=1), axis=0)
+            return torch.zeros((0, 2), dtype=torch.int64, device='cuda')
+        k = Torchfeld.unique(torch.sort(Torchfeld.column_stack([a, b]), dim=1, stable=True).values, axis=0)
         gilt = (k >= 0).all(axis=1) & (k < anzahl).all(axis=1) & (k[:, 0] != k[:, 1])
-        return k[gilt].astype(np.int64)
+        return Torchfeld.astype(k[gilt], torch.int64)
 
     @classmethod
     def spannen(cls, traeger, punkte, ruhe, kanten, abstand_m):
         u"""Die gehobenen Käfigpunkte `punkte`, mit den Längen von `ruhe` gespannt."""
-        p = np.asarray(punkte, dtype=np.float64).copy()
-        ruhe = np.asarray(ruhe, dtype=np.float64)
+        p = Torchfeld.kopie(Torchfeld.feld(punkte, dtype=torch.float64))
+        ruhe = Torchfeld.feld(ruhe, dtype=torch.float64)
         if not len(kanten) or ruhe.shape != p.shape:
             return p
         a, b = kanten[:, 0], kanten[:, 1]
-        laenge0 = np.linalg.norm(ruhe[b] - ruhe[a], axis=1)
-        grad = np.maximum(np.bincount(np.concatenate([a, b]), minlength=len(p)), 1).astype(np.float64)
+        laenge0 = Torchfeld.linalg_norm(ruhe[b] - ruhe[a], dim=1)
+        grad = Torchfeld.astype(Torchfeld.maximum(Torchfeld.bincount(Torchfeld.cat([a, b]), minlength=len(p)), 1), torch.float64)
         koerper, normalen, baum = traeger.koerperflaeche()
-        koerper = np.asarray(koerper, dtype=np.float64)
-        normalen = np.asarray(normalen, dtype=np.float64)
-        normalen = normalen / np.maximum(np.linalg.norm(normalen, axis=1, keepdims=True), 1e-12)
-        anfang = p.copy()
+        koerper = Torchfeld.feld(koerper, dtype=torch.float64)
+        normalen = Torchfeld.feld(normalen, dtype=torch.float64)
+        normalen = normalen / Torchfeld.maximum(Torchfeld.linalg_norm(normalen, dim=1, keepdim=True), 1e-12)
+        anfang = Torchfeld.kopie(p)
         gedehnt_vorher = cls._gedehnt(p, a, b, laenge0)
-        abstand0 = np.asarray(baum.query(p)[0]).reshape(-1)
+        abstand0 = Torchfeld.feld(baum.query(p)[0]).reshape(-1)
         for _ in range(cls.SCHRITTE):
             d = p[b] - p[a]
-            laenge = np.maximum(np.linalg.norm(d, axis=1), 1e-12)
-            zug = np.maximum(laenge - laenge0, 0.0) / laenge          # nur gedehnte Kanten
+            laenge = Torchfeld.maximum(Torchfeld.linalg_norm(d, dim=1), 1e-12)
+            zug = Torchfeld.maximum(laenge - laenge0, 0.0) / laenge          # nur gedehnte Kanten
             if not (zug > 1e-4).any():
                 break
             korrektur = (0.5 * cls.STEIFE * zug)[:, None] * d
-            summe = np.zeros_like(p)
-            np.add.at(summe, a, korrektur)
-            np.add.at(summe, b, -korrektur)
+            summe = torch.zeros_like(p)
+            Torchfeld.add_at(summe, a, korrektur)
+            Torchfeld.add_at(summe, b, -korrektur)
             p += summe / grad[:, None]
             # Der Abstand zur Haut ändert sich höchstens um den zurückgelegten Weg: Wer am Anfang weiter
             # als UMKREIS_M + Weg weg war, liegt auch jetzt außerhalb und wird nicht gefragt (Saum eines
             # Rocks: die Hälfte der Punkte) — dasselbe Ergebnis, 80 Mal weniger Anfragen an den Hautbaum.
-            sicher = abstand0 - np.linalg.norm(p - anfang, axis=1) >= cls.UMKREIS_M + 1e-9
+            sicher = abstand0 - Torchfeld.linalg_norm(p - anfang, dim=1) >= cls.UMKREIS_M + 1e-9
             p = cls._hinaus(p, koerper, normalen, baum, abstand_m, sicher)
-        weg =np.linalg.norm(p - anfang, axis=1)
+        weg =Torchfeld.linalg_norm(p - anfang, dim=1)
         logger.info('Stoffbrücke: %d Kanten gedehnt vorher, %d nachher; %d von %d Punkten bewegt '
                     '(Median %.1f mm, größter %.1f mm)', gedehnt_vorher,
                     cls._gedehnt(p, a, b, laenge0), int((weg > 1e-4).sum()), len(p),
-                    float(np.median(weg[weg > 1e-4]) * 1000) if (weg > 1e-4).any() else 0.0,
+                    float(Torchfeld.median(weg[weg > 1e-4]) * 1000) if (weg > 1e-4).any() else 0.0,
                     float(weg.max() * 1000) if len(weg) else 0.0)
         return p
 
@@ -115,16 +116,16 @@ class G9hbstoffbruecke:
     def _hinaus(cls, p, koerper, normalen, baum, abstand_m, sicher=None):
         u"""Punkte näher als `abstand_m` an der Haut entlang ihrer Normale hinaus. `sicher` (Bool je Punkt):
         Punkte, die sicher weiter als UMKREIS_M von der Haut liegen — sie werden nicht gefragt."""
-        wahl = np.arange(len(p)) if sicher is None else np.flatnonzero(~sicher)
+        wahl = Torchfeld.arange(len(p)) if sicher is None else torch.flatten(~sicher).nonzero()[:, 0]
         abstand, idx = baum.query(p[wahl])
-        idx = np.asarray(idx).reshape(-1)
+        idx = Torchfeld.feld(idx).reshape(-1)
         n = normalen[idx]
-        tiefe = np.einsum('ij,ij->i', p[wahl] - koerper[idx], n)
-        nah = (np.asarray(abstand).reshape(-1) < cls.UMKREIS_M) & (tiefe < abstand_m)
+        tiefe = Torchfeld.einsum('ij,ij->i', p[wahl] - koerper[idx], n)
+        nah = (Torchfeld.feld(abstand).reshape(-1) < cls.UMKREIS_M) & (tiefe < abstand_m)
         p[wahl[nah]] += n[nah] * (abstand_m - tiefe[nah])[:, None]
         return p
 
     @staticmethod
     def _gedehnt(p, a, b, laenge0, anteil=0.05):
         u"""Wie viele Kanten mehr als `anteil` länger sind als in Ruhe."""
-        return int((np.linalg.norm(p[b] - p[a], axis=1) > laenge0 * (1.0 + anteil)).sum())
+        return int((Torchfeld.linalg_norm(p[b] - p[a], dim=1) > laenge0 * (1.0 + anteil)).sum())

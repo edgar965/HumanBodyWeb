@@ -39,7 +39,8 @@ Nacharbeit und `Anziehen` rechnen — wie `_smpl_traeger` in `drapierdienst.py`.
 """
 import math
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.formung import G9formung
@@ -125,17 +126,17 @@ class G9garmentfigur:
     def roh(self):
         u"""Die Kaefigpunkte der Stellung, Fuesse auf dem Boden (Y oben)."""
         if self._roh is None:
-            self._roh = self.formung.punkte() - np.array([0.0, self.formung.boden(), 0.0])
+            self._roh = self.formung.punkte() - Torchfeld.feld([0.0, self.formung.boden(), 0.0], copy=True)
         return self._roh
 
     def stufe(self, stufen=0):
         return G9basisnetz.holen().netzstufe(stufen)
 
     def punkte(self):
-        return np.asarray(self.stufe(0).punkte(self.roh()), dtype=np.float64)
+        return Torchfeld.feld(self.stufe(0).punkte(self.roh()), dtype=torch.float64)
 
     def dreiecke(self):
-        return np.asarray(self.stufe(0).dreiecke, dtype=np.int64)
+        return Torchfeld.feld(self.stufe(0).dreiecke, dtype=torch.int64)
 
     def sichtbar(self):
         u"""(Punkte, Dreiecke) der Flaeche, die man sieht: Browserstufe, mit
@@ -143,8 +144,8 @@ class G9garmentfigur:
         — der Daz-Weg hat sie meist schon gerechnet)."""
         stufen = self.sichtbare_stufe()
         fein, _normalen, _baum = G9koerpernetz(self.formung, stufen=stufen).koerperflaeche()
-        return (np.asarray(fein, dtype=np.float64),
-                np.asarray(self.stufe(stufen).dreiecke, dtype=np.int64))
+        return (Torchfeld.feld(fein, dtype=torch.float64),
+                Torchfeld.feld(self.stufe(stufen).dreiecke, dtype=torch.int64))
 
     @classmethod
     def sichtbare_stufe(cls):
@@ -176,8 +177,8 @@ class G9garmentfigur:
     @staticmethod
     def projekt(punkte):
         u"""Three (m, Y oben) -> Projekt (m, Z oben)."""
-        a = np.asarray(punkte, dtype=np.float64)
-        return np.column_stack([a[:, 0], -a[:, 2], a[:, 1]])
+        a = Torchfeld.feld(punkte, dtype=torch.float64)
+        return Torchfeld.column_stack([a[:, 0], -a[:, 2], a[:, 1]])
 
     # ------------------------------------------------------------ Segmente
 
@@ -186,19 +187,19 @@ class G9garmentfigur:
         von Punktnummern, jeder Punkt genau einmal."""
         haut = self.haut()
         teile = [self.knochenteil(name) for name in haut['knochen']]
-        index = np.asarray(haut['index'], dtype=np.int64)
-        gewicht = np.asarray(haut['gewicht'], dtype=np.float64)
-        staerkster = index[np.arange(len(index)), gewicht.argmax(axis=1)]
+        index = Torchfeld.feld(haut['index'], dtype=torch.int64)
+        gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64)
+        staerkster = index[Torchfeld.arange(len(index)), gewicht.argmax(axis=1)]
         nummer = {name: n for n, name in enumerate(self.SEGMENTE)}
-        zuordnung = np.array([nummer[teile[k] or 'body'] for k in staerkster], dtype=np.int8)
-        zuordnung[gewicht.max(axis=1) <= 0] = 0
+        zuordnung = Torchfeld.feld([nummer[teile[k] or 'body'] for k in staerkster], dtype=torch.int8, copy=True)
+        zuordnung[Torchfeld.amax(gewicht, dim=1) <= 0] = 0
         stufe = self.stufe(0)
-        ecken = np.asarray(stufe.dreiecke, dtype=np.int64).ravel()
+        ecken = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).ravel()
         for gruppe in stufe.gruppen:
             if gruppe.get('name') in self.INNEN:
                 ab, anzahl = int(gruppe['index_ab']), int(gruppe['index_anzahl'])
-                zuordnung[np.unique(ecken[ab:ab + anzahl])] = nummer['face_internal']
-        return {name: np.where(zuordnung == n)[0].tolist() for name, n in nummer.items()}
+                zuordnung[Torchfeld.unique(ecken[ab:ab + anzahl])] = nummer['face_internal']
+        return {name: torch.nonzero(zuordnung == n, as_tuple=True)[0].tolist() for name, n in nummer.items()}
 
     @classmethod
     def knochenteil(cls, name):
@@ -230,7 +231,7 @@ class G9garmentfigur:
         try:
             knochen = self.formung.skelett().bauen()['knochen']
             schulter = next(k for k in knochen if k['name'] == 'l_shoulder')
-            kopf, schwanz = np.asarray(schulter['kopf']), np.asarray(schulter['schwanz'])
+            kopf, schwanz = Torchfeld.feld(schulter['kopf']), Torchfeld.feld(schulter['schwanz'])
         except (KeyError, StopIteration, TypeError, ValueError):
             return None
         weg = schwanz - kopf

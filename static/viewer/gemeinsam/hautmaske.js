@@ -137,7 +137,7 @@ export class Hautmaske {
             const [stueckRinge, stueckNahe] = stoff.starr ? [0, stoff.nahe ?? nahe] : [ringe, 0];
             const stueckTiefe = Math.max(tiefe, stoff.tiefe || 0);     // `stoff.tiefe`: Scham aus einer .blend, bis 30 mm hinter der Haut
             const stueckWeite = optionen.suchweite ?? Math.max(abstand, stueckTiefe, nahe);
-            Hautmaske._einStueck(basis, maske, stoff, abstand, stueckTiefe, stueckRinge, eng, stueckWeite, stueckNahe);
+            Hautmaske._einStueck(basis, maske, stoff, abstand, stueckTiefe, stueckRinge, eng, stueckWeite, stueckNahe, optionen.nachgeben);
             if (stoff.ersatz) {
                 Hautmaskeersatz.maskieren(basis, maske, stoff, abstand, stueckTiefe, optionen.ersatz, optionen.hoehe, optionen.rand);
             }
@@ -146,7 +146,13 @@ export class Hautmaske {
         return maske;
     }
 
-    static _einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite, nahe) {
+    /**
+     * `nachgeben` (12.11.2026, `Bauart`): Float32Array je Körperpunkt — die Tiefe, bis zu der die Haut unter dem deckenden Stück nachgibt. Liegt ein
+     * Punkt unter mehreren Stücken, gilt das tiefste: Ein schon verdeckter Punkt wird nur noch geprüft, wenn dieses Stück tiefer nachgeben lässt —
+     * die Maske selbst bleibt dieselbe wie ohne das Feld (die Reihenfolge der Stücke ändert sich nicht).
+     */
+    static _einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite, nahe, nachgeben = null) {
+        const wert = nachgeben ? (stoff.nachgeben || 0) : 0;
         const { koerper, normalen } = basis;
         const P = stoff.punkte, T = stoff.dreiecke, nP = P.length / 3;
         const { rand, nachbarn } = Hautmaske.randpunkte(T, nP);
@@ -159,7 +165,7 @@ export class Hautmaske {
         const huelle = G.huelle(P, suchweite);
         const grenze2 = suchweite * suchweite;
         for (let i = 0; i < maske.length; i++) {
-            if (maske[i]) continue;
+            if (maske[i] && !(nachgeben && wert > nachgeben[i])) continue;
             const px = koerper[3 * i], py = koerper[3 * i + 1], pz = koerper[3 * i + 2];
             if (px < huelle[0] || px > huelle[3] || py < huelle[1] || py > huelle[4]
                 || pz < huelle[2] || pz > huelle[5]) continue;
@@ -169,11 +175,11 @@ export class Hautmaske {
             // bis `abstand` darüber, muss ein zulässiges Dreieck treffen.
             const nx = normalen[3 * i], ny = normalen[3 * i + 1], nz = normalen[3 * i + 2];
             const liste = umkreis(nah.j);
-            let naechster2 = Infinity;
+            let naechster2 = Infinity, getroffen = false;
             for (let l = 0; l < liste.length; l++) {
                 const k = liste[l];
                 const t = G.strahlDreieck(P, T[k], T[k + 1], T[k + 2], px, py, pz, nx, ny, nz);
-                if (t !== null && t >= -tiefe && t <= abstand) { maske[i] = 1; break; }
+                if (t !== null && t >= -tiefe && t <= abstand) { getroffen = true; break; }
                 // Richtungsloser Fallback (27.09.2026, Schuh-Befund oben; `nahe` 0 an
                 // weichem Stoff): der Strahl kann ein nahes, aber anders gekrümmtes
                 // Dreieck verfehlen. Nur unter denselben ERLAUBTEN Dreiecken gesucht —
@@ -181,7 +187,11 @@ export class Hautmaske {
                 const d2 = nahe ? G.punktDreieckAbstand2(P, T[k], T[k + 1], T[k + 2], px, py, pz) : Infinity;
                 if (d2 < naechster2) naechster2 = d2;
             }
-            if (!maske[i] && naechster2 <= nahe * nahe) maske[i] = 1;
+            if (!getroffen && naechster2 <= nahe * nahe) getroffen = true;
+            if (getroffen) {
+                maske[i] = 1;
+                if (nachgeben && wert > nachgeben[i]) nachgeben[i] = wert;
+            }
         }
     }
 

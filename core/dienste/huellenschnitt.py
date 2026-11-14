@@ -16,7 +16,9 @@ Kante (gemessen: Hosensaum 0,665–0,699 m, Zickzack |Δy|/Umfang 0,29). Ein Sau
     Huellenschnitt(ruhe, dreiecke).feld(wahl) → (V,)        .schneiden(lagen, flaechen, spalte) → (lagen, flaechen)
 """
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Huellenschnitt']
 
@@ -35,12 +37,12 @@ class Huellenschnitt:
     VORGABE_NAH = 0.05
 
     def __init__(self, ruhe, dreiecke, halsgewicht=None):
-        self.ruhe = np.asarray(ruhe, dtype=np.float64)
-        self.dreiecke = np.asarray(dreiecke, dtype=np.int64)
+        self.ruhe = Torchfeld.feld(ruhe, dtype=torch.float64)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64)
         #: Nach `feld`: die Ebenen der Säume dieses Stücks, `[(Mitte, Normale)]` — das Stück darunter nimmt die tiefste waagerechte als Vorgabe.
         self.ebenen = []
         #: (V,) Hautgewicht der Halsknochen und ihrer Kinder je Figurpunkt (`_rundhals`); None = kein Rundhals.
-        self.halsgewicht = None if halsgewicht is None else np.asarray(halsgewicht, dtype=np.float64)
+        self.halsgewicht = None if halsgewicht is None else Torchfeld.feld(halsgewicht, dtype=torch.float64)
 
     @staticmethod
     def halsgewichte(datei, wurzel='neck1'):
@@ -48,36 +50,36 @@ class Huellenschnitt:
         Knochen."""
         if not {'knochen', 'eltern', 'haut_index', 'haut_gewicht'} <= set(datei.files):
             return None
-        knochen, eltern = [str(k) for k in datei['knochen']], np.asarray(datei['eltern'])
+        knochen, eltern = [str(k) for k in datei['knochen']], Torchfeld.feld(datei['eltern'])
         if wurzel not in knochen:
             return None
-        drin = np.zeros(len(knochen), bool)
+        drin = torch.zeros(len(knochen), dtype=torch.bool, device='cuda')
         drin[knochen.index(wurzel)] = True
         for _ in range(len(knochen)):                       # Kinder erben (Eltern stehen nicht immer vorn)
-            neu = drin | ((eltern >= 0) & drin[np.maximum(eltern, 0)])
+            neu = drin | ((eltern >= 0) & drin[Torchfeld.maximum(eltern, 0)])
             if (neu == drin).all():
                 break
             drin = neu
-        index, gewicht = np.asarray(datei['haut_index']), np.asarray(datei['haut_gewicht'], dtype=np.float64)
-        return (gewicht * drin[np.clip(index, 0, len(knochen) - 1)] * (index >= 0)).sum(axis=1)
+        index, gewicht = Torchfeld.feld(datei['haut_index']), Torchfeld.feld(datei['haut_gewicht'], dtype=torch.float64)
+        return (gewicht * drin[Torchfeld.clip(index, 0, len(knochen) - 1)] * (index >= 0)).sum(axis=1)
 
     def _mittel(self, werte, runden):
-        from scipy.sparse import coo_matrix
-        zeilen = np.repeat(np.arange(len(self.dreiecke)), 3)
-        inzidenz = coo_matrix((np.ones(len(zeilen)), (zeilen, self.dreiecke.reshape(-1))),
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        zeilen = Torchfeld.repeat_interleave(Torchfeld.arange(len(self.dreiecke)), 3)
+        inzidenz = coo_matrix((torch.ones(len(zeilen), dtype=torch.float64, device='cuda'), (zeilen, self.dreiecke.reshape(-1))),
                               shape=(len(self.dreiecke), len(self.ruhe))).tocsr()
         nachbar = (inzidenz.T @ inzidenz).tocsr()
-        anzahl = np.maximum(np.asarray(nachbar.sum(axis=1)).ravel(), 1e-12)
+        anzahl = Torchfeld.maximum(Torchfeld.feld(nachbar.sum(axis=1)).ravel(), 1e-12)
         for _ in range(runden):
             werte = (nachbar @ werte) / anzahl
         return werte
 
     def feld(self, wahl, hals=False, vorgabe=None):
         """`vorgabe`: `(Mitte, Normale)` einer Ebene, die eine Randlinie ohne eigene Ebene nimmt (`eben`) — der Saum des Stücks darüber."""
-        anteil, zahl = np.zeros(len(self.ruhe)), np.zeros(len(self.ruhe))
-        np.add.at(anteil, self.dreiecke, np.repeat(np.asarray(wahl, np.float64)[:, None], 3, axis=1))
-        np.add.at(zahl, self.dreiecke, 1.0)
-        return self.eben(self._mittel(anteil / np.maximum(zahl, 1.0), self.RUNDEN), hals, vorgabe)
+        anteil, zahl = torch.zeros(len(self.ruhe), dtype=torch.float64, device='cuda'), torch.zeros(len(self.ruhe), dtype=torch.float64, device='cuda')
+        Torchfeld.add_at(anteil, self.dreiecke, Torchfeld.repeat_interleave(Torchfeld.feld(wahl, dtype=torch.float64)[:, None], 3, dim=1))
+        Torchfeld.add_at(zahl, self.dreiecke, 1.0)
+        return self.eben(self._mittel(anteil / Torchfeld.maximum(zahl, 1.0), self.RUNDEN), hals, vorgabe)
 
     def tiefster_saum(self):
         """`(Mitte, Normale)` der tiefsten waagerechten Saum-Ebene dieses Stücks (Normale zu mehr als 0,9 senkrecht) — None ohne."""
@@ -88,25 +90,25 @@ class Huellenschnitt:
 
     def _linien(self, f):
         """Kreuzungspunkte der Linie `SCHNITT` auf den Figurkanten, je Randlinie → [(N, 3) Punkte]."""
-        from scipy.sparse import coo_matrix
-        from scipy.sparse.csgraph import connected_components
-        kanten = np.sort(np.concatenate([self.dreiecke[:, [0, 1]], self.dreiecke[:, [1, 2]],
-                                         self.dreiecke[:, [2, 0]]]), axis=1)
-        einzig, zurueck = np.unique(kanten, axis=0, return_inverse=True)
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        from KoerperKI_alle.kartengraph import connected_components
+        kanten = torch.sort(Torchfeld.cat([self.dreiecke[:, [0, 1]], self.dreiecke[:, [1, 2]],
+                                         self.dreiecke[:, [2, 0]]]), dim=1, stable=True).values
+        einzig, zurueck = Torchfeld.unique(kanten, axis=0, return_inverse=True)
         zurueck = zurueck.reshape(3, -1).T                                  # (F, 3) Kantennummern je Fläche
         u, v = einzig[:, 0], einzig[:, 1]
         kreuzt = (f[u] - self.SCHNITT) * (f[v] - self.SCHNITT) < 0
-        nummer = np.full(len(einzig), -1)
-        nummer[kreuzt] = np.arange(kreuzt.sum())
+        nummer = Torchfeld.full(len(einzig), -1)
+        nummer[kreuzt] = Torchfeld.arange(kreuzt.sum())
         if not kreuzt.any():
             return []
         t = (self.SCHNITT - f[u[kreuzt]]) / (f[v[kreuzt]] - f[u[kreuzt]])
         punkte = self.ruhe[u[kreuzt]] + t[:, None] * (self.ruhe[v[kreuzt]] - self.ruhe[u[kreuzt]])
         je_flaeche = nummer[zurueck]                                         # (F, 3), −1 = kreuzt nicht
         paare = [je_flaeche[:, [i, j]] for i, j in ((0, 1), (1, 2), (0, 2))]
-        paare = np.vstack([p[(p >= 0).all(axis=1)] for p in paare])
+        paare = Torchfeld.vstack([p[(p >= 0).all(axis=1)] for p in Torchfeld.liste(paare)])
         n = len(punkte)
-        graph = coo_matrix((np.ones(len(paare)), (paare[:, 0], paare[:, 1])), shape=(n, n))
+        graph = coo_matrix((torch.ones(len(paare), dtype=torch.float64, device='cuda'), (paare[:, 0], paare[:, 1])), shape=(n, n))
         anzahl, teil = connected_components(graph, directed=False)
         return [punkte[teil == k] for k in range(anzahl) if (teil == k).sum() >= self.PUNKTE_MIN]
 
@@ -123,7 +125,7 @@ class Huellenschnitt:
         if self.halsgewicht is None:
             return False
         oben = (self.ruhe[:, 1] >= punkte[:, 1].min() - self.HALS_UNTER) & (
-            np.linalg.norm(self.ruhe[:, [0, 2]] - punkte[:, [0, 2]].mean(axis=0), axis=1) < self.SCHULTER)
+            Torchfeld.linalg_norm(self.ruhe[:, [0, 2]] - punkte[:, [0, 2]].mean(axis=0), dim=1) < self.SCHULTER)
         aus[oben] = self.SCHNITT + (self.HALS_SCHWELLE - self.halsgewicht[oben])
         besetzt[oben] = 0.0
         return True
@@ -134,28 +136,28 @@ class Huellenschnitt:
     def eben(self, f, hals=False, vorgabe=None):
         """Das Feld nahe jeder ebenen Randlinie durch den Abstand von ihrer Ebene ersetzen; `hals`: die oberste Linie
         ist ein Rundhals (`_rundhals`); `vorgabe` `(Mitte, Normale)`: eine Linie, die keine Ebene ist, aber im Mittel höchstens `VORGABE_NAH` davon entfernt liegt, nimmt diese Ebene (Hosenbund unter dem Hemdsaum)."""
-        from scipy.spatial import cKDTree
-        aus = f.copy()
-        besetzt = np.full(len(f), np.inf)
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
+        aus = Torchfeld.kopie(f)
+        besetzt = Torchfeld.full(len(f), math.inf)
         self.ebenen = []
         linien = sorted(self._linien(f), key=lambda p: -p[:, 1].mean())
         if hals and linien and self._rundhals(f, linien[0], aus, besetzt):
             linien = linien[1:]
         for punkte in linien:
             mitte = punkte.mean(axis=0)
-            _w, achsen = np.linalg.eigh(np.cov((punkte - mitte).T))
+            _w, achsen = Torchfeld.linalg_eigh(Torchfeld.cov((punkte - mitte).T))
             normale = achsen[:, 0]
-            if np.sqrt(np.mean(((punkte - mitte) @ normale) ** 2)) > self.EBEN_RMS:
-                if vorgabe is None or float(np.mean(np.abs((punkte - vorgabe[0]) @ vorgabe[1]))) > self.VORGABE_NAH:
+            if Torchfeld.sqrt(Torchfeld.mean(((punkte - mitte) @ normale) ** 2)) > self.EBEN_RMS:
+                if vorgabe is None or float(Torchfeld.mean(Torchfeld.abs((punkte - vorgabe[0]) @ vorgabe[1]))) > self.VORGABE_NAH:
                     continue
-                mitte, normale = np.asarray(vorgabe[0], dtype=np.float64), np.asarray(vorgabe[1], dtype=np.float64)
+                mitte, normale = Torchfeld.feld(vorgabe[0], dtype=torch.float64), Torchfeld.feld(vorgabe[1], dtype=torch.float64)
             self.ebenen.append((mitte, normale))
             abstand, _ = cKDTree(punkte).query(self.ruhe, distance_upper_bound=self.NAH)
-            nah = np.isfinite(abstand) & (abstand < besetzt)
+            nah = Torchfeld.isfinite(abstand) & (abstand < besetzt)
             if not nah.any():
                 continue
             seite = (self.ruhe[nah] - mitte) @ normale
-            if np.sum((f[nah] - self.SCHNITT) * seite) < 0:              # Normale zeigt ins Stück
+            if Torchfeld.sum(Torchfeld.feld((f[nah] - self.SCHNITT) * seite)) < 0:              # Normale zeigt ins Stück
                 normale, seite = -normale, -seite
             aus[nah] = self.SCHNITT + seite / self.STEIL
             besetzt[nah] = abstand[nah]
@@ -172,19 +174,19 @@ class Huellenschnitt:
         rand = flaechen[(k == 1) | (k == 2)]
         km = k[(k == 1) | (k == 2)]
         # die Ecke, die allein auf ihrer Seite liegt, nach vorn drehen (Umlaufsinn bleibt)
-        einzeln = np.where(km == 1, np.argmax(innen[rand], axis=1), np.argmin(innen[rand], axis=1))
-        reihe = (einzeln[:, None] + np.arange(3)[None, :]) % 3
-        a, b, c = (np.take_along_axis(rand, reihe, axis=1)[:, i] for i in range(3))
-        kanten = np.sort(np.concatenate([np.stack([a, b], 1), np.stack([a, c], 1)]), axis=1)
-        einzig, zurueck = np.unique(kanten, axis=0, return_inverse=True)
+        einzeln = torch.where(km == 1, Torchfeld.argmax(innen[rand], dim=1), Torchfeld.argmin(innen[rand], dim=1))
+        reihe = (einzeln[:, None] + Torchfeld.arange(3)[None, :]) % 3
+        a, b, c = (Torchfeld.take_along_dim(rand, reihe, dim=1)[:, i] for i in range(3))
+        kanten = torch.sort(Torchfeld.cat([Torchfeld.stack([a, b], 1), Torchfeld.stack([a, c], 1)]), dim=1, stable=True).values
+        einzig, zurueck = Torchfeld.unique(kanten, axis=0, return_inverse=True)
         zurueck = zurueck.reshape(-1)
         u, v = einzig[:, 0], einzig[:, 1]
-        t = np.clip((self.SCHNITT - f[u]) / np.where(f[v] != f[u], f[v] - f[u], 1e-12), 0.02, 0.98)
+        t = Torchfeld.clip((self.SCHNITT - f[u]) / torch.where(f[v] != f[u], f[v] - f[u], 1e-12), 0.02, 0.98)
         neu = lagen[u] + t[:, None] * (lagen[v] - lagen[u])
         p_ab, p_ac = len(lagen) + zurueck[:len(a)], len(lagen) + zurueck[len(a):]
         eins = km == 1
-        teile = [ganz, np.stack([a, p_ab, p_ac], 1)[eins],
-                 np.stack([p_ab, b, c], 1)[~eins], np.stack([p_ab, c, p_ac], 1)[~eins]]
-        alle = np.vstack([lagen, neu])
-        genutzt, index = np.unique(np.vstack(teile).reshape(-1), return_inverse=True)
+        teile = [ganz, Torchfeld.stack([a, p_ab, p_ac], 1)[eins],
+                 Torchfeld.stack([p_ab, b, c], 1)[~eins], Torchfeld.stack([p_ab, c, p_ac], 1)[~eins]]
+        alle = Torchfeld.vstack([lagen, neu])
+        genutzt, index = Torchfeld.unique(Torchfeld.vstack(teile).reshape(-1), return_inverse=True)
         return alle[genutzt], index.reshape(-1, 3)

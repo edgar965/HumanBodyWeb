@@ -13,7 +13,8 @@ Ablauf (nur mit einem Vorderfoto, |Winkel| ≤ `VORN_BIS`, und erkanntem Gesicht
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image
 
 from .kopfmarken import Kopfmarken
@@ -50,13 +51,13 @@ class Kopfregistrierung:
         vorbereitet = self.ablage.unter(Engine2d3dKleiderablage.VORBEREITET) / (stamm + '.png')
         if vorbereitet.is_file():
             with Image.open(vorbereitet) as bild:
-                rgba = np.asarray(bild.convert('RGBA'))
-            figur, rgb = rgba[..., 3] > 127, rgba[..., :3].astype(np.float32)
-            alpha = rgba[..., 3:4].astype(np.float32) / 255.0
+                rgba = Torchfeld.feld(bild.convert('RGBA'))
+            figur, rgb = rgba[..., 3] > 127, Torchfeld.astype(rgba[..., :3], torch.float32)
+            alpha = Torchfeld.astype(rgba[..., 3:4], torch.float32) / 255.0
             rgb = rgb * alpha + 255.0 * (1.0 - alpha)
         else:
             with Image.open(self.ablage.unter(Engine2d3dKleiderablage.EINGANG) / r.datei) as bild:
-                rgb = np.asarray(bild.convert('RGB'), dtype=np.float32)
+                rgb = Torchfeld.feld(bild.convert('RGB'), dtype=torch.float32)
             figur = (765.0 - rgb.sum(axis=2)) > Iterationsbild.WEISS_SCHWELLE
         abbildung = Iterationsbild.abbildung(figur)
         if abbildung is None:
@@ -68,7 +69,7 @@ class Kopfregistrierung:
         y_a, y_b = int(max(y0 - oben * h, 0)), int(min(y0 + unten * h, rgb.shape[0]))
         farbe = rgb[y_a:y_b, x_a:x_b]
         ziel.parent.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(np.rint(farbe).astype(np.uint8)).save(ziel, compress_level=1)
+        Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.round(farbe), torch.uint8))).save(ziel, compress_level=1)
         return ziel, farbe / 255.0, figur[y_a:y_b, x_a:x_b]
 
     def _render_marken(self, teile, winkel, aus):
@@ -82,9 +83,9 @@ class Kopfregistrierung:
         arten = [Kopfmarken.punkte(b['gesicht'], b['breite'], b['hoehe']) for b in (befunde.get(p.name) or {} for p in pfade) if b.get('gesicht')]
         if len(arten) < 2:
             return None
-        arten = np.asarray(arten)
+        arten = Torchfeld.feld(arten)
         mittel = arten.mean(axis=0)
-        return mittel, float(np.sqrt(((arten - mittel) ** 2).sum(axis=2).mean()))
+        return mittel, float(Torchfeld.sqrt(((arten - mittel) ** 2).sum(axis=2).mean()))
 
     def projektion(self, teile, referenzen, aus):
         """→ `(Kopfprojektion, bericht)` oder `(None, Grund)`; `teile` die gebauten Teile (alle, mit Haar — die Kamera hängt am höchsten Punkt, wie bei `Gesichtsmasse`)."""
@@ -111,11 +112,11 @@ class Kopfregistrierung:
         if warp.fehler_mm is None or warp.fehler_mm > self.FEHLER_MAX_MM:
             return None, 'Warp zu ungenau (%s mm an ungesehenen Landmarken, Grenze %.1f)' % (
                 None if warp.fehler_mm is None else round(warp.fehler_mm, 2), self.FEHLER_MAX_MM)
-        scheitel = max(float(np.asarray(t['punkte'])[:, 1].max()) for t in teile)
-        mitte = np.array([0.0, scheitel - self.render.KOPF_UNTER_SCHEITEL, 0.0])
+        scheitel = max(float(Torchfeld.feld(t['punkte'])[:, 1].max()) for t in teile)
+        mitte = Torchfeld.feld([0.0, scheitel - self.render.KOPF_UNTER_SCHEITEL, 0.0], copy=True)
         haut = Kopfmarken.haut(marken_foto, (farbe.shape[1], farbe.shape[0])) & figur
         projektion = Kopfprojektion(mitte, halb, self.GROESSE, warp)
-        projektion.ansicht(r.winkel, (0.0, 0.0, 1.0), farbe, haut, np.ones(haut.shape, dtype=bool))
+        projektion.ansicht(r.winkel, (0.0, 0.0, 1.0), farbe, haut, torch.ones(haut.shape, dtype=torch.bool, device='cuda'))
         bericht = {'foto': r.datei, 'winkel': float(r.winkel), 'fehler_mm': round(warp.fehler_mm, 2), 'fehler_px': round(warp.fehler_px, 2),
                    'glaettung': warp.glaettung, 'massstab': round(warp.massstab, 3), 'streuung_px': round(streuung, 2),
                    'haut_anteil': round(float(haut.mean()), 3)}

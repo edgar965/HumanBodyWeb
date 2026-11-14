@@ -26,13 +26,14 @@ import json
 import logging
 import os
 
-import numpy as np
+import torch
 from django.conf import settings
 from humanbody_core.cloth import generate_from_pattern
 from humanbody_core.koerperabstand import Koerperabstand
 
 from ..daten.objdatei import Objdatei
 from ..dienste.charakterdaten import Charakterdaten
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger(__name__)
 
@@ -97,11 +98,11 @@ class Musterablage:
         if unterteiler is None:
             return ergebnis
         stoff = Koerperabstand.radial(
-            ergebnis['vertices'].astype(np.float64),
+            Torchfeld.astype(ergebnis['vertices'], torch.float64),
             unterteiler.subdivide(koerper),
             mindestabstand=self.abstand,
         )
-        ergebnis['vertices'] = stoff.astype(np.float32)
+        ergebnis['vertices'] = Torchfeld.astype(stoff, torch.float32)
         return ergebnis
 
     # ----------------------------------------------------------- Ablegen

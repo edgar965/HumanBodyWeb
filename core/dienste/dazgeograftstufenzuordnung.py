@@ -16,7 +16,8 @@ Die Reihenfolge im Stück hängt am Käfig (Lage, Realism-Morph 1): beide Stück
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -60,12 +61,12 @@ class Dazgeograftstufenzuordnung:
             raise ValueError('das angepasste Stück (Stufe %d) ist nicht feiner als das Basis-Stück (Stufe %d)' % (fein, grob))
         roh_g, erste_g, _rep_g = stufen[grob]
         roh_f, _erste_f, rep_f = stufen[fein]
-        abstand = np.linalg.norm(roh_f[erste_g] - roh_g[erste_g], axis=1) * 1000.0
+        abstand = Torchfeld.linalg_norm(roh_f[erste_g] - roh_g[erste_g], dim=1) * 1000.0
         if float(abstand.max()) > cls.MAX_ABSTAND_MM:
             raise ValueError('Stufe %d und %d tragen die Punkte nicht an denselben Nummern (größter Abstand %.1f mm, Grenze %.1f mm)' % (grob, fein, abstand.max(), cls.MAX_ABSTAND_MM))
         zu = rep_f[erste_g]
         logger.info('Stufenzuordnung %s: Stufe %d → %d, %d Punkte, Abstand Median %.2f mm, größter %.2f mm, %d verschiedene Ziele',
-                    geschlecht, grob, fein, len(zu), float(np.median(abstand)), float(abstand.max()), len(np.unique(zu)))
+                    geschlecht, grob, fein, len(zu), float(Torchfeld.median(abstand)), float(abstand.max()), len(Torchfeld.unique(zu)))
         return zu
 
     @classmethod

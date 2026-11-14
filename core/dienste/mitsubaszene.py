@@ -26,7 +26,8 @@ ohne das landet er unter %TEMP%\\drjit auf C:.
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .mitsubamaterial import Mitsubamaterial
 
@@ -106,7 +107,7 @@ class Mitsubaszene:
         return {'type': 'aov', 'aovs': 'alb:albedo', 'integrator': pfad} if self.kennung else pfad
 
     def _netze(self, formen, name, punkte, dreiecke, farbe, extra):
-        dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         if not len(dreiecke):
             return
         # Nahtkopien EINMAL je Teil suchen (je Teilnetz und doppelt kostete es 6,3 s je Runde, 01.10.2026).
@@ -116,7 +117,7 @@ class Mitsubaszene:
             return
         uv = extra.get('uv')
         gruppen = [g for g in (extra.get('gruppen') or []) if g.get('albedo') is not None or g.get('opazitaet') is not None] if uv is not None else []
-        belegt = np.zeros(len(dreiecke), dtype=bool)
+        belegt = torch.zeros(len(dreiecke), dtype=torch.bool, device='cuda')
         for k, g in enumerate(gruppen):
             ab, anzahl = int(g['ab']), int(g['anzahl'])
             wahl = dreiecke[ab:ab + anzahl]
@@ -143,8 +144,8 @@ class Mitsubaszene:
         bleiben, wo sie sind (der Film rendert Stranghaar als Band)."""
         werte = self.mi.traverse(self.szene)
         for form, teil, nummern, dreiecke, gruppe in self._netzliste:
-            p = np.asarray(teile[teil][0], dtype=np.float64)[nummern]
-            werte['%s.vertex_positions' % form] = self.mi.Float(np.ascontiguousarray(p, dtype=np.float32).ravel())
+            p = Torchfeld.feld(teile[teil][0], dtype=torch.float64)[nummern]
+            werte['%s.vertex_positions' % form] = self.mi.Float(Torchfeld.feld(p, dtype=torch.float32).ravel())
             werte['%s.vertex_normals' % form] = self.mi.Float(Mitsubamaterial.normalen(p, dreiecke, gruppe).ravel())
         werte.update()
 
@@ -153,8 +154,8 @@ class Mitsubaszene:
         des ganzen Teils, `Mitsubamaterial.gruppen`). UV von Daz (v nach oben, OBJ) → Mitsuba (v nach unten: Zeile 0 des
         Bildes bei v = 0)."""
         mi = self.mi
-        nummern, neu = np.unique(np.asarray(dreiecke, dtype=np.int64).ravel(), return_inverse=True)
-        p = np.asarray(punkte, dtype=np.float64)[nummern]
+        nummern, neu = Torchfeld.unique(Torchfeld.feld(dreiecke, dtype=torch.int64).ravel(), return_inverse=True)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)[nummern]
         d = neu.reshape(-1, 3)
         gruppe = (Mitsubamaterial.gruppen(punkte) if lage is None else lage)[nummern]
         self._netzliste.append((name, int(name[1:].split('_')[0]), nummern, d, gruppe))
@@ -163,20 +164,20 @@ class Mitsubaszene:
         netz = mi.Mesh(name, vertex_count=len(p), face_count=len(d), has_vertex_normals=True,
                        has_vertex_texcoords=uv is not None, props=eigen)
         werte = mi.traverse(netz)
-        werte['vertex_positions'] = mi.Float(np.ascontiguousarray(p, dtype=np.float32).ravel())
-        werte['faces'] = mi.UInt32(np.ascontiguousarray(d, dtype=np.uint32).ravel())
+        werte['vertex_positions'] = mi.Float(Torchfeld.roh(Torchfeld.feld(p, dtype=torch.float32).ravel()))
+        werte['faces'] = mi.UInt32(Torchfeld.roh(Torchfeld.feld(d, dtype=torch.uint32).ravel()))
         werte['vertex_normals'] = mi.Float(Mitsubamaterial.normalen(p, d, gruppe).ravel())
         if uv is not None:
-            t = np.asarray(uv, dtype=np.float64)[nummern].copy()
+            t = Torchfeld.kopie(Torchfeld.feld(uv, dtype=torch.float64)[nummern])
             t[:, 1] = 1.0 - t[:, 1]
-            werte['vertex_texcoords'] = mi.Float(np.ascontiguousarray(t, dtype=np.float32).ravel())
+            werte['vertex_texcoords'] = mi.Float(Torchfeld.roh(Torchfeld.feld(t, dtype=torch.float32).ravel()))
         werte.update()
         return netz
 
     def _tensoren(self, wert):
         """Bildfelder (`data`, NumPy) als Dr.Jit-Tensor — `load_dict` nimmt kein ndarray."""
         if isinstance(wert, dict):
-            return {k: (self.mi.TensorXf(v) if k == 'data' and isinstance(v, np.ndarray) else self._tensoren(v))
+            return {k: (self.mi.TensorXf(Torchfeld.roh(v)) if k == 'data' and Torchfeld.ist_feld(v) else self._tensoren(v))
                     for k, v in wert.items()}
         return wert
 
@@ -184,16 +185,16 @@ class Mitsubaszene:
         """Strähnen als `linearcurve`: Kontrollpunkte (x, y, z, r) und Segmentanfänge direkt aus den Feldern — Mitsuba
         liest Kurven nur aus einer Datei, also eine Strähne als Platzhalter laden und die Felder ersetzen."""
         mi = self.mi
-        reihe = np.asarray(kurven['reihe'], dtype=np.int64)
-        laengen = np.asarray(kurven['laengen'], dtype=np.int64)
-        p = np.asarray(kurven['punkte'], dtype=np.float32)[reihe]
-        r = np.asarray(kurven['radius'], dtype=np.float32)[reihe]
-        start = np.concatenate([[0], np.cumsum(laengen)[:-1]])
-        segment = np.concatenate([np.arange(s, s + n - 1) for s, n in zip(start, laengen, strict=True) if n >= 2])
+        reihe = Torchfeld.feld(kurven['reihe'], dtype=torch.int64)
+        laengen = Torchfeld.feld(kurven['laengen'], dtype=torch.int64)
+        p = Torchfeld.feld(kurven['punkte'], dtype=torch.float32)[reihe]
+        r = Torchfeld.feld(kurven['radius'], dtype=torch.float32)[reihe]
+        start = Torchfeld.cat([[0], Torchfeld.cumsum(laengen)[:-1]])
+        segment = Torchfeld.cat([Torchfeld.arange(s, s + n - 1) for s, n in zip(start, laengen, strict=True) if n >= 2])
         form = mi.load_dict({'type': 'linearcurve', 'filename': self._platzhalter(), 'bsdf': bsdf})
         werte = mi.traverse(form)
-        werte['control_points'] = mi.Float(np.ascontiguousarray(np.column_stack([p, r]), dtype=np.float32).ravel())
-        werte['segment_indices'] = mi.UInt32(segment.astype(np.uint32))
+        werte['control_points'] = mi.Float(Torchfeld.roh(Torchfeld.feld(Torchfeld.column_stack([p, r]), dtype=torch.float32).ravel()))
+        werte['segment_indices'] = mi.UInt32(Torchfeld.roh(Torchfeld.astype(segment, torch.uint32)))
         werte.update()
         return form
 
@@ -212,9 +213,9 @@ class Mitsubaszene:
     def sensor(self, mitte, halb, winkel, groesse, spp):
         b, h = int(groesse[0]), int(groesse[1])
         s = float(halb) * b / h
-        bogen = np.radians(float(winkel))
-        mitte = np.asarray(mitte, dtype=np.float64)
-        lage = mitte + max(4.0 * float(halb), 2.0) * np.array([np.sin(bogen), 0.0, np.cos(bogen)])
+        bogen = Torchfeld.radians(float(winkel))
+        mitte = Torchfeld.feld(mitte, dtype=torch.float64)
+        lage = mitte + max(4.0 * float(halb), 2.0) * Torchfeld.feld([Torchfeld.sin(bogen), 0.0, Torchfeld.cos(bogen)], copy=True)
         T = self.mi.ScalarTransform4f
         return self.mi.load_dict({
             'type': 'orthographic', 'near_clip': 1e-3, 'far_clip': 1e3,
@@ -232,11 +233,11 @@ class Mitsubaszene:
         spp = 1 if self.kennung else int(spp or self.SPP)
         roh = self.mi.render(self.szene, sensor=self.sensor(mitte, halb, winkel, groesse, spp), spp=spp, seed=int(saat))
         dr.sync_thread()
-        feld = np.array(roh, dtype=np.float32)
-        alpha = np.clip(feld[..., 3], 0.0, 1.0)
+        feld = Torchfeld.feld(roh, dtype=torch.float32, copy=True)
+        alpha = Torchfeld.clip(feld[..., 3], 0.0, 1.0)
         if self.kennung:
-            rgb = np.clip(feld[..., 4:7], 0.0, 1.0)
-            alpha = (alpha > 0.5).astype(np.float32)
+            rgb = Torchfeld.clip(feld[..., 4:7], 0.0, 1.0)
+            alpha = Torchfeld.astype(alpha > 0.5, torch.float32)
         else:
-            rgb = Mitsubamaterial.srgb(feld[..., :3] / np.maximum(alpha, 1e-6)[..., None])
-        return np.dstack([rgb * (alpha[..., None] > 0), alpha]).astype(np.float32)
+            rgb = Mitsubamaterial.srgb(feld[..., :3] / Torchfeld.maximum(alpha, 1e-6)[..., None])
+        return Torchfeld.astype(Torchfeld.dstack([rgb * (alpha[..., None] > 0), alpha]), torch.float32)

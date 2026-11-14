@@ -11,7 +11,8 @@ gelten sie für die gebackene Figur (`Meshfigurgriff.anwenden` addiert sie zu de
 denselben Armwinkeln (`ohne_finger`): nur was die Finger darüber hinaus verbessern, zählt.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportfingermodell import Blendimportfingermodell
 
@@ -42,17 +43,17 @@ class Meshfigurgriffmodell(Blendimportfingermodell):
 
     def ohne_finger(self):
         """Die beste Lage der GESTRECKTEN Hand (Armwinkel und Größe frei, Finger bei 0) — der Maßstab, den die Finger schlagen müssen: `{kennzahlen, phi}`."""
-        from scipy.optimize import least_squares
+        from KoerperKI_alle.kartenausgleich import least_squares
 
-        frei = np.array([not any(f in k for f in self.FINGER_TEILE) for k, _ in self.schluessel] + [True])
-        start = np.zeros(self.anzahl)
+        frei = Torchfeld.feld([not any(f in k for f in self.FINGER_TEILE) for k, _ in self.schluessel] + [True], copy=True)
+        start = torch.zeros(self.anzahl, dtype=torch.float64, device='cuda')
 
         def reste(u):
-            phi = start.copy()
+            phi = Torchfeld.kopie(start)
             phi[frei] = u * 10.0
             return self.reste(phi)
 
-        erg = least_squares(reste, np.zeros(int(frei.sum())), bounds=(self.unten[frei] / 10.0, self.oben[frei] / 10.0), loss='soft_l1', f_scale=0.008, diff_step=0.1, max_nfev=30)
-        phi = start.copy()
+        erg = least_squares(reste, torch.zeros(int(frei.sum()), dtype=torch.float64, device='cuda'), bounds=(self.unten[frei] / 10.0, self.oben[frei] / 10.0), loss='soft_l1', f_scale=0.008, diff_step=0.1, max_nfev=30)
+        phi = Torchfeld.kopie(start)
         phi[frei] = erg.x * 10.0
         return {'kennzahlen': self.kennzahlen(phi), 'phi': phi}

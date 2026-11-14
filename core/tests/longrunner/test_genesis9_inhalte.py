@@ -27,6 +27,10 @@ from Genesis9.morphablage import G9morphablage
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
 from Genesis9.schminke import G9schminke
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 def bibliothek_da():
@@ -262,7 +266,7 @@ class NetzMitInhaltenTest(SimpleTestCase):
         self.assertTrue(gloss['bilder']['Head']['metall']
                         .endswith('P3DUrsula_Gloss_1001.jpg'))
         self.assertEqual(gloss['bilder']['Head']['metallgewicht'], 0.8)
-        ablagen = list(G9pfade.ablage().glob('anhangmorphe_*.npz'))
+        ablagen = list(Npztorch.glob(G9pfade.ablage(), 'anhangmorphe_*.npz'))
         self.assertGreater(len(ablagen), 5, 'Anhangmorphe-Ablagen fehlen')
-        self.assertTrue(list(G9pfade.ablage().glob('haut_koerper_s1_*.npz')))
-        self.assertTrue(list(G9pfade.ablage().glob('naht_*.npz')))
+        self.assertTrue(list(Npztorch.glob(G9pfade.ablage(), 'haut_koerper_s1_*.npz')))
+        self.assertTrue(list(Npztorch.glob(G9pfade.ablage(), 'naht_*.npz')))

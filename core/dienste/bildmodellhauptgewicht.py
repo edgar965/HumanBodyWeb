@@ -21,7 +21,8 @@ das Maßband (`Bildmodellmassband.smplx`) und die Kopfwahl (`kopf`: erst das
 Kopf-Hauptbild von vorn, dann Seite, dann hinten, dann das größte Gesicht).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .bildmodellbildtypen import Bildmodellbildtypen
 
@@ -81,8 +82,8 @@ class Bildmodellhauptgewicht:
         if not bilder or len(werte) == 0:  # `werte` kann ein numpy-Array sein — kein `not`
             return None
         g = self.gewichte(bilder)
-        w = np.array([g.get(b.get('datei'), 0.0) for b in bilder], dtype=float)
-        m = np.array(werte, dtype=float)
+        w = Torchfeld.feld([g.get(b.get('datei'), 0.0) for b in bilder], dtype=torch.float64, copy=True)
+        m = Torchfeld.feld(werte, dtype=torch.float64, copy=True)
         if w.sum() <= 0:
             return m.mean(axis=0)
         return (m * w[:, None]).sum(axis=0) / w.sum()

@@ -174,6 +174,13 @@
     margin: 0 0 6px 28px; padding-left: 8px; border-left: 2px solid var(--einstellung);
 }
 .genesis9-stueckregler .genesis9-reglergruppe > summary.aufklappkopf { color: var(--einstellung); }
+/* Bewegung und „Haut gibt nach“ je Stück (`genesis9bauartwahl.js`, 12.11.2026). */
+.genesis9-bauart { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 6px; font-size: 12px; }
+.genesis9-bauart-zeile { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.genesis9-bauart-art { min-width: 0; max-width: 62%; }
+.genesis9-bauart-tiefe { width: 56px; }
+.genesis9-bauart select, .genesis9-bauart option, .genesis9-bauart input { background: #fff; color: #000; color-scheme: light; }
+.genesis9-bauart input::placeholder { color: #555; }
 /* Die Zeilen darin (25.10.2026, Edgar: „Abstand zum Geschlechtsteil (mm)“ läuft aus dem Panel, der Wert fehlt, „50 %“ bricht um). Gemessen bei 400 px
    Panelbreite: Zeile 311 px, Inhalt 368 px — die Beschriftung behielt ihre volle Breite (195 px), der Schieber seine Standardbreite (129 px), der Wert stand bei
    x 802–830 jenseits des Rands (773), „50 %“ umbrach auf 48 px Höhe. Jetzt bricht die Beschriftung um (höchstens 45 %), der Schieber nimmt den Rest bis

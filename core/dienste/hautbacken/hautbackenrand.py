@@ -9,7 +9,8 @@ die Blender leer lässt. Was dahinter bleibt, ist leer und wird wie bisher von `
 """
 
 import cv2
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 from . import hautbackenkernel as kern
@@ -26,11 +27,11 @@ class Hautbackenrand:
     def erweitern(self, bild, maske):
         """`(bild, maske)`: `bild` `(h, w, 3)` uint8 im Speicher, `maske` `(h, w)` bool (gebacken). Gibt Bild und Maske mit dem Rand zurück."""
         h, w = maske.shape
-        nah = cv2.dilate(maske.astype(np.uint8), np.ones((2 * self.breite + 1, 2 * self.breite + 1), np.uint8))
-        a_bild = wp.array(np.ascontiguousarray(bild), dtype=wp.uint8, device=self.geraet)
-        a_maske = wp.array(maske.astype(np.uint8), dtype=wp.uint8, device=self.geraet)
+        nah = cv2.dilate(Torchfeld.roh(Torchfeld.astype(maske, torch.uint8)), Torchfeld.roh(torch.ones((2 * self.breite + 1, 2 * self.breite + 1), dtype=torch.uint8, device='cuda')))
+        a_bild = wp.array(Torchfeld.feld(bild), dtype=wp.uint8, device=self.geraet)
+        a_maske = wp.array(Torchfeld.astype(maske, torch.uint8), dtype=wp.uint8, device=self.geraet)
         a_nah = wp.array(nah, dtype=wp.uint8, device=self.geraet)
         aus = wp.empty_like(a_bild)
         aus_maske = wp.empty_like(a_maske)
         wp.launch(kern.erweitern, dim=(h, w), inputs=[a_bild, a_maske, a_nah, self.breite, aus, aus_maske], device=self.geraet)
-        return aus.numpy(), aus_maske.numpy().astype(bool)
+        return aus.numpy(), Torchfeld.astype(aus_maske.numpy(), torch.bool)

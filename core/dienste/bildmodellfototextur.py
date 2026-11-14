@@ -40,7 +40,9 @@ import os
 import subprocess
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..daten.wrapperpfad import Wrapperpfad
@@ -215,7 +217,7 @@ class Bildmodellfototextur:
         antwort = Bildmodellmehrbild.antwort(aus)
         if not antwort or 'error' in antwort:
             raise RuntimeError('Fotofarben: %s' % ((antwort or {}).get('error') or (fehler or '')[-400:]))
-        with np.load(self.ablage.ergebnis() / self.TEXEL) as d:
+        with Npztorch.lesen(self.ablage.ergebnis() / self.TEXEL) as d:
             return {k: d[k] for k in d.files}, antwort
 
     # ------------------------------------------------------------- Backen
@@ -225,16 +227,16 @@ class Bildmodellfototextur:
         from Genesis9.restmorph import G9restmorph
         from Genesis9.texturbacken import G9texturbacken
 
-        gedeckt = np.asarray(hd['punktgewicht'], dtype=float) > 0
+        gedeckt = Torchfeld.feld(hd['punktgewicht'], dtype=torch.float64) > 0
         if melder:
             melder(0.6, 'Lücken füllen (%d von %d Punkten gedeckt)' % (int(gedeckt.sum()), len(gedeckt)))
         # Lücken: ungedeckte Punkte nehmen den Mittelwert ihrer Nachbarn (Kanten des Käfigs);
         # die Deckung läuft über dieselben Kanten aus (weicher Rand statt harter Kante).
-        gewicht_feld = gedeckt.astype(float)
-        gefuellt = G9restmorph.glaetten(np.asarray(hd['punktfarbe'], dtype=float), gewicht_feld, schritte=0)
-        feder = G9restmorph.glaetten(np.repeat(gewicht_feld[:, None], 3, axis=1), gewicht_feld,
+        gewicht_feld = Torchfeld.astype(gedeckt, torch.float64)
+        gefuellt = G9restmorph.glaetten(Torchfeld.feld(hd['punktfarbe'], dtype=torch.float64), gewicht_feld, schritte=0)
+        feder = G9restmorph.glaetten(Torchfeld.repeat_interleave(gewicht_feld[:, None], 3, dim=1), gewicht_feld,
                                      schritte=0)[:, 0]
-        alpha = np.clip((feder - 0.2) / 0.8, 0.0, 1.0)
+        alpha = Torchfeld.clip((feder - 0.2) / 0.8, 0.0, 1.0)
         hautton = Bildmodelltextur.hautton(self.job.bilder).get('hautton')
         if melder:
             melder(0.7, 'Kacheln backen (%d²)' % abtastung.seite)
@@ -249,9 +251,9 @@ class Bildmodellfototextur:
 
         pfad = self.ablage.ergebnis() / self.TEXEL
         alt = self.job.ergebnis.get('fototextur')
-        if not pfad.is_file() or not alt:
+        if not Npztorch.da(pfad) or not alt:
             return None
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             hd = {k: d[k] for k in d.files}
         kacheln, herkunft, hautton = self._kacheln(hd, G9texturabtastung.holen(), melder)
         return self._verschiebung(dict(
@@ -283,7 +285,7 @@ class Bildmodellfototextur:
         if melder:
             melder(0.05, 'Fototextur aus %d Bildern (python10)' % len(bilder))
         hd, antwort = self.fotofarben(bilder, modell, abtastung)
-        gedeckt = np.asarray(hd['punktgewicht'], dtype=float) > 0
+        gedeckt = Torchfeld.feld(hd['punktgewicht'], dtype=torch.float64) > 0
         kacheln, herkunft, hautton = self._kacheln(hd, abtastung, melder)
         ordner = self.ablage.ergebnis()
         karten = G9kachelkarte(abtastung, modell.teil).schreiben(ordner)

@@ -27,7 +27,7 @@ an); Bericht in `ergebnis.anpassung.umriss`.
 
 import logging
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellbildtypen import Bildmodellbildtypen
@@ -96,7 +96,7 @@ class Bildmodellumriss:
             if len(lm) >= 13 and lm[0][2] >= self.SICHT:
                 nase, schultern = lm[0], [lm[11][0], lm[12][0]]
         if nase is not None and schultern:
-            profil['front_links'] = nase[0] < float(np.mean(schultern))
+            profil['front_links'] = nase[0] < float(Torchfeld.mean(schultern))
         from Genesis9.fotoproportionen import G9fotoproportionen
 
         n = len(profil['breiten'])

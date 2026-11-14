@@ -17,7 +17,9 @@ import json
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from .meshgenesisdaten import Meshgenesisdaten
@@ -54,7 +56,7 @@ class Meshgenesisgenesis:
     def drehung(cls, knochen, winkel):
         """Daz-Gelenkwinkel (138, 3) → `{knochen: {'rotation/x': Grad, …}}`, ohne die Wurzel und ohne Kanäle bei 0."""
         aus = {}
-        for k, w in zip(knochen, np.asarray(winkel, dtype=float), strict=True):
+        for k, w in zip(knochen, Torchfeld.feld(winkel, dtype=torch.float64), strict=True):
             if k.get('eltern', 0) < 0:
                 continue
             kanaele = {c: round(float(v), 4) for c, v in zip(cls.KANAELE, w, strict=True) if abs(v) > 1e-6}
@@ -93,8 +95,8 @@ class Meshgenesisgenesis:
                 pass
         ziel = ergebnis = None
         kanaele = ordner / 'proben' / ('%04d' % int(nr)) / 'kanaele.npz'
-        if knochen and kanaele.is_file():
-            with np.load(kanaele) as z:
+        if knochen and Npztorch.da(kanaele):
+            with Npztorch.lesen(kanaele) as z:
                 ziel = cls.drehung(knochen, z['winkel'])
         wege = Meshgenesiswege.lesen(lauf, len(knochen)) if knochen and lauf is not None else None
         if wege and int(nr) in wege['proben']:
@@ -102,11 +104,11 @@ class Meshgenesisgenesis:
             ergebnis = cls.drehung(knochen, Meshgenesisdazwinkel.aus_drehungen(wege['proben'][int(nr)][weg][1], knochen))
         elif knochen_ergebnis and lauf is not None:
             weg = None
-            with np.load(lauf / 'vorhersagen.npz') as v:
+            with Npztorch.lesen(lauf / 'vorhersagen.npz') as v:
                 for gruppe in Meshgenesisdaten.GRUPPEN:
                     if gruppe + '_winkel' not in v.files:
                         continue
-                    treffer = np.nonzero(v[gruppe + '_nr'] == int(nr))[0]
+                    treffer = torch.nonzero(v[gruppe + '_nr'] == int(nr), as_tuple=True)[0]
                     if len(treffer):
                         ergebnis = cls.drehung(knochen_ergebnis, v[gruppe + '_winkel'][treffer[0]])
                         break

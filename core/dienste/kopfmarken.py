@@ -11,7 +11,8 @@ darum richtet `Kopfwarp` das FOTO nach den Landmarken auf das Modell aus, und di
 Die Nummern sind die Umrissketten von MediaPipe (`face_mesh_connections`); an Foto und Render gezeichnet geprüft (`ProjektTemp/_wegwerf/edgar/kopf_reg_probe.py`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from PIL import Image, ImageDraw
 
 __all__ = ['Kopfmarken']
@@ -38,29 +39,29 @@ class Kopfmarken:
     @staticmethod
     def punkte(gesicht, breite, hoehe, ursprung=(0.0, 0.0)):
         """`gesicht`: 478 × (x, y) in Bildanteilen eines Bildes `breite` × `hoehe` px → (478, 2) in Pixeln, um `ursprung` verschoben (Ausschnitt im größeren Bild)."""
-        p = np.asarray([[float(q[0]), float(q[1])] for q in gesicht], dtype=np.float64)
-        return p * np.array([float(breite), float(hoehe)]) - np.asarray(ursprung, dtype=np.float64)
+        p = Torchfeld.feld([[float(q[0]), float(q[1])] for q in gesicht], dtype=torch.float64)
+        return p * Torchfeld.feld([float(breite), float(hoehe)], copy=True) - Torchfeld.feld(ursprung, dtype=torch.float64)
 
     @classmethod
     def hoehe(cls, p):
         """Gesichtshöhe Stirn – Kinn in Pixeln."""
-        return float(np.hypot(*(p[cls.STIRN] - p[cls.KINN])))
+        return float(Torchfeld.hypot(*(p[cls.STIRN] - p[cls.KINN])))
 
     @staticmethod
     def _flaeche(punkte, groesse):
         """Bool-Maske `(hoehe, breite)` des Vielecks `punkte` (N, 2)."""
         bild = Image.new('L', (int(groesse[0]), int(groesse[1])), 0)
         ImageDraw.Draw(bild).polygon([(float(x), float(y)) for x, y in punkte], fill=255)
-        return np.asarray(bild) > 0
+        return Torchfeld.feld(bild) > 0
 
     @staticmethod
     def _wachsen(maske, radius):
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
         return ndimage.distance_transform_edt(~maske) <= max(float(radius), 1.0)
 
     @staticmethod
     def _schrumpfen(maske, radius):
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
         return ndimage.distance_transform_edt(maske) > max(float(radius), 1.0)
 
     @classmethod
@@ -68,7 +69,7 @@ class Kopfmarken:
         """Pixel des Fotos, in denen Gesichtshaut zählt: `(hoehe, breite)` Bool für `p` (478, 2) in Pixeln eines Ausschnitts `groesse` (Breite, Höhe)."""
         h = cls.hoehe(p)
         maske = cls._schrumpfen(cls._flaeche(p[list(cls.OVAL)], groesse), cls.OVAL_RAND * h)
-        brauen = np.vstack([p[list(cls.BRAUE_LINKS)], p[list(cls.BRAUE_RECHTS)]])
+        brauen = Torchfeld.vstack([p[list(cls.BRAUE_LINKS)], p[list(cls.BRAUE_RECHTS)]])
         oben = float(brauen[:, 1].min())
         grenze = oben - cls.STIRN_BIS * (oben - float(p[cls.STIRN][1]))
         maske[: max(int(grenze), 0)] = False

@@ -11,7 +11,8 @@ Normalen und Tangenten, die Cycles in Blender benutzt:
 * Tangenten der Figur (Backziel): Blenders eigener Weg beim Backen (`calc_tangents`, Modus `blender`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..hautbackenblendernormalen import Hautbackenblendernormalen
 from ..hautbackentangenten import Hautbackentangenten
@@ -23,16 +24,16 @@ __all__ = ['Hautschattungbau']
 class Hautschattungbau:
     @staticmethod
     def aus_export(punkte, npz, info, geraet='cuda:0'):
-        punkte = np.ascontiguousarray(punkte, dtype=np.float32)
-        dreiecke = np.asarray(npz['dreiecke'])
+        punkte = Torchfeld.feld(punkte, dtype=torch.float32)
+        dreiecke = Torchfeld.feld(npz['dreiecke'])
         n = Hautbackenblendernormalen.berechnen(
             punkte, npz['poly_start'], npz['poly_punkte'], npz.get('kanten'), npz.get('ecke_kante'), npz.get('scharf_kante'), npz.get('scharf_flaeche'),
             npz.get('eigene_normale'))
         if info.get('normalen_domain') not in (None, n['domain']):
             raise ValueError('Normalen-Domain: Blender meldet %s, die Rechnung ergibt %s' % (info.get('normalen_domain'), n['domain']))
         ecke = n['domain'] == 'CORNER'
-        ecken_normalen = n['ecken'][np.asarray(npz['dreieck_ecken'])] if ecke else n['punkte'][dreiecke]
-        glatt = np.asarray(npz['glatt'], dtype=bool) if 'glatt' in npz else np.ones(len(dreiecke), dtype=bool)
+        ecken_normalen = n['ecken'][Torchfeld.feld(npz['dreieck_ecken'])] if ecke else n['punkte'][dreiecke]
+        glatt = Torchfeld.feld(npz['glatt'], dtype=torch.bool) if 'glatt' in npz else torch.ones(len(dreiecke), dtype=torch.bool, device='cuda')
 
         def tangenten(uv_index):
             return Hautbackentangenten.berechnen(punkte, dreiecke, npz['uv_%d' % uv_index], normalen=None if ecke else n['punkte'], glatt=glatt,
@@ -44,4 +45,4 @@ class Hautschattungbau:
     def figur_tangenten(figur):
         """`(M, 3, 4)` float32: Tangente (xyz) und Vorzeichen (w) je Ecke der Figur, wie Blender sie beim Backen in den Tangentenraum der Figur rechnet."""
         t, s = Hautbackentangenten.berechnen(figur.punkte, figur.dreiecke, figur.uv_ecken, modus='blender')
-        return np.concatenate([t, s[..., None]], axis=2).astype(np.float32)
+        return Torchfeld.astype(Torchfeld.cat([t, s[..., None]], axis=2), torch.float32)

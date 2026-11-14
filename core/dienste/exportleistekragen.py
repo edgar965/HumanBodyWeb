@@ -10,8 +10,9 @@ Randpunkte eines deckenden Stücks in Halshöhe, die `NAH_M` bis `WEIT_M` über 
 bleibt, wie er ist: Er steht weiter ab oder liegt tiefer. Haar deckt nicht und bleibt. Die Haut unter dem Stück rechnet `Exportleistehautmaske` danach, auf dem angelegten Stück.
 """
 
-import numpy as np
-from scipy.spatial import cKDTree
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
 __all__ = ['Exportleistekragen']
 
@@ -37,10 +38,10 @@ class Exportleistekragen:
         from .exportleistehautmaske import Exportleistehautmaske
         p, t = Exportleistehautmaske.verschweissen(punkte, dreiecke)
         n = len(p)
-        kanten = np.sort(np.concatenate([t[:, [0, 1]], t[:, [1, 2]], t[:, [2, 0]]]), axis=1)
-        einzig, zahl = np.unique(kanten[:, 0] * n + kanten[:, 1], return_counts=True)
+        kanten = torch.sort(Torchfeld.cat([t[:, [0, 1]], t[:, [1, 2]], t[:, [2, 0]]]), dim=1, stable=True).values
+        einzig, zahl = Torchfeld.unique(kanten[:, 0] * n + kanten[:, 1], return_counts=True)
         offen = einzig[zahl == 1]
-        return p[np.unique(np.concatenate([offen // n, offen % n]))]
+        return p[Torchfeld.unique(Torchfeld.cat([offen // n, offen % n]))]
 
     @classmethod
     def anlegen(cls, stuecke, netz):
@@ -48,10 +49,10 @@ class Exportleistekragen:
         knochen = {k['name']: k for k in netz['skelett']['knochen']}
         if 'neck1' not in knochen or 'head' not in knochen:
             return {}
-        haut, normalen = np.asarray(netz['punkte'], dtype=np.float64), np.asarray(netz['normalen'], dtype=np.float64)
+        haut, normalen = Torchfeld.feld(netz['punkte'], dtype=torch.float64), Torchfeld.feld(netz['normalen'], dtype=torch.float64)
         unten, oben = float(knochen['neck1']['kopf'][1]) - cls.UNTER_HALS_M, float(knochen['head']['kopf'][1])
-        achse = np.asarray(knochen['head']['kopf'], dtype=np.float64)[[0, 2]]
-        am_hals = lambda q: (q[:, 1] > unten) & (q[:, 1] < oben) & (np.linalg.norm(q[:, [0, 2]] - achse, axis=1) < cls.RADIUS_M)
+        achse = Torchfeld.feld(knochen['head']['kopf'], dtype=torch.float64)[[0, 2]]
+        am_hals = lambda q: (q[:, 1] > unten) & (q[:, 1] < oben) & (Torchfeld.linalg_norm(q[:, [0, 2]] - achse, dim=1) < cls.RADIUS_M)
         feld = (haut[:, 1] > unten - cls.WEIT_M) & (haut[:, 1] < oben + cls.WEIT_M)
         baum, flaeche, richtung = cKDTree(haut[feld]), haut[feld], normalen[feld]
         bericht = {}
@@ -70,7 +71,7 @@ class Exportleistekragen:
             ziel = rand[offen]
             versatz = -richtung[nah][offen] * (hoehe[offen] - cls.LUFT_M)[:, None]
             bericht[s['name']] = {'punkte': int(offen.sum()), 'weit_mm': round(float((hoehe[offen] - cls.LUFT_M).max()) * 1000, 1)}
-            s['punkte'] = cls._versetzt(np.asarray(s['punkte'], dtype=np.float64), ziel, versatz)
+            s['punkte'] = cls._versetzt(Torchfeld.feld(s['punkte'], dtype=torch.float64), ziel, versatz)
         return bericht
 
     @classmethod
@@ -79,11 +80,11 @@ class Exportleistekragen:
         k = min(cls.NACHBARN, len(ziel))
         ab, nah = cKDTree(ziel).query(punkte, k=k, distance_upper_bound=cls.FALL_M)
         ab, nah = ab.reshape(len(punkte), k), nah.reshape(len(punkte), k)
-        treffer = np.isfinite(ab)
+        treffer = Torchfeld.isfinite(ab)
         an = treffer.any(1)
         nah_an, treffer_an = nah[an], treffer[an]
-        mittel = (versatz[np.minimum(nah_an, len(ziel) - 1)] * treffer_an[:, :, None]).sum(1) / treffer_an.sum(1, keepdims=True)
-        t = np.clip(1.0 - ab[an, 0] / cls.FALL_M, 0.0, 1.0)
-        neu = punkte.copy()
+        mittel = (versatz[Torchfeld.minimum(nah_an, len(ziel) - 1)] * treffer_an[:, :, None]).sum(1) / treffer_an.sum(1, keepdims=True)
+        t = Torchfeld.clip(1.0 - ab[an, 0] / cls.FALL_M, 0.0, 1.0)
+        neu = Torchfeld.kopie(punkte)
         neu[an] += mittel * (t * t * (3.0 - 2.0 * t))[:, None]
         return neu

@@ -27,7 +27,8 @@ import io
 import matplotlib
 matplotlib.use('Agg')  # kein Display noetig — Server-Prozess (keine GUI-Backends)
 import matplotlib.pyplot as plt
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .engine2d3dkleidergesichtslage import Engine2d3dKleiderGesichtslage
 from .engine2d3dkleidergesichtsvergleich import Engine2d3dKleiderGesichtsvergleich as GV
@@ -131,16 +132,16 @@ class Engine2d3dKleiderGesichtsbilder:
         entlang der JEWEILS ANDEREN der beiden (`offset_achse = 1 - achse`) von der Nasenspitze verschoben —
         bei „horizontal" also die Hoehe (Y), bei „vertikal" die Breite (X)."""
         rb = RICHTUNGEN[richtung]
-        normal = np.array(rb['normal'])
+        normal = Torchfeld.feld(rb['normal'], copy=True)
         achse = rb['achse']
         offset_achse = 1 - achse
         nase = gesicht[4]                         # Nasenspitze — gemeinsamer Nullpunkt beider Richtungen
         z_mitte = sum(kasten['z']) / 2
         quer_mitte = float(nase[achse])            # Mitte der GEPLOTTETEN Koordinate = Nasenspitze auf dieser Achse
-        mitte_kasten = np.array([sum(kasten['x']) / 2, sum(kasten['y']) / 2, sum(kasten['z']) / 2])
+        mitte_kasten = Torchfeld.feld([sum(kasten['x']) / 2, sum(kasten['y']) / 2, sum(kasten['z']) / 2], copy=True)
         ergebnis = []
         for offset in rb['offsets_mm']:
-            ursprung = mitte_kasten.copy()
+            ursprung = Torchfeld.kopie(mitte_kasten)
             ursprung[offset_achse] = nase[offset_achse] - offset / 1000.0
             mesh_xy = cls._vorderes_profil(mesh_figur, normal, ursprung, kasten, achse, quer_mitte, z_mitte)
             modell_xy = cls._vorderes_profil(modell_figur, normal, ursprung, kasten, achse, quer_mitte, z_mitte)
@@ -160,15 +161,15 @@ class Engine2d3dKleiderGesichtsbilder:
         derselben Tiefen-Null, damit sie vergleichbar uebereinanderliegen), nicht der Auswahl."""
         segmente = GV._segmente(figur, normal, ursprung, kasten)
         if not segmente:
-            return np.zeros((0, 2))
-        punkte = np.array(segmente).reshape(-1, 3)
+            return torch.zeros((0, 2), dtype=torch.float64, device='cuda')
+        punkte = Torchfeld.feld(segmente, copy=True).reshape(-1, 3)
         z_lokal_mitte = (punkte[:, 2].min() + punkte[:, 2].max()) / 2
         vorn = punkte[punkte[:, 2] > z_lokal_mitte]
         if len(vorn) == 0:
-            return np.zeros((0, 2))
+            return torch.zeros((0, 2), dtype=torch.float64, device='cuda')
         quer = vorn[:, achse]
-        reihenfolge = np.argsort(quer)
-        xy = np.stack([(quer[reihenfolge] - quer_mitte) * 1000, (vorn[reihenfolge, 2] - z_mitte_anzeige) * 1000], axis=1)
+        reihenfolge = torch.argsort(quer, stable=True)
+        xy = Torchfeld.stack([(quer[reihenfolge] - quer_mitte) * 1000, (vorn[reihenfolge, 2] - z_mitte_anzeige) * 1000], axis=1)
         return xy
 
     @staticmethod
@@ -181,9 +182,9 @@ class Engine2d3dKleiderGesichtsbilder:
         innen = (mesh_xy[:, 0] >= x_lo) & (mesh_xy[:, 0] <= x_hi)
         if not innen.any():
             return None, None
-        modell_bei_mesh_x = np.interp(mesh_xy[innen, 0], modell_xy[:, 0], modell_xy[:, 1])
-        delta = np.abs(mesh_xy[innen, 1] - modell_bei_mesh_x)
-        i = int(np.argmax(delta))
+        modell_bei_mesh_x = Torchfeld.interp(mesh_xy[innen, 0], modell_xy[:, 0], modell_xy[:, 1])
+        delta = Torchfeld.abs(mesh_xy[innen, 1] - modell_bei_mesh_x)
+        i = int(Torchfeld.argmax(delta))
         return float(delta[i]), float(mesh_xy[innen, 0][i])
 
     @staticmethod

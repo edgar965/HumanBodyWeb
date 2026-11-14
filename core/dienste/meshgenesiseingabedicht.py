@@ -8,7 +8,9 @@ Fehlt die Datei: None — die Seite nimmt dann die 16.384 Punkte aus `eingabe.np
 
 import struct
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdatensatz import Meshgenesisdatensatz
 
@@ -21,11 +23,11 @@ class Meshgenesiseingabedicht:
     @classmethod
     def paket(cls, job, nr):
         datei = Meshgenesisdatensatz.ordner(job['ordner']) / 'proben' / ('%04d' % int(nr)) / cls.DATEI
-        if not datei.is_file():
+        if not Npztorch.da(datei):
             return None
-        with np.load(datei) as z:
-            lage = np.ascontiguousarray(z['punkte_q'], dtype='<i2')
-            farbe = np.ascontiguousarray(z['farbe'], dtype=np.uint8)
-            teil = np.ascontiguousarray(z['etikett'], dtype=np.int8)
+        with Npztorch.lesen(datei) as z:
+            lage = Torchfeld.feld(z['punkte_q'], dtype='<i2')
+            farbe = Torchfeld.feld(z['farbe'], dtype=torch.uint8)
+            teil = Torchfeld.feld(z['etikett'], dtype=torch.int8)
             einheit = float(z['einheit_m'])
-        return struct.pack('<If', len(lage), einheit) + lage.tobytes() + farbe.tobytes() + teil.tobytes()
+        return struct.pack('<If', len(lage), einheit) + Torchfeld.als_bytes(lage) + Torchfeld.als_bytes(farbe) + Torchfeld.als_bytes(teil)

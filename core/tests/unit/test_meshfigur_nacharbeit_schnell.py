@@ -19,6 +19,10 @@ import numpy as np
 
 from ._pruefablage import Pruefablage
 from ._wrappersuchpfad import Wrappersuchpfad
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 Wrappersuchpfad.setzen()
 
@@ -56,7 +60,7 @@ class AblegenTest(unittest.TestCase):
         self.addCleanup(self._ablage.__exit__, None, None, None)
 
     def _zeit(self, pfad):
-        return os.stat(pfad).st_mtime_ns
+        return Npztorch.stat(pfad).st_mtime_ns
 
     def test_gleicher_inhalt_bleibt_liegen(self):
         from meshfigur_ablegen import Meshfigurablegen
@@ -69,7 +73,7 @@ class AblegenTest(unittest.TestCase):
         self.assertFalse(Meshfigurablegen.npy(pfad, a.copy()))
         self.assertEqual(self._zeit(pfad), zeit)
         self.assertTrue(Meshfigurablegen.npy(pfad, a + 1))                             # anderer Inhalt: geschrieben
-        self.assertTrue(np.array_equal(np.load(pfad), a + 1))
+        self.assertTrue(np.array_equal(Npztorch.lesen_numpy(pfad), a + 1))
         self.assertTrue(Meshfigurablegen.npy(pfad, (a + 1).astype(np.float64)))        # anderer Datentyp zählt als anderer Inhalt
 
     def test_unlesbare_datei_wird_ersetzt(self):
@@ -80,7 +84,7 @@ class AblegenTest(unittest.TestCase):
             f.write(b'kaputt')
         a = np.ones((4, 3), dtype=np.float32)
         self.assertTrue(Meshfigurablegen.npy(pfad, a))
-        self.assertTrue(np.array_equal(np.load(pfad), a))
+        self.assertTrue(np.array_equal(Npztorch.lesen_numpy(pfad), a))
 
     def test_genesisdatei_gleich_und_ungleich(self):
         from core.dienste.meshfigurgenesis import Meshfigurgenesis
@@ -88,7 +92,7 @@ class AblegenTest(unittest.TestCase):
         pfad = os.path.join(self.ordner, 'genesis_ende.npz')
         daten = {'punkte': np.arange(12, dtype=np.float64).reshape(4, 3), 'eltern': np.array([-1, 0, 1]), 'name': np.array(['a', 'b'])}
         self.assertFalse(Meshfigurgenesis._gleich(pfad, daten))                        # fehlt
-        np.savez(pfad, **daten)
+        Npztorch.speichern(pfad, **daten)
         self.assertTrue(Meshfigurgenesis._gleich(pfad, daten))
         geaendert = dict(daten, punkte=daten['punkte'] + 1e-9)
         self.assertFalse(Meshfigurgenesis._gleich(pfad, geaendert))

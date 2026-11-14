@@ -16,7 +16,8 @@ nach Abzug der Mittellage Median 9 mm, p99 16 mm gegen 29 mm bei zufälliger Paa
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -53,7 +54,7 @@ class Dazgeograftmorphbasis:
         self.stufe = min(stufe_a, stufe_b)
         #: Anteil der Punkte, die in beiden Stücken gleich viele Dreiecke tragen (nur bei gleicher Unterteilungsstufe; über zwei Stufen hat der alte Punkt in der feineren dieselbe Valenz nicht mehr).
         self.gleich = None
-        self.zu = np.full(len(self.p_b), -1, dtype=np.int64)
+        self.zu = Torchfeld.full(len(self.p_b), -1, dtype=torch.int64)
         herkunft = Dazgeograftumriss.herkunft_lesen(eintrag_a)
         if herkunft is not None:                                                # am Umriss zugeschnittenes Stück: die Nummern sagen, welche Punkte des Geografts es noch trägt
             self.stufe = stufe_b
@@ -71,11 +72,11 @@ class Dazgeograftmorphbasis:
         else:
             if da.shape != db.shape:
                 raise ValueError('verschiedene Zahl der Dreiecke (%d / %d): nicht dasselbe Geograft' % (len(da), len(db)))
-            valenz_a, valenz_b = (np.bincount(d.ravel(), minlength=n)[:self.stufe] for d, n in ((da, len(self.p_a)), (db, len(self.p_b))))
+            valenz_a, valenz_b = (Torchfeld.bincount(d.ravel(), minlength=n)[:self.stufe] for d, n in ((da, len(self.p_a)), (db, len(self.p_b))))
             self.gleich = float((valenz_a == valenz_b).mean())
             if self.gleich < self.MIN_VALENZ:
                 raise ValueError('nur %.0f %% der Punkte der Stufe 1 tragen in beiden Stücken gleich viele Dreiecke (nötig %.0f %%)' % (self.gleich * 100, self.MIN_VALENZ * 100))
-            self.zu[:self.stufe] = np.arange(self.stufe)
+            self.zu[:self.stufe] = Torchfeld.arange(self.stufe)
         self.dreiecke_a, self.dreiecke_b = da, db
         self.lage_mm = self.pruefen_lage()
         from Genesis9.schammorphe import G9schammorphe
@@ -91,10 +92,10 @@ class Dazgeograftmorphbasis:
         from .dazgeograftstufenzuordnung import Dazgeograftstufenzuordnung
 
         h = herkunft['herkunft']
-        im_geograft = (np.arange(anzahl_basis) if int(herkunft['stufe']) == 1
+        im_geograft = (Torchfeld.arange(anzahl_basis) if int(herkunft['stufe']) == 1
                        else Dazgeograftstufenzuordnung.zuordnen(geschlecht, anzahl_basis, int(herkunft['nahtfrei']))[:anzahl_basis])
-        stelle = np.full(int(herkunft['nahtfrei']), -1, dtype=np.int64)
-        da = np.flatnonzero(h >= 0)
+        stelle = Torchfeld.full(int(herkunft['nahtfrei']), -1, dtype=torch.int64)
+        da = torch.flatten(h >= 0).nonzero()[:, 0]
         stelle[h[da]] = da
         return stelle[im_geograft]
 
@@ -103,21 +104,21 @@ class Dazgeograftmorphbasis:
         Modells, das Basis-Stück auf der Grundfigur). Dasselbe Geograft gibt wenige Millimeter, eine falsche Zuordnung so viel wie zufällige Paarung."""
         hat = self.zu >= 0
         d = self.p_a[self.zu[hat]] - self.p_b[hat]
-        laenge = np.linalg.norm(d - d.mean(axis=0), axis=1) * 1000.0
-        return [round(float(np.median(laenge)), 1), round(float(np.percentile(laenge, 99)), 1)]
+        laenge = Torchfeld.linalg_norm(d - d.mean(axis=0), dim=1) * 1000.0
+        return [round(float(Torchfeld.median(laenge)), 1), round(float(Torchfeld.percentile(laenge, 99)), 1)]
 
     @classmethod
     def _stufe_punkte(cls, punkte, eintrag):
         """Zahl der Punkte vor dem Schwanz aus Ringecken: die Naht hängt die Ecken des Rings, die dem Rand fehlen, hinten an (`Blendimportschamnaht._einfuegen`)."""
         from Genesis9.stueckersatz import G9stueckersatz
 
-        ring = np.asarray((G9stueckersatz.loch_fuer(eintrag).get('ring') or {}).get('lage') or [], dtype=np.float64).reshape(-1, 3)
+        ring = Torchfeld.feld((G9stueckersatz.loch_fuer(eintrag).get('ring') or {}).get('lage') or [], dtype=torch.float64).reshape(-1, 3)
         if not len(ring):
             raise ValueError('das Stück hat kein Loch mit Ring: keine Naht, keine Zuordnung')
-        auf_ring = np.zeros(len(punkte), dtype=bool)
-        from scipy.spatial import cKDTree
+        auf_ring = torch.zeros(len(punkte), dtype=torch.bool, device='cuda')
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        auf_ring[np.unique(np.concatenate([np.asarray(x, dtype=np.int64) for x in cKDTree(punkte).query_ball_point(ring, cls.LAGE_M)] or [np.zeros(0, dtype=np.int64)]))] = True
+        auf_ring[Torchfeld.unique(Torchfeld.cat([Torchfeld.feld(x, dtype=torch.int64) for x in cKDTree(punkte).query_ball_point(ring, cls.LAGE_M)] or [torch.zeros(0, dtype=torch.int64, device='cuda')]))] = True
         ende = len(punkte)
         while ende > 0 and auf_ring[ende - 1]:
             ende -= 1
@@ -129,9 +130,9 @@ class Dazgeograftmorphbasis:
         felder = G9kleidmorphe.deltas(kennung, name)
         if not felder:
             raise ValueError('Regler %s/%s nicht lesbar' % (kennung, name))
-        d = np.zeros((n, 3))
+        d = torch.zeros((n, 3), dtype=torch.float64, device='cuda')
         for nummern, deltas in felder.values():
-            d[np.asarray(nummern, dtype=np.int64)] = deltas
+            d[Torchfeld.feld(nummern, dtype=torch.int64)] = deltas
         return d
 
     def uebertragen(self, name):
@@ -156,10 +157,10 @@ class Dazgeograftmorphbasis:
         d_a = self._voll(self.angepasst, name, len(self.p_a))
         hat = (self.zu >= 0)[:, None]
         if (zusatz.get('scham') or {}).get('art') in U.NORMAL_ARTEN:      # als Betrag entlang der Normale des Basis-Stücks
-            betrag = np.einsum('ij,ij->i', d_a, self.n_a)[np.maximum(self.zu, 0)]
-            d_b = np.where(hat, betrag[:, None] * self.n_b, 0.0)
+            betrag = Torchfeld.einsum('ij,ij->i', d_a, self.n_a)[Torchfeld.maximum(self.zu, 0)]
+            d_b = torch.where(hat, betrag[:, None] * self.n_b, 0.0)
         else:
-            d_b = np.where(hat, d_a[np.maximum(self.zu, 0)], 0.0)
+            d_b = torch.where(hat, d_a[Torchfeld.maximum(self.zu, 0)], 0.0)
         return d_b, zusatz
 
     def alle(self, namen):
@@ -179,8 +180,8 @@ class Dazgeograftmorphbasis:
         Flächennormale an den bewegten Punkten (0 = genau entlang; das Vorzeichen zählt nicht)."""
         import trimesh
 
-        normalen_b = np.asarray(trimesh.Trimesh(self.p_b, self.dreiecke_b, process=False).vertex_normals)
-        normalen_a = np.asarray(trimesh.Trimesh(self.p_a, self.dreiecke_a, process=False).vertex_normals)
+        normalen_b = Torchfeld.feld(trimesh.Trimesh(self.p_b, self.dreiecke_b, process=False).vertex_normals)
+        normalen_a = Torchfeld.feld(trimesh.Trimesh(self.p_a, self.dreiecke_a, process=False).vertex_normals)
         aus = {}
         for name in namen:
             try:
@@ -191,7 +192,7 @@ class Dazgeograftmorphbasis:
             except (ValueError, OSError, KeyError) as fehler:
                 aus[name] = {'fehler': str(fehler)[:120]}
                 continue
-            weg = np.linalg.norm(d_b, axis=1) * 1000.0
+            weg = Torchfeld.linalg_norm(d_b, dim=1) * 1000.0
             eintrag = {'bewegt': int((weg > 0.05).sum()), 'weg_max_mm': round(float(weg.max()), 2)}
             if art in ('normal', 'kraeuseln'):
                 eintrag['normal_grad_basis'] = self._winkel(d_b, normalen_b)
@@ -206,9 +207,9 @@ class Dazgeograftmorphbasis:
 
     @staticmethod
     def _winkel(delta, normalen):
-        laenge = np.linalg.norm(delta, axis=1)
+        laenge = Torchfeld.linalg_norm(delta, dim=1)
         wahl = laenge > 5e-5
         if not wahl.any():
             return None
-        cos = np.abs(np.einsum('ij,ij->i', delta[wahl], normalen[wahl]) / laenge[wahl])
-        return round(float(np.degrees(np.arccos(np.clip(np.median(cos), 0.0, 1.0)))), 1)
+        cos = Torchfeld.abs(Torchfeld.einsum('ij,ij->i', delta[wahl], normalen[wahl]) / laenge[wahl])
+        return round(float(Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip(Torchfeld.median(cos), 0.0, 1.0)))), 1)

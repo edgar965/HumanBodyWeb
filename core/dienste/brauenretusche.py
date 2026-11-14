@@ -22,7 +22,9 @@ ist oder `FASSUNG` steigt.
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 logger = logging.getLogger('core')
@@ -53,24 +55,24 @@ class Brauenretusche:
         punkte = set()
         for name in cls.EINHEITEN:
             for richtung in ('plus', 'minus'):
-                deltas = np.array(einheiten.get(name, {}).get(richtung, []), dtype=np.float64)
+                deltas = Torchfeld.feld(einheiten.get(name, {}).get(richtung, []), dtype=torch.float64, copy=True)
                 if not len(deltas):
                     continue
-                stark = np.linalg.norm(deltas[:, 1:], axis=1) > cls.MINDEST
-                punkte.update(deltas[stark, 0].astype(int).tolist())
-        return np.array(sorted(punkte), dtype=int)
+                stark = Torchfeld.linalg_norm(deltas[:, 1:], dim=1) > cls.MINDEST
+                punkte.update(Torchfeld.astype(deltas[stark, 0], torch.int64).tolist())
+        return Torchfeld.feld(sorted(punkte), dtype=torch.int64, copy=True)
 
     @classmethod
     def kern(cls, uvs, form, radius):
         """Bool-Bild (H, W): Umkreis `radius` um die UV-Pixel der Punkte."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         hoehe, breite = form
-        bild = np.zeros((hoehe, breite), dtype=bool)
-        u = np.clip(np.rint(uvs[:, 0] * (breite - 1)).astype(int), 0, breite - 1)
-        w = np.clip(np.rint((1 - uvs[:, 1]) * (hoehe - 1)).astype(int), 0, hoehe - 1)
+        bild = torch.zeros((hoehe, breite), dtype=torch.bool, device='cuda')
+        u = Torchfeld.clip(Torchfeld.astype(Torchfeld.round(uvs[:, 0] * (breite - 1)), torch.int64), 0, breite - 1)
+        w = Torchfeld.clip(Torchfeld.astype(Torchfeld.round((1 - uvs[:, 1]) * (hoehe - 1)), torch.int64), 0, hoehe - 1)
         bild[w, u] = True
-        y, x = np.ogrid[-radius : radius + 1, -radius : radius + 1]
+        y, x = Torchfeld.ogrid[-radius : radius + 1, -radius : radius + 1]
         return ndimage.binary_dilation(bild, structure=(x * x + y * y) <= radius**2)
 
     @classmethod
@@ -83,22 +85,22 @@ class Brauenretusche:
         (`kern`; Augenwinkel und Wimpernansatz liegen weiter weg), dazu die
         helleren Enden und Ränder des Bogens (`RAND_DUNKEL`, zusammenhängend
         mit dem Dunklen), etwas ausgedehnt."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        rgb = bild[..., :3].astype(np.float64)
-        lum = rgb @ np.array([0.299, 0.587, 0.114])
-        median = np.median(lum[zone]) if zone.any() else 0.0
+        rgb = Torchfeld.astype(bild[..., :3], torch.float64)
+        lum = rgb @ Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
+        median = Torchfeld.median(lum[zone]) if zone.any() else 0.0
         dunkel = zone & (lum < cls.DUNKEL * median)
         marken, anzahl = ndimage.label(dunkel)
-        am_kern = np.zeros(anzahl + 1, dtype=bool)
-        am_kern[np.unique(marken[kern & dunkel])] = True
+        am_kern = torch.zeros(anzahl + 1, dtype=torch.bool, device='cuda')
+        am_kern[Torchfeld.unique(marken[kern & dunkel])] = True
         am_kern[0] = False
         bogen = am_kern[marken]
         # Die helleren Enden und Ränder des Bogens: zusammenhängend mit ihm.
         weich = zone & (lum < cls.RAND_DUNKEL * median)
         marken, anzahl = ndimage.label(weich)
-        am_bogen = np.zeros(anzahl + 1, dtype=bool)
-        am_bogen[np.unique(marken[bogen & weich])] = True
+        am_bogen = torch.zeros(anzahl + 1, dtype=torch.bool, device='cuda')
+        am_bogen[Torchfeld.unique(marken[bogen & weich])] = True
         am_bogen[0] = False
         return ndimage.binary_dilation(bogen | am_bogen[marken], iterations=cls.AUSDEHNUNG_PX)
 
@@ -106,28 +108,23 @@ class Brauenretusche:
     def fuellen(cls, bild, maske):
         """Maskenpixel aus der Umgebung füllen — Front vom Rand nach innen,
         danach im Maskenbereich geglättet. Gibt eine Kopie zurück."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
-        aus = bild.astype(np.float64).copy()
-        offen = maske.copy()
-        kern = np.ones((3, 3))
+        aus = Torchfeld.kopie(Torchfeld.astype(bild, torch.float64))
+        offen = Torchfeld.kopie(maske)
+        kern = torch.ones((3, 3), dtype=torch.float64, device='cuda')
         while offen.any():
             bekannt = ~offen
-            summe = np.stack(
-                [ndimage.convolve(aus[..., k] * bekannt, kern, mode='nearest') for k in range(aus.shape[-1])],
-                axis=-1,
-            )
-            anzahl = ndimage.convolve(bekannt.astype(np.float64), kern, mode='nearest')
+            summe = Torchfeld.stack([ndimage.convolve(aus[..., k] * bekannt, kern, mode='nearest') for k in range(aus.shape[-1])], axis=-1)
+            anzahl = ndimage.convolve(Torchfeld.astype(bekannt, torch.float64), kern, mode='nearest')
             rand = offen & (anzahl > 0)
             if not rand.any():
                 break
             aus[rand] = summe[rand] / anzahl[rand][:, None]
             offen &= ~rand
-        weich = np.stack(
-            [ndimage.gaussian_filter(aus[..., k], cls.GLAETTUNG) for k in range(aus.shape[-1])], axis=-1
-        )
+        weich = Torchfeld.stack([ndimage.gaussian_filter(aus[..., k], cls.GLAETTUNG) for k in range(aus.shape[-1])], axis=-1)
         aus[maske] = weich[maske]
-        return np.clip(np.rint(aus), 0, 255).astype(np.uint8)
+        return Torchfeld.astype(Torchfeld.clip(Torchfeld.round(aus), 0, 255), torch.uint8)
 
     # --------------------------------------------------------------- Zutaten
 
@@ -142,9 +139,7 @@ class Brauenretusche:
 
             mblab = Path(settings.TOOLS_ROOT) / 'tools' / 'MB-Lab' / 'data'
             cls._zutaten['einheiten'] = MblabAusdruecke(str(mblab)).einheiten()
-            cls._zutaten['uvs'] = np.load(
-                str(Path(settings.HUMANBODY_ROOT) / 'data' / 'humanBody' / 'uvs.npy')
-            )
+            cls._zutaten['uvs'] = Npztorch.lesen(str(Path(settings.HUMANBODY_ROOT) / 'data' / 'humanBody' / 'uvs.npy'))
         return cls._zutaten['einheiten'], cls._zutaten['uvs']
 
     @classmethod
@@ -160,7 +155,7 @@ class Brauenretusche:
 
         einheiten, uvs = cls.zutaten()
         with Image.open(quelle) as bild:
-            roh = np.asarray(bild.convert('RGB'))
+            roh = Torchfeld.feld(bild.convert('RGB'))
         brauen = uvs[cls.brauenpunkte(einheiten)]
         zone = cls.zone(brauen, roh.shape[:2])
         return cls.maske(roh, zone, cls.kern(brauen, roh.shape[:2], cls.KERN_PX)), zone
@@ -185,7 +180,7 @@ class Brauenretusche:
         ):
             return ziel
         with Image.open(quelle) as bild:
-            roh = np.asarray(bild.convert('RGB'))
+            roh = Torchfeld.feld(bild.convert('RGB'))
         brauen = uvs[cls.brauenpunkte(einheiten)]
         zone = cls.zone(brauen, roh.shape[:2])
         maske = cls.maske(roh, zone, cls.kern(brauen, roh.shape[:2], cls.KERN_PX))

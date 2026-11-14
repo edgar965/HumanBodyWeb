@@ -35,7 +35,8 @@ eine gleichmäßig gemalte Frisur statt Flecken. Sonst (Glatze) bleibt sie. Mit 
 
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .meshfigurtexeldetail import Meshfigurtexeldetail
 from .meshfigurtexelsaum import Meshfigurtexelsaum
@@ -70,7 +71,7 @@ class Meshfigurtexelpruefung:
     #: Füllzellen des Kopfnetzes zogen den Median sonst ins Graue.
     HAAR_SATT = 0.35
     #: Mindeststreuung je Kanal (Y, Cb, Cr) — wie `meshfigur_abstand.haut_bestimmen`.
-    STREUUNG_MIN = np.array([4.0, 2.0, 2.0])
+    STREUUNG_MIN = Torchfeld.feld([4.0, 2.0, 2.0], copy=True)
     #: Haarfarbe: Chroma binnen so vielen robusten Streuungen um den Median der Haartreffer.
     HAAR_CHROMA = 3.0
     FEIN_PX = 12.0
@@ -94,24 +95,24 @@ class Meshfigurtexelpruefung:
         r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
         y = 0.299 * r + 0.587 * g + 0.114 * b
         cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b
-        return np.stack([y, cb, 128 + 0.5 * r - 0.418688 * g - 0.081312 * b], -1)
+        return Torchfeld.stack([y, cb, 128 + 0.5 * r - 0.418688 * g - 0.081312 * b], -1)
 
     @staticmethod
     def satt(ycc):
         """Sättigung (Abstand vom Grau in Cb/Cr) — für (n, 3) oder (3,)."""
-        return np.hypot(ycc[..., 1] - 128.0, ycc[..., 2] - 128.0)
+        return Torchfeld.hypot(ycc[..., 1] - 128.0, ycc[..., 2] - 128.0)
 
     @classmethod
     def modell(cls, ycc):
-        mitte = np.median(ycc, axis=0)
-        return mitte, 1.4826 * np.median(np.abs(ycc - mitte), axis=0) + cls.STREUUNG_MIN
+        mitte = Torchfeld.median(ycc, axis=0)
+        return mitte, 1.4826 * Torchfeld.median(Torchfeld.abs(ycc - mitte), axis=0) + cls.STREUUNG_MIN
 
     def ist_haut(self, ycc):
         """Derselbe Test wie `meshfigur_abstand.ist_haut` (Chroma, Helligkeit, Sättigung)."""
         mitte, streuung = self.tonmodell
-        chroma = np.sqrt((((ycc[:, 1:] - mitte[1:]) / streuung[1:]) ** 2).sum(1))
-        satt = np.hypot(ycc[:, 1] - 128.0, ycc[:, 2] - 128.0)
-        ton = float(np.hypot(mitte[1] - 128.0, mitte[2] - 128.0))
+        chroma = Torchfeld.sqrt((((ycc[:, 1:] - mitte[1:]) / streuung[1:]) ** 2).sum(1))
+        satt = Torchfeld.hypot(ycc[:, 1] - 128.0, ycc[:, 2] - 128.0)
+        ton = float(Torchfeld.hypot(mitte[1] - 128.0, mitte[2] - 128.0))
         return (chroma < self.CHROMA) & (ycc[:, 0] > self.HELL * mitte[0]) & (satt > self.SATT * ton)
 
     @staticmethod
@@ -120,20 +121,20 @@ class Meshfigurtexelpruefung:
         einem verkleinerten Bild (Blocksumme, bilinear zurück): dieselbe Wirkung, ein Bruchteil der Zeit
         (erste Fassung: 142 s für fünf Kacheln)."""
         from Genesis9.bildzoom import G9bildzoom
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         s = maske.shape[0]
         f = 1
         while sigma / (2 * f) >= 6 and s % (2 * f) == 0:
             f *= 2
-        gewicht = np.concatenate([bild * maske[..., None], maske[..., None].astype(np.float64)], -1)
+        gewicht = Torchfeld.cat([bild * maske[..., None], Torchfeld.astype(maske[..., None], torch.float64)], -1)
         if f > 1:
             gewicht = gewicht.reshape(s // f, f, s // f, f, 4).sum((1, 3)) / (f * f)
-        glatt = np.stack([ndimage.gaussian_filter(gewicht[..., i], sigma / f) for i in range(4)], -1)
+        glatt = Torchfeld.stack([ndimage.gaussian_filter(gewicht[..., i], sigma / f) for i in range(4)], -1)
         if f > 1:
             glatt = G9bildzoom.linear(glatt, f)         # wie `ndimage.zoom(…, order=1)` (Abweichung 3·10⁻¹⁶), doppelt so schnell
         m = glatt[..., 3]
-        return glatt[..., :3] / np.maximum(m, 1e-9)[..., None], m
+        return glatt[..., :3] / Torchfeld.maximum(m, 1e-9)[..., None], m
 
     # ------------------------------------------------------------- Prüfen
 
@@ -143,20 +144,20 @@ class Meshfigurtexelpruefung:
 
         def vorbereiten(kachel):
             drin, ecken, anteile = self.abtastung.stellen(kachel)
-            punkt = ecken[np.arange(len(ecken)), anteile.argmax(1)]
-            haut = np.isin(self.bereich[punkt], self.hautbereiche) & ~self.kern[punkt]
-            getroffen = np.asarray(hd['gewicht_%d' % kachel]) > 0
-            hand = np.isin(self.bereich[punkt], self.handbereiche) & ~self.kern[punkt]
+            punkt = ecken[Torchfeld.arange(len(ecken)), anteile.argmax(1)]
+            haut = torch.isin(self.bereich[punkt], Torchfeld.feld(self.hautbereiche)) & ~self.kern[punkt]
+            getroffen = Torchfeld.feld(hd['gewicht_%d' % kachel]) > 0
+            hand = torch.isin(self.bereich[punkt], Torchfeld.feld(self.handbereiche)) & ~self.kern[punkt]
             if kachel != self.NAGELKACHEL and (hand & getroffen).any():
                 haut |= hand
-            ycc = self.ycbcr(np.asarray(hd['farbe_%d' % kachel], dtype=np.float64))
+            ycc = self.ycbcr(Torchfeld.feld(hd['farbe_%d' % kachel], dtype=torch.float64))
             return (drin, haut, self.bereich[punkt] == self.kopfhaut, getroffen, ycc)
 
         # Die Kacheln hängen nicht voneinander ab; scipy.ndimage und numpy geben den GIL frei (Zauberer: ein Faden nach dem anderen brauchte 63 s, `threads_messen.py` ×3–4).
         with ThreadPoolExecutor(max_workers=max(1, min(len(kacheln), self.FAEDEN))) as pool:
             teile = dict(zip(kacheln, pool.map(vorbereiten, kacheln), strict=True))
         proben = [ycc[haut & getroffen][::7] for (_drin, haut, _kopf, getroffen, ycc) in teile.values()]
-        ton = np.concatenate(proben) if proben else np.zeros((0, 3))
+        ton = Torchfeld.cat(proben) if proben else torch.zeros((0, 3), dtype=torch.float64, device='cuda')
         if len(ton) < 1000:
             return hd, {'grund': 'zu wenige Hauttexel (%d)' % len(ton)}
         self.tonmodell = self.modell(ton)
@@ -165,12 +166,12 @@ class Meshfigurtexelpruefung:
 
         def pruefen_eine(kachel):
             drin, haut, kopf, getroffen, ycc = teile[kachel]
-            farbe = np.asarray(hd['farbe_%d' % kachel], dtype=np.float64)
-            gewicht = np.array(hd['gewicht_%d' % kachel], dtype=np.float32, copy=True)
+            farbe = Torchfeld.feld(hd['farbe_%d' % kachel], dtype=torch.float64)
+            gewicht = Torchfeld.feld(hd['gewicht_%d' % kachel], dtype=torch.float32, copy=True)
             eintrag = self._haut(drin, haut, getroffen, ycc, farbe, gewicht, saum=kachel == Meshfigurtexelsaum.KACHEL)
             if kopf.any():
                 eintrag['kopfhaut'] = self._kopfhaut(drin, kopf, getroffen, ycc, farbe, gewicht)
-            return kachel, np.clip(farbe + 0.5, 0, 255).astype(np.uint8), gewicht, eintrag
+            return kachel, Torchfeld.astype(Torchfeld.clip(farbe + 0.5, 0, 255), torch.uint8), gewicht, eintrag
 
         with ThreadPoolExecutor(max_workers=max(1, min(len(kacheln), self.FAEDEN))) as pool:
             ergebnisse = list(pool.map(pruefen_eine, teile))
@@ -182,7 +183,7 @@ class Meshfigurtexelpruefung:
 
     def _bild(self, drin, werte, maske):
         s = self.abtastung.seite
-        bild, m = np.zeros((s, s, 3)), np.zeros((s, s), dtype=bool)
+        bild, m = torch.zeros((s, s, 3), dtype=torch.float64, device='cuda'), torch.zeros((s, s), dtype=torch.bool, device='cuda')
         bild[drin] = werte
         m[drin] = maske
         return bild, m
@@ -194,9 +195,9 @@ class Meshfigurtexelpruefung:
         schatten = (satt < self.SATT_SCHATTEN) & (ycc[:, 0] < mitte[0])
         gut = haut & getroffen & self.ist_haut(ycc) & ~schatten
         fremd = haut & getroffen & (~self.ist_haut(ycc) | schatten)
-        im_schatten = Meshfigurtexelsaum(self.abtastung.seite, self.glatt).schatten(drin, fremd, ycc[:, 0], farbe, gut) if saum else np.zeros_like(gut)
+        im_schatten = Meshfigurtexelsaum(self.abtastung.seite, self.glatt).schatten(drin, fremd, ycc[:, 0], farbe, gut) if saum else torch.zeros_like(gut)
         gut &= ~im_schatten
-        ausreisser = im_schatten.copy()
+        ausreisser = Torchfeld.kopie(im_schatten)
         schatten_saum = int(im_schatten.sum())
         for _ in range(self.DURCHGAENGE):
             bild, maske = self._bild(drin, farbe, gut)
@@ -212,7 +213,7 @@ class Meshfigurtexelpruefung:
         bild, maske = self._bild(drin, farbe, gut)
         fein, m_fein = self.glatt(bild, maske, self.FEIN_PX)
         grob, m_grob = self.glatt(bild, maske, self.GROB_PX)
-        fuellung = np.where((m_fein > 0.15)[..., None], fein, grob)[drin]
+        fuellung = torch.where((m_fein > 0.15)[..., None], fein, grob)[drin]
         ziel = haut & ~gut & (m_grob[drin] > 1e-3)
         grund = Meshfigurtexelsaum(self.abtastung.seite, self.glatt).grund(drin, gut, farbe, fuellung, ziel) if saum else 0       # Armkachel: der Grund der Haut statt ihres Mittels
         # Große nie getroffene Zonen (Haut unter dem Stoff): Ton ohne den Saumschatten und ein weicher Übergang der echten Haut (`Meshfigurtexelzone`) — vor dem Füllen: `gut` und `ziel` sind getrennte Texel.
@@ -236,15 +237,15 @@ class Meshfigurtexelpruefung:
     def _kopfinsel(self, drin, kopf):
         """(n,) bool: Texel der UV-Inseln, die den Großteil der Kopfhaut tragen — nicht die Ohren
         (deren Rückseite zählt zur Kopfhaut, bekam im ersten Versuch aber Haarfarbe)."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         s = self.abtastung.seite
-        flaeche = np.zeros((s, s), dtype=bool)
+        flaeche = torch.zeros((s, s), dtype=torch.bool, device='cuda')
         flaeche[drin] = True
         nummer, _ = ndimage.label(flaeche)
         je_texel = nummer[drin]
-        anzahl = np.bincount(je_texel[kopf], minlength=int(je_texel.max()) + 1)
-        return np.isin(je_texel, np.flatnonzero(anzahl >= 0.2 * anzahl.max()))
+        anzahl = Torchfeld.bincount(je_texel[kopf], minlength=int(je_texel.max()) + 1)
+        return torch.isin(je_texel, Torchfeld.feld(torch.flatten(anzahl >= 0.2 * anzahl.max()).nonzero()[:, 0]))
 
     def _kopfhaut(self, drin, kopf, getroffen, ycc, farbe, gewicht):
         """Überwiegend Haar getroffen: die Kopfhaut in der geglätteten Haarfarbe malen (in place)."""
@@ -255,15 +256,15 @@ class Meshfigurtexelpruefung:
         satt = self.satt(ycc) / max(float(self.satt(self.tonmodell[0])), 1e-6)
         farbig = haar & (satt >= self.HAAR_SATT)
         mitte, streuung = self.modell(ycc[farbig if farbig.sum() >= max(50, 0.05 * haar.sum()) else haar])
-        chroma = np.sqrt((((ycc[:, 1:] - mitte[1:]) / streuung[1:]) ** 2).sum(1))
+        chroma = Torchfeld.sqrt((((ycc[:, 1:] - mitte[1:]) / streuung[1:]) ** 2).sum(1))
         hell = (ycc[:, 0] < 1.6 * mitte[0]) & (ycc[:, 0] > 0.5 * mitte[0])
         sauber = haar & (chroma < self.HAAR_CHROMA) & hell
         bild, maske = self._bild(drin, farbe, sauber)
         fein, m_fein = self.glatt(bild, maske, self.FEIN_PX / 4)
         grob, m_grob = self.glatt(bild, maske, self.GROB_PX)
-        malen = np.where((m_fein > 0.2)[..., None], fein, grob)[drin]
+        malen = torch.where((m_fein > 0.2)[..., None], fein, grob)[drin]
         # Wo auch die grobe Faltung nichts hat: der Median der sauberen Haarfarbe.
-        grundfarbe = np.median(farbe[sauber], axis=0) if sauber.any() else np.median(farbe[haar], axis=0)
+        grundfarbe = Torchfeld.median(farbe[sauber], axis=0) if sauber.any() else Torchfeld.median(farbe[haar], axis=0)
         malen[m_grob[drin] <= 1e-3] = grundfarbe
         ziel = kopf & self._kopfinsel(drin, kopf)
         farbe[ziel] = malen[ziel]

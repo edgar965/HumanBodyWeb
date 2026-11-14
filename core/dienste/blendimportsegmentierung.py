@@ -21,7 +21,9 @@ import logging
 import os
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 from django.utils import timezone
 
@@ -104,8 +106,12 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
     #: Ab so vielen Dreiecken stimmt ein Abstimm-Netz ab (darunter deckt jede Fläche mehrere Pixel), und so viele hat es (Setzung: bei 56.560 cm² Netzfläche rund 3,8 cm² je Fläche, ~100 Pixel).
     PROXY_AB = 400_000
     PROXY_FLAECHEN = 150_000
-    #: Fassung des Verfahrens, das das Abstimm-Netz baut (zusammen mit `Mesh3dnetzansicht.FASSUNG` im Stempel von `abstimmnetz.json`).
-    PROXY_FASSUNG = 1
+    #: Fassung des Verfahrens, das das Abstimm-Netz baut (zusammen mit `Mesh3dnetzansicht.FASSUNG` im Stempel von `abstimmnetz.json`). 1 = pymeshlab (quadratische Kantenreduktion, ein Kern,
+    #: ~77 s am Zauberer), 2 = `Gitterquadrik` auf der Karte (12.11.2026, Edgar: „baue und teste das“). Gemessen am Zauberer (`zauberer_mesh_genesis_11`, `ProjektTemp/_wegwerf/genesis_zuerst/umbau/
+    #: abstimmnetz_vergleich.py`, `abstimmnetz_referenz.py`): pymeshlab 86,6 s und ein kaputtes Netz (200.148 statt 150.000 Flächen, Oberfläche 4,3 × das Netz, Kanten bis 2,4 Einheiten quer durch
+    #: die Figur), Karte 1,5 s (0,02 s Rechnung) mit 147.076 Flächen und gleicher Oberfläche. Je Pixel der vier Ansichten gegen das Sapiens-Etikett (799.196 Personenpixel): alt 15,9 % richtig,
+    #: 82,6 % ohne Stimme; neu 79,8 % richtig, 3,4 % falsch, 16,8 % ohne Stimme. Nur an diesem einen Modell gemessen.
+    PROXY_FASSUNG = 2
 
     def _abstimmnetz(self, glb):
         """`(Dreiecke, Punkte)` des Abstimm-Netzes. Es ist eine reine Funktion des Körpernetzes (pymeshlab, EIN Kern: am Zauberer rund 40–60 s im Lauf, 12.10.2026, py-spy): gehört `abstimmnetz.glb` schon zu
@@ -121,11 +127,29 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
             except (OSError, ValueError, KeyError, IndexError, TypeError):
                 pass
         vermerk.unlink(missing_ok=True)
-        proxy = Mesh3dnetzansicht.vereinfachen(glb, self._netz, self.PROXY_FLAECHEN, farben=False)
+        proxy = self._abstimmnetz_karte(glb) if self.PROXY_FASSUNG == 2 else Mesh3dnetzansicht.vereinfachen(glb, self._netz, self.PROXY_FLAECHEN, farben=False)
         teil = vermerk.with_name(vermerk.name + '.teil')
         teil.write_text(json.dumps({'stempel': stempel, 'groesse': [proxy[0], proxy[1]]}), encoding='utf-8')
         os.replace(teil, vermerk)
         return proxy
+
+    def _abstimmnetz_karte(self, glb):
+        """Fassung 2: das Abstimm-Netz mit `Gitterquadrik` auf der Karte (Punkte je Gitterzelle zusammengelegt, Lage aus den Quadriken der Flächen), als GLB nach `self._netz` → `(Dreiecke, Punkte)`.
+        Koordinaten wie das Original (trimesh mit den Knoten-Transformationen, wie `Mesh3dnetzansicht.vereinfachen`)."""
+        import torch
+        import trimesh
+
+        from KoerperKI_alle.gitterquadrik import Gitterquadrik
+
+        roh = trimesh.load(str(glb), process=False)
+        netz = roh.to_geometry() if isinstance(roh, trimesh.Scene) else roh
+        g = torch.device('cuda')
+        lage, flaechen = Gitterquadrik.vereinfachen(torch.as_tensor(netz.vertices, dtype=torch.float64, device=g), torch.as_tensor(netz.faces, dtype=torch.int64, device=g),
+                                                    self.PROXY_FLAECHEN)
+        teil = self._netz.with_name(self._netz.name + '.teil')
+        trimesh.Trimesh(vertices=lage.cpu().numpy(), faces=flaechen.cpu().numpy(), process=False).export(str(teil), file_type='glb')     # Übergabe an trimesh (Datei)
+        os.replace(teil, self._netz)
+        return int(len(flaechen)), int(len(lage))
 
     @staticmethod
     def flaechen_von(glb):
@@ -146,21 +170,35 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
     def _uebertragen(self, glb):
         """Die Stimmen des Abstimm-Netzes (`abstimmnetz/sapiens_flaechen.npz`) auf die Flächen des vollen Netzes legen → `sapiens_flaechen.npz` im Ordner des Schritts, Stempel auf `glb`.
         Je Fläche des vollen Netzes die nächste Flächenmitte des Abstimm-Netzes; eine Fläche, die dort ungesehen blieb, bleibt es."""
-        from scipy.spatial import cKDTree
-
         voll, klein = self._flaechenmitten(glb), self._flaechenmitten(self._netz)
-        _, nah = cKDTree(klein).query(voll, workers=-1)
+        nah = self._naechste(klein, voll)
         # Sapiens-Stimmen und die Stimmen der Begriffe (SAM 3, `teile_flaechen.npz`) gehen auf dieselbe Weise vom Abstimm-Netz auf das volle Netz.
         for datei, felder in ((self.DATEI, ('klassen', 'stimmen', 'hintergrund', 'ansichten')), (Blendimportbegriffe.DATEI, ('stimmen', 'pixel', 'ansichten'))):
-            if not (self._arbeit / datei).is_file():
+            if not Npztorch.da(self._arbeit / datei):
                 continue
-            with np.load(self._arbeit / datei) as d:
+            with Npztorch.lesen(self._arbeit / datei) as d:
                 kopie = {k: d[k] for k in d.files}
             for feld in felder:
                 kopie[feld] = kopie[feld][nah]
-            kopie['netz'] = np.array(self.stempel(glb))
+            kopie['netz'] = Torchfeld.feld(self.stempel(glb), copy=True)
             kopie['flaechen'] = len(voll)
-            np.savez_compressed(self.ordner() / datei, **kopie)
+            Npztorch.speichern(self.ordner() / datei, **kopie, komprimiert=True)
+
+    @staticmethod
+    def _naechste(klein, voll):
+        """Je Zeile von `voll` der Index der nächsten Zeile von `klein` (beide (n, 3)) — auf der Karte mit der exakten Rastersuche (`G9rasternachbarn`, Ergebnis wie `cKDTree.query`, gleich weite
+        Punkte: kleinerer Index). Bis 12.11.2026 cKDTree auf allen Kernen (Edgar: „alles auf GPU und VRAM, alles pytorch“; py-spy am Zauberer: `_uebertragen` 1,7 % des Schritts „rig“).
+        Gegenprobe `ProjektTemp/_wegwerf/genesis_zuerst/umbau/naechste_probe.py`. Das Ergebnis geht als Feld an `_uebertragen` (liest und schreibt die npz-Ablagen wie bisher).
+        `je_zelle=8`: das Abstimm-Netz ist in flachen Bereichen grob; mit der Vorgabe 4 blieben am Zauberer 932.959 von 2.334.176 Zeilen im ersten Block offen (1,25 s), mit 8 sind es 411.524
+        und alle in den Ringen bewiesen (0,63 s, der Baum auf der CPU 0,79 s; `naechste_zelle.py`)."""
+        import torch
+
+        from Genesis9.rasternachbarn import G9rasternachbarn
+        from Genesis9.rechenkarte import G9rechenkarte
+
+        karte = G9rechenkarte.an() or G9rechenkarte(torch)
+        _w, i = G9rasternachbarn(karte, klein, je_zelle=8).naechste(voll, 1)
+        return i[:, 0].cpu().numpy()
 
     @staticmethod
     def _flaechenmitten(glb):
@@ -169,7 +207,7 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
 
         roh = trimesh.load(str(glb), force='scene', process=False)
         netz = roh.to_geometry() if hasattr(roh, 'to_geometry') else roh.dump(concatenate=True)
-        return np.asarray(netz.vertices, dtype=np.float64)[np.asarray(netz.faces)].mean(axis=1)
+        return Torchfeld.feld(netz.vertices, dtype=torch.float64)[Torchfeld.feld(netz.faces)].mean(axis=1)
 
     def _abschluss(self):
         kennzahlen = (self._ergebnis or {}).get('kennzahlen') or {}
@@ -207,7 +245,7 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         quelle = ablage.arbeit(cls.ORDNER) / bericht['datei']
         eingang = job_ablage.netzdatei('koerper')
         grund = ''
-        if not quelle.is_file():
+        if not Npztorch.da(quelle):
             grund = 'Datei fehlt'
         elif eingang is None:
             grund = 'kein Netz im Eingang des Auftrags'
@@ -218,17 +256,17 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         if grund:
             logger.warning('Mesh-3D %s: Segmentierung nicht benutzt (%s) — „Mesh to 3D“ rechnet ohne Sapiens', ablage.kennung, grund)
             return None
-        with np.load(quelle) as d:
+        with Npztorch.lesen(quelle) as d:
             daten = {k: d[k] for k in d.files}
-        daten['netz'] = np.array(cls.stempel(eingang))
+        daten['netz'] = Torchfeld.feld(cls.stempel(eingang), copy=True)
         ziel = job_ablage.arbeit(cls.DATEI)
         ziel.parent.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(ziel, **daten)
+        Npztorch.speichern(ziel, **daten, komprimiert=True)
         # Die Stimmen der Begriffe (SAM 3) gehören zum selben Netz und gehen mit — fehlen sie, rechnet „Mesh to 3D“ ohne Bestandteile (kein Fehler).
         teile = ablage.arbeit(cls.ORDNER) / Blendimportbegriffe.DATEI
-        if teile.is_file():
-            with np.load(teile) as d:
+        if Npztorch.da(teile):
+            with Npztorch.lesen(teile) as d:
                 gleiche = {k: d[k] for k in d.files}
             gleiche['netz'] = daten['netz']
-            np.savez_compressed(job_ablage.arbeit(Blendimportbegriffe.DATEI), **gleiche)
+            Npztorch.speichern(job_ablage.arbeit(Blendimportbegriffe.DATEI), **gleiche, komprimiert=True)
         return dict(bericht.get('optionen') or {})

@@ -16,7 +16,8 @@ import logging
 import os
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.hautpresets import G9hautpresets
 
 from .g9bedlamabbildung import G9bedlamabbildung
@@ -141,31 +142,31 @@ class G9bedlamhaut:
     def ohne_unterwaesche(cls, foto):
         """Das Bild (H, W, 3) uint8 ohne die aufgemalte Unterwäsche (olivgrün bei den Frauen, grau bei den Männern); ohne solche Pixel unverändert."""
         import cv2
-        g = foto.astype(np.int16)
+        g = Torchfeld.astype(foto, torch.int16)
         olive = (g[..., 0] - g[..., 1] < cls.ROT_UEBER_GRUEN) & (g[..., 1] - g[..., 2] > cls.BLAU_UNTER_GRUEN)
-        grau = (g.max(axis=2) - g.min(axis=2)) < cls.GRAU_BUNTHEIT
-        maske = (olive | grau).astype(np.uint8) * 255
+        grau = (Torchfeld.amax(g, dim=2) - Torchfeld.amin(g, dim=2)) < cls.GRAU_BUNTHEIT
+        maske = Torchfeld.astype(olive | grau, torch.uint8) * 255
         if not maske.any():
             return foto
-        maske = cv2.morphologyEx(maske, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-        maske = cv2.dilate(maske, np.ones((5, 5), np.uint8), iterations=cls.RAND)
+        maske = cv2.morphologyEx(maske, cv2.MORPH_CLOSE, Torchfeld.roh(torch.ones((7, 7), dtype=torch.uint8, device='cuda')))
+        maske = cv2.dilate(maske, Torchfeld.roh(torch.ones((5, 5), dtype=torch.uint8, device='cuda')), iterations=cls.RAND)
         h, b = foto.shape[:2]
         klein = cv2.resize(foto, (cls.KLEIN, cls.KLEIN), interpolation=cv2.INTER_AREA)
         mklein = cv2.resize(maske, (cls.KLEIN, cls.KLEIN), interpolation=cv2.INTER_NEAREST)
         gefuellt = cv2.resize(cv2.inpaint(klein, mklein, 8, cv2.INPAINT_TELEA), (b, h), interpolation=cv2.INTER_CUBIC)
-        a = (cv2.GaussianBlur(maske, (0, 0), 3).astype(np.float32) / 255.0)[..., None]
-        return np.clip(foto * (1.0 - a) + gefuellt * a + 0.5, 0, 255).astype(np.uint8)
+        a = (Torchfeld.astype(cv2.GaussianBlur(maske, (0, 0), 3), torch.float32) / 255.0)[..., None]
+        return Torchfeld.astype(Torchfeld.clip(foto * (1.0 - a) + gefuellt * a + 0.5, 0, 255), torch.uint8)
 
     @classmethod
     def _bauen(cls, geschlecht, schluessel, namen):
         from PIL import Image
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         abbildung = G9bedlamabbildung.holen()
         quelle = cls._quelle(geschlecht, schluessel)
         if not abbildung or not quelle:
             raise FileNotFoundError('BEDLAM-Abbildung oder Textur fehlt')
-        foto = np.asarray(Image.open(quelle).convert('RGB'), dtype=np.float32)
+        foto = Torchfeld.feld(Image.open(quelle).convert('RGB'), dtype=torch.float32)
         h, b = foto.shape[:2]
         from Genesis9.texturabtastung import G9texturabtastung
         abtastung = G9texturabtastung.holen(G9bedlamabbildung.SEITE)
@@ -175,11 +176,11 @@ class G9bedlamhaut:
             uv = abbildung[kachel][drin]
             y = (1.0 - uv[:, 1]) * (h - 1)
             x = uv[:, 0] * (b - 1)
-            bild = np.zeros(drin.shape + (3,), dtype=np.float32)
+            bild = torch.zeros(drin.shape + (3,), dtype=torch.float32, device='cuda')
             for k in range(3):
                 bild[drin, k] = ndimage.map_coordinates(foto[..., k], [y, x], order=1, mode='nearest')
             _w, (iy, ix) = ndimage.distance_transform_edt(~drin, return_indices=True)
-            bild = np.clip(bild[iy, ix] + 0.5, 0, 255).astype(np.uint8)  # außerhalb der Inseln die Farbe des nächsten Texels — das Filtern zieht kein Schwarz herein
+            bild = Torchfeld.astype(Torchfeld.clip(bild[iy, ix] + 0.5, 0, 255), torch.uint8)  # außerhalb der Inseln die Farbe des nächsten Texels — das Filtern zieht kein Schwarz herein
             if kachel != cls.KOPFKACHEL:
                 bild = cls.ohne_unterwaesche(bild)
             neu = ziel.with_name(ziel.stem + '.neu.jpg')

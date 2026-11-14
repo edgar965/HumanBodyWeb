@@ -10,7 +10,8 @@ ECKEN — je Ecke die UV ihrer Fläche (`uv_loops`), darum stimmt es an Nähten.
 Gerechnet in Blöcken (`BLOCK` Punkte × K Kandidaten), sonst wächst der Speicher
 auf Gigabytes.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hbdreiecksuche']
 
@@ -24,32 +25,32 @@ class Hbdreiecksuche:
     KERNE = 2
 
     def __init__(self, punkte, ecken, uvs):
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        self.punkte = np.asarray(punkte, dtype=np.float64)
-        self.ecken = np.asarray(ecken, dtype=np.int64)
-        self.uvs = np.asarray(uvs, dtype=np.float64)
+        self.punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        self.ecken = Torchfeld.feld(ecken, dtype=torch.int64)
+        self.uvs = Torchfeld.feld(uvs, dtype=torch.float64)
         self.dreiecke = self.punkte[self.ecken]                           # (T, 3, 3)
         self.baum = cKDTree(self.dreiecke.mean(axis=1))
         self.k = min(self.K, len(self.ecken))
 
     def uv(self, pos):
         """`(uv (n, 2), abstand (n,))` — UV des nächsten Oberflächenpunkts je Anfragepunkt."""
-        pos = np.asarray(pos, dtype=np.float64)
-        uv = np.zeros((len(pos), 2))
-        abstand = np.zeros(len(pos))
+        pos = Torchfeld.feld(pos, dtype=torch.float64)
+        uv = torch.zeros((len(pos), 2), dtype=torch.float64, device='cuda')
+        abstand = torch.zeros(len(pos), dtype=torch.float64, device='cuda')
         for anfang in range(0, len(pos), self.BLOCK):
             p = pos[anfang:anfang + self.BLOCK]
             _w, kand = self.baum.query(p, k=self.k, workers=self.KERNE)
-            kand = np.asarray(kand, dtype=np.int64).reshape(len(p), -1)   # (m, K)
-            b, d2 = self.naechster(np.repeat(p, kand.shape[1], axis=0), self.dreiecke[kand.ravel()])
+            kand = Torchfeld.feld(kand, dtype=torch.int64).reshape(len(p), -1)   # (m, K)
+            b, d2 = self.naechster(Torchfeld.repeat_interleave(p, kand.shape[1], dim=0), self.dreiecke[kand.ravel()])
             b = b.reshape(len(p), -1, 3)
             d2 = d2.reshape(len(p), -1)
             beste = d2.argmin(axis=1)
-            zeile = np.arange(len(p))
+            zeile = Torchfeld.arange(len(p))
             t = kand[zeile, beste]
-            uv[anfang:anfang + len(p)] = np.einsum('mk,mkc->mc', b[zeile, beste], self.uvs[t])
-            abstand[anfang:anfang + len(p)] = np.sqrt(d2[zeile, beste])
+            uv[anfang:anfang + len(p)] = Torchfeld.einsum('mk,mkc->mc', b[zeile, beste], self.uvs[t])
+            abstand[anfang:anfang + len(p)] = Torchfeld.sqrt(d2[zeile, beste])
         return uv, abstand
 
     @staticmethod
@@ -67,30 +68,30 @@ class Hbdreiecksuche:
         # Innen (Vorgabe), dann die Fälle in Ericsons Reihenfolge rückwärts überschreiben —
         # so gewinnt der zuerst geprüfte Fall (Ecke A vor Kante AB vor Innen).
         nenner = va + vb + vc
-        sicher = np.abs(nenner) > 1e-30
-        v = np.where(sicher, vb / np.where(sicher, nenner, 1.0), 0.0)
-        w = np.where(sicher, vc / np.where(sicher, nenner, 1.0), 0.0)
+        sicher = Torchfeld.abs(nenner) > 1e-30
+        v = torch.where(sicher, vb / torch.where(sicher, nenner, 1.0), 0.0)
+        w = torch.where(sicher, vc / torch.where(sicher, nenner, 1.0), 0.0)
         # Kante BC
         m = (va <= 0) & (d4 - d3 >= 0) & (d5 - d6 >= 0)
-        t = (d4 - d3) / np.maximum((d4 - d3) + (d5 - d6), 1e-30)
-        v, w = np.where(m, 1.0 - t, v), np.where(m, t, w)
+        t = (d4 - d3) / Torchfeld.maximum((d4 - d3) + (d5 - d6), 1e-30)
+        v, w = torch.where(m, 1.0 - t, v), torch.where(m, t, w)
         # Kante AC
         m = (vb <= 0) & (d2 >= 0) & (d6 <= 0)
-        t = d2 / np.maximum(d2 - d6, 1e-30)
-        v, w = np.where(m, 0.0, v), np.where(m, t, w)
+        t = d2 / Torchfeld.maximum(d2 - d6, 1e-30)
+        v, w = torch.where(m, 0.0, v), torch.where(m, t, w)
         # Ecke C
         m = (d6 >= 0) & (d5 <= d6)
-        v, w = np.where(m, 0.0, v), np.where(m, 1.0, w)
+        v, w = torch.where(m, 0.0, v), torch.where(m, 1.0, w)
         # Kante AB
         m = (vc <= 0) & (d1 >= 0) & (d3 <= 0)
-        t = d1 / np.maximum(d1 - d3, 1e-30)
-        v, w = np.where(m, t, v), np.where(m, 0.0, w)
+        t = d1 / Torchfeld.maximum(d1 - d3, 1e-30)
+        v, w = torch.where(m, t, v), torch.where(m, 0.0, w)
         # Ecke B
         m = (d3 >= 0) & (d4 <= d3)
-        v, w = np.where(m, 1.0, v), np.where(m, 0.0, w)
+        v, w = torch.where(m, 1.0, v), torch.where(m, 0.0, w)
         # Ecke A
         m = (d1 <= 0) & (d2 <= 0)
-        v, w = np.where(m, 0.0, v), np.where(m, 0.0, w)
+        v, w = torch.where(m, 0.0, v), torch.where(m, 0.0, w)
         u = 1.0 - v - w
         naechst = a + v[:, None] * ab + w[:, None] * ac
-        return np.stack([u, v, w], axis=1), ((p - naechst) ** 2).sum(1)
+        return Torchfeld.stack([u, v, w], axis=1), ((p - naechst) ** 2).sum(1)

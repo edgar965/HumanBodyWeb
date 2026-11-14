@@ -13,7 +13,9 @@ Eine Figur ohne diese Felder in `genesis_ende.npz` (alte Läufe) gibt `holen` �
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -22,17 +24,17 @@ __all__ = ['Meshfigurhautgewichte']
 
 class Meshfigurhautgewichte:
     def __init__(self, index, gewicht, knochen):
-        self.index = np.asarray(index, dtype=np.int64)
-        self.gewicht = np.asarray(gewicht, dtype=np.float64)
+        self.index = Torchfeld.feld(index, dtype=torch.int64)
+        self.gewicht = Torchfeld.feld(gewicht, dtype=torch.float64)
         self.knochen = [str(k) for k in knochen]
 
     @classmethod
     def holen(cls, ablage):
         """Die Käfiggewichte des Laufs — None, wenn `genesis_ende.npz` fehlt oder sie nicht trägt."""
         pfad = ablage.arbeit('genesis_ende.npz')
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             if not all(k in d.files for k in ('haut_index', 'haut_gewicht', 'knochen')):
                 return None
             return cls(d['haut_index'], d['haut_gewicht'], d['knochen'])
@@ -74,9 +76,9 @@ class Meshfigurhautgewichte:
         """(M,) Abstand der Punkte des Objekts in der RUHELAGE zum Käfig in Ruhe (m) — `None` ohne `ruhe`. Dort sieht man Figur und Stoff; wer anliegt, bewegt sich wie die Haut (`Kleidunghautgewichte`, `Hautnaehe`, `Kleidunggewebe`)."""
         if ruhe is None:
             return None
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        return cKDTree(ruhelage.entposen.ruhe).query(np.asarray(ruhe, dtype=np.float64), workers=-1)[0]
+        return cKDTree(ruhelage.entposen.ruhe).query(Torchfeld.feld(ruhe, dtype=torch.float64), workers=-1)[0]
 
     def starr(self, anzahl, knochen):
         """`{index, gewicht, knochen}` für `anzahl` Punkte, die ganz an `knochen` hängen — None, wenn die Figur ihn nicht führt."""

@@ -11,7 +11,8 @@ des Bestandteils entfernt liegen — und die über gemeinsame Punkte mit ihm zus
 Setzung (an einem Modell gemessen, ohne die Bedingung des Zusammenhangs: binnen 6 mm 5.351 Flächen, 10 mm 6.250, 20 mm 7.234, 35 mm 7.434 — danach kaum noch mehr).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurteileanschluss']
 
@@ -25,16 +26,16 @@ class Meshfigurteileanschluss:
     def erweitern(cls, flaechen, punkte, maske, andere):
         """Die Maske `maske` (F,) bool eines stabförmigen Bestandteils um die anliegenden, zusammenhängenden Flächen erweitern; `andere` (F,) bool = Flächen anderer Bestandteile (bleiben draußen).
         Gibt `(neue Maske, Zahl der hinzugekommenen Flächen)` zurück."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        flaechen = np.asarray(flaechen)
-        punkte = np.asarray(punkte, dtype=np.float64)
-        eigene = np.unique(flaechen[maske].reshape(-1))
+        flaechen = Torchfeld.feld(flaechen)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        eigene = Torchfeld.unique(flaechen[maske].reshape(-1))
         if not len(eigene):
             return maske, 0
         kern = punkte[eigene]
-        lo, hi = kern.min(axis=0) - cls.ANSCHLUSS_M, kern.max(axis=0) + cls.ANSCHLUSS_M
-        kandidaten = np.flatnonzero(~maske & ~np.asarray(andere, dtype=bool))
+        lo, hi = Torchfeld.amin(kern, dim=0) - cls.ANSCHLUSS_M, Torchfeld.amax(kern, dim=0) + cls.ANSCHLUSS_M
+        kandidaten = torch.flatten(~maske & ~Torchfeld.feld(andere, dtype=torch.bool)).nonzero()[:, 0]
         ecken = punkte[flaechen[kandidaten]]                                         # (K, 3, 3)
         im_kasten = ((ecken >= lo) & (ecken <= hi)).all(axis=2).all(axis=1)
         kandidaten, ecken = kandidaten[im_kasten], ecken[im_kasten]
@@ -44,9 +45,9 @@ class Meshfigurteileanschluss:
         nah = (abstand.reshape(-1, 3) <= cls.ANSCHLUSS_M).all(axis=1)
         kandidaten = kandidaten[nah]
         # Wachsen: nur Flächen, die über einen Punkt mit dem Bestandteil (oder einer schon aufgenommenen Fläche) zusammenhängen.
-        bekannt = np.zeros(len(punkte), dtype=bool)
+        bekannt = torch.zeros(len(punkte), dtype=torch.bool, device='cuda')
         bekannt[eigene] = True
-        genommen = np.zeros(len(kandidaten), dtype=bool)
+        genommen = torch.zeros(len(kandidaten), dtype=torch.bool, device='cuda')
         ecken_nummern = flaechen[kandidaten]
         for _ in range(cls.RUNDEN):
             neu = ~genommen & bekannt[ecken_nummern].any(axis=1)
@@ -54,6 +55,6 @@ class Meshfigurteileanschluss:
                 break
             genommen |= neu
             bekannt[ecken_nummern[neu].reshape(-1)] = True
-        aus = maske.copy()
+        aus = Torchfeld.kopie(maske)
         aus[kandidaten[genommen]] = True
         return aus, int(genommen.sum())

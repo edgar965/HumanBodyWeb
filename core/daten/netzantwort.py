@@ -31,7 +31,8 @@ Bytes, aber nur, wenn das Feld C-zusammenhängend ist. Nach einem `[:, [0, 2, 1]
 ist es das nicht mehr.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .netzfeld import Netzfeld
 
@@ -41,12 +42,12 @@ class Netzantwort:
 
     #: Feldname -> Zieltyp. Der Browser liest genau diese Breiten.
     TYPEN = {
-        'vertices': np.float32,
-        'normals': np.float32,
-        'uvs': np.float32,
-        'skin_indices': np.float32,
-        'skin_weights': np.float32,
-        'faces': np.uint32,
+        'vertices': torch.float32,
+        'normals': torch.float32,
+        'uvs': torch.float32,
+        'skin_indices': torch.float32,
+        'skin_weights': torch.float32,
+        'faces': torch.uint32,
     }
 
     #: Die SMPL-X-Antwort (`api/smplx_ausgabe.py`) hat einen EIGENEN Vertrag:
@@ -61,17 +62,25 @@ class Netzantwort:
     #: Wer diese Breiten angleicht, macht die Foto-zu-3D-Kette kaputt, ohne
     #: dass etwas rot wird. Deshalb geht der Typ dort ausdrücklich mit.
     TYPEN_SMPLX = {
-        'faces': np.uint32, 'uv_faces': np.uint32,
-        'skin_indices': np.uint16, 'uv_skin_indices': np.uint16,
+        'faces': torch.uint32, 'uv_faces': torch.uint32,
+        'skin_indices': torch.uint16, 'uv_skin_indices': torch.uint16,
     }
 
+    #: Felder, die NUMMERN tragen und trotzdem als float32 reisen (der Shader liest Attribute als Gleitkomma): Knochennummern. Sie gehen `genau`
+    #: hinaus, `Netzpaket` kürzt sie nie auf 16 Bit (`netzkurz.py`, 12.11.2026). Wer ein weiteres Nummernfeld als float32 schickt, gibt `genau=True` mit
+    #: (`G9netzantwort`: die Körperpunkte der Oberflächenbindung).
+    NUMMERN = frozenset({'skin_indices'})
+
     @classmethod
-    def feld(cls, werte, name, typ=None):
+    def feld(cls, werte, name, typ=None, genau=None):
         """Ein Feld als `Netzfeld` — mit dem Typ, den der Browser erwartet.
 
         `typ` schlägt die Tabelle: Für einen zweiten Vertrag (SMPL-X, siehe
         `TYPEN_SMPLX`) wird er ausdrücklich mitgegeben, statt die Tabelle zu
         einer Sammlung von Sonderfällen wachsen zu lassen.
+
+        `genau`: das Feld trägt Nummern und darf auf dem Weg nicht gerundet
+        werden; ohne Angabe gilt die Tabelle `NUMMERN`.
 
         SEIT DEM 30.09.2026 KOMMT HIER KEIN STRING MEHR HERAUS (`netzfeld.py`):
         Der Träger hält die rohen Bytes, und erst die Auslieferung entscheidet,
@@ -80,13 +89,13 @@ class Netzantwort:
         beim ersten Aufruf einen `TypeError` — laut, nicht still.
         """
         if typ is None:
-            typ = cls.TYPEN.get(name, np.float32)
-        return Netzfeld.aus(werte, typ)
+            typ = cls.TYPEN.get(name, torch.float32)
+        return Netzfeld.aus(werte, typ, genau=name in cls.NUMMERN if genau is None else genau)
 
     @classmethod
     def smplx_feld(cls, werte, name):
         """Ein Feld der SMPL-X-Antwort, mit deren eigenen Breiten."""
-        return cls.feld(werte, name, cls.TYPEN_SMPLX.get(name, np.float32))
+        return cls.feld(werte, name, cls.TYPEN_SMPLX.get(name, torch.float32))
 
     @classmethod
     def hautgewichte(cls, haut, kompakt=False):
@@ -106,12 +115,12 @@ class Netzantwort:
         if not haut:
             return None
         if kompakt:
-            gewicht = np.clip(np.rint(np.asarray(haut['gewicht'], dtype=np.float64)
+            gewicht = Torchfeld.clip(Torchfeld.round(Torchfeld.feld(haut['gewicht'], dtype=torch.float64)
                                       * 255.0), 0, 255)
             return {
                 'knochen': haut['knochen'], 'kodierung': 'u16u8',
-                'skin_indices': cls.feld(haut['index'], 'skin_indices', np.uint16),
-                'skin_weights': cls.feld(gewicht, 'skin_weights', np.uint8),
+                'skin_indices': cls.feld(haut['index'], 'skin_indices', torch.uint16),
+                'skin_weights': cls.feld(gewicht, 'skin_weights', torch.uint8),
             }
         return {
             'knochen': haut['knochen'],
@@ -127,13 +136,13 @@ class Netzantwort:
         Hand mitzugeben war die zweite Fehlerquelle: In zwei Fassungen zählte
         `face_count` die VIERECKE, obwohl `faces` schon Dreiecke enthielt.
         """
-        punkte = np.asarray(vertices)
+        punkte = Torchfeld.feld(vertices)
         aus = {
             'vertex_count': int(punkte.reshape(-1, 3).shape[0]),
             'vertices': cls.feld(punkte, 'vertices'),
         }
         if faces is not None:
-            dreiecke = np.asarray(faces)
+            dreiecke = Torchfeld.feld(faces)
             aus['face_count'] = int(dreiecke.reshape(-1, 3).shape[0])
             aus['faces'] = cls.feld(dreiecke, 'faces')
         if normals is not None:

@@ -39,9 +39,10 @@ import threading
 from collections import OrderedDict
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
-from scipy.spatial.transform import Rotation
+from KoerperKI_alle.drehung import Drehung as Rotation
 
 logger = logging.getLogger('core')
 
@@ -59,7 +60,7 @@ class G9hbpose:
                ('DEF-thigh', 'DEF-shin', 'thigh', 'shin'),
                ('DEF-shin', 'DEF-foot', 'shin', 'foot'))
     SEITEN = (('L', 'l_'), ('R', 'r_'))
-    UNTEN = np.array([0.0, -1.0, 0.0])
+    UNTEN = Torchfeld.feld([0.0, -1.0, 0.0], copy=True)
     VORRAT_MAX = 16
     _vorrat = OrderedDict()
     _skelett = None
@@ -120,14 +121,14 @@ class G9hbpose:
                     if name not in geordnet and (b.get('parent') not in roh or b.get('parent') in geordnet):
                         p, q = b['local_position'], b['local_quaternion']
                         geordnet[name] = {'eltern': b.get('parent') if b.get('parent') in roh else None,
-                                          'pos': np.array([p[0], p[2], -p[1]], dtype=np.float64),
+                                          'pos': Torchfeld.feld([p[0], p[2], -p[1]], dtype=torch.float64, copy=True),
                                           'quat': (q[1], q[3], -q[2], q[0])}
             cls._skelett = geordnet
         return cls._skelett
 
     @staticmethod
     def _matrix(q):
-        return Rotation.from_quat(np.asarray(q, dtype=np.float64)).as_matrix()   # (x, y, z, w)
+        return Rotation.from_quat(Torchfeld.feld(q, dtype=torch.float64)).as_matrix()   # (x, y, z, w)
 
     @classmethod
     def _welt(cls, lokal):
@@ -169,13 +170,13 @@ class G9hbpose:
         ruhe, pose = cls.gestellt(deltas)
         bewegung = {n: pose[n][0] @ ruhe[n][0].T for n in pose}
         aus_def = {g9: d for d, g9 in DEF_ZU_G9.items() if g9 and d in bewegung}
-        gelenke = {k['name']: np.asarray(k['kopf'], dtype=np.float64) for k in
+        gelenke = {k['name']: Torchfeld.feld(k['kopf'], dtype=torch.float64) for k in
                    G9skelett(ruhe_formung.formeln.knochen(), 0.0, ruhe_formung.matrizen()).gelenkknochen()}
         ziele = cls._ziele(pose, gelenke, tpose)
         welt, drehung = {}, {}
         for k in G9skelett.roh():
             name, eltern = k['name'], k['eltern']
-            d_eltern = welt.get(eltern, np.eye(3))
+            d_eltern = welt.get(eltern, torch.eye(3, dtype=torch.float64, device='cuda'))
             d = bewegung[aus_def[name]] if name in aus_def else d_eltern
             if name in ziele:
                 d = cls._schwenkung(d @ ziele[name][0], ziele[name][1]) @ d
@@ -202,17 +203,17 @@ class G9hbpose:
     @staticmethod
     def _schwenkung(von, nach):
         u"""Die kleinste Drehung, die die Richtung `von` auf `nach` legt."""
-        a, b = von / np.linalg.norm(von), nach / np.linalg.norm(nach)
-        achse = np.cross(a, b)
-        sinus = np.linalg.norm(achse)
+        a, b = von / Torchfeld.linalg_norm(von), nach / Torchfeld.linalg_norm(nach)
+        achse = Torchfeld.cross(a, b)
+        sinus = Torchfeld.linalg_norm(achse)
         if sinus < 1e-9:
-            return np.eye(3)
-        return Rotation.from_rotvec(achse / sinus * np.arctan2(sinus, float(np.dot(a, b)))).as_matrix()
+            return torch.eye(3, dtype=torch.float64, device='cuda')
+        return Rotation.from_rotvec(achse / sinus * Torchfeld.arctan2(sinus, float(Torchfeld.dot(a, b)))).as_matrix()
 
     @staticmethod
     def _kanaele(r, orientierung, reihenfolge, matrizen):
         u"""`{'rotation/x': Grad, …}` einer lokalen Drehung `r` (Achsen der Ruhelage) — leer ohne Drehung."""
-        if np.allclose(r, np.eye(3), atol=1e-7):
+        if Torchfeld.allclose(r, torch.eye(3, dtype=torch.float64, device='cuda'), atol=1e-7):
             return {}
         o = matrizen.euler(orientierung, 'XYZ')
         winkel = Rotation.from_matrix(o.T @ r @ o).as_euler(str(reihenfolge).lower(), degrees=True)

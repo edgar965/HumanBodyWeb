@@ -13,7 +13,8 @@ Test `test_eine_kleine_zone_ohne_stoff_bleibt`). Weg fällt eine Fläche des Kö
 
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .exportleistehautmaske import Exportleistehautmaske
 
@@ -40,7 +41,7 @@ class Exportleisteobjmaske:
         bericht.update(punkte_verdeckt=int(verdeckt.sum()), dreiecke_weg=len(weg))
         if not weg:
             return text, bericht
-        bleibt = np.ones(len(zeilen), dtype=bool)
+        bleibt = torch.ones(len(zeilen), dtype=torch.bool, device='cuda')
         bleibt[weg] = False
         return '\n'.join(z for z, b in zip(zeilen, bleibt.tolist(), strict=True) if b), bericht
 
@@ -54,27 +55,27 @@ class Exportleisteobjmaske:
                 punkte.append(z[2:].split()[:3])
             elif art == 'f ':
                 ecken = [int(t.split('/', 1)[0]) for t in z[2:].split()]
-                flaechen.setdefault(objekt, []).append((i, np.asarray([n - 1 if n > 0 else len(punkte) + n for n in ecken], dtype=np.int64)))
+                flaechen.setdefault(objekt, []).append((i, Torchfeld.feld([n - 1 if n > 0 else len(punkte) + n for n in ecken], dtype=torch.int64)))
             elif art == 'o ':
                 objekt = z[2:].strip()
-        return np.asarray(punkte, dtype=np.float64).reshape(-1, 3), flaechen
+        return Torchfeld.feld(punkte, dtype=torch.float64).reshape(-1, 3), flaechen
 
     @staticmethod
     def _dreiecke(ecken):
         """Flächen (Listen von Nummern) als Fächer zu Dreiecken (N, 3)."""
-        return np.asarray([(e[0], e[k], e[k + 1]) for e in ecken for k in range(1, len(e) - 1)], dtype=np.int64).reshape(-1, 3)
+        return Torchfeld.feld([(e[0], e[k], e[k + 1]) for e in ecken for k in range(1, len(e) - 1)], dtype=torch.int64).reshape(-1, 3)
 
     @classmethod
     def _netz(cls, punkte, flaechen):
         """Ein Stück als (Punkte, Dreiecke) nur mit seinen Punkten."""
         t = cls._dreiecke([e for _, e in flaechen])
-        genutzt, neu = np.unique(t, return_inverse=True)
+        genutzt, neu = Torchfeld.unique(t, return_inverse=True)
         return punkte[genutzt], neu.reshape(-1, 3)
 
     @classmethod
     def _verdeckt(cls, punkte, ecken, stuecke):
         """Bool je Punkt der Datei: verdeckt (nur Körperpunkte können es sein)."""
-        genutzt, t = np.unique(cls._dreiecke(ecken), return_inverse=True)
-        verdeckt = np.zeros(len(punkte), dtype=bool)
+        genutzt, t = Torchfeld.unique(cls._dreiecke(ecken), return_inverse=True)
+        verdeckt = torch.zeros(len(punkte), dtype=torch.bool, device='cuda')
         verdeckt[genutzt] = Exportleistehautmaske.maske(punkte[genutzt], t.reshape(-1, 3), stuecke)
         return verdeckt

@@ -12,9 +12,10 @@ Originals enthalten — sie werden nie angesprochen.
 Spiegelbild der Rechnung: UV-Ursprung unten links (Blender), Bildzeile 0 oben — `v` wird beim Schneiden gespiegelt.
 """
 
-import numpy as np
-from scipy import sparse
-from scipy.sparse import csgraph
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
 __all__ = ['Blendimportatlas']
 
@@ -32,11 +33,11 @@ class Blendimportatlas:
         """Nummer der UV-Insel je Dreieck; `uv_ecken` (T, 3, 2)."""
         t = len(uv_ecken)
         if t == 0:
-            return np.zeros(0, dtype=np.int64)
-        raster = np.round(np.asarray(uv_ecken, dtype=np.float64).reshape(-1, 2) * cls.AUFLOESUNG).astype(np.int64)
-        _, ecke = np.unique(raster, axis=0, return_inverse=True)
-        zeile = np.repeat(np.arange(t), 3)
-        je = sparse.csr_matrix((np.ones(3 * t), (zeile, ecke.reshape(-1))), shape=(t, int(ecke.max()) + 1))
+            return torch.zeros(0, dtype=torch.int64, device='cuda')
+        raster = Torchfeld.astype(Torchfeld.round(Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2) * cls.AUFLOESUNG), torch.int64)
+        _, ecke = Torchfeld.unique(raster, axis=0, return_inverse=True)
+        zeile = Torchfeld.repeat_interleave(Torchfeld.arange(t), 3)
+        je = sparse.csr_matrix((torch.ones(3 * t, dtype=torch.float64, device='cuda'), (zeile, ecke.reshape(-1))), shape=(t, int(ecke.max()) + 1))
         return csgraph.connected_components((je @ je.T) > 0, directed=False)[1]
 
     @classmethod
@@ -44,12 +45,12 @@ class Blendimportatlas:
         """`(x0, y0, x1, y1)` je Insel in Texeln des Quellbilds (Zeile 0 oben), samt Rand, auf das Bild begrenzt.
         `groesse` = (Breite, Höhe) des Quellbilds."""
         breite, hoehe = groesse
-        uv = np.asarray(uv_ecken, dtype=np.float64)
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64)
         aus = []
         for i in range(int(insel.max()) + 1 if len(insel) else 0):
             u, v = uv[insel == i][..., 0].reshape(-1), uv[insel == i][..., 1].reshape(-1)
-            x0, x1 = np.floor(u.min() * breite) - cls.RAND_PX, np.ceil(u.max() * breite) + cls.RAND_PX
-            y0, y1 = np.floor((1.0 - v.max()) * hoehe) - cls.RAND_PX, np.ceil((1.0 - v.min()) * hoehe) + cls.RAND_PX
+            x0, x1 = Torchfeld.floor(u.min() * breite) - cls.RAND_PX, Torchfeld.ceil(u.max() * breite) + cls.RAND_PX
+            y0, y1 = Torchfeld.floor((1.0 - v.max()) * hoehe) - cls.RAND_PX, Torchfeld.ceil((1.0 - v.min()) * hoehe) + cls.RAND_PX
             aus.append((int(max(0, x0)), int(max(0, y0)), int(min(breite, x1)), int(min(hoehe, y1))))
         return aus
 
@@ -77,19 +78,19 @@ class Blendimportatlas:
     @staticmethod
     def neue_uv(uv_ecken, insel, rechtecke, orte, groesse, atlas):
         """UV je Dreiecksecke im Atlas (Ursprung unten links, wie das Original)."""
-        uv = np.asarray(uv_ecken, dtype=np.float64)
-        aus = np.zeros_like(uv)
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64)
+        aus = torch.zeros_like(uv)
         for i, (x0, y0, _, _) in enumerate(rechtecke):
             m = insel == i
             px = uv[m][..., 0] * groesse[0] - x0 + orte[i][0]
             py = (1.0 - uv[m][..., 1]) * groesse[1] - y0 + orte[i][1]
-            aus[m] = np.stack([px / atlas[0], 1.0 - py / atlas[1]], axis=-1)
+            aus[m] = Torchfeld.stack([px / atlas[0], 1.0 - py / atlas[1]], axis=-1)
         return aus
 
     @staticmethod
     def schneiden(bild, rechtecke, orte, atlas):
         """Der Atlas aus `bild` (H, W, K): jede Insel an ihren Ort kopiert, Rest schwarz."""
-        aus = np.zeros((atlas[1], atlas[0]) + bild.shape[2:], dtype=bild.dtype)
+        aus = torch.zeros((atlas[1], atlas[0]) + bild.shape[2:], dtype=bild.dtype, device='cuda')
         for (x0, y0, x1, y1), (ax, ay) in zip(rechtecke, orte, strict=True):
             aus[ay:ay + (y1 - y0), ax:ax + (x1 - x0)] = bild[y0:y1, x0:x1]
         return aus

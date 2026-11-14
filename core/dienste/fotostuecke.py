@@ -19,7 +19,9 @@ sich davon etwas geändert hat (`artefakte-benennen`).
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 
@@ -47,7 +49,7 @@ class Fotostuecke:
     def _stand(self):
         dateien = [self.ablage.arbeit(n) for n in ('kleidung_maske.npz', 'genesis_ende.npz', 'posiert.npy')]
         dateien.append(self.ablage.netzdatei())
-        return [self.FASSUNG] + [[str(p), p.stat().st_mtime_ns] if p and p.is_file() else None for p in dateien]
+        return [self.FASSUNG] + [[str(p), Npztorch.stat(p).st_mtime_ns] if p and Npztorch.da(p) else None for p in dateien]
 
     def holen(self):
         """`{name: garderobenkennung}` — gebaut, wenn nötig; leer ohne Kleidung oder Figur."""
@@ -71,24 +73,24 @@ class Fotostuecke:
         from .meshfigurkleidung import Meshfigurkleidung
         maske = self.ablage.arbeit('kleidung_maske.npz')
         ruhe, posiert = self.ablage.arbeit('genesis_ende.npz'), self.ablage.arbeit('posiert.npy')
-        if not (maske.is_file() and ruhe.is_file() and posiert.is_file()):
+        if not (Npztorch.da(maske) and Npztorch.da(ruhe) and Npztorch.da(posiert)):
             return {}, {'fehler': 'Maske oder Figur fehlen'}
         scan, _ = Meshfigurkleidung(type('Lauf', (), {'job': self.job, 'ablage': self.ablage})()).koerpernetz()
         # Die Hülle (`FORM == 'huelle'`) holt nur Farben (`scan.farben`: Textur ODER Punktfarben) und schreibt ihren eigenen Atlas. Netze aus Pixal3D (Mehrbild) tragen Punktfarben statt einer Textur —
         # der Auftrag „Generisch" (2026.10.04.12.40.34) bekam deshalb keine Kleiderstücke („Netz ohne Textur"), obwohl Körper und Maske stimmten.
         if (scan.uv_ecken is None or scan.textur is None) and (self.FORM != 'huelle' or scan.punktfarben is None):
             return {}, {'fehler': 'Netz ohne Textur'}
-        with np.load(maske) as d:
-            stueck = np.asarray(d['stueck'])
-            haut = np.asarray(d['haut'], dtype=bool) if 'haut' in d.files else np.zeros(len(stueck), dtype=bool)
-        with np.load(ruhe) as d:
-            koerper = (np.asarray(d['punkte'], dtype=np.float64), np.asarray(d['dreiecke'], dtype=np.int64))
-            entposen = Kleidungsentposen(koerper[0], np.load(posiert).astype(np.float64))
+        with Npztorch.lesen(maske) as d:
+            stueck = Torchfeld.feld(d['stueck'])
+            haut = Torchfeld.feld(d['haut'], dtype=torch.bool) if 'haut' in d.files else torch.zeros(len(stueck), dtype=torch.bool, device='cuda')
+        with Npztorch.lesen(ruhe) as d:
+            koerper = (Torchfeld.feld(d['punkte'], dtype=torch.float64), Torchfeld.feld(d['dreiecke'], dtype=torch.int64))
+            entposen = Kleidungsentposen(koerper[0], Torchfeld.astype(Npztorch.lesen(posiert), torch.float64))
             from .huellenschnitt import Huellenschnitt
             hals = Huellenschnitt.halsgewichte(d)
-        alle = np.arange(len(scan.flaechen))
+        alle = Torchfeld.arange(len(scan.flaechen))
         hoehe = scan.punkte[scan.flaechen].mean(axis=1)[:, 1]
-        rgb = scan.farben(alle, np.full((len(alle), 3), 1.0 / 3.0)).astype(np.float64) / 255.0
+        rgb = Torchfeld.astype(scan.farben(alle, Torchfeld.full((len(alle), 3), 1.0 / 3.0)), torch.float64) / 255.0
         warm = (rgb[:, 0] > rgb[:, 1]) & (rgb[:, 1] > rgb[:, 2]) & (rgb[:, 0] - rgb[:, 2] > self.HAUT_ABSTAND)
         if self.FORM == 'huelle':                     # Form aus der Figur, Farbe aus dem Netz (`Fotohuelle`)
             from .fotohuelle import Fotohuelle
@@ -107,25 +109,25 @@ class Fotostuecke:
             glatt = self._glaetten(scan.flaechen, wahl, self.GLAETTEN_JE.get(name))
             masken[name] = self._zusammen(scan.flaechen, glatt)
         haarmaske = self.ablage.arbeit('haar_maske.npz')
-        if haarmaske.is_file():                 # das Haar des Netzes (Schritt „haar") — ohne Hautton- und Höhenfilter
-            with np.load(haarmaske) as d:
+        if Npztorch.da(haarmaske):                 # das Haar des Netzes (Schritt „haar") — ohne Hautton- und Höhenfilter
+            with Npztorch.lesen(haarmaske) as d:
                 if len(d['haar']) == len(scan.flaechen):
-                    masken['haar'] = self._zusammen(scan.flaechen, np.asarray(d['haar'], dtype=bool))
+                    masken['haar'] = self._zusammen(scan.flaechen, Torchfeld.feld(d['haar'], dtype=torch.bool))
         aus, bericht = {}, {}
         for name, wahl in masken.items():
             if int(wahl.sum()) < self.FLAECHEN_MIN:
                 continue
-            genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
+            genutzt, neu = Torchfeld.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
             punkte = entposen.ruhelage(scan.punkte[genutzt])
             flaechen = neu.reshape(-1, 3)
             heil = self._ungedehnt(scan.punkte[genutzt], punkte, flaechen) & self._ungeklappt(
                 scan.punkte[genutzt], punkte, flaechen, entposen.posiert, *koerper)
             if not heil.all():                   # gezerrte und umgeklappte Flächen (Achsel) heraus, neu nummerieren
-                index = np.flatnonzero(wahl)
-                wahl = np.zeros_like(wahl)
+                index = torch.flatten(wahl).nonzero()[:, 0]
+                wahl = torch.zeros_like(wahl)
                 wahl[index[heil]] = True
                 wahl = self._zusammen(scan.flaechen, wahl)
-                genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
+                genutzt, neu = Torchfeld.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
                 punkte = entposen.ruhelage(scan.punkte[genutzt])
                 flaechen = neu.reshape(-1, 3)
             kennung, b = self._schreiben(name, punkte, flaechen, scan.uv_ecken[wahl], scan.textur)
@@ -142,8 +144,8 @@ class Fotostuecke:
         """(F,) bool — Flächen, deren längste Kante höchstens um `DEHNUNG_MAX` gewachsen ist."""
         def laenge(p):
             e = p[flaechen]
-            return np.max(np.stack([np.linalg.norm(e[:, i] - e[:, (i + 1) % 3], axis=1) for i in range(3)]), axis=0)
-        return laenge(np.asarray(nachher)) <= cls.DEHNUNG_MAX * np.maximum(laenge(np.asarray(vorher)), 1e-6)
+            return Torchfeld.amax(Torchfeld.stack([Torchfeld.linalg_norm(e[:, i] - e[:, (i + 1) % 3], dim=1) for i in range(3)]), dim=0)
+        return laenge(Torchfeld.feld(nachher)) <= cls.DEHNUNG_MAX * Torchfeld.maximum(laenge(Torchfeld.feld(vorher)), 1e-6)
 
     #: Eine Fläche ist umgeklappt, wenn ihre Normale gegenüber der Hautnormale am nächsten Figurpunkt vor dem
     #: Zurückrechnen deutlich auf der einen, danach deutlich auf der anderen Seite steht (Kosinus über ±`KLAPP`) —
@@ -161,17 +163,17 @@ class Fotostuecke:
     @staticmethod
     def _kosinus(punkte, flaechen, koerper, dreiecke):
         """(F,) — Kosinus zwischen Flächennormale und Hautnormale am nächsten Figurpunkt."""
-        from scipy.spatial import cKDTree
-        e = np.asarray(punkte)[flaechen]
-        n = np.cross(e[:, 1] - e[:, 0], e[:, 2] - e[:, 0])
-        n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
+        e = Torchfeld.feld(punkte)[flaechen]
+        n = Torchfeld.cross(e[:, 1] - e[:, 0], e[:, 2] - e[:, 0])
+        n /= Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-12)
         k = koerper[dreiecke]
-        kn = np.zeros_like(koerper)
+        kn = torch.zeros_like(koerper)
         for i in range(3):                                         # Punktnormalen der Figur (flächengewichtet)
-            np.add.at(kn, dreiecke[:, i], np.cross(k[:, 1] - k[:, 0], k[:, 2] - k[:, 0]))
-        kn /= np.maximum(np.linalg.norm(kn, axis=1, keepdims=True), 1e-12)
+            Torchfeld.add_at(kn, dreiecke[:, i], Torchfeld.cross(k[:, 1] - k[:, 0], k[:, 2] - k[:, 0]))
+        kn /= Torchfeld.maximum(Torchfeld.linalg_norm(kn, dim=1, keepdim=True), 1e-12)
         _, index = cKDTree(koerper).query(e.mean(axis=1), workers=-1)
-        return np.einsum('ij,ij->i', n, kn[index])
+        return Torchfeld.einsum('ij,ij->i', n, kn[index])
 
     #: Zusammenhangsteile unter diesem Anteil der Flächen des Stücks fallen weg (Hautflecken, Fäden, Inseln).
     TEIL_MIN = 0.03
@@ -195,9 +197,9 @@ class Fotostuecke:
         """`wahl` auf den zusammenhängenden Höhenkern um das dichteste Band beschränkt."""
         if not wahl.any():
             return wahl
-        band = np.floor((hoehe - hoehe[wahl].min()) / cls.KERN_BAND).astype(int)
-        zahl = np.bincount(band[wahl])
-        dicht = int(np.argmax(zahl))
+        band = Torchfeld.astype(Torchfeld.floor((hoehe - hoehe[wahl].min()) / cls.KERN_BAND), torch.int64)
+        zahl = Torchfeld.bincount(band[wahl])
+        dicht = int(Torchfeld.argmax(zahl))
         genug = zahl >= cls.KERN_ANTEIL_JE.get(name, cls.KERN_ANTEIL) * zahl[dicht]
         von = dicht
         while von > 0 and genug[von - 1]:
@@ -217,19 +219,19 @@ class Fotostuecke:
     def _glaetten(cls, flaechen, wahl, ringe=None):
         """Morphologisches Öffnen auf dem Netz: `ringe` Mal die Randflächen weg (Flächen mit einem Punkt außerhalb),
         dann ebenso oft innerhalb der alten Wahl wieder dazu."""
-        from scipy.sparse import coo_matrix
-        f = np.asarray(flaechen, dtype=np.int64)
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        f = Torchfeld.feld(flaechen, dtype=torch.int64)
         n_punkte = int(f.max()) + 1
-        zeilen = np.repeat(np.arange(len(f)), 3)
-        inzidenz = coo_matrix((np.ones(len(zeilen)), (zeilen, f.reshape(-1))), shape=(len(f), n_punkte)).tocsr()
-        alt, jetzt = wahl.copy(), wahl.copy()
+        zeilen = Torchfeld.repeat_interleave(Torchfeld.arange(len(f)), 3)
+        inzidenz = coo_matrix((torch.ones(len(zeilen), dtype=torch.float64, device='cuda'), (zeilen, f.reshape(-1))), shape=(len(f), n_punkte)).tocsr()
+        alt, jetzt = Torchfeld.kopie(wahl), Torchfeld.kopie(wahl)
         for _ in range(cls.GLAETTEN_RINGE if ringe is None else ringe):    # abtragen
-            draussen = np.zeros(n_punkte, dtype=bool)                      # Punkte an einer nicht gewählten Fläche
-            draussen[np.unique(f[~jetzt])] = True
-            jetzt = jetzt & ~(inzidenz @ draussen.astype(np.float64) > 0)
+            draussen = torch.zeros(n_punkte, dtype=torch.bool, device='cuda')                      # Punkte an einer nicht gewählten Fläche
+            draussen[Torchfeld.unique(f[~jetzt])] = True
+            jetzt = jetzt & ~(inzidenz @ Torchfeld.astype(draussen, torch.float64) > 0)
         for _ in range(cls.GLAETTEN_RINGE if ringe is None else ringe):    # wieder anfügen, nur in der alten Wahl
-            punkte = np.zeros(n_punkte, dtype=np.float64)
-            punkte[np.unique(f[jetzt])] = 1.0
+            punkte = torch.zeros(n_punkte, dtype=torch.float64, device='cuda')
+            punkte[Torchfeld.unique(f[jetzt])] = 1.0
             jetzt = alt & ((inzidenz @ punkte) > 0)
         return jetzt
 
@@ -237,18 +239,18 @@ class Fotostuecke:
     def _zusammen(cls, flaechen, wahl):
         """`wahl` ohne Hautflächen (`haut` der Maske — dunkle Flecken an den Beinen galten als „Hose", Testauftrag
         2026.10.01.12.38.09: 0,23–0,84 m) und ohne kleine Zusammenhangsteile (`TEIL_MIN`)."""
-        from scipy.sparse import coo_matrix
-        from scipy.sparse.csgraph import connected_components
-        index = np.flatnonzero(wahl)
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        from KoerperKI_alle.kartengraph import connected_components
+        index = torch.flatten(wahl).nonzero()[:, 0]
         if not len(index):
             return wahl
-        f = np.asarray(flaechen)[index]
-        zeilen = np.repeat(np.arange(len(index)), 3)
-        punkt = coo_matrix((np.ones(len(zeilen)), (zeilen, f.reshape(-1))), shape=(len(index), int(f.max()) + 1))
+        f = Torchfeld.feld(flaechen)[index]
+        zeilen = Torchfeld.repeat_interleave(Torchfeld.arange(len(index)), 3)
+        punkt = coo_matrix((torch.ones(len(zeilen), dtype=torch.float64, device='cuda'), (zeilen, f.reshape(-1))), shape=(len(index), int(f.max()) + 1))
         nachbarn = (punkt @ punkt.T).tocoo()                       # Flächen mit gemeinsamem Punkt
         n, teil = connected_components(nachbarn, directed=False)
-        groesse = np.bincount(teil, minlength=n)
-        aus = np.zeros_like(wahl)
+        groesse = Torchfeld.bincount(teil, minlength=n)
+        aus = torch.zeros_like(wahl)
         aus[index[groesse[teil] >= cls.TEIL_MIN * len(index)]] = True
         return aus
 
@@ -266,17 +268,17 @@ class Fotostuecke:
         kennung, anzeige = G9eigenstueck.kennung_und_name('Eigen Foto %s %s f%d' % (kuerzel, name, self.FASSUNG))
         ordner = G9eigenstueck.arbeitsordner(kennung)
         ordner.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(np.asarray(textur, dtype=np.uint8)).save(ordner / 'textur.png')
+        Image.fromarray(Torchfeld.roh(Torchfeld.feld(textur, dtype=torch.uint8))).save(ordner / 'textur.png')
         (ordner / 'stueck.mtl').write_text('newmtl Stoff\nKd 1 1 1\nmap_Kd textur.png\n', encoding='utf-8')
-        uv = np.asarray(uv_ecken, dtype=np.float64).reshape(-1, 2)
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2)
         zeilen = ['mtllib stueck.mtl', 'usemtl Stoff'] + ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
+        zeilen += ['vt %.6f %.6f' % tuple(t) for t in Torchfeld.liste(uv)]
         zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                   for i, (a, b, c) in enumerate(np.asarray(flaechen, dtype=np.int64))]
+                   for i, (a, b, c) in enumerate(Torchfeld.feld(flaechen, dtype=torch.int64))]
         obj = ordner / 'stueck.obj'
         obj.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
         netz = G9objleser.lesen(str(obj))
-        roh = np.asarray(netz['punkte'], dtype=np.float64)
+        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
         kategorie = G9mbkategorien.fuer(self.ORDNER.get(name, 'tops'), anzeige)
         material = {'name': kennung + '_Mat', 'farbe': (1.0, 1.0, 1.0), 'bild': str(ordner / 'textur.png'),
                     'shininess': None, 'opacity': None}

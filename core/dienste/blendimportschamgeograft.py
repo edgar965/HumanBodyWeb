@@ -17,7 +17,8 @@ Ohne Django. Hat das Loch keinen einfachen Rand, bleibt das Stück, wie es war �
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportschamloch import Blendimportschamloch
 from .blendimportschamnaht import Blendimportschamnaht
@@ -77,7 +78,7 @@ class Blendimportschamgeograft:
         except ValueError as fehler:
             logger.warning('Scham-Stück ohne Naht: %s', fehler)
             return {'aus': str(fehler)}
-        loch = {'dreiecke': np.flatnonzero(im_loch).astype(np.int64), 'von': int(len(flaeche.faces)), 'ring': lage,
+        loch = {'dreiecke': Torchfeld.astype(torch.flatten(im_loch).nonzero()[:, 0], torch.int64), 'von': int(len(flaeche.faces)), 'ring': lage,
                 'ring_punkte': ring_punkte, 'verschiebung': verschiebung, 'ring_d': lage - lage0}
         tiefenfeld = {}
         if feld:        # die Lücke zur Haut am Rand läuft als weiches Feld ins Stück (`Schamtiefenfeld`), vor der Randseite: sie prüft die fertige Lage
@@ -85,5 +86,5 @@ class Blendimportschamgeograft:
         # Punkte und Spitzen hinter dem Ring zurück ins Loch (11.10.2026): sonst klappt das Stück an einzelnen Ringkanten auf der Haut zurück (cute girl: Ringecke 14 und 66 mit 178° und 168°).
         punkte, randseite = Schamnahtrandseite.schieben(punkte, {'punkte': flaeche.vertices, 'dreiecke': flaeche.faces}, loch, dreiecke)
         bericht = dict(haut.bericht(im_loch, ring), **naht, randseite=randseite, tiefenfeld=tiefenfeld, abgeschnitten=abgeschnitten, ring_gezogen_halbiert=verschiebung['halbiert'],
-                       ring_gezogen_max_mm=round(float(np.linalg.norm(verschiebung['d'], axis=1).max()) * 1000.0, 2))
+                       ring_gezogen_max_mm=round(float(Torchfeld.linalg_norm(verschiebung['d'], dim=1).max()) * 1000.0, 2))
         return {'punkte': punkte, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken, 'loch': loch, 'bericht': bericht}

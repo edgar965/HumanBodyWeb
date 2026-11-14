@@ -16,7 +16,8 @@ ausgeblendet, damit kein Ring entsteht. Die Lederhaut bleibt, wie Daz sie malt.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -39,46 +40,46 @@ class Meshfiguraugenbild:
 
     @staticmethod
     def linear(srgb):
-        c = np.asarray(srgb, dtype=np.float64) / 255.0
-        return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+        c = Torchfeld.feld(srgb, dtype=torch.float64) / 255.0
+        return torch.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
     @staticmethod
     def srgb(linear):
-        c = np.clip(linear, 0.0, 1.0)
-        return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055) * 255.0
+        c = Torchfeld.clip(linear, 0.0, 1.0)
+        return torch.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055) * 255.0
 
     @classmethod
     def gewicht(cls, kante):
         """(kante, kante) 0..1 — 1 in der Iris, weich zu Pupille und Limbus, 0 sonst."""
-        yy, xx = np.mgrid[:kante, :kante].astype(np.float64) + 0.5
-        aus = np.zeros((kante, kante))
+        yy, xx = Torchfeld.astype(Torchfeld.mgrid[:kante, :kante], torch.float64) + 0.5
+        aus = torch.zeros((kante, kante), dtype=torch.float64, device='cuda')
         for mx, my in cls.MITTEN:
-            r = np.hypot(xx - mx * kante, yy - my * kante) / kante
-            ein = np.clip((r - cls.PUPILLE[0]) / (cls.PUPILLE[1] - cls.PUPILLE[0]), 0, 1)
-            aus_ = np.clip((cls.LIMBUS[1] - r) / (cls.LIMBUS[1] - cls.LIMBUS[0]), 0, 1)
-            aus = np.maximum(aus, ein * aus_)
+            r = Torchfeld.hypot(xx - mx * kante, yy - my * kante) / kante
+            ein = Torchfeld.clip((r - cls.PUPILLE[0]) / (cls.PUPILLE[1] - cls.PUPILLE[0]), 0, 1)
+            aus_ = Torchfeld.clip((cls.LIMBUS[1] - r) / (cls.LIMBUS[1] - cls.LIMBUS[0]), 0, 1)
+            aus = Torchfeld.maximum(aus, ein * aus_)
         return aus
 
     @classmethod
     def irismaske(cls, kante):
-        yy, xx = np.mgrid[:kante, :kante].astype(np.float64) + 0.5
-        aus = np.zeros((kante, kante), dtype=bool)
+        yy, xx = Torchfeld.astype(Torchfeld.mgrid[:kante, :kante], torch.float64) + 0.5
+        aus = torch.zeros((kante, kante), dtype=torch.bool, device='cuda')
         for mx, my in cls.MITTEN:
-            r = np.hypot(xx - mx * kante, yy - my * kante) / kante
+            r = Torchfeld.hypot(xx - mx * kante, yy - my * kante) / kante
             aus |= (r >= cls.IRIS[0]) & (r < cls.IRIS[1])
         return aus
 
     @classmethod
     def faerben_bild(cls, bild, ziel):
         """(H, W, 3) uint8 → gefärbt; `ziel` sRGB. Gibt (Bild, Faktoren je Kanal)."""
-        bild = np.asarray(bild, dtype=np.uint8)
+        bild = Torchfeld.feld(bild, dtype=torch.uint8)
         kante = bild.shape[0]
         lin = cls.linear(bild)
-        quelle = np.median(lin[cls.irismaske(kante)], axis=0)
-        faktor = np.clip(cls.linear(ziel) / np.maximum(quelle, 1e-6), *cls.GRENZEN)
+        quelle = Torchfeld.median(lin[cls.irismaske(kante)], axis=0)
+        faktor = Torchfeld.clip(cls.linear(ziel) / Torchfeld.maximum(quelle, 1e-6), *cls.GRENZEN)
         w = cls.gewicht(kante)[..., None]
         aus = cls.srgb(lin * (1.0 + w * (faktor - 1.0)))
-        return np.round(aus).astype(np.uint8), faktor
+        return Torchfeld.astype(Torchfeld.round(aus), torch.uint8), faktor
 
     # ---------------------------------------------------------------- Datei
 
@@ -102,7 +103,7 @@ class Meshfiguraugenbild:
             logger.warning('Mesh to 3D: Augenbild nicht gefärbt (Vorlage %s, Ziel %s)', quelle, ziel)
             return None
         bild = Image.open(quelle).convert('RGB').resize((cls.KANTE, cls.KANTE), Image.LANCZOS)
-        gefaerbt, faktor = cls.faerben_bild(np.asarray(bild), ziel)
+        gefaerbt, faktor = cls.faerben_bild(Torchfeld.feld(bild), ziel)
         Image.fromarray(gefaerbt).save(ordner / cls.DATEI, quality=92)
         return {
             'datei': cls.DATEI,

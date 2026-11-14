@@ -15,7 +15,9 @@ jetzt an einer Stelle:
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..daten.bildrahmen import Bildrahmen
@@ -98,12 +100,12 @@ class Gesichtskontur:
             'partial_mesh',
             'smplx_face_vids.npz',
         )
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             return False
-        indizes = np.load(pfad)['vids']
+        indizes = Npztorch.lesen(pfad)['vids']
         indizes = indizes[indizes < len(self.projektion)]
         punkte = self.projektion[indizes]
-        punkte = punkte[~np.isnan(punkte).any(axis=1)]
+        punkte = punkte[~Torchfeld.isnan(punkte).any(axis=1)]
         if len(punkte) < 3:
             return False
         self.rahmen_netz = Bildrahmen.um(punkte)
@@ -115,7 +117,7 @@ class Gesichtskontur:
 
     def aus_kopfbereich(self):
         """Rueckfall: konvexe Huelle des obersten Zwoelftels der Projektion."""
-        gueltig = self.projektion[~np.isnan(self.projektion).any(axis=1)]
+        gueltig = self.projektion[~Torchfeld.isnan(self.projektion).any(axis=1)]
         if len(gueltig) < 3:
             return False
         y_min, y_max = gueltig[:, 1].min(), gueltig[:, 1].max()
@@ -187,7 +189,7 @@ class Gesichtskontur:
     @staticmethod
     def _huelle(punkte):
         try:
-            from scipy.spatial import ConvexHull
+            from KoerperKI_alle.kartenhuelle import ConvexHull
 
             huelle = ConvexHull(punkte)
             return [[float(p[0]), float(p[1])] for p in punkte[huelle.vertices]]

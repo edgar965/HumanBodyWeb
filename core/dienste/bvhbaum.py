@@ -21,7 +21,7 @@ Skelettvideo wird über das echte Video gelegt). Ein Umbau ohne Vergleichsbilder
 wäre geraten. Vermerkt statt stillschweigend gemacht.
 """
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Bvhbaum:
@@ -135,9 +135,7 @@ class Bvhbaum:
         """`OFFSET` und `CHANNELS` des zuletzt begonnenen Gelenks."""
         gelenk = self.gelenke[-1]
         if kopf == 'OFFSET':
-            self.verschiebung[gelenk] = np.array(
-                [float(wortliste[1]), float(wortliste[2]), float(wortliste[3])]
-            )
+            self.verschiebung[gelenk] = Torchfeld.feld([float(wortliste[1]), float(wortliste[2]), float(wortliste[3])], copy=True)
         elif kopf == 'CHANNELS':
             # Die ANZAHL steht in der Zeile; mehr Namen dahinter wären ein
             # Fehler der Datei und werden abgeschnitten, nicht gelesen.

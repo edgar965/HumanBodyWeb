@@ -40,7 +40,7 @@ class Command(BaseCommand):
 
         start = time.perf_counter()
         ausdruecke = MblabAusdruecke(str(mblab))
-        deltas = Knochendeltas(
+        deltas = Knochendeltas(  # npz geprüft: HumanBody/data bleibt NPY (Npzumstellung.AUSGENOMMEN), humanbody_core liest numpy
             str(daten / 'def_skeleton.json'),
             str(daten / 'skin_weights_base.json'),
             str(daten / 'vertices_tpose.npy'),

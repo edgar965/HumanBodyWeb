@@ -16,7 +16,8 @@ Figur rechnet `Hautschattungbau` wie Blender beim Backen. Der Rand um die getrof
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportlage import Blendimportlage
 from .hautbacken import Hautbackenflaeche, Hautbackenquelle, Hautbackenrand, Hautbackenretri
@@ -37,7 +38,7 @@ class Blendimporthautlokal:
         self.ruhe, self.genesis, self.px, self.geraet = ruhe_blender, genesis, int(px), geraet
         self.npz, self.retri = npz, None
         self.melden = melden or (lambda anteil, text: None)
-        self.figur_blender = np.round(Blendimportlage.blender(genesis['punkte']), 6)
+        self.figur_blender = Torchfeld.round(Blendimportlage.blender(genesis['punkte']), 6)
         self.quelle = self.schattung = self.treiber = None
         #: Glanz-Normalen-Korrektur von Cycles (`hautglanz`): `glanz_gerechnet` `{Material: Texel}` (das Closure-Modell hat die gebackene Normale gerechnet), `glanz_korrektur`
         #: `{Material: {'texel', 'grund'}}` (nicht gerechnet: dort gilt die Normale ohne die Korrektur).
@@ -80,8 +81,8 @@ class Blendimporthautlokal:
         """Die Figur der Kachel (`Hautbackenflaeche`), so wie Blender das OBJ liest."""
         g = self.genesis
         dreiecke = g['dreiecke'][g['kachel'] == nummer]
-        uv = np.round(g['uv'][dreiecke], 6).astype(np.float32)
-        return Hautbackenflaeche(self.figur_blender.astype(np.float32), dreiecke, uv)
+        uv = Torchfeld.astype(Torchfeld.round(g['uv'][dreiecke], 6), torch.float32)
+        return Hautbackenflaeche(Torchfeld.astype(self.figur_blender, torch.float32), dreiecke, uv)
 
     def kachel(self, nummer):
         """`{'farbe', 'rauheit', 'normalen': (px, px, 3) uint8, 'maske': (px, px) getroffen, 'belegt': getroffen + Rand, 'getroffen': Anteil in %}`."""

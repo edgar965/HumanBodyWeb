@@ -14,6 +14,10 @@ from Genesis9.kopfhaut import G9kopfhaut
 from core.dienste.haardynamik import Haardynamik
 
 from ._haardaten import Haardaten
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Haarablauf']
 
@@ -33,11 +37,11 @@ class Haarablauf:
         if self.fehler_im_teil is not None and len(self.auftraege) == self.fehler_im_teil:
             raise RuntimeError('Haar-Dynamik: Attrappe scheitert')
         self.auftraege.append(auftrag)
-        with np.load(auftrag['straehnen']) as d:
+        with Npztorch.lesen_numpy(auftrag['straehnen']) as d:
             punkte, laengen = d['punkte'], d['laengen']
         nachher = punkte.astype(np.float64) + (0.0, -0.02, 0.0)                       # alles 2 cm nach unten, auch die Wurzeln
         nachher[np.cumsum(laengen) - laengen] += 1e-4                                  # und die Wurzeln noch ein Stück falsch
-        np.savez(auftrag['aus'], punkte=nachher.astype(np.float32))
+        Npztorch.speichern(auftrag['aus'], punkte=nachher.astype(np.float32))
         return {'sekunden': 0.1, 'rechner': 'warp-motor:cuda:0'}
 
     def ablegen(self, kennung, name, namen, deltas, brief):

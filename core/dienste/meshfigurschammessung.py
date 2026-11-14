@@ -20,7 +20,10 @@ Gemessen wird die Figur VOR der Nachformung (`Blendimportnachformung`) und vor e
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 logger = logging.getLogger('core')
 
@@ -62,18 +65,18 @@ class Meshfigurschammessung:
         import trimesh
         from Genesis9.basisnetz import G9basisnetz
 
-        posiert = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
+        posiert = Torchfeld.astype(Npztorch.lesen(self.ablage.arbeit('posiert.npy')), torch.float64)
         stufe = G9basisnetz.holen().netzstufe(1)
-        figur_punkte = np.asarray(stufe.punkte(posiert), dtype=np.float64)
-        figur_dreiecke = np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3)
+        figur_punkte = Torchfeld.feld(stufe.punkte(posiert), dtype=torch.float64)
+        figur_dreiecke = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).reshape(-1, 3)
         netz_pfad = self.ablage.netzdatei()
         if netz_pfad is None:
             return {'hinweis': 'kein Netz im Eingang'}
-        with np.load(self.ablage.arbeit('scan_lage.npz')) as d:
-            matrix = np.asarray(d['matrix'], dtype=np.float64)
+        with Npztorch.lesen(self.ablage.arbeit('scan_lage.npz')) as d:
+            matrix = Torchfeld.feld(d['matrix'], dtype=torch.float64)
         netz = trimesh.load(str(netz_pfad), force='mesh', process=False)
         netz.apply_transform(matrix)
-        bericht = self.flaechen(figur_punkte, figur_dreiecke, np.asarray(netz.vertices, dtype=np.float64), np.asarray(netz.faces, dtype=np.int64))
+        bericht = self.flaechen(figur_punkte, figur_dreiecke, Torchfeld.feld(netz.vertices, dtype=torch.float64), Torchfeld.feld(netz.faces, dtype=torch.int64))
         bericht['netz'] = {'datei': netz_pfad.name, 'punkte': int(len(netz.vertices)), 'dreiecke': int(len(netz.faces))}
         return bericht
 
@@ -112,14 +115,14 @@ class Meshfigurschammessung:
     def _ausduennen(cls, punkte):
         if len(punkte) <= cls.PROBEN:
             return punkte
-        return punkte[np.sort(np.random.default_rng(7).choice(len(punkte), cls.PROBEN, replace=False))]
+        return punkte[torch.sort(Zufallsstrom.default_rng(7).choice(len(punkte), cls.PROBEN, replace=False), stable=True).values]
 
     @classmethod
     def _zuschneiden(cls, punkte, dreiecke, proben):
         """Die Dreiecke, deren Mitte im Kasten der Proben plus `UMKREIS_M` liegt."""
         import trimesh
 
-        lo, hi = proben.min(axis=0) - cls.UMKREIS_M, proben.max(axis=0) + cls.UMKREIS_M
+        lo, hi = Torchfeld.amin(proben, dim=0) - cls.UMKREIS_M, Torchfeld.amax(proben, dim=0) + cls.UMKREIS_M
         mitte = punkte[dreiecke].mean(axis=1)
         netz = trimesh.Trimesh(punkte, dreiecke[((mitte >= lo) & (mitte <= hi)).all(axis=1)], process=False)
         netz.remove_unreferenced_vertices()
@@ -129,9 +132,9 @@ class Meshfigurschammessung:
     def _statistik(d, hoehe):
         """`{n, median, p90, max, innerhalb_1mm, innerhalb_2mm, drittel: [unten, mitte, oben]}` der Abstände `d` (mm); die Drittel nach der Höhe `hoehe` (m) der Punkte."""
         def zeile(x):
-            return {'n': int(len(x)), 'median': round(float(np.median(x)), 2), 'p90': round(float(np.percentile(x, 90)), 2), 'max': round(float(x.max()), 1)} if len(x) else {'n': 0}
+            return {'n': int(len(x)), 'median': round(float(Torchfeld.median(x)), 2), 'p90': round(float(Torchfeld.percentile(x, 90)), 2), 'max': round(float(x.max()), 1)} if len(x) else {'n': 0}
 
-        grenzen = np.percentile(hoehe, [100 / 3, 200 / 3])
+        grenzen = Torchfeld.percentile(hoehe, [100 / 3, 200 / 3])
         drittel = [zeile(d[hoehe <= grenzen[0]]), zeile(d[(hoehe > grenzen[0]) & (hoehe <= grenzen[1])]), zeile(d[hoehe > grenzen[1]])]
         return {**zeile(d), 'innerhalb_1mm': round(float((d < 1.0).mean()), 3), 'innerhalb_2mm': round(float((d < 2.0).mean()), 3), 'drittel': drittel}
 

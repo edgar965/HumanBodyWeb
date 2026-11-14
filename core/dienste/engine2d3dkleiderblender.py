@@ -19,7 +19,9 @@ import logging
 import time
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..atomic_write import AtomarSchreiber
@@ -55,23 +57,21 @@ class Engine2d3dKleiderblender:
         for nummer, ((folger, _lage), punkte) in enumerate(zip(teile, kaefige, strict=True)):
             dreiecke = self._dreiecke(folger)
             if dreiecke is None or not len(dreiecke):
-                deltas.append(np.zeros_like(punkte))
+                deltas.append(torch.zeros_like(punkte))
                 continue
             stamm = self.ordner / ('%s_%d' % (kennung, nummer))
-            np.savez_compressed(str(stamm) + '_koerper.npz', punkte=k_punkte.astype(np.float32),
-                                dreiecke=np.asarray(k_dreiecke, dtype=np.int32))
-            np.savez_compressed(str(stamm) + '_stueck.npz', punkte=np.asarray(punkte, dtype=np.float32),
-                                dreiecke=np.asarray(dreiecke, dtype=np.int32))
-            fest = np.asarray(punkte, dtype=np.float64)[:, 1] >= y1 - float(fest_oben) * (y1 - y0)
+            Npztorch.speichern(str(stamm) + '_koerper.npz', punkte=Torchfeld.astype(k_punkte, torch.float32), dreiecke=Torchfeld.feld(k_dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)          # Blender (`drapieren.py`) liest mit numpy
+            Npztorch.speichern(str(stamm) + '_stueck.npz', punkte=Torchfeld.feld(punkte, dtype=torch.float32), dreiecke=Torchfeld.feld(dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)
+            fest = Torchfeld.feld(punkte, dtype=torch.float64)[:, 1] >= y1 - float(fest_oben) * (y1 - y0)
             auftrag = {'koerper': str(stamm) + '_koerper.npz', 'stueck': str(stamm) + '_stueck.npz',
                        'aus': str(stamm) + '_nachher.npz', 'bericht': str(stamm) + '_bericht.json',
                        'bilder': int(bilder), 'druck': float(druck), 'steifigkeit': float(steifigkeit),
-                       'schwerkraft': [0.0, -9.81, 0.0], 'anheften': np.flatnonzero(fest).tolist()}
+                       'schwerkraft': [0.0, -9.81, 0.0], 'anheften': torch.flatten(fest).nonzero()[:, 0].tolist()}
             AtomarSchreiber.json_schreiben(Path(str(stamm) + '_auftrag.json'), auftrag)
             bericht = self._laufen(Path(str(stamm) + '_auftrag.json'), Path(auftrag['bericht']))
-            with np.load(auftrag['aus']) as d:
-                nachher = np.asarray(d['punkte'], dtype=np.float64)
-            delta = nachher - np.asarray(punkte, dtype=np.float64)
+            with Npztorch.lesen(auftrag['aus']) as d:
+                nachher = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+            delta = nachher - Torchfeld.feld(punkte, dtype=torch.float64)
             delta[fest] = 0.0
             deltas.append(delta)
             bericht['fest'] = int(fest.sum())
@@ -133,8 +133,8 @@ class Engine2d3dKleiderblender:
         zusatz = str(knoten) in Haarknotenauftrag.ZUSATZ
         deltas, je_teil, berichte, straenge = [], [], [], 0
         for nummer, ((folger, _lage), punkte) in enumerate(zip(teile, kaefige, strict=True)):
-            punkte = np.asarray(punkte, dtype=np.float64)
-            deltas.append(np.zeros_like(punkte))
+            punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+            deltas.append(torch.zeros_like(punkte))
             je_teil.append(None)
             if getattr(folger, 'ART', None) != 'strang':
                 continue
@@ -142,20 +142,20 @@ class Engine2d3dKleiderblender:
             if not ketten:
                 continue
             maske = (G9ortsmorph.gewicht({'ort': dict(ort)}, punkte, y0, y1, mitte) if ort
-                     else np.ones(len(punkte)))
+                     else torch.ones(len(punkte), dtype=torch.float64, device='cuda'))
             pfad, auftrag = hin.schreiben(nummer, punkte, ketten, maske)
             bericht = self._laufen(pfad, Path(auftrag['bericht']), self.HAARSKRIPT)
             if zusatz:
                 je_teil[-1] = Haarknotenauftrag.zusatz(auftrag, folger, punkte)
                 f = je_teil[-1]
-                if f is None or len(f['l']) < 0.01 * len(ketten) or float(np.mean(f['l'])) < 2.0:
+                if f is None or len(f['l']) < 0.01 * len(ketten) or float(Torchfeld.mean(f['l'])) < 2.0:
                     raise ValueError(u'%s: Blender erzeugte aus %d Strähnen nichts Brauchbares (%s Strähnen, %s Punkte je '
                                      u'Strähne) — Dichte/Kopfhaut prüfen (Bericht); haar_duplizieren/'
                                      u'haar_interpolieren (Python) gehen immer'
                                      % (knoten, len(ketten), 0 if f is None else len(f['l']),
-                                        0 if f is None else round(float(np.mean(f['l'])), 1)))
+                                        0 if f is None else round(float(Torchfeld.mean(f['l'])), 1)))
             else:
-                deltas[-1] = Haarknotenauftrag.delta(auftrag, punkte, np.concatenate(ketten), maske)
+                deltas[-1] = Haarknotenauftrag.delta(auftrag, punkte, Torchfeld.cat(ketten), maske)
             berichte.append(bericht)
             straenge += len(ketten)
         if not straenge:
@@ -177,17 +177,17 @@ class Engine2d3dKleiderblender:
         roh = getattr(folger, 'dreiecke', None)
         if roh is None:
             return None
-        roh = np.asarray(roh)
+        roh = Torchfeld.feld(roh)
         if roh.ndim == 2 and roh.shape[1] == 4:
             vier = roh[:, 3] >= 0
             aus = [roh[:, :3]]
             if vier.any():
                 aus.append(roh[vier][:, [0, 2, 3]])
-            roh = np.vstack(aus)
+            roh = Torchfeld.vstack(aus)
         roh = roh.reshape(-1, 3)
         ursprung = getattr(folger, 'ursprung', None)
         if ursprung is not None:
-            roh = np.asarray(ursprung, dtype=np.int64)[roh]
+            roh = Torchfeld.feld(ursprung, dtype=torch.int64)[roh]
         return roh
 
     def exportieren(self, glb, ziel, fps, ton=None, zeit_s=300):
@@ -222,7 +222,7 @@ class Engine2d3dKleiderblender:
         except Exception as fehler:  # noqa: BLE001 — Zeitgrenze: Prozessbaum beenden, dann melden
             pp.beenden()
             raise RuntimeError('Blender-Drapierung: Zeitgrenze %d s (%s)' % (self.ZEIT_S, fehler)) from None
-        if not bericht.is_file():
+        if not Npztorch.da(bericht):
             raise RuntimeError('Blender-Drapierung ohne Bericht: %s' % pp.fehlertext(1500))
         with open(bericht, encoding='utf-8') as fh:
             daten = json.load(fh)

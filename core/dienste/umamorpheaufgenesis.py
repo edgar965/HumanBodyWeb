@@ -20,7 +20,8 @@ import logging
 import re
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.knochenfeld import G9knochenfeld
 from Genesis9.umamorphe import G9umamorphe
 
@@ -36,7 +37,7 @@ class Umamorpheaufgenesis:
     u"""Alle UMA-Regler und Kinder-Posen als Genesis-9-Morphs."""
 
     #: Unity (links-haendig, x = rechts der Figur) → Genesis (x = links): die x-Achse kehrt sich um.
-    SPIEGEL = np.array([-1.0, 1.0, 1.0])
+    SPIEGEL = Torchfeld.feld([-1.0, 1.0, 1.0], copy=True)
     NULL_M = 2e-5
 
     def __init__(self, melden=None):
@@ -61,7 +62,7 @@ class Umamorpheaufgenesis:
         if z.get('pivot') is not None:
             op['pivot'] = z['pivot']
         elif z.get('mitte'):
-            op['pivot'] = np.mean([self.feld.kopf[b] for b in z['mitte'] if b in self.feld.kopf], axis=0)
+            op['pivot'] = Torchfeld.mean([self.feld.kopf[b] for b in z['mitte'] if b in self.feld.kopf], axis=0)
         op.update(zusatz)
         return op
 
@@ -73,15 +74,15 @@ class Umamorpheaufgenesis:
         u"""Operationen einer `UMABonePose` mit Gewicht `gewicht` (`UMASkeleton.Morph`)."""
         aus = []
         for p in pose:
-            skala = 1.0 + (np.asarray(p['skala']) - 1.0) * gewicht
-            if np.abs(skala - 1.0).max() > 1e-6:
+            skala = 1.0 + (Torchfeld.feld(p['skala']) - 1.0) * gewicht
+            if Torchfeld.abs(skala - 1.0).max() > 1e-6:
                 aus.append(self.op(p['knochen'], 'skalieren', tuple(skala)))
-            pos = np.asarray(p['position']) * gewicht * self.SPIEGEL
-            if np.abs(pos).max() > 1e-6:
+            pos = Torchfeld.feld(p['position']) * gewicht * self.SPIEGEL
+            if Torchfeld.abs(pos).max() > 1e-6:
                 aus.append(self.op(p['knochen'], 'verschieben', tuple(pos)))
             x, y, z, w = p['rotation']
-            winkel = 2.0 * np.degrees(np.arccos(max(-1.0, min(1.0, w))))
-            if abs(winkel) > 1e-3 and np.linalg.norm((x, y, z)) > 1e-9:
+            winkel = 2.0 * Torchfeld.degrees(Torchfeld.arccos(max(-1.0, min(1.0, w))))
+            if abs(winkel) > 1e-3 and Torchfeld.linalg_norm(Torchfeld.feld((x, y, z))) > 1e-9:
                 aus.append(self.op(p['knochen'], 'drehen', self.drehung((x, y, z), winkel * gewicht)))
         return [o for o in aus if o]
 
@@ -90,9 +91,9 @@ class Umamorpheaufgenesis:
         m = Umaregler.wert(effekt, v)
         art = effekt['art']
         if art == 'skalieren':
-            o = self.op(effekt['knochen'], 'skalieren', tuple(1.0 + np.asarray(effekt['wert']) * m))
+            o = self.op(effekt['knochen'], 'skalieren', tuple((1.0 + Torchfeld.feld(effekt['wert']) * m).tolist()))
         elif art == 'verschieben':
-            o = self.op(effekt['knochen'], 'verschieben', tuple(np.asarray(effekt['wert']) * m * self.SPIEGEL))
+            o = self.op(effekt['knochen'], 'verschieben', tuple((Torchfeld.feld(effekt['wert']) * m * self.SPIEGEL).tolist()))
         elif art == 'drehen':
             o = self.op(effekt['knochen'], 'drehen', self.drehung(effekt['achse'], effekt['grad'] * m))
         else:
@@ -112,12 +113,12 @@ class Umamorpheaufgenesis:
 
     def gelenke(self, plus, minus):
         u"""`(namen, kopf_plus, ende_plus, kopf_minus, ende_minus)` fuer die Knochen mit merklichem Versatz — oder None."""
-        halten = [n for n in self.feld.namen if max(np.linalg.norm(plus[n][0]), np.linalg.norm(plus[n][1]),
-                                                    np.linalg.norm(minus[n][0]), np.linalg.norm(minus[n][1])) >= 2e-4]
+        halten = [n for n in self.feld.namen if max(Torchfeld.linalg_norm(plus[n][0]), Torchfeld.linalg_norm(plus[n][1]),
+                                                    Torchfeld.linalg_norm(minus[n][0]), Torchfeld.linalg_norm(minus[n][1])) >= 2e-4]
         if not halten:
             return None
-        return (np.asarray(halten), np.asarray([plus[n][0] for n in halten]), np.asarray([plus[n][1] for n in halten]),
-                np.asarray([minus[n][0] for n in halten]), np.asarray([minus[n][1] for n in halten]))
+        return (Torchfeld.feld(halten), Torchfeld.feld([plus[n][0] for n in halten]), Torchfeld.feld([plus[n][1] for n in halten]),
+                Torchfeld.feld([minus[n][0] for n in halten]), Torchfeld.feld([minus[n][1] for n in halten]))
 
     @staticmethod
     def anzeige(titel, name):
@@ -130,7 +131,7 @@ class Umamorpheaufgenesis:
         self.vorbereiten()
         G9umamorphe.leeren()
         aus, reihe = [], 0
-        hoehe0 = float(np.ptp(self.feld.basis[:, 1]))
+        hoehe0 = float(Torchfeld.ptp(self.feld.basis[:, 1]))
         auftraege = []
         for p in Umaregler.kinderposen():
             auftraege.append({'kennung': p['kennung'], 'anzeige': p['anzeige'], 'kategorie': 'Kind', 'bereich': 'uma_kind', 'min': 0.0,
@@ -144,10 +145,10 @@ class Umamorpheaufgenesis:
             if a['minus'] is not None:
                 d_minus, g_minus = self.seite(a['minus'], a['vorgabe'])
             else:
-                d_minus, g_minus = np.zeros_like(d_plus), {n: (np.zeros(3), np.zeros(3)) for n in g_plus}
-            d_plus[np.linalg.norm(d_plus, axis=1) < self.NULL_M] = 0.0
-            d_minus[np.linalg.norm(d_minus, axis=1) < self.NULL_M] = 0.0
-            nummern = np.nonzero((np.abs(d_plus).max(axis=1) > 0) | (np.abs(d_minus).max(axis=1) > 0))[0]
+                d_minus, g_minus = torch.zeros_like(d_plus), {n: (torch.zeros(3, dtype=torch.float64, device='cuda'), torch.zeros(3, dtype=torch.float64, device='cuda')) for n in g_plus}
+            d_plus[Torchfeld.linalg_norm(d_plus, dim=1) < self.NULL_M] = 0.0
+            d_minus[Torchfeld.linalg_norm(d_minus, dim=1) < self.NULL_M] = 0.0
+            nummern = torch.nonzero((Torchfeld.amax(Torchfeld.abs(d_plus), dim=1) > 0) | (Torchfeld.amax(Torchfeld.abs(d_minus), dim=1) > 0), as_tuple=True)[0]
             if not len(nummern):
                 logger.info('UMA-Morphs: %s bewegt keinen Kaefigpunkt (kein Knochen zugeordnet?) — uebergangen', a['kennung'])
                 self.melden(nr, len(auftraege), a['kennung'], None)
@@ -155,8 +156,8 @@ class Umamorpheaufgenesis:
             quelle = {'quelle': 'UMA 3 (Knochenvorgaben, auf Genesis uebertragen — Achsen angenommen)', 'anzeige': a['anzeige'], 'kategorie': a['kategorie'],
                       'bereich': a['bereich'], 'reihe': reihe, 'min': a['min'], 'max': 1.0, 'rig': True,
                       # Koerperhoehe der Genesis-Figur bei +1 und −1 im Verhaeltnis zur Vorgabe — Kontrolle der Groessenwirkung
-                      'hoehe_verhaeltnis': [round(float(np.ptp(self.feld.basis[:, 1] + d_plus[:, 1])) / hoehe0, 3),
-                                            round(float(np.ptp(self.feld.basis[:, 1] + d_minus[:, 1])) / hoehe0, 3)]}
+                      'hoehe_verhaeltnis': [round(float(Torchfeld.ptp(self.feld.basis[:, 1] + d_plus[:, 1])) / hoehe0, 3),
+                                            round(float(Torchfeld.ptp(self.feld.basis[:, 1] + d_minus[:, 1])) / hoehe0, 3)]}
             G9umamorphe.ablegen(a['kennung'], nummern, d_plus[nummern], d_minus[nummern], quelle, self.gelenke(g_plus, g_minus))
             brief = G9umamorphe.steckbrief(a['kennung'])
             aus.append({'name': a['kennung'], 'punkte': brief['punkte'], 'plus_mm': brief['plus_mm'], 'minus_mm': brief['minus_mm']})

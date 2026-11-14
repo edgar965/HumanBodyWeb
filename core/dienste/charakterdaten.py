@@ -26,9 +26,10 @@ liess. Jetzt: erst laden, dann zuweisen, und das Ganze unter einem Schloss.
 
 import logging
 
-import numpy as np
+import torch
 from django.conf import settings
 from humanbody_core import CharacterDefaults, CharacterState, MeshData, MorphData
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..daten.koerperzustand import Koerperzustand
 from ..daten.ladeschloss import Ladeschloss
@@ -127,8 +128,8 @@ class Charakterdaten:
         """
         for name in cls.NETZFELDER:
             feld = getattr(netz, name, None)
-            if isinstance(feld, np.ndarray):
-                feld.flags.writeable = False
+            if feld is not None:
+                Torchfeld.schreibschutz(feld)          # numpy-Felder aus humanbody_core: nur lesbar; Tensoren kennen keinen Schreibschutz
 
     # ---------------------------------------------------------- Unterteilung
 
@@ -170,7 +171,7 @@ class Charakterdaten:
             '(davon %d Textur-Kopien an Naehten), %d Dreiecke',
             geschlecht,
             stufen,
-            mesh.faces.max() + 1,
+            int(mesh.faces.to(torch.int64).max()) + 1,     # Flächen kommen als uint16 von der Platte; `max` gibt es dafür auf der Karte nicht (14.11.2026)
             cc.sub_vertex_count,
             cc.naht_kopien,
             len(cc.triangles),

@@ -24,7 +24,8 @@ aktuelle Genesis-9-Oberflaeche):
 import json
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import trimesh
 
 from Genesis9.basisnetz import G9basisnetz
@@ -85,7 +86,7 @@ class Engine2d3dKleiderGesichtsvergleich:
             modell_quelle = 'eigene Landmarken der Figur'
         else:
             nah, _, _ = modell_figur.nearest.on_surface(gesicht[gebraucht])
-            modell_punkte = np.zeros_like(gesicht)
+            modell_punkte = torch.zeros_like(gesicht)
             modell_punkte[gebraucht] = nah
             modell_quelle = 'nächster Flächenpunkt'
 
@@ -98,8 +99,8 @@ class Engine2d3dKleiderGesichtsvergleich:
                 'bezeichnung': name,
                 'mesh_a': mesh_a.tolist(), 'mesh_b': mesh_b.tolist(),
                 'modell_a': mod_a.tolist(), 'modell_b': mod_b.tolist(),
-                'mesh_cm': round(float(np.linalg.norm(mesh_a - mesh_b) * 100), 2),
-                'modell_cm': round(float(np.linalg.norm(mod_a - mod_b) * 100), 2),
+                'mesh_cm': round(float(Torchfeld.linalg_norm(mesh_a - mesh_b) * 100), 2),
+                'modell_cm': round(float(Torchfeld.linalg_norm(mod_a - mod_b) * 100), 2),
             })
 
         mesh_figur = cls._mesh_figur(lage)
@@ -119,10 +120,10 @@ class Engine2d3dKleiderGesichtsvergleich:
     def _modell_figur(job):
         """Die AKTUELLE Genesis-9-Oberflaeche als Dreiecksnetz (Vierecke des Basisnetzes gesplittet)."""
         formung = G9formung.aus_abfrage(job.stellung())
-        p = formung.punkte().copy()
+        p = Torchfeld.kopie(formung.punkte())
         p[:, 1] -= formung.boden()
         quads = G9basisnetz.holen().vierecke
-        tris = np.concatenate([quads[:, [0, 1, 2]], quads[:, [0, 2, 3]]])
+        tris = Torchfeld.cat([quads[:, [0, 1, 2]], quads[:, [0, 2, 3]]])
         return trimesh.Trimesh(vertices=p, faces=tris, process=False)
 
     @staticmethod
@@ -133,7 +134,7 @@ class Engine2d3dKleiderGesichtsvergleich:
             return None
         mesh = trimesh.load(str(lage['netz_pfad']), force='mesh')
         matrix = lage['netz_matrix']
-        v = np.asarray(mesh.vertices, dtype=float)
+        v = Torchfeld.feld(mesh.vertices, dtype=torch.float64)
         v = (matrix[:3, :3] @ v.T).T + matrix[:3, 3]
         return trimesh.Trimesh(vertices=v, faces=mesh.faces, process=False)
 
@@ -145,10 +146,10 @@ class Engine2d3dKleiderGesichtsvergleich:
         BEIDER Flaechen, auf die Kopf-Box beschraenkt."""
         kasten = cls._kopfkasten(mesh_figur, gesicht)
         ebenen = []
-        ebenen += cls._ebenen('horizontal', np.array([0.0, 1.0, 0.0]), kasten)
-        ebenen += cls._ebenen('vertikal', np.array([1.0, 0.0, 0.0]), kasten)
-        diagonal = np.array([1.0, 1.0, 0.0])
-        diagonal /= np.linalg.norm(diagonal)
+        ebenen += cls._ebenen('horizontal', Torchfeld.feld([0.0, 1.0, 0.0], copy=True), kasten)
+        ebenen += cls._ebenen('vertikal', Torchfeld.feld([1.0, 0.0, 0.0], copy=True), kasten)
+        diagonal = Torchfeld.feld([1.0, 1.0, 0.0], copy=True)
+        diagonal /= Torchfeld.linalg_norm(diagonal)
         ebenen += cls._ebenen('diagonal', diagonal, kasten)
         ergebnis = []
         for kategorie, nummer, normal, ursprung in ebenen:
@@ -172,17 +173,17 @@ class Engine2d3dKleiderGesichtsvergleich:
         `nanmin`/`nanmax` statt `min`/`max`: eine einzelne nicht erkannte Landmarke (NaN) kippt sonst den
         ganzen Kasten auf NaN und `_segmente` findet nirgends mehr „innen“ (Befund 08.10.2026, Edgar 9
         TRELLIS-Kopf: Landmarke 332 NaN, 0 Schnitte trotz vorhandenem Netz)."""
-        x_min, x_max = float(np.nanmin(gesicht[:, 0])) - 0.08, float(np.nanmax(gesicht[:, 0])) + 0.08
-        y_min, y_max = float(np.nanmin(gesicht[:, 1])) - 0.05, float(np.nanmax(gesicht[:, 1])) + 0.13
-        z_min, z_max = float(np.nanmin(gesicht[:, 2])) - 0.10, float(np.nanmax(gesicht[:, 2])) + 0.03
+        x_min, x_max = float(Torchfeld.nanmin(gesicht[:, 0])) - 0.08, float(Torchfeld.nanmax(gesicht[:, 0])) + 0.08
+        y_min, y_max = float(Torchfeld.nanmin(gesicht[:, 1])) - 0.05, float(Torchfeld.nanmax(gesicht[:, 1])) + 0.13
+        z_min, z_max = float(Torchfeld.nanmin(gesicht[:, 2])) - 0.10, float(Torchfeld.nanmax(gesicht[:, 2])) + 0.03
         return {'x': (x_min, x_max), 'y': (y_min, y_max), 'z': (z_min, z_max)}
 
     @classmethod
     def _ebenen(cls, kategorie, normal, kasten):
         """Ebenen mit `normal`, von einem Rand der Kopf-Box zum anderen (entlang `normal`) in `SCHRITT`-
         Abstaenden — `ursprung` liegt sonst im Kopf-Mittelpunkt (die Box-Mitte in den anderen zwei Achsen)."""
-        mitte = np.array([sum(kasten['x']) / 2, sum(kasten['y']) / 2, sum(kasten['z']) / 2])
-        ecken = np.array([[x, y, z] for x in kasten['x'] for y in kasten['y'] for z in kasten['z']])
+        mitte = Torchfeld.feld([sum(kasten['x']) / 2, sum(kasten['y']) / 2, sum(kasten['z']) / 2], copy=True)
+        ecken = Torchfeld.feld([[x, y, z] for x in kasten['x'] for y in kasten['y'] for z in kasten['z']], copy=True)
         t_werte = ecken @ normal
         t_mitte = float(mitte @ normal)
         ebenen, t, nummer = [], float(t_werte.min()), 1

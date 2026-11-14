@@ -14,9 +14,10 @@ Dazu 181 Punkte im Schritt unter der lockeren Hose: alt schnitt sie die UV-Naht 
     Exportleisteinseln.schliessen(maske, punkte, dreiecke)      # maske (bool je Punkt) an Ort und Stelle → Zahl der neu verdeckten Punkte
 """
 
-import numpy as np
-from scipy.sparse import coo_matrix
-from scipy.sparse.csgraph import connected_components
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kartenduenn import coo_matrix
+from KoerperKI_alle.kartengraph import connected_components
 
 __all__ = ['Exportleisteinseln']
 
@@ -31,23 +32,23 @@ class Exportleisteinseln:
     def schliessen(cls, maske, punkte, dreiecke, punkte_max=None, flaeche_max=None):
         punkte_max = cls.PUNKTE if punkte_max is None else punkte_max
         flaeche_max = cls.FLAECHE_M2 if flaeche_max is None else flaeche_max
-        P = np.asarray(punkte, dtype=np.float64).reshape(-1, 3)
-        T = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        P = Torchfeld.feld(punkte, dtype=torch.float64).reshape(-1, 3)
+        T = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         n = len(maske)
-        k = np.vstack([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]])
+        k = Torchfeld.vstack([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]])
         frei = ~maske[k[:, 0]] & ~maske[k[:, 1]]
-        anzahl, marke = connected_components(coo_matrix((np.ones(int(frei.sum()), dtype=np.int8), (k[frei, 0], k[frei, 1])), shape=(n, n)), directed=False)
-        groesse = np.bincount(marke[~maske], minlength=anzahl)
+        anzahl, marke = connected_components(coo_matrix((torch.ones(int(frei.sum()), dtype=torch.int8, device='cuda'), (k[frei, 0], k[frei, 1])), shape=(n, n)), directed=False)
+        groesse = Torchfeld.bincount(marke[~maske], minlength=anzahl)
         if not groesse.any():
             return 0
         rand = k[maske[k[:, 0]] != maske[k[:, 1]]]
-        kueste = np.zeros(anzahl, dtype=bool)
-        kueste[marke[np.where(maske[rand[:, 0]], rand[:, 1], rand[:, 0])]] = True
+        kueste = torch.zeros(anzahl, dtype=torch.bool, device='cuda')
+        kueste[marke[torch.where(maske[rand[:, 0]], rand[:, 1], rand[:, 0])]] = True
         klein = groesse <= punkte_max
         if flaeche_max > 0:
             tf = T[~maske[T].any(axis=1)]
-            a = 0.5 * np.linalg.norm(np.cross(P[tf[:, 1]] - P[tf[:, 0]], P[tf[:, 2]] - P[tf[:, 0]]), axis=1)
-            klein |= np.bincount(marke[tf[:, 0]], weights=a, minlength=anzahl) <= flaeche_max
+            a = 0.5 * Torchfeld.linalg_norm(Torchfeld.cross(P[tf[:, 1]] - P[tf[:, 0]], P[tf[:, 2]] - P[tf[:, 0]]), dim=1)
+            klein |= Torchfeld.bincount(marke[tf[:, 0]], weights=a, minlength=anzahl) <= flaeche_max
         insel = klein & kueste & (groesse > 0) & (groesse < groesse.max())
         neu = ~maske & insel[marke]
         maske[neu] = True

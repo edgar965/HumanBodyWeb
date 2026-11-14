@@ -16,6 +16,10 @@ from types import SimpleNamespace
 import numpy as np
 
 from ._wrappersuchpfad import Wrappersuchpfad
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 Wrappersuchpfad.setzen()
 
@@ -92,7 +96,7 @@ class SamTabelleTest(unittest.TestCase):
             pfad = os.path.join(ordner, 'sam.npz')
             m, f = np.full((12, 3), 0.01, np.float32), np.full((12, 3), 0.02, np.float32)
             f[8] = np.nan                                                        # SAM fand dieses Gelenk bei der Frau nicht: der MediaPipe-Wert bleibt
-            np.savez(pfad, nummer=np.array(self.NUMMERN), versatz_masculine=m, versatz_feminine=f)
+            Npztorch.speichern(pfad, nummer=np.array(self.NUMMERN), versatz_masculine=m, versatz_feminine=f)
             d, aus = self._daten(pfad, {'landmarken_hand': 'x.npz'}, {'basis': 'masculine'})
             self.assertEqual(d.versatz_quelle, 'sam')
             np.testing.assert_allclose(aus['lm_gelenk_versatz'], m)

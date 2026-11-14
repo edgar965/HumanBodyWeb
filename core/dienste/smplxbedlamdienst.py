@@ -10,6 +10,7 @@ Ablage neben der eigenen Textur (`3DObjects/Archiv/SMPL-X/texturen/bedlam/`,
 nicht im Repo): `f<FASSUNG>_<geschlecht>_<schluessel>.jpg`.
 """
 
+from KoerperKI_alle.torchfeld import Torchfeld
 import logging
 import os
 
@@ -62,7 +63,7 @@ class Smplxbedlamdienst:
 
     @classmethod
     def _bauen(cls, geschlecht, schluessel, ziel):
-        import numpy as np
+        import torch
         from PIL import Image
         from SMPL.xbedlamhaut import Smplxbedlamhaut
         from SMPL.xbrauenweg import Smplxbrauenweg
@@ -83,13 +84,13 @@ class Smplxbedlamdienst:
         kopf = SmplxKopf.aus_modell(modell, Smplxrig.ordner())
         details = Smplxdetails(modell, kopf, vt, ft)
 
-        haut = np.array(Image.open(quelle).convert('RGB'))
+        haut = Torchfeld.feld(Image.open(quelle).convert('RGB'), copy=True)
         n = haut.shape[0]
-        eigen = np.array(Image.open(eigene_textur).convert('RGB'))
+        eigen = Torchfeld.feld(Image.open(eigene_textur).convert('RGB'), copy=True)
         if eigen.shape[0] != n:
-            eigen = np.array(Image.fromarray(eigen).resize((n, n)))
+            eigen = Torchfeld.feld(Image.fromarray(eigen).resize((n, n)), copy=True)
 
-        ohne_brauen_bgr = Smplxbrauenweg.entfernen(haut[:, :, ::-1].copy(), details)
+        ohne_brauen_bgr = Smplxbrauenweg.entfernen(Torchfeld.kopie(haut[:, :, ::-1]), details)
         ohne_brauen = ohne_brauen_bgr[:, :, ::-1]
         augen = Smplxbedlamhaut.augenmaske(vt, ft, modell.faces, n)
         fertig = Smplxbedlamhaut.komponieren(ohne_brauen, eigen, augen)

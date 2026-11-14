@@ -11,7 +11,10 @@ Glättung des Rings (`loch['verschiebung']`, `Hauteinzug`).
     ueber_30, ueber_60, ueber_90      Zahl der Kanten darüber (über 90° = das Stück liegt auf der Haut zurückgeklappt)
     schlimmste        die fünf größten: `[Ringecke, Grad]`
 """
-import numpy as np
+from itertools import accumulate
+
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Schammessungknick']
 
@@ -23,38 +26,39 @@ class Schammessungknick:
     @staticmethod
     def haut_lage(figur, loch):
         """Die Punkte der Figur, wie der Browser sie zeigt: mit der Verschiebung der Ringpunkte (`loch['verschiebung']`)."""
-        fp = np.array(figur['punkte'], dtype=np.float64)
+        fp = Torchfeld.feld(figur['punkte'], dtype=torch.float64, copy=True)
         v = (loch or {}).get('verschiebung')
         if v is not None and len(v['punkte']):
-            fp[np.asarray(v['punkte'], dtype=np.int64)] += np.asarray(v['d'], dtype=np.float64)
+            fp[Torchfeld.feld(v['punkte'], dtype=torch.int64)] += Torchfeld.feld(v['d'], dtype=torch.float64)
         return fp
 
     @staticmethod
     def sichtbare(figur, loch):
         """Die Dreiecke der Haut ohne die des Lochs, `(M, 3)`."""
-        fd = np.asarray(figur['dreiecke'], dtype=np.int64)
-        sichtbar = np.ones(len(fd), dtype=bool)
-        sichtbar[np.asarray(loch['dreiecke'], dtype=np.int64)] = False
+        fd = Torchfeld.feld(figur['dreiecke'], dtype=torch.int64)
+        sichtbar = torch.ones(len(fd), dtype=torch.bool, device='cuda')
+        sichtbar[Torchfeld.feld(loch['dreiecke'], dtype=torch.int64)] = False
         return fd[sichtbar]
 
     @staticmethod
     def normale(p, t):
-        n = np.cross(p[t[1]] - p[t[0]], p[t[2]] - p[t[0]])
-        return n / max(float(np.linalg.norm(n)), 1e-30)
+        n = Torchfeld.cross(p[t[1]] - p[t[0]], p[t[2]] - p[t[0]])
+        return n / max(float(Torchfeld.linalg_norm(n)), 1e-30)
 
     @classmethod
     def ringkanten(cls, fp, haut, ring_punkte):
         """`[(j, Dreieck der Haut)]` für jede Ringkante `j → j+1`, die als Kante in einem sichtbaren Hautdreieck steht (einige Kanten des Rings sind Sehnen: dort fehlt sie)."""
-        ring_punkte = np.asarray(ring_punkte, dtype=np.int64)
+        ring_punkte = Torchfeld.feld(ring_punkte, dtype=torch.int64)
         k = len(ring_punkte)
-        hat = np.isin(haut, ring_punkte).any(axis=1)
+        hat = torch.isin(haut, Torchfeld.feld(ring_punkte)).any(axis=1)
         kante = {}
-        for t in haut[hat]:
+        for t in haut[hat].tolist():                    # Dreiecke als Zahlenlisten in EINEM Zug von der Karte (13.11.2026: vorher je Ecke ein Wartepunkt)
             for e in range(3):
-                kante[(int(t[e]), int(t[(e + 1) % 3]))] = t
+                kante[(t[e], t[(e + 1) % 3])] = t
         aus = []
+        rp = ring_punkte.tolist()
         for j in range(k):
-            a, b = int(ring_punkte[j]), int(ring_punkte[(j + 1) % k])
+            a, b = rp[j], rp[(j + 1) % k]
             t = kante.get((a, b), kante.get((b, a)))
             if t is not None:
                 aus.append((j, t))
@@ -63,24 +67,28 @@ class Schammessungknick:
     @classmethod
     def winkel(cls, punkte, dreiecke, figur, loch):
         """`[(j, Grad)]`: der Knick über die Ringkante `j → j+1` (Winkel zwischen den Flächennormalen des Haut- und des Stückdreiecks), für jede Kante, an der beide gefunden wurden."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum
 
-        p = np.asarray(punkte, dtype=np.float64)
-        d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        ring = np.asarray(loch['ring'], dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        ring = Torchfeld.feld(loch['ring'], dtype=torch.float64)
         k = len(ring)
         fp = cls.haut_lage(figur, loch)
         kanten = cls.ringkanten(fp, cls.sichtbare(figur, loch), loch['ring_punkte'])
-        auf_ring = [np.asarray(x, dtype=np.int64) for x in cKDTree(p).query_ball_point(ring, cls.LAGE_M)]
+        # Ring-Nachbarn und Stückdreiecke als Zahlenlisten in EINEM Zug von der Karte (13.11.2026: vorher je Ecke `int(…)`, am Zauberer 71.520 Wartepunkte in „meshanpassung“)
+        nahe = [Torchfeld.feld(x, dtype=torch.int64) for x in Kartenbaum(p).query_ball_point(ring, cls.LAGE_M)]
+        flach = torch.cat(nahe).tolist() if nahe else []
+        grenzen = [0, *accumulate(len(x) for x in nahe)]
+        auf_ring = [flach[grenzen[i]:grenzen[i + 1]] for i in range(len(nahe))]
         stueck = {}
-        for t in d:
+        for t in d.tolist():
             for e in range(3):
-                stueck[(int(t[e]), int(t[(e + 1) % 3]))] = t
+                stueck[(t[e], t[(e + 1) % 3])] = t
         aus = []
         for j, haut_dreieck in kanten:
-            tb = next((stueck[xy] for x in auf_ring[j] for y in auf_ring[(j + 1) % k] for xy in ((int(x), int(y)), (int(y), int(x))) if xy in stueck), None)
+            tb = next((stueck[xy] for x in auf_ring[j] for y in auf_ring[(j + 1) % k] for xy in ((x, y), (y, x)) if xy in stueck), None)
             if tb is not None:
-                aus.append((j, float(np.degrees(np.arccos(np.clip(cls.normale(fp, haut_dreieck) @ cls.normale(p, tb), -1.0, 1.0))))))
+                aus.append((j, float(Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip(cls.normale(fp, haut_dreieck) @ cls.normale(p, tb), -1.0, 1.0))))))
         return aus
 
     @classmethod
@@ -88,7 +96,7 @@ class Schammessungknick:
         winkel = cls.winkel(punkte, dreiecke, figur, loch)
         if not winkel:
             return {'kanten': 0, 'hinweis': 'keine Ringkante mit Haut- und Stückdreieck gefunden'}
-        w = np.array([x[1] for x in winkel])
+        w = Torchfeld.feld([x[1] for x in winkel], copy=True)
         schlimm = sorted(winkel, key=lambda x: -x[1])[:5]
-        return {'kanten': int(len(w)), 'median_grad': round(float(np.median(w)), 1), 'p90_grad': round(float(np.percentile(w, 90)), 1), 'max_grad': round(float(w.max()), 1),
+        return {'kanten': int(len(w)), 'median_grad': round(float(Torchfeld.median(w)), 1), 'p90_grad': round(float(Torchfeld.percentile(w, 90)), 1), 'max_grad': round(float(w.max()), 1),
                 'ueber_30': int((w > 30).sum()), 'ueber_60': int((w > 60).sum()), 'ueber_90': int((w > 90).sum()), 'schlimmste': [[int(j), round(g, 1)] for j, g in schlimm]}

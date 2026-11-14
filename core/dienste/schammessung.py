@@ -20,7 +20,8 @@ den Import nie ab (`sicher`), steht aber im Bericht und im Log.
 import json
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .schammessungzeilen import Schammessungzeilen
 
@@ -55,9 +56,9 @@ class Schammessung:
     def __init__(self, punkte, dreiecke, uv_ecken, figur, loch, vorgabe=None, farbe_pfad=None, kachelbild=None):
         """`punkte`, `dreiecke`, `uv_ecken (T,3,2)`: das Stück nach der Naht; `figur`: `{punkte, dreiecke, uv, kachel}` (Stufe 1); `loch`: `{dreiecke, ring, ring_punkte[, ring_d]}` (oder None);
         `vorgabe`: `{punkte, dreiecke[, farbe_an, teil]}` — das Original (`teil`: nur der Teil, den die Figur nicht trägt); `farbe_pfad`: Farbbild des Stücks; `kachelbild(k)`: Pfad der Hautkachel `k`."""
-        self.punkte = np.asarray(punkte, dtype=np.float64)
-        self.dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        self.uv_ecken = np.asarray(uv_ecken, dtype=np.float64)
+        self.punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        self.uv_ecken = Torchfeld.feld(uv_ecken, dtype=torch.float64)
         self.figur, self.loch, self.vorgabe = figur, loch, vorgabe
         self.farbe_pfad, self.kachelbild = farbe_pfad, kachelbild
 
@@ -97,11 +98,11 @@ class Schammessung:
         from .schammessungtextur import Schammessungtextur
 
         f = self.figur
-        sichtbar = np.ones(len(f['dreiecke']), dtype=bool)
+        sichtbar = torch.ones(len(f['dreiecke']), dtype=torch.bool, device='cuda')
         if self.loch:
-            sichtbar[np.asarray(self.loch['dreiecke'], dtype=np.int64)] = False
-        ring = np.asarray((self.loch or {}).get('ring', np.zeros((0, 3))), dtype=np.float64)
-        rand = Schammessungnaht(self.punkte, self.dreiecke, ring, np.zeros_like(ring)).rand
+            sichtbar[Torchfeld.feld(self.loch['dreiecke'], dtype=torch.int64)] = False
+        ring = Torchfeld.feld((self.loch or {}).get('ring', torch.zeros((0, 3), dtype=torch.float64, device='cuda')), dtype=torch.float64)
+        rand = Schammessungnaht(self.punkte, self.dreiecke, ring, torch.zeros_like(ring)).rand
         return Schammessungtextur.am_ring(rand, self.punkte, self.dreiecke, self.uv_ecken, Schammessungtextur.bild(self.farbe_pfad), f, sichtbar, self.kachelbild)
 
     def messen(self):
@@ -114,18 +115,18 @@ class Schammessung:
         from .schammessungtextur import Schammessungtextur
 
         f = self.figur
-        fp, fd = np.asarray(f['punkte'], dtype=np.float64), np.asarray(f['dreiecke'], dtype=np.int64)
-        sichtbar = np.ones(len(fd), dtype=bool)
+        fp, fd = Torchfeld.feld(f['punkte'], dtype=torch.float64), Torchfeld.feld(f['dreiecke'], dtype=torch.int64)
+        sichtbar = torch.ones(len(fd), dtype=torch.bool, device='cuda')
         if self.loch:
-            sichtbar[np.asarray(self.loch['dreiecke'], dtype=np.int64)] = False
-        lo, hi = self.punkte.min(axis=0) - self.UMKREIS_M, self.punkte.max(axis=0) + self.UMKREIS_M
+            sichtbar[Torchfeld.feld(self.loch['dreiecke'], dtype=torch.int64)] = False
+        lo, hi = Torchfeld.amin(self.punkte, dim=0) - self.UMKREIS_M, Torchfeld.amax(self.punkte, dim=0) + self.UMKREIS_M
         haut = self._zuschneiden(fp, fd[sichtbar], lo, hi)
         stueck = trimesh.Trimesh(self.punkte, self.dreiecke, process=False)
         modell = trimesh.util.concatenate([haut, stueck])
-        ring_normalen = np.asarray(trimesh.Trimesh(fp, fd[sichtbar], process=False).vertex_normals)
+        ring_normalen = Torchfeld.feld(trimesh.Trimesh(fp, fd[sichtbar], process=False).vertex_normals)
         aus = {'stueck': {'punkte': int(len(self.punkte)), 'dreiecke': int(len(self.dreiecke))}}
         if self.loch:
-            ring_punkte = np.asarray(self.loch['ring_punkte'], dtype=np.int64)
+            ring_punkte = Torchfeld.feld(self.loch['ring_punkte'], dtype=torch.int64)
             rahmen = Schammessungrahmen.von_ring(fp, ring_normalen, ring_punkte, self.punkte)
             naht = Schammessungnaht(self.punkte, self.dreiecke, self.loch['ring'], ring_normalen[ring_punkte], self.loch.get('ring_d'))
             aus['naht'] = naht.messen()
@@ -133,10 +134,10 @@ class Schammessung:
             rand = naht.rand
         else:
             aus['naht'] = {'hinweis': 'Stück ohne Naht (kein Loch in der Haut)'}
-            tief = np.asarray(haut.vertices)[np.unique(haut.faces)]
-            nah = np.argsort(np.linalg.norm(tief - self.punkte.mean(axis=0), axis=1))[:50]
-            rahmen = Schammessungrahmen(self.punkte.mean(axis=0), np.asarray(haut.vertex_normals)[np.unique(haut.faces)[nah]].mean(axis=0), self.punkte)
-            rand, naht = np.zeros((0, 3)), None
+            tief = Torchfeld.feld(haut.vertices)[Torchfeld.unique(haut.faces)]
+            nah = torch.argsort(Torchfeld.linalg_norm(tief - self.punkte.mean(axis=0), dim=1), stable=True)[:50]
+            rahmen = Schammessungrahmen(self.punkte.mean(axis=0), Torchfeld.feld(haut.vertex_normals)[Torchfeld.unique(haut.faces)[nah]].mean(axis=0), self.punkte)
+            rand, naht = torch.zeros((0, 3), dtype=torch.float64, device='cuda'), None
         vorgabe, original = self._vorgabe(lo, hi, haut)
         geometrie = Schammessunggeometrie(rahmen, stueck, modell, vorgabe, original, rand)
         aus['geometrie'] = geometrie.messen()
@@ -158,7 +159,7 @@ class Schammessung:
 
         if not self.vorgabe:
             return None, None
-        vorgabe = self._zuschneiden(np.asarray(self.vorgabe['punkte'], dtype=np.float64), np.asarray(self.vorgabe['dreiecke'], dtype=np.int64), lo, hi)
+        vorgabe = self._zuschneiden(Torchfeld.feld(self.vorgabe['punkte'], dtype=torch.float64), Torchfeld.feld(self.vorgabe['dreiecke'], dtype=torch.int64), lo, hi)
         if not len(vorgabe.faces):
             return None, None
         return vorgabe, (trimesh.util.concatenate([vorgabe, haut]) if self.vorgabe.get('teil') else vorgabe)

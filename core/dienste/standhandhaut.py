@@ -17,7 +17,8 @@ import hashlib
 import io
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .standhandangleich import Standhandangleich
 from .standhautdetail import Standhautdetail
@@ -48,21 +49,21 @@ class Standhandhaut:
         from Figurfilm.handhaut import Handhaut
 
         h = hashlib.md5(('%d|%d|%s' % (cls.VERSION, cls.GROESSE, Handhaut.__dict__.get('STAERKE'))).encode())
-        dr = np.asarray(netz['dreiecke'], dtype=np.int64).reshape(-1, 3)
+        dr = Torchfeld.feld(netz['dreiecke'], dtype=torch.int64).reshape(-1, 3)
         gruppen = [g for g in netz['gruppen'] if int(g.get('kachel') or 1001) in (Handhaut.KACHEL, Handhaut.NAGEL_KACHEL)]
-        wahl = np.concatenate([dr[int(g['index_ab']) // 3: int(g['index_ab']) // 3 + int(g['index_anzahl']) // 3] for g in gruppen])
-        nummern = np.unique(wahl)
-        h.update(wahl.tobytes())
-        h.update(np.rint(np.asarray(netz['punkte'])[nummern] * 1e4).astype(np.int64).tobytes())
-        h.update(np.rint(np.asarray(netz['uv'])[nummern] * 1e5).astype(np.int64).tobytes())
+        wahl = Torchfeld.cat([dr[int(g['index_ab']) // 3: int(g['index_ab']) // 3 + int(g['index_anzahl']) // 3] for g in gruppen])
+        nummern = Torchfeld.unique(wahl)
+        h.update(Torchfeld.als_bytes(wahl))
+        h.update(Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.round(Torchfeld.feld(netz['punkte'])[nummern] * 1e4), torch.int64)))
+        h.update(Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.round(Torchfeld.feld(netz['uv'])[nummern] * 1e5), torch.int64)))
         haut = netz['haut']
-        h.update(np.asarray(haut['index']).reshape(-1, 4)[nummern].astype(np.int64).tobytes())
-        h.update(np.rint(np.asarray(haut['gewicht']).reshape(-1, 4)[nummern] * 1e3).astype(np.int64).tobytes())
+        h.update(Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.feld(haut['index']).reshape(-1, 4)[nummern], torch.int64)))
+        h.update(Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.round(Torchfeld.feld(haut['gewicht']).reshape(-1, 4)[nummern] * 1e3), torch.int64)))
         h.update('|'.join(str(n) for n in haut['knochen']).encode())
         for k in sorted(netz['skelett']['knochen'], key=lambda b: b['name']):
             if k['name'][2:].startswith(cls.KNOCHEN) and k['name'][1] == '_':
                 h.update(k['name'].encode())
-                h.update(np.rint(np.asarray([k['kopf'] or (0, 0, 0), k['schwanz'] or (0, 0, 0)], dtype=np.float64) * 1e4).astype(np.int64).tobytes())     # Endknochen haben keinen Schwanz
+                h.update(Torchfeld.als_bytes(Torchfeld.astype(Torchfeld.round(Torchfeld.feld([k['kopf'] or (0, 0, 0), k['schwanz'] or (0, 0, 0)], dtype=torch.float64) * 1e4), torch.int64)))     # Endknochen haben keinen Schwanz
         return h.hexdigest()[:12]
 
     # ------------------------------------------------------------------ Karten
@@ -78,7 +79,7 @@ class Standhandhaut:
         """Hand-, Unterarmgewicht und belegt (0…1) als 8-Bit-RGB-Bild."""
         from PIL import Image
 
-        return Image.fromarray(np.rint(np.clip(masken, 0.0, 1.0) * 255.0).astype(np.uint8), 'RGB')
+        return Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.round(Torchfeld.clip(masken, 0.0, 1.0) * 255.0), torch.uint8)), 'RGB')
 
     def _gerechnet(self, netz):
         """(normal PIL, faktoren float32, masken float32 (H, W, 3)) — aus dem Zwischenspeicher oder gerechnet und abgelegt."""
@@ -92,7 +93,7 @@ class Standhandhaut:
         if normal.is_file() and faktor.is_file() and maske.is_file():
             try:
                 with Image.open(normal) as n, Image.open(faktor) as f, Image.open(maske) as m:
-                    return n.convert('RGB'), Handhaut.faktoren_aus_bild(f), np.asarray(m.convert('RGB'), dtype=np.float32) / 255.0
+                    return n.convert('RGB'), Handhaut.faktoren_aus_bild(f), Torchfeld.feld(m.convert('RGB'), dtype=torch.float32) / 255.0
             except (OSError, ValueError) as fehler:
                 logger.warning('Handhaut: Zwischenspeicher %s unlesbar (%s), wird neu gerechnet', schluessel, fehler)
         karten = Handhaut(netz, self.GROESSE).rechnen()
@@ -131,9 +132,9 @@ class Standhandhaut:
         if not karte.is_file():
             return None
         with Image.open(karte) as bild:
-            hd = np.asarray(bild.convert('RGBA'))[..., 3] > 0
+            hd = Torchfeld.feld(bild.convert('RGBA'))[..., 3] > 0
         if hd.shape[0] != cls.GROESSE:
-            hd = np.kron(hd, np.ones((cls.GROESSE // hd.shape[0],) * 2, dtype=bool)) if cls.GROESSE % hd.shape[0] == 0 else None
+            hd = Torchfeld.kron(hd, torch.ones((cls.GROESSE // hd.shape[0],) * 2, dtype=torch.bool, device='cuda')) if cls.GROESSE % hd.shape[0] == 0 else None
         return hd
 
     def karten(self, netz, albedo, detail=False, basisnormale=None):

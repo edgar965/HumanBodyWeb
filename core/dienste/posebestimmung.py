@@ -16,7 +16,9 @@ import logging
 import os
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from .engine2d3dkleiderposeabbildung import Engine2d3dKleiderposeabbildung
@@ -81,16 +83,16 @@ class Posebestimmung:
         from Sam3dbodyTorch.schaetzer import S3dbschaetzer
 
         rgba = Image.open(png).convert('RGBA')
-        grund = Image.new('RGBA', rgba.size, (S3dbschaetzer.GRAU,) * 3 + (255,))
-        rgb = np.array(Image.alpha_composite(grund, rgba).convert('RGB'))
-        maske = np.array(rgba)[:, :, 3] > 127
+        grund = Image.new('RGBA', Torchfeld.roh(Torchfeld.groesse(rgba)), (S3dbschaetzer.GRAU,) * 3 + (255,))
+        rgb = Torchfeld.feld(Image.alpha_composite(grund, rgba).convert('RGB'), copy=True)
+        maske = Torchfeld.feld(rgba, copy=True)[:, :, 3] > 127
         self._fortschritt(2, 'SAM 3D Body: Modell laden')
         t = time.perf_counter()
         quelle = type(self).schaetzer_quelle
         s = quelle() if quelle else S3dbschaetzer(gewichte=settings.SAM3DBODY_CHECKPOINT, mhr=settings.SAM3DBODY_MHR)
         self._fortschritt(40, 'Modell geladen in %.1f s' % (time.perf_counter() - t))
         logger.info('%s: SAM 3D Body im Prozess geladen in %.1f s', self.bezeichnung, time.perf_counter() - t)
-        sam = {'namen': list(s.namen), 'bildgroesse': [rgba.size[0], rgba.size[1]], 'kasten': s.kasten(maske),
+        sam = {'namen': list(s.namen), 'bildgroesse': [Torchfeld.groesse(rgba)[0], Torchfeld.groesse(rgba)[1]], 'kasten': s.kasten(Torchfeld.roh(maske)),
                'drehungen': {}}
         try:
             for nr, grad in enumerate(drehungen):
@@ -103,8 +105,8 @@ class Posebestimmung:
                     sam['drehungen'][str(grad)] = {'fehler': 'keine Ausgabe'}
                     continue
                 sam['drehungen'][str(grad)] = {
-                    'k2': np.round(e['k2'], 2).tolist(), 'k3': np.round(e['k3'], 5).tolist(),
-                    'cam_t': np.round(e['cam_t'], 5).tolist(), 'brennweite': e['brennweite'],
+                    'k2': Torchfeld.round(e['k2'], 2).tolist(), 'k3': Torchfeld.round(e['k3'], 5).tolist(),
+                    'cam_t': Torchfeld.round(e['cam_t'], 5).tolist(), 'brennweite': e['brennweite'],
                     'bildgroesse_gedreht': e['bildgroesse_gedreht']}
         finally:
             del s
@@ -131,12 +133,12 @@ class Posebestimmung:
         with Meshto3dpfad():
             from meshfigur_scan import Meshfigurscan
             scan = Meshfigurscan.laden(netz)
-        alpha = np.asarray(Image.open(png).convert('RGBA'))[:, :, 3]
+        alpha = Torchfeld.feld(Image.open(png).convert('RGBA'))[:, :, 3]
         abbildung = Engine2d3dKleiderposeabbildung(scan, alpha)
-        roh, treffer, liste = abbildung.landmarken(np.asarray(e['k2']), sam['namen'], Engine2d3dKleiderposegelenke.ZUORDNUNG, weglassen, k3=e.get('k3'))
+        roh, treffer, liste = abbildung.landmarken(Torchfeld.feld(e['k2']), sam['namen'], Engine2d3dKleiderposegelenke.ZUORDNUNG, weglassen, k3=e.get('k3'))
         if int((treffer > 0).sum()) < 4:
             raise RuntimeError('Zu wenige Gelenke im Netz (%d) — Drehung oder Auswahl der Gelenke prüfen' % int((treffer > 0).sum()))
-        np.savez(self.ordner / 'landmarken.npz', roh=roh, treffer=treffer)
+        Npztorch.speichern(self.ordner / 'landmarken.npz', roh=roh, treffer=treffer, komprimiert=False)
         m = None
         if masstab:
             verwendet = [n for n in Engine2d3dKleiderposegelenke.HAUPT if n not in weglassen]

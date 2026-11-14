@@ -14,7 +14,8 @@ Warum nicht die Fotos selbst entlichten? Im Foto fehlt die Normale je Pixel; im 
 
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from iterationen2d3d.fotolicht import Fotolicht
 
@@ -34,7 +35,7 @@ class Hautproben:
     def __init__(self, projektion, haut, dreiecke):
         """`projektion`: `Fotoprojektion` mit den Ansichten; `haut`: `{knochen, index, gewicht}` je Punkt des Körpers; `dreiecke` (T, 3) des Körpers."""
         self.projektion = projektion
-        self.dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
         self.hand_je_dreieck = self._hand(haut)
 
     def _hand(self, haut):
@@ -42,90 +43,90 @@ class Hautproben:
         namen = [str(n) for n in (haut or {}).get('knochen') or []]
         ziele = [i for i, n in enumerate(namen) if self.HAND.match(n)]
         if not ziele:
-            return np.zeros(len(self.dreiecke))
-        index = np.asarray(haut['index']).reshape(-1, 4)
-        gewicht = np.asarray(haut['gewicht'], dtype=np.float64).reshape(-1, 4)
-        je_punkt = (gewicht * np.isin(index, ziele)).sum(axis=1)
+            return torch.zeros(len(self.dreiecke), dtype=torch.float64, device='cuda')
+        index = Torchfeld.feld(haut['index']).reshape(-1, 4)
+        gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64).reshape(-1, 4)
+        je_punkt = (gewicht * torch.isin(index, Torchfeld.feld(ziele))).sum(axis=1)
         return je_punkt[self.dreiecke].mean(axis=1)
 
     # ------------------------------------------------------------ sammeln
 
     def sammeln(self, karten):
         """Proben einer Kachel aus ihren Gruppenkarten: `{lage, normale, maske, hand, farbe (V, N, 3), kosinus (V, N), drin (V, N)}` — `N` die Texel aller Gruppen, `maske` (S, S) Bool, `index` (N, 2) die Texel (Zeile, Spalte)."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         s = karten[0]['maske'].shape[0]
-        maske = np.zeros((s, s), dtype=bool)
+        maske = torch.zeros((s, s), dtype=torch.bool, device='cuda')
         for k in karten:
             maske |= k['maske']
-        zeilen, spalten = np.nonzero(maske)
-        lage = np.zeros((len(zeilen), 3), dtype=np.float64)
-        normale = np.zeros_like(lage)
-        hand = np.zeros((s, s), dtype=bool)
+        zeilen, spalten = torch.nonzero(maske, as_tuple=True)
+        lage = torch.zeros((len(zeilen), 3), dtype=torch.float64, device='cuda')
+        normale = torch.zeros_like(lage)
+        hand = torch.zeros((s, s), dtype=torch.bool, device='cuda')
         # je Gruppe die Texel an die richtigen Stellen der gemeinsamen Liste
-        nummer = -np.ones((s, s), dtype=np.int64)
-        nummer[zeilen, spalten] = np.arange(len(zeilen))
+        nummer = -torch.ones((s, s), dtype=torch.int64, device='cuda')
+        nummer[zeilen, spalten] = Torchfeld.arange(len(zeilen))
         for k in karten:
             m = k['maske']
             ziel = nummer[m]
             lage[ziel] = k['lage'][m]
             normale[ziel] = k['normale'][m]
             d = k['dreieck'][m]
-            hand[m] = (d >= 0) & (self.hand_je_dreieck[np.clip(d, 0, len(self.hand_je_dreieck) - 1)] > self.HAND_AB)
+            hand[m] = (d >= 0) & (self.hand_je_dreieck[Torchfeld.clip(d, 0, len(self.hand_je_dreieck) - 1)] > self.HAND_AB)
         if hand.any():
             hand = ndimage.binary_dilation(hand, iterations=self.HAND_RAND_PX) & maske
         farben, kosinus, drin = [], [], []
         for a in self.projektion.ansichten:
             farbe, ist_drin = self.projektion._farbe_in(lage, a)                    # noqa: SLF001 — dieselbe Abbildung wie die Projektion selbst
-            farben.append(farbe.astype(np.float32))
-            kosinus.append(np.clip(normale @ self.projektion.blick(a['winkel']), 0.0, None).astype(np.float32))
+            farben.append(Torchfeld.astype(farbe, torch.float32))
+            kosinus.append(Torchfeld.astype(Torchfeld.clip(normale @ self.projektion.blick(a['winkel']), 0.0, None), torch.float32))
             drin.append(ist_drin)
-        return {'lage': lage, 'normale': normale, 'maske': maske, 'index': np.column_stack([zeilen, spalten]), 'hand': hand[zeilen, spalten],
-                'farbe': np.asarray(farben), 'kosinus': np.asarray(kosinus), 'drin': np.asarray(drin)}
+        return {'lage': lage, 'normale': normale, 'maske': maske, 'index': Torchfeld.column_stack([zeilen, spalten]), 'hand': hand[zeilen, spalten],
+                'farbe': Torchfeld.feld(farben), 'kosinus': Torchfeld.feld(kosinus), 'drin': Torchfeld.feld(drin)}
 
     # ------------------------------------------------------------ Licht
 
     def licht_schaetzen(self, proben):
         """Das Licht jeder Ansicht aus den Hautpunkten ALLER Kacheln (eine Liste von `sammeln`-Ergebnissen) zusammen schätzen (`Fotoprojektion.licht_schaetzen`, `Fotolicht`) — nur hautfarbene Punkte außerhalb der Hand
         zählen als Bezug. Ohne `projektion.licht` > 0 ohne Wirkung."""
-        lage = np.vstack([p['lage'] for p in proben])
-        normale = np.vstack([p['normale'] for p in proben])
-        nicht_hand = ~np.concatenate([p['hand'] for p in proben])
+        lage = Torchfeld.vstack([p['lage'] for p in proben])
+        normale = Torchfeld.vstack([p['normale'] for p in proben])
+        nicht_hand = ~Torchfeld.cat([p['hand'] for p in proben])
         self.projektion.licht_schaetzen(lage, normale, lambda lin: Fotolicht.warm(lin) & nicht_hand)
 
     @staticmethod
     def _linear(c):
-        return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+        return torch.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
     @staticmethod
     def _srgb(c):
-        c = np.clip(c, 0.0, 1.0)
-        return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+        c = Torchfeld.clip(c, 0.0, 1.0)
+        return torch.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
 
     # ------------------------------------------------------------ Farbe
 
     def summen(self, p):
         """`(summe (N, 3) linear, gewicht (N,), beste (N,))` der Ansichten dieser Proben — Zwischenstand von `farbe`; `Hautprobenmehrpose` legt die Summen mehrerer Proben (je Ansicht eine Haltung) zusammen."""
         n = len(p['lage'])
-        summe = np.zeros((n, 3), dtype=np.float64)
-        gewicht = np.zeros(n, dtype=np.float64)
-        beste = np.zeros(n, dtype=np.float64)
+        summe = torch.zeros((n, 3), dtype=torch.float64, device='cuda')
+        gewicht = torch.zeros(n, dtype=torch.float64, device='cuda')
+        beste = torch.zeros(n, dtype=torch.float64, device='cuda')
         for i, a in enumerate(self.projektion.ansichten):
-            farbe = self._linear(p['farbe'][i].astype(np.float64)) / self.projektion.licht_faktor(a, p['lage'], p['normale'])[:, None]
-            gew = (p['kosinus'][i].astype(np.float64) ** self.AUSRICHTUNG) * p['drin'][i]
+            farbe = self._linear(Torchfeld.astype(p['farbe'][i], torch.float64)) / self.projektion.licht_faktor(a, p['lage'], p['normale'])[:, None]
+            gew = (Torchfeld.astype(p['kosinus'][i], torch.float64) ** self.AUSRICHTUNG) * p['drin'][i]
             summe += farbe * gew[:, None]
             gewicht += gew
-            beste = np.maximum(beste, p['kosinus'][i] * p['drin'][i])
+            beste = Torchfeld.maximum(beste, p['kosinus'][i] * p['drin'][i])
         return summe, gewicht, beste
 
     @classmethod
     def abschluss(cls, summe, gewicht, beste, hand):
         """`(farbe (N, 3) sRGB, deckung (N,), getroffen (N,) bool)` aus den Summen; Deckung 0 an der Hand (`hand` (N,) bool)."""
         getroffen = gewicht >= 1e-6
-        farbe = cls._srgb(np.where(getroffen[:, None], summe / np.maximum(gewicht, 1e-12)[:, None], 0.0))
+        farbe = cls._srgb(torch.where(getroffen[:, None], summe / Torchfeld.maximum(gewicht, 1e-12)[:, None], 0.0))
         von, bis = cls.DECKUNG
-        deckung = np.clip((beste - von) / (bis - von), 0.0, 1.0) * getroffen * ~hand
-        return farbe.astype(np.float32), deckung.astype(np.float32), getroffen
+        deckung = Torchfeld.clip((beste - von) / (bis - von), 0.0, 1.0) * getroffen * ~hand
+        return Torchfeld.astype(farbe, torch.float32), Torchfeld.astype(deckung, torch.float32), getroffen
 
     def farbe(self, p):
         """`(farbe (N, 3) sRGB, deckung (N,), getroffen (N,) bool)` einer Kachel: das Mittel der Ansichten, vom Licht befreit (wo es geschätzt ist); Deckung 0 an der Hand."""

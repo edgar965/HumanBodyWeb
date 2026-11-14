@@ -13,6 +13,10 @@ import json
 from pathlib import Path
 
 from .architekturmeshgenesisassetbild import Architekturmeshgenesisassetbild
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Architekturmeshgenesisgarmentcode']
 
@@ -252,7 +256,7 @@ class Architekturmeshgenesisgarmentcode:
         daten = schnitt / ('daten_katalog_%s' % cls.FIGUR)
         datei = daten / 'aufbau.json'
         aufbau = json.loads(datei.read_text(encoding='utf-8')) if datei.is_file() else {}
-        fertig = sum(1 for _ in daten.glob('[0-9]*.npz')) if daten.is_dir() else 0
+        fertig = sum(1 for _ in Npztorch.glob(daten, '[0-9]*.npz')) if daten.is_dir() else 0
         bauplaene = cls.bauplaene(aufbau)
         return {'schritte': cls.SCHRITTE, 'gemessen': cls.GEMESSEN, 'eichung': cls.EICHUNG, 'nicht_gemessen': cls.NICHT_GEMESSEN, 'katalog': cls.KATALOG,
                 'bauplaene': bauplaene, 'vorbilder': sum(z['training'] + z['pruefung'] for z in bauplaene), 'aufbau_fehlt': not aufbau,

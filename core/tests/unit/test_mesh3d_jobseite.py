@@ -28,6 +28,10 @@ from core.dienste.mesh3dkopie import Mesh3dkopie
 from core.dienste.mesh3dnetzansicht import Mesh3dnetzansicht
 from core.dienste.mesh3dquellwechsel import Mesh3dquellwechsel
 from core.dienste.ordnerkopie import Ordnerkopie
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 def _ordner():
@@ -71,10 +75,10 @@ class OrdnerkopieTest(SimpleTestCase):
             von, nach = Path(o) / 'von', Path(o) / 'nach'
             von.mkdir()
             (von / 'k.npz').write_bytes(b'2026.10.11.20.03.34')
-            alt = (von / 'k.npz').stat().st_mtime_ns
+            alt = Npztorch.stat(von / 'k.npz').st_mtime_ns
             Ordnerkopie(von, nach, {'2026.10.11.20.03.34': 'neu'}).kopieren()
             self.assertEqual((nach / 'k.npz').read_bytes(), b'2026.10.11.20.03.34')
-            self.assertEqual((nach / 'k.npz').stat().st_mtime_ns, alt)
+            self.assertEqual(Npztorch.stat(nach / 'k.npz').st_mtime_ns, alt)
 
 
 class EingangTest(SimpleTestCase):
@@ -246,8 +250,7 @@ class SegmentierungTest(SimpleTestCase):
         glb.write_bytes(b'g' * 100)
         eingang = wurzel / 'eingang' / 'koerper.glb'
         eingang.write_bytes(b'g' * (eingang_groesse or 100))
-        np.savez_compressed(wurzel / 'import' / 'arbeit' / 'segmentierung' / 'sapiens_flaechen.npz', klassen=np.ones((4, 28), dtype=np.float32), flaechen=4,
-                            netz=np.array(Blendimportsegmentierung.stempel(glb)), fassung=2)
+        Npztorch.speichern(wurzel / 'import' / 'arbeit' / 'segmentierung' / 'sapiens_flaechen.npz', klassen=np.ones((4, 28), dtype=np.float32), flaechen=4, netz=np.array(Blendimportsegmentierung.stempel(glb)), fassung=2, komprimiert=True)
         stand = {'ergebnis': {'segmentierung': {'datei': 'sapiens_flaechen.npz', 'optionen': {'verwenden': 'an', 'haar': 'beide'},
                                                  'quelle': {'koerper': Blendimportsegmentierung.stempel(glb)}}}}
         return _Ablage(wurzel / 'import'), _Ablage(wurzel), stand, glb
@@ -257,14 +260,14 @@ class SegmentierungTest(SimpleTestCase):
             ablage, job, stand, glb = self._vorbereiten(o)
             optionen = Blendimportsegmentierung.fuer_figur(ablage, stand, job, glb)
             self.assertEqual(optionen['haar'], 'beide')
-            with np.load(job.arbeit('sapiens_flaechen.npz')) as d:
+            with Npztorch.lesen_numpy(job.arbeit('sapiens_flaechen.npz')) as d:
                 self.assertEqual(d['netz'].tolist(), Blendimportsegmentierung.stempel(job.netzdatei()))
 
     def test_3_ohne_passende_stimmen_gilt_der_alte_weg_mit_grund(self):
         with _ordner() as o:
             ablage, job, stand, glb = self._vorbereiten(o, eingang_groesse=99)          # das Netz im Eingang weicht ab
             self.assertIsNone(Blendimportsegmentierung.fuer_figur(ablage, stand, job, glb))
-            self.assertFalse(job.arbeit('sapiens_flaechen.npz').exists())
+            self.assertFalse(Npztorch.da(job.arbeit('sapiens_flaechen.npz')))
             self.assertIsNone(Blendimportsegmentierung.fuer_figur(ablage, {'ergebnis': {}}, job, glb))
             glb.write_bytes(b'g' * 100)                                                  # gleich groß, aber neu geschrieben: eine andere Änderungszeit
             # ausdrücklich setzen: Wenige ms nach dem ersten Schreiben liegt Windows noch im selben Uhrtakt, st_mtime_ns bliebe gleich

@@ -23,6 +23,10 @@ from unittest import mock
 import numpy as np
 import torch
 from django.conf import settings
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 sys.path.insert(0, str(settings.TOOLS_ROOT / 'meshgenesis'))
 
@@ -107,7 +111,7 @@ class FotoSchrittTest(unittest.TestCase):
         (o / 'foto.jpg').write_bytes(b'x')
         (o / 'maske.png').write_bytes(b'x')
         d = F.datei(self.t)
-        np.savez(d, namen=np.array(['a']), k2=np.zeros((1, 2)), k3=np.zeros((1, 3)), umriss=np.zeros(4))
+        Npztorch.speichern(d, namen=np.array(['a']), k2=np.zeros((1, 2)), k3=np.zeros((1, 3)), umriss=np.zeros(4))
         self.assertTrue(F.aktuell(self.t))
         os.utime(d, (1, 1))
         self.assertFalse(F.aktuell(self.t))
@@ -121,7 +125,7 @@ class VorratTest(unittest.TestCase):
         wurzel = Path(settings.TOOLS_ROOT) / 'ProjektTemp' / '_wegwerf'
         seg = Path(tempfile.mkdtemp(dir=wurzel))
         self.addCleanup(shutil.rmtree, seg, ignore_errors=True)
-        np.savez(seg / 'teile_flaechen.npz', begriffe=np.array(['beard', 'hat']))
+        Npztorch.speichern(seg / 'teile_flaechen.npz', begriffe=np.array(['beard', 'hat']))
         with mock.patch.object(Blendimportbegriffe, 'vorrat', return_value=[{'phrase': 'beard'}, {'phrase': 'hat'}]):
             self.assertTrue(S._kennt_vorrat(seg))
         with mock.patch.object(Blendimportbegriffe, 'vorrat', return_value=[{'phrase': 'beard'}, {'phrase': 'glove'}]):

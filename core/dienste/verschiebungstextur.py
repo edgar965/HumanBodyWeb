@@ -13,7 +13,8 @@ gerundet, damit ein Regler nicht je Tausendstel eine neue Datei anlegt.
 import logging
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 from humanbody_core.hautverschiebung import Hautverschiebung
 
@@ -59,7 +60,7 @@ class Verschiebungstextur:
             if not pfad.is_file():
                 raise FileNotFoundError(str(pfad))
             with Image.open(pfad) as bild:
-                roh = np.asarray(bild.convert('RGBA'), dtype=np.float32) / 255.0
+                roh = Torchfeld.feld(bild.convert('RGBA'), dtype=torch.float32) / 255.0
             cls._datenbilder[geschlecht] = roh
         return cls._datenbilder[geschlecht]
 
@@ -95,7 +96,7 @@ class Verschiebungstextur:
         werte = cls.feld(geschlecht, alter, tonus, masse)
         cls.ORDNER.mkdir(parents=True, exist_ok=True)
         vorlaeufig = pfad.with_suffix('.neu.png')
-        Image.fromarray(np.clip(werte * 255.0 + 0.5, 0, 255).astype(np.uint8), 'L').save(vorlaeufig, 'PNG')
+        Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(werte * 255.0 + 0.5, 0, 255), torch.uint8)), 'L').save(vorlaeufig, 'PNG')
         vorlaeufig.replace(pfad)
         logger.info('Verschiebungstextur geschrieben: %s', pfad.name)
         return pfad

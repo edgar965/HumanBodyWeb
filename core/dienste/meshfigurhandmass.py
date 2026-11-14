@@ -13,7 +13,9 @@ Läuft am Ende der Körperkette (`Meshfigurkette.koerper`), damit Gesicht, Rest,
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -53,40 +55,40 @@ class Meshfigurhandmass:
     @staticmethod
     def laenge(punkte):
         """Ausdehnung (m) von `punkte` entlang ihrer Hauptachse, 2. bis 98. Perzentil (robust gegen einzelne Fäden)."""
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         m = p.mean(axis=0)
-        _, _, vt = np.linalg.svd(p - m, full_matrices=False)
+        _, _, vt = Torchfeld.linalg_svd(p - m, full_matrices=False)
         q = (p - m) @ vt[0]
-        return float(np.percentile(q, 98) - np.percentile(q, 2))
+        return float(Torchfeld.percentile(q, 98) - Torchfeld.percentile(q, 2))
 
     def haende_im_netz(self):
         """`[Punkte (n, 3), …]` der höchstens zwei größten zusammenhängenden Handstücke im Netz (Flächen, die Sapiens als Hand sieht); leer ohne Etiketten."""
-        from scipy.sparse import coo_matrix
-        from scipy.sparse.csgraph import connected_components
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenduenn import coo_matrix
+        from KoerperKI_alle.kartengraph import connected_components
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         from .meshfigurhalter import Meshfigurhalter
         from .meshfigurkleidung import Meshfigurkleidung
 
         pfad = self.ablage.arbeit('sapiens_flaechen.npz')
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return []
         scan, _ = Meshfigurkleidung(self.lauf).koerpernetz()
-        with np.load(pfad) as d:
-            klassen = np.asarray(d['klassen'])
+        with Npztorch.lesen(pfad) as d:
+            klassen = Torchfeld.feld(d['klassen'])
         if len(klassen) != len(scan.flaechen):
             return []
-        ids = np.flatnonzero((klassen.max(axis=1) >= Meshfigurhalter.MIN_STIMMEN) & np.isin(klassen.argmax(axis=1), Meshfigurhalter.HAND_KLASSEN))
+        ids = torch.flatten((Torchfeld.amax(klassen, dim=1) >= Meshfigurhalter.MIN_STIMMEN) & torch.isin(klassen.argmax(axis=1), Torchfeld.feld(Meshfigurhalter.HAND_KLASSEN))).nonzero()[:, 0]
         if len(ids) < 100:
             return []
-        flaechen = np.asarray(scan.flaechen)[ids]
+        flaechen = Torchfeld.feld(scan.flaechen)[ids]
         # Gruppen nach NÄHE der Flächenmitten, nicht über Kanten: Sapiens' Handfläche zerfällt im Netz in 553 Stücke (Edgar3, größtes 73 cm²); mit 2 cm Abstand bleiben genau zwei übrig (19,7 und 20,4 cm lang, je ~230 cm²).
-        mitten = np.asarray(scan.punkte)[flaechen].mean(axis=1)
+        mitten = Torchfeld.feld(scan.punkte)[flaechen].mean(axis=1)
         paare = cKDTree(mitten).query_pairs(self.NAEHE_M, output_type='ndarray')
-        n, teil = connected_components(coo_matrix((np.ones(len(paare)), (paare[:, 0], paare[:, 1])), shape=(len(ids), len(ids))), directed=False)
-        cm2 = np.bincount(teil, weights=scan.flaecheninhalte()[ids], minlength=n) * 1e4
-        stuecke = [k for k in np.argsort(cm2)[::-1][:2] if cm2[k] >= self.MIN_CM2]
-        return [np.asarray(scan.punkte)[np.unique(flaechen[teil == k].reshape(-1))] for k in stuecke]
+        n, teil = connected_components(coo_matrix((torch.ones(len(paare), dtype=torch.float64, device='cuda'), (paare[:, 0], paare[:, 1])), shape=(len(ids), len(ids))), directed=False)
+        cm2 = Torchfeld.bincount(teil, weights=scan.flaecheninhalte()[ids], minlength=n) * 1e4
+        stuecke = [k for k in Torchfeld.liste(Torchfeld.umgekehrt(torch.argsort(cm2, stable=True), 0)[:2]) if cm2[k] >= self.MIN_CM2]
+        return [Torchfeld.feld(scan.punkte)[Torchfeld.unique(flaechen[teil == k].reshape(-1))] for k in stuecke]
 
     @staticmethod
     def figurhand(stellung):
@@ -98,7 +100,7 @@ class Meshfigurhandmass:
 
         punkte, _, _ = G9reglerableitung.lage(G9formung(stellung))
         teil = G9koerperteile.genesis_punkte(G9haut.holen())
-        return [np.asarray(punkte)[teil == G9koerperteile.NUMMER[s + '_hand']] for s in ('l', 'r')]
+        return [Torchfeld.feld(punkte)[teil == G9koerperteile.NUMMER[s + '_hand']] for s in ('l', 'r')]
 
     # ---------------------------------------------------------------- Anwenden
 
@@ -111,7 +113,7 @@ class Meshfigurhandmass:
             return {'hinweis': 'Keine Hand im Netz erkannt (Sapiens-Etiketten fehlen oder zu klein)'}
         netz = [self.laenge(p) for p in im_netz]
         figur = [self.laenge(p) for p in self.figurhand(stellung)]
-        mittel_figur = float(np.mean(figur))
+        mittel_figur = float(Torchfeld.mean(figur))
         verhaeltnisse = [laenge_netz / mittel_figur for laenge_netz in netz]
         bericht = {'netz_cm': [round(x * 100, 1) for x in netz], 'figur_cm': [round(x * 100, 1) for x in figur],
                    'verhaeltnis': [round(v, 3) for v in verhaeltnisse], 'regler_vorher': round(float(stellung.get(self.REGLER, 0.0)), 4)}
@@ -119,19 +121,19 @@ class Meshfigurhandmass:
         if not all(self.PLAUSIBEL[0] <= v <= self.PLAUSIBEL[1] for v in verhaeltnisse):
             bericht['hinweis'] = 'Eine Hand im Netz ist keine offene Hand (Verhältnis %s außerhalb %s): die Figur behält ihre Hand' % (bericht['verhaeltnis'], self.PLAUSIBEL)
             return bericht
-        if len(verhaeltnisse) > 1 and (max(verhaeltnisse) - min(verhaeltnisse)) > self.UNEINIG * float(np.mean(verhaeltnisse)):
+        if len(verhaeltnisse) > 1 and (max(verhaeltnisse) - min(verhaeltnisse)) > self.UNEINIG * float(Torchfeld.mean(verhaeltnisse)):
             bericht['hinweis'] = 'Die Hände im Netz sind verschieden lang (Verhältnis %s, mehr als %.0f %% auseinander): die Figur behält ihre Hand' % (bericht['verhaeltnis'], 100 * self.UNEINIG)
             return bericht
-        ziel = float(np.mean(verhaeltnisse))
+        ziel = float(Torchfeld.mean(verhaeltnisse))
         # Länge ist linear im Regler: zwei Stützstellen statt einer Annahme über die Steigung.
         alt = float(stellung.get(self.REGLER, 0.0))
         schritt = 0.25
-        l0 = float(np.mean([self.laenge(p) for p in self.figurhand(stellung)]))
-        l1 = float(np.mean([self.laenge(p) for p in self.figurhand({**stellung, self.REGLER: alt + schritt})]))
+        l0 = float(Torchfeld.mean([self.laenge(p) for p in self.figurhand(stellung)]))
+        l1 = float(Torchfeld.mean([self.laenge(p) for p in self.figurhand({**stellung, self.REGLER: alt + schritt})]))
         steigung = (l1 - l0) / schritt
-        neu = float(np.clip(alt + (ziel * l0 - l0) / steigung, -self.GRENZE, self.GRENZE))
+        neu = float(Torchfeld.clip(alt + (ziel * l0 - l0) / steigung, -self.GRENZE, self.GRENZE))
         stellung[self.REGLER] = neu
-        lange_danach = float(np.mean([self.laenge(p) for p in self.figurhand(stellung)]))
+        lange_danach = float(Torchfeld.mean([self.laenge(p) for p in self.figurhand(stellung)]))
         bericht.update(regler_nachher=round(neu, 4), faktor=round(ziel, 3), figur_nachher_cm=round(lange_danach * 100, 1))
         logger.info('Mesh to 3D %s: Handmaß — Hand im Netz %s cm, Figur %s → %.1f cm (Regler %.3f → %.3f)', self.job.kennung, bericht['netz_cm'], bericht['figur_cm'], lange_danach * 100, alt, neu)
         return bericht

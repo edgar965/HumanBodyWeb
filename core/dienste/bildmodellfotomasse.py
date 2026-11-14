@@ -22,7 +22,7 @@ Taille 24,0 (22,7) — die YOLO-Maske ist an schmalen Stellen etwas zu breit.
 
 import logging
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .bildmodellbildtypen import Bildmodellbildtypen
 
@@ -68,7 +68,7 @@ class Bildmodellfotomasse:
         for b in bilder:
             for k, v in G9fotoproportionen(b).messen().items():
                 werte.setdefault(k, []).append(float(v))
-        cm = {k: round(float(np.median(v)) * self.hoehe_cm, 1) for k, v in werte.items()}
+        cm = {k: round(float(Torchfeld.median(v)) * self.hoehe_cm, 1) for k, v in werte.items()}
         anzahl = {k: len(v) for k, v in werte.items()}
         logger.info('Bildmodell %s: Fotomaße aus %d Bildern: %s', self.job.kennung, len(bilder), cm)
         return {'cm': cm, 'bilder': anzahl, 'anzahl': len(bilder)}

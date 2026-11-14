@@ -24,7 +24,8 @@ die des Schätzers. Darum steht die Referenzhöhe mit im Ergebnis.
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -58,8 +59,8 @@ class Bildmodelltestfall:
 
         f = G9formung(dict(stellung))
         p, _, _ = G9reglerableitung.lage(f)
-        gelenke = {e['name']: np.asarray(e['kopf'], float) for e in f.skelett().gelenkknochen()}
-        return np.asarray(p, float), gelenke
+        gelenke = {e['name']: Torchfeld.feld(e['kopf'], dtype=torch.float64) for e in f.skelett().gelenkknochen()}
+        return Torchfeld.feld(p, dtype=torch.float64), gelenke
 
     @staticmethod
     def flaechenabstand(punkte, referenz):
@@ -72,9 +73,9 @@ class Bildmodelltestfall:
         import trimesh
         from Genesis9.kaefigumriss import G9kaefigumriss
 
-        netz = trimesh.Trimesh(np.asarray(referenz, float), G9kaefigumriss.dreiecke(), process=False)
-        _, abstand, _ = trimesh.proximity.closest_point(netz, np.asarray(punkte, float))
-        return np.asarray(abstand, float)
+        netz = trimesh.Trimesh(Torchfeld.roh(Torchfeld.feld(referenz, dtype=torch.float64)), G9kaefigumriss.dreiecke(), process=False)
+        _, abstand, _ = trimesh.proximity.closest_point(netz, Torchfeld.roh(Torchfeld.feld(punkte, dtype=torch.float64)))
+        return Torchfeld.feld(abstand, dtype=torch.float64)
 
     @staticmethod
     def je_teil(abstand):
@@ -87,7 +88,7 @@ class Bildmodelltestfall:
         for i, name in enumerate(G9koerperteile.TEILE):
             drin = teil == i
             if drin.any():
-                aus[name] = round(float(np.sqrt((abstand[drin] ** 2).mean())) * 1000.0, 2)
+                aus[name] = round(float(Torchfeld.sqrt((abstand[drin] ** 2).mean())) * 1000.0, 2)
         return aus
 
     def vergleichen(self, stellung, melder=None):
@@ -101,7 +102,7 @@ class Bildmodelltestfall:
             melder(0.1, 'Testfall: Referenz %s bauen' % eintrag.get('anzeige', eintrag['name']))
         ref_p, ref_g = self.kaefig(eintrag['regler'])
         mod_p, mod_g = self.kaefig(stellung)
-        abstand = np.linalg.norm(mod_p - ref_p, axis=1)
+        abstand = Torchfeld.linalg_norm(mod_p - ref_p, dim=1)
         flaeche = self.flaechenabstand(mod_p, ref_p)
         pr = G9proportionen()
         if melder:
@@ -110,10 +111,10 @@ class Bildmodelltestfall:
             'figur': eintrag['name'],
             'anzeige': eintrag.get('anzeige') or eintrag['name'],
             'punkte': int(len(abstand)),
-            'rms_mm': round(float(np.sqrt((abstand ** 2).mean())) * 1000.0, 2),
+            'rms_mm': round(float(Torchfeld.sqrt((abstand ** 2).mean())) * 1000.0, 2),
             'max_mm': round(float(abstand.max()) * 1000.0, 1),
             'je_teil': self.je_teil(abstand),
-            'flaeche_mm': round(float(np.sqrt((flaeche ** 2).mean())) * 1000.0, 2),
+            'flaeche_mm': round(float(Torchfeld.sqrt((flaeche ** 2).mean())) * 1000.0, 2),
             'flaeche_max_mm': round(float(flaeche.max()) * 1000.0, 1),
             'flaeche_je_teil': self.je_teil(flaeche),
             'hoehe_cm': {

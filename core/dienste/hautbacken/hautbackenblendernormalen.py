@@ -13,7 +13,8 @@ Die Punkte sind die des Objektraums, in dem Blender rechnet; werden sie in den W
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .hautbackenblenderecken import Hautbackenblenderecken
 from .hautbackenblendereintraege import Hautbackenblendereintraege
@@ -33,8 +34,8 @@ class Hautbackenblendernormalen:
             return 'POINT'
         if eigene_normale is not None:
             return 'CORNER'
-        flaeche = None if scharf_flaeche is None else np.asarray(scharf_flaeche, dtype=bool)
-        kante = None if scharf_kante is None else np.asarray(scharf_kante, dtype=bool)
+        flaeche = None if scharf_flaeche is None else Torchfeld.feld(scharf_flaeche, dtype=torch.bool)
+        kante = None if scharf_kante is None else Torchfeld.feld(scharf_kante, dtype=torch.bool)
         if flaeche is not None and flaeche.all():
             return 'FACE'
         if kante is not None and len(kante) and kante.all():
@@ -55,18 +56,18 @@ class Hautbackenblendernormalen:
         None — mit `ecken_immer=True` immer), `domain` ('POINT'|'FACE'|'CORNER'), außerdem `flaechen_wahr` / `punkte_wahr`: die Normalen ohne Einfluss eigener Normalen
         (`face_normals_true` / `vert_normals_true`).
         """
-        p = np.ascontiguousarray(punkte, dtype=np.float32).reshape(-1, 3)
-        ps = np.asarray(poly_start, dtype=np.int64)
-        pp = np.asarray(poly_punkte, dtype=np.int64)
+        p = Torchfeld.feld(punkte, dtype=torch.float32).reshape(-1, 3)
+        ps = Torchfeld.feld(poly_start, dtype=torch.int64)
+        pp = Torchfeld.feld(poly_punkte, dtype=torch.int64)
         flaechen = len(ps) - 1
         domain = Hautbackenblendernormalen.domain(flaechen, scharf_kante, scharf_flaeche, eigene_normale)
-        sk = None if scharf_kante is None else np.asarray(scharf_kante, dtype=bool)
-        sf = None if scharf_flaeche is None else np.asarray(scharf_flaeche, dtype=bool)
-        eigene = None if eigene_normale is None else np.asarray(eigene_normale)
+        sk = None if scharf_kante is None else Torchfeld.feld(scharf_kante, dtype=torch.bool)
+        sf = None if scharf_flaeche is None else Torchfeld.feld(scharf_flaeche, dtype=torch.bool)
+        eigene = None if eigene_normale is None else Torchfeld.feld(eigene_normale)
         if eigene is not None:
-            if eigene.ndim != 2 or eigene.shape[1] != 2 or eigene.dtype.kind not in 'iu':
+            if eigene.ndim != 2 or eigene.shape[1] != 2 or Torchfeld.typart(eigene.dtype) not in 'iu':
                 raise ValueError('eigene_normale: (L,2) ganze Zahlen (INT16_2D) erwartet, nicht %s %s — freie Float3-Normalen sind nicht gebaut' % (eigene.dtype, eigene.shape))
-            eigene = eigene.astype(np.int16)
+            eigene = Torchfeld.astype(eigene, torch.int16)
         if len(pp) != int(ps[-1]) or (sf is not None and len(sf) != flaechen):
             raise ValueError('poly_start/poly_punkte/scharf_flaeche passen nicht zusammen')
         if eigene is not None and len(eigene) != len(pp):
@@ -82,7 +83,7 @@ class Hautbackenblendernormalen:
         if domain == 'CORNER':
             if e.doppelt:
                 LOG.warning('Hautbackenblendernormalen: ein Polygon benutzt einen Punkt mehrfach — Blender setzt die späteren Ecken dieses Punkts nie (nicht initialisierter Speicher), hier (0, 0, 0)')
-            ek = None if ecke_kante is None else np.asarray(ecke_kante, dtype=np.int64)
+            ek = None if ecke_kante is None else Torchfeld.feld(ecke_kante, dtype=torch.int64)
             faecher = Hautbackenblenderfaecher(e, ek, sk, sf)
             ecken = Hautbackenblenderecken.berechnen(p, e, faecher, fn, eigene)
             aus['ecken'] = ecken
@@ -90,5 +91,5 @@ class Hautbackenblendernormalen:
                 aus['punkte'] = Flaechen.ecken_zu_punkten(p, e, ecken)
                 aus['flaechen'] = Flaechen.ecken_zu_flaechen(ps, ecken)
         elif ecken_immer:
-            aus['ecken'] = pn[pp] if domain == 'POINT' else np.repeat(fn, np.diff(ps), axis=0)
+            aus['ecken'] = pn[pp] if domain == 'POINT' else Torchfeld.repeat_interleave(fn, Torchfeld.diff(ps), dim=0)
         return aus

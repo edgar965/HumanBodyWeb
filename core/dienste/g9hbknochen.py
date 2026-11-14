@@ -37,7 +37,8 @@ Meter, Y oben, Fuesse am Boden); DEF liefert Kopf, Laenge und Weltdrehung
 (`Skelettgeometrie`, Achse -Z) — der Schwanz eines Kettenknochens ist der
 Kopf seines Kindes, sonst Kopf + Laenge entlang der Achse.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from humanbody_core.quaternion import Quat
 from humanbody_core.skeleton.formats.g9_zuordnung import DEF_ZU_G9
@@ -88,7 +89,7 @@ class G9hbknochen:
                 continue
             self.rahmen_g9[paar] = self._rahmen(self._kopf_g9(paar), self._schwanz_g9(paar))
             self.rahmen_def[paar] = self._rahmen(
-                np.asarray(def_welt[defname]['world_pos'], dtype=np.float64),
+                Torchfeld.feld(def_welt[defname]['world_pos'], dtype=torch.float64),
                 self._schwanz_def(defname, paar, def_welt))
         self.rumpf = self._rumpfabbildung(def_welt)
 
@@ -104,35 +105,35 @@ class G9hbknochen:
         return None
 
     def _kopf_g9(self, name):
-        return np.asarray(self.g9[name]['kopf'], dtype=np.float64)
+        return Torchfeld.feld(self.g9[name]['kopf'], dtype=torch.float64)
 
     def _schwanz_g9(self, name):
         kind = self.kinder.get(name)
         if kind in self.g9:
             return self._kopf_g9(kind)
-        return np.asarray(self.g9[name]['schwanz'], dtype=np.float64)
+        return Torchfeld.feld(self.g9[name]['schwanz'], dtype=torch.float64)
 
     def _schwanz_def(self, defname, g9name, welt):
         kind = self.kinder.get(g9name)
         kind_def = self.g9_zu_def.get(kind) if kind else None
         if kind_def in welt:
-            return np.asarray(welt[kind_def]['world_pos'], dtype=np.float64)
+            return Torchfeld.feld(welt[kind_def]['world_pos'], dtype=torch.float64)
         b = welt[defname]
-        return np.asarray(b['world_pos'], dtype=np.float64) + Quat.rotate(
-            np.asarray(b['world_quat'], dtype=np.float64), np.array([0.0, 0.0, -b['length']]))
+        return Torchfeld.feld(b['world_pos'], dtype=torch.float64) + Quat.rotate(
+            Torchfeld.feld(b['world_quat'], dtype=torch.float64), Torchfeld.feld([0.0, 0.0, -b['length']], copy=True))
 
     @classmethod
     def _rahmen(cls, kopf, schwanz):
         u"""`(kopf, Achsen (3, 3), Laenge)` — Achsen zeilenweise."""
         weg = schwanz - kopf
-        laenge = float(np.linalg.norm(weg))
+        laenge = float(Torchfeld.linalg_norm(weg))
         if laenge < 1e-9:
-            weg, laenge = np.array([0.0, 1.0, 0.0]), 1e-3
+            weg, laenge = Torchfeld.feld([0.0, 1.0, 0.0], copy=True), 1e-3
         d = weg / laenge
-        hilfe = np.array([0.0, 0.0, 1.0]) if abs(d[1]) > 1.0 - cls.SENKRECHT else np.array([0.0, 1.0, 0.0])
-        zweite = hilfe - np.dot(hilfe, d) * d
-        zweite /= max(np.linalg.norm(zweite), 1e-9)
-        return kopf, np.stack([d, zweite, np.cross(d, zweite)]), laenge
+        hilfe = Torchfeld.feld([0.0, 0.0, 1.0], copy=True) if abs(d[1]) > 1.0 - cls.SENKRECHT else Torchfeld.feld([0.0, 1.0, 0.0], copy=True)
+        zweite = hilfe - Torchfeld.dot(hilfe, d) * d
+        zweite /= max(Torchfeld.linalg_norm(zweite), 1e-9)
+        return kopf, Torchfeld.stack([d, zweite, Torchfeld.cross(d, zweite)]), laenge
 
     def _rumpfabbildung(self, welt):
         u"""(R, s, t) mit HB = s·R·G9 + t ueber die Rumpfgelenke (Umeyama)."""
@@ -141,17 +142,17 @@ class G9hbknochen:
             defname = self.g9_zu_def.get(name)
             if name in self.g9 and defname in welt:
                 quelle.append(self._kopf_g9(name))
-                ziel.append(np.asarray(welt[defname]['world_pos'], dtype=np.float64))
+                ziel.append(Torchfeld.feld(welt[defname]['world_pos'], dtype=torch.float64))
         if len(quelle) < 3:
-            return np.eye(3), self.massstab, np.zeros(3)
-        q, z = np.asarray(quelle), np.asarray(ziel)
+            return torch.eye(3, dtype=torch.float64, device='cuda'), self.massstab, torch.zeros(3, dtype=torch.float64, device='cuda')
+        q, z = Torchfeld.feld(quelle), Torchfeld.feld(ziel)
         mq, mz = q.mean(axis=0), z.mean(axis=0)
         h = (q - mq).T @ (z - mz)
-        u, sig, vt = np.linalg.svd(h)
-        d = np.eye(3)
-        d[2, 2] = np.sign(np.linalg.det(vt.T @ u.T))
+        u, sig, vt = Torchfeld.linalg_svd(h)
+        d = torch.eye(3, dtype=torch.float64, device='cuda')
+        d[2, 2] = Torchfeld.sign(Torchfeld.linalg_det(vt.T @ u.T))
         r = vt.T @ d @ u.T
-        s = float(np.trace(np.diag(sig) @ d) / max(((q - mq) ** 2).sum(), 1e-12))
+        s = float(Torchfeld.trace(Torchfeld.diag(sig) @ d) / max(((q - mq) ** 2).sum(), 1e-12))
         return r, s, mz - s * (r @ mq)
 
     # ---------------------------------------------------------- Schaetzen
@@ -160,12 +161,12 @@ class G9hbknochen:
         u"""(N, 3) Genesis-Punkte mit ihrem staerksten Knochen (Namen) -> (N, 3)
         Schaetzung in der HumanBody-Lage; Punkte ohne gepaarten Knochen
         bleiben, wo sie sind (`getroffen` sagt, welche)."""
-        p = np.asarray(punkte, dtype=np.float64)
-        aus = p.copy()
-        getroffen = np.zeros(len(p), dtype=bool)
-        namen = np.asarray([self.gepaart(k) or '' for k in knochen])
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
+        aus = Torchfeld.kopie(p)
+        getroffen = torch.zeros(len(p), dtype=torch.bool, device='cuda')
+        namen = Torchfeld.feld([self.gepaart(k) or '' for k in knochen])
         r, s, t = self.rumpf
-        rumpf = np.isin(namen, self.RUMPF)
+        rumpf = torch.isin(namen, Torchfeld.feld(self.RUMPF))
         if rumpf.any():
             aus[rumpf] = (s * (p[rumpf] @ r.T)) + t
             getroffen[rumpf] = True

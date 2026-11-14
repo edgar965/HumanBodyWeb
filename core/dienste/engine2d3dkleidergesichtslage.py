@@ -17,7 +17,10 @@ Körpernetz 5,92 → 2,13 mm (952 Punkte). Die großen Abweichungen im Reiter wa
 Ohne `arbeit/posiert.npy` (Lauf vor der Vorschau) oder bei abweichender Punktzahl bleibt es bei der alten Lage; `haltung` nennt den Grund.
 """
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 import trimesh
 
 __all__ = ['Engine2d3dKleiderGesichtslage']
@@ -34,17 +37,17 @@ class Engine2d3dKleiderGesichtslage:
         zurückgedreht. `netz_pfad` ist None, wenn Netz oder `scan_lage.npz` fehlen. ValueError, wenn die Landmarken fehlen. `stellung`: statt `job.stellung()` diese Reglerstellung für das Modell
         (der Schritt „rest" rechnet auf der Stellung OHNE den Rest-Morph, den er gerade erst bauen will)."""
         landmarken_pfad = ablage.arbeit('landmarken.npz')
-        if not landmarken_pfad.is_file():
+        if not Npztorch.da(landmarken_pfad):
             raise ValueError('Keine landmarken.npz — die Gesichtserkennung ist für diesen Auftrag noch nicht gelaufen.')
-        with np.load(landmarken_pfad) as d:
-            gesicht = np.asarray(d['gesicht'], dtype=float)
+        with Npztorch.lesen(landmarken_pfad) as d:
+            gesicht = Torchfeld.feld(d['gesicht'], dtype=torch.float64)
         pfad, ordner, art, roh = cls._netz(job, ablage)
         lage_pfad = ablage.arbeit('scan_lage.npz')
-        if pfad is None or not lage_pfad.is_file():
-            pfad, scan = None, np.eye(4)
+        if pfad is None or not Npztorch.da(lage_pfad):
+            pfad, scan = None, torch.eye(4, dtype=torch.float64, device='cuda')
         else:
-            with np.load(lage_pfad) as d:
-                scan = np.asarray(d['matrix'], dtype=float)
+            with Npztorch.lesen(lage_pfad) as d:
+                scan = Torchfeld.feld(d['matrix'], dtype=torch.float64)
         ruhe = cls._ruhe(stellung if stellung is not None else job.stellung())
         zurueck, haltung = cls._haltung(ablage, gesicht, ruhe)
         return {
@@ -70,12 +73,12 @@ class Engine2d3dKleiderGesichtslage:
         """`{'alle': {median_mm, p90_mm}, 'gruppen': {name: {median_mm, p90_mm}}}` — Abstand Netz-Landmarke ↔ Modell-Landmarke (je 478), oder None ohne Modell-Landmarken."""
         if lage['modell_gesicht'] is None:
             return None
-        fehler = np.linalg.norm(lage['modell_gesicht'] - lage['gesicht'], axis=1) * 1000.0
-        gueltig = np.isfinite(fehler)
+        fehler = Torchfeld.linalg_norm(lage['modell_gesicht'] - lage['gesicht'], dim=1) * 1000.0
+        gueltig = Torchfeld.isfinite(fehler)
 
         def zahlen(indizes):
             e = fehler[[i for i in indizes if gueltig[i]]]
-            return {'median_mm': round(float(np.median(e)), 2), 'p90_mm': round(float(np.percentile(e, 90)), 2)} if len(e) else None
+            return {'median_mm': round(float(Torchfeld.median(e)), 2), 'p90_mm': round(float(Torchfeld.percentile(e, 90)), 2)} if len(e) else None
 
         return {'alle': zahlen(range(len(fehler))), 'gruppen': {name: zahlen(ix) for name, ix in cls.GRUPPEN.items()}}
 
@@ -85,22 +88,22 @@ class Engine2d3dKleiderGesichtslage:
         from Genesis9.formung import G9formung
         from Genesis9.reglerableitung import G9reglerableitung
 
-        return np.asarray(G9reglerableitung.lage(G9formung(stellung))[0], dtype=float)
+        return Torchfeld.feld(G9reglerableitung.lage(G9formung(stellung))[0], dtype=torch.float64)
 
     @staticmethod
     def _modell_gesicht(ablage, ruhe):
         """(478, 3) die EIGENEN Gesichtspunkte der Figur in der Ruhehaltung: Dreieck + Anteile je Landmarke aus `genesis_ende.npz` (`lm_flaeche_*`, vom Detektor kalibriert, `G9netzlandmarken`) —
         das Modell hat also doch eine Landmarken-Topologie; die Abweichung zum Netz ist Landmarke gegen Landmarke, nicht gegen die nächste Fläche. None ohne `genesis_ende.npz`; NaN, wo die Tabelle keinen Punkt kennt."""
         pfad = ablage.arbeit('genesis_ende.npz')
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             if len(d['punkte']) != len(ruhe):
                 return None
             quelle, nummer, dreieck = d['lm_flaeche_quelle'], d['lm_flaeche_nummer'], d['lm_flaeche_dreieck']
-            bary, tri = d['lm_flaeche_bary'].astype(float), d['dreiecke']
-        aus = np.full((478, 3), np.nan)
-        for i in np.flatnonzero(quelle == 1):
+            bary, tri = Torchfeld.astype(d['lm_flaeche_bary'], torch.float64), d['dreiecke']
+        aus = Torchfeld.full((478, 3), math.nan)
+        for i in Torchfeld.liste(torch.flatten(quelle == 1).nonzero()[:, 0]):
             aus[nummer[i]] = bary[i] @ ruhe[tri[dreieck[i]]]
         return aus
 
@@ -112,12 +115,12 @@ class Engine2d3dKleiderGesichtslage:
         """Die Netz-Landmarken (`lage['gesicht']`), wo sie bis `FLAECHE_MAX` neben der Netzfläche liegen, auf deren nächsten Punkt gelegt; der Rest bleibt, wie er ist. Die Landmarken schweben im Mittel
         1,3 (Lippen) bis 2,5 mm (Augen) über der Fläche — gemessen an `Edgar 10`; gegen sie zu messen oder zu morphen höbe die Figur von der Fläche ab. Ohne Netz: unverändert."""
         if lage['netz_pfad'] is None:
-            return np.array(lage['gesicht'], dtype=float, copy=True)
+            return Torchfeld.feld(lage['gesicht'], dtype=torch.float64, copy=True)
         geladen = trimesh.load(str(lage['netz_pfad']), force='mesh')
         matrix = lage['netz_matrix']
-        netz = trimesh.Trimesh(np.asarray(geladen.vertices, dtype=float) @ matrix[:3, :3].T + matrix[:3, 3], geladen.faces, process=False)
-        aus = np.array(lage['gesicht'], dtype=float, copy=True)
-        gueltig = np.flatnonzero(np.isfinite(aus).all(axis=1))
+        netz = trimesh.Trimesh(Torchfeld.roh(Torchfeld.feld(geladen.vertices, dtype=torch.float64) @ matrix[:3, :3].T + matrix[:3, 3]), geladen.faces, process=False)
+        aus = Torchfeld.feld(lage['gesicht'], dtype=torch.float64, copy=True)
+        gueltig = torch.flatten(Torchfeld.isfinite(aus).all(axis=1)).nonzero()[:, 0]
         nah, abstand, _ = netz.nearest.on_surface(aus[gueltig])
         nah_genug = abstand <= cls.FLAECHE_MAX
         aus[gueltig[nah_genug]] = nah[nah_genug]
@@ -133,49 +136,49 @@ class Engine2d3dKleiderGesichtslage:
         """`(Pfad, Ordner, Art, Matrix Netz → Rohrahmen des Körpers)` — das Kopfnetz, wenn der Körper es benutzt hat, sonst das Körpernetz."""
         kopf = ((job.ergebnis or {}).get('erkennung') or {}).get('kopf') or {}
         kopfdatei, lage = ablage.kopf('mesh.glb'), ablage.arbeit('kopf_lage.npz')
-        if kopf.get('abgleich') and kopfdatei.is_file() and lage.is_file():
-            with np.load(lage) as d:
-                return kopfdatei, ablage.KOPF, 'Kopfnetz', np.asarray(d['matrix_roh'], dtype=float)
+        if kopf.get('abgleich') and Npztorch.da(kopfdatei) and Npztorch.da(lage):
+            with Npztorch.lesen(lage) as d:
+                return kopfdatei, ablage.KOPF, 'Kopfnetz', Torchfeld.feld(d['matrix_roh'], dtype=torch.float64)
         netz = ablage.netz('mesh.glb')
-        return (netz if netz.is_file() else None), ablage.NETZ, 'Körpernetz', np.eye(4)
+        return (netz if Npztorch.da(netz) else None), ablage.NETZ, 'Körpernetz', torch.eye(4, dtype=torch.float64, device='cuda')
 
     @classmethod
     def _haltung(cls, ablage, gesicht, ruhe):
         """`(4×4 Haltung → Ruhe, Befund)`. Ohne Fehlerfall die Einheitsmatrix und `{'aus': Grund}`."""
         pfad = ablage.arbeit('posiert.npy')
-        if not pfad.is_file():
-            return np.eye(4), {'aus': 'arbeit/posiert.npy fehlt'}
-        posiert = np.load(pfad).astype(float)
+        if not Npztorch.da(pfad):
+            return torch.eye(4, dtype=torch.float64, device='cuda'), {'aus': 'arbeit/posiert.npy fehlt'}
+        posiert = Torchfeld.astype(Npztorch.lesen(pfad), torch.float64)
         if ruhe.shape != posiert.shape:
-            return np.eye(4), {'aus': 'posiert.npy hat %d Punkte, der Käfig %d' % (len(posiert), len(ruhe))}
+            return torch.eye(4, dtype=torch.float64, device='cuda'), {'aus': 'posiert.npy hat %d Punkte, der Käfig %d' % (len(posiert), len(ruhe))}
         # `np.mean` propagiert ein einzelnes NaN (eine nicht erkannte Landmarke) auf den gesamten Mittelpunkt — dann
         # findet die Kaefigpunkt-Suche darunter ueberall „zu weit weg“ und die Haltungskorrektur faellt ganz aus
         # (Befund 08.10.2026, Edgar 9 TRELLIS-Kopf: Landmarke 332 NaN, 0 Kaefigpunkte, Abweichung dadurch auf 37 mm
         # Median statt der ueblichen < 1 mm — kein Form-Fehler, nur Ruhehaltung gegen Pose verglichen).
-        gueltig = np.isfinite(gesicht).all(axis=1)
+        gueltig = Torchfeld.isfinite(gesicht).all(axis=1)
         if not gueltig.any():
-            return np.eye(4), {'aus': 'keine gültige Landmarke für den Kopf-Mittelpunkt'}
-        kopf = np.linalg.norm(posiert - gesicht[gueltig].mean(axis=0), axis=1) < cls.RADIUS
+            return torch.eye(4, dtype=torch.float64, device='cuda'), {'aus': 'keine gültige Landmarke für den Kopf-Mittelpunkt'}
+        kopf = Torchfeld.linalg_norm(posiert - gesicht[gueltig].mean(axis=0), dim=1) < cls.RADIUS
         if kopf.sum() < cls.MINDESTPUNKTE:
-            return np.eye(4), {'aus': 'nur %d Käfigpunkte am Kopf' % int(kopf.sum())}
+            return torch.eye(4, dtype=torch.float64, device='cuda'), {'aus': 'nur %d Käfigpunkte am Kopf' % int(kopf.sum())}
         drehung, versatz = cls._kabsch(ruhe[kopf], posiert[kopf])
-        rest = np.linalg.norm(ruhe[kopf] @ drehung.T + versatz - posiert[kopf], axis=1)
-        vor = np.eye(4)
+        rest = Torchfeld.linalg_norm(ruhe[kopf] @ drehung.T + versatz - posiert[kopf], dim=1)
+        vor = torch.eye(4, dtype=torch.float64, device='cuda')
         vor[:3, :3], vor[:3, 3] = drehung, versatz
-        winkel = np.degrees(np.arccos(np.clip((np.trace(drehung) - 1.0) / 2.0, -1.0, 1.0)))
+        winkel = Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip((Torchfeld.trace(drehung) - 1.0) / 2.0, -1.0, 1.0)))
         befund = {
-            'punkte': int(kopf.sum()), 'drehung_grad': round(float(winkel), 1), 'verschiebung_mm': round(float(np.linalg.norm(versatz)) * 1000, 1),
-            'rest_rms_mm': round(float(np.sqrt((rest ** 2).mean())) * 1000, 2),
+            'punkte': int(kopf.sum()), 'drehung_grad': round(float(winkel), 1), 'verschiebung_mm': round(float(Torchfeld.linalg_norm(versatz)) * 1000, 1),
+            'rest_rms_mm': round(float(Torchfeld.sqrt((rest ** 2).mean())) * 1000, 2),
         }
-        return np.linalg.inv(vor), befund
+        return Torchfeld.linalg_inv(vor), befund
 
     @staticmethod
     def _kabsch(a, b):
         """Starre Abbildung `a → b`: `(Drehung, Versatz)` mit `b ≈ a @ Drehung.T + Versatz` — `KoerperKI_alle.Kabsch` seit 01.11.2026."""
         from KoerperKI_alle.kabsch import Kabsch
-        _s, drehung, versatz = Kabsch.lage(np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64))
+        _s, drehung, versatz = Kabsch.lage(Torchfeld.feld(a, dtype=torch.float64), Torchfeld.feld(b, dtype=torch.float64))
         return drehung, versatz
 
     @staticmethod
     def _anwenden(punkte, matrix):
-        return np.asarray(punkte, dtype=float) @ matrix[:3, :3].T + matrix[:3, 3]
+        return Torchfeld.feld(punkte, dtype=torch.float64) @ matrix[:3, :3].T + matrix[:3, 3]

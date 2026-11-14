@@ -15,7 +15,8 @@ sie in beiden Netzen dasselbe meinen:
 An Genesis geprueft: das Nasenrezept trifft MediaPipe-Landmarke 1/4 auf 0,6 mm, das Kinn liegt 9,9 mm neben Landmarke 152 (Kinnunterseite statt Kinnspitze —
 fuer beide Netze dieselbe Wahl, darauf kommt es an).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Mhkopfanker']
 
@@ -33,14 +34,14 @@ class Mhkopfanker:
 
     @classmethod
     def finden(cls, punkte):
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         h = float(p[:, 1].max())
-        mitte = np.abs(p[:, 0]) < cls.MITTE
-        kopf = np.nonzero(p[:, 1] > cls.KOPF_AB * h)[0]
-        nase = kopf[np.argmax(p[kopf, 2])]
-        vorn = np.nonzero((p[:, 1] > cls.KINN_AB * h) & (p[:, 2] > p[nase, 2] - cls.KINN_HINTER_NASE) & mitte)[0]
-        oben = np.nonzero(mitte)[0]
-        hinten = np.nonzero(mitte & (p[:, 1] > cls.HINTEN_AB * h))[0]
-        band = np.nonzero((p[:, 1] > cls.OHR_VON * h) & (p[:, 1] < cls.OHR_BIS * h))[0]
-        return {'nase': p[nase], 'kinn': p[vorn[np.argmin(p[vorn, 1])]], 'scheitel': p[oben[np.argmax(p[oben, 1])]],
-                'hinterkopf': p[hinten[np.argmin(p[hinten, 2])]], 'ohr_l': p[band[np.argmax(p[band, 0])]], 'ohr_r': p[band[np.argmin(p[band, 0])]]}
+        mitte = Torchfeld.abs(p[:, 0]) < cls.MITTE
+        kopf = torch.nonzero(p[:, 1] > cls.KOPF_AB * h, as_tuple=True)[0]
+        nase = kopf[Torchfeld.argmax(p[kopf, 2])]
+        vorn = torch.nonzero((p[:, 1] > cls.KINN_AB * h) & (p[:, 2] > p[nase, 2] - cls.KINN_HINTER_NASE) & mitte, as_tuple=True)[0]
+        oben = torch.nonzero(mitte, as_tuple=True)[0]
+        hinten = torch.nonzero(mitte & (p[:, 1] > cls.HINTEN_AB * h), as_tuple=True)[0]
+        band = torch.nonzero((p[:, 1] > cls.OHR_VON * h) & (p[:, 1] < cls.OHR_BIS * h), as_tuple=True)[0]
+        return {'nase': p[nase], 'kinn': p[vorn[Torchfeld.argmin(p[vorn, 1])]], 'scheitel': p[oben[Torchfeld.argmax(p[oben, 1])]],
+                'hinterkopf': p[hinten[Torchfeld.argmin(p[hinten, 2])]], 'ohr_l': p[band[Torchfeld.argmax(p[band, 0])]], 'ohr_r': p[band[Torchfeld.argmin(p[band, 0])]]}

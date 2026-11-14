@@ -20,7 +20,9 @@ in der Irisfarbe des Netzes (`Meshfiguraugenbild`, `fototextur.augen`).
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshfiguraugenbild import Meshfiguraugenbild
 from .meshfiguraugenhoehle import Meshfiguraugenhoehle
@@ -60,10 +62,10 @@ class Meshfigurende:
             raise RuntimeError('Regler fehlen — Schritte „koerper"/„gesicht" zuerst')
         self._genesis(stellung)
         e = self.lauf.runner('rest', von=0.05, bis=0.85)
-        with np.load(self.ablage.arbeit('rest.npz')) as d:
-            rest, gewicht = d['rest'].astype(float), d['gewicht'].astype(float)
+        with Npztorch.lesen(self.ablage.arbeit('rest.npz')) as d:
+            rest, gewicht = Torchfeld.astype(d['rest'], torch.float64), Torchfeld.astype(d['gewicht'], torch.float64)
             # Option `kleidungsluft_mm`: Punkte, die durch Stoff ragen, behalten nach dem Spiegeln und Glätten mindestens ihren Weg (`G9restmorph.untergrenze`, 07.10.2026).
-            mindest = d['mindest'].astype(float) if 'mindest' in d.files else None
+            mindest = Torchfeld.astype(d['mindest'], torch.float64) if 'mindest' in d.files else None
         # Augenpartie aus der Umgebung füllen — nicht in die Augenmulde des Netzes ziehen.
         rest, gewicht, augen = Meshfiguraugenhoehle.luecke(rest, gewicht)
         if self.optionen.get('symmetrie') == 'an':
@@ -134,13 +136,11 @@ class Meshfigurende:
         from Genesis9.netzbereiche import G9netzbereiche
 
         s = G9netzbereiche.spiegel()
-        gespiegelt = rest[s] * np.array([-1.0, 1.0, 1.0])
+        gespiegelt = rest[s] * Torchfeld.feld([-1.0, 1.0, 1.0], copy=True)
         g_sp = gewicht[s]
         beide = (gewicht > 0) & (g_sp > 0)
-        aus = np.where(
-            beide[:, None], 0.5 * (rest + gespiegelt), np.where((g_sp > 0)[:, None], gespiegelt, rest)
-        )
-        return aus, np.maximum(gewicht, g_sp)
+        aus = torch.where(beide[:, None], 0.5 * (rest + gespiegelt), torch.where((g_sp > 0)[:, None], gespiegelt, rest))
+        return aus, Torchfeld.maximum(gewicht, g_sp)
 
     # --------------------------------------------------------------- Textur
 
@@ -195,7 +195,7 @@ class Meshfigurende:
 
         from .meshfigurtexelpruefung import Meshfigurtexelpruefung
 
-        with np.load(self.ablage.arbeit('meshtextur.npz')) as d:
+        with Npztorch.lesen(self.ablage.arbeit('meshtextur.npz')) as d:
             hd = {k: d[k] for k in d.files}
         # Helle Füllflächen, Schattenklumpen und die fleckige Kopfhaut vor dem Backen säubern.
         hd, pruefung = Meshfigurtexelpruefung(G9texturabtastung.holen(seite)).pruefen(hd)

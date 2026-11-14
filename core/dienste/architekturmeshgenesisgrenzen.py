@@ -12,7 +12,9 @@ GELESEN beim Aufruf (nichts von Hand):
 
 import json
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 __all__ = ['Architekturmeshgenesisgrenzen']
 
@@ -38,7 +40,7 @@ class Architekturmeshgenesisgrenzen:
             if k:
                 beispiele.append({'name': n, 'reihenfolge': k['reihenfolge'], 'achsen': [{'achse': a, 'min': k['min'][i], 'max': k['max'][i], 'gesperrt': k['max'][i] <= k['min'][i],
                                                                                           'fest': k['fest'][i]} for i, a in enumerate('xyz')]})
-        glieder = [1000 * float(np.linalg.norm(np.subtract(k['zentrum'], knochen[k['eltern']]['zentrum'])))
+        glieder = [1000 * float(Torchfeld.linalg_norm(Torchfeld.subtract(k['zentrum'], knochen[k['eltern']]['zentrum'])))   # Listen: numpys `subtract` wandelt sie
                    for k in knochen if k['gruppe'] == 'finger' and k['eltern'] >= 0 and knochen[k['eltern']]['gruppe'] == 'finger']
         return {'bericht': bericht, 'beispiele': beispiele, 'glieder_mm': (min(glieder), max(glieder)) if glieder else None,
                 'vergleich': cls.vergleich(ordner, knochen)}
@@ -60,7 +62,7 @@ class Architekturmeshgenesisgrenzen:
         fertig = []
         for p in sorted(wurzel.iterdir()):
             e = cls._json(p / 'lauf_ergebnis.json')
-            if e and (p / 'vorhersagen.npz').is_file():
+            if e and Npztorch.da(p / 'vorhersagen.npz'):
                 fertig.append((p, e))
         alle = [(p, e) for p, e in reversed(fertig) if e.get('ausgabe') == 'kanaele']
         if not alle:
@@ -78,7 +80,7 @@ class Architekturmeshgenesisgrenzen:
         kanaele, punkte = cls.laeufe(ordner)
         if kanaele is None:
             return None
-        stand = tuple((str(p), (p / 'vorhersagen.npz').stat().st_mtime_ns) for p, _e in (kanaele, punkte) if p is not None)
+        stand = tuple((str(p), Npztorch.stat(p / 'vorhersagen.npz').st_mtime_ns) for p, _e in (kanaele, punkte) if p is not None)
         if cls._ablage.get(str(ordner), {}).get('stand') != stand:
             zeilen = [cls._lauf(ordner, knochen, p, e) for p, e in (punkte, kanaele) if p is not None]
             cls._ablage[str(ordner)] = {'stand': stand, 'zeilen': zeilen}
@@ -87,28 +89,28 @@ class Architekturmeshgenesisgrenzen:
     @classmethod
     def _lauf(cls, ordner, knochen, lauf, ergebnis):
         """Je Gruppe der Proben: Fehler (aus `lauf_ergebnis.json`), Knochenlänge und Grenzverletzungen (gerechnet)."""
-        vor = np.load(lauf / 'vorhersagen.npz')
+        vor = Npztorch.lesen(lauf / 'vorhersagen.npz')
         paare = [(k['eltern'], j) for j, k in enumerate(knochen) if k['eltern'] >= 0]
-        lo = np.array([k['min'] for k in knochen])
-        hi = np.array([k['max'] for k in knochen])
-        wurzel = np.array([k['eltern'] < 0 for k in knochen])
+        lo = Torchfeld.feld([k['min'] for k in knochen], copy=True)
+        hi = Torchfeld.feld([k['max'] for k in knochen], copy=True)
+        wurzel = Torchfeld.feld([k['eltern'] < 0 for k in knochen], copy=True)
         aus = {'lauf': lauf.name, 'ausgabe': ergebnis.get('ausgabe', 'punkte'), 'dauer_s': ergebnis.get('dauer_s'), 'parameter': ergebnis.get('parameter'),
                'zahlen': ergebnis.get('ausgabe_zahlen', 414), 'gruppen': []}
         for g in cls.GRUPPEN:
             if g + '_nr' not in vor.files:
                 continue
             m = (ergebnis.get('maße') or {}).get(g, {})
-            soll = np.stack([np.load(ordner / 'proben' / ('%04d' % int(nr)) / 'soll.npz')['rig'] for nr in vor[g + '_nr']])
+            soll = Torchfeld.stack([Npztorch.lesen(ordner / 'proben' / ('%04d' % int(nr)) / 'soll.npz')['rig'] for nr in vor[g + '_nr']])
             rig = vor[g + '_rig']
-            l_soll = np.stack([np.linalg.norm(soll[:, j] - soll[:, e], axis=-1) for e, j in paare], axis=1)
-            l_vor = np.stack([np.linalg.norm(rig[:, j] - rig[:, e], axis=-1) for e, j in paare], axis=1)
+            l_soll = Torchfeld.stack([Torchfeld.linalg_norm(soll[:, j] - soll[:, e], dim=-1) for e, j in paare], axis=1)
+            l_vor = Torchfeld.stack([Torchfeld.linalg_norm(rig[:, j] - rig[:, e], dim=-1) for e, j in paare], axis=1)
             maske = l_soll > 0.001
             zeile = {'gruppe': g, 'proben': int(len(rig)), 'netz_mm': m.get('netz_mm'), 'je': {s: (m.get('je_gruppe_mm') or {}).get(s) for s in cls.SPALTEN},
-                     'laenge_mm': round(float(1000 * np.abs(l_vor - l_soll)[maske].mean()), 2), 'laenge_max_mm': round(float(1000 * np.abs(l_vor - l_soll)[maske].max()), 1),
+                     'laenge_mm': round(float(1000 * Torchfeld.abs(l_vor - l_soll)[maske].mean()), 2), 'laenge_max_mm': round(float(1000 * Torchfeld.abs(l_vor - l_soll)[maske].max()), 1),
                      'verletzt': None}
             if g + '_winkel' in vor.files:
                 w = vor[g + '_winkel']
-                v = np.maximum(0, lo[None] - w) + np.maximum(0, w - hi[None])
+                v = Torchfeld.maximum(0, lo[None] - w) + Torchfeld.maximum(0, w - hi[None])
                 v[:, wurzel] = 0
                 zeile['verletzt'] = int((v > 0.01).sum())
             aus['gruppen'].append(zeile)

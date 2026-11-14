@@ -9,7 +9,8 @@ das Konzept der Jobseite sieht dieselben Renderings als Vorlagen der Iterationen
 
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Mesh3dansicht']
 
@@ -48,16 +49,16 @@ class Mesh3dansicht:
         tief, hoch = szene_tm.bounds
         mitte = (tief + hoch) / 2.0
         ausdehnung = hoch - tief
-        if not np.isfinite(ausdehnung).all() or float(ausdehnung.max()) <= 0:
+        if not Torchfeld.isfinite(ausdehnung).all() or float(ausdehnung.max()) <= 0:
             raise ValueError('Netz ohne Ausdehnung: %s' % glb)
-        abstand = float(np.linalg.norm(ausdehnung)) + 1.0
+        abstand = float(Torchfeld.linalg_norm(ausdehnung)) + 1.0
         szene = pyrender.Scene.from_trimesh_scene(szene_tm, bg_color=cls.HINTERGRUND, ambient_light=cls.UMGEBUNG)
         renderer = pyrender.OffscreenRenderer(kante, kante)
         try:
             for rolle, ziel in ziele.items():
-                blick, rechts, oben = (np.asarray(v, dtype=np.float64) for v in cls.ACHSEN[rolle])
+                blick, rechts, oben = (Torchfeld.feld(v, dtype=torch.float64) for v in cls.ACHSEN[rolle])
                 spanne = max(abs(float(rechts @ ausdehnung)), abs(float(oben @ ausdehnung)))
-                lage = np.eye(4)
+                lage = torch.eye(4, dtype=torch.float64, device='cuda')
                 lage[:3, 0], lage[:3, 1], lage[:3, 2] = rechts, oben, blick          # Spalten der Kamera: rechts, oben, hinten (sie blickt entlang −z)
                 lage[:3, 3] = mitte + blick * abstand
                 halb = spanne * cls.RAND / 2.0
@@ -68,7 +69,7 @@ class Mesh3dansicht:
                 finally:
                     szene.remove_node(kamera)
                     szene.remove_node(licht)
-                rgba = np.dstack([farbe[:, :, :3], np.where(tiefe > 0, 255, 0).astype(np.uint8)])
+                rgba = Torchfeld.dstack([farbe[:, :, :3], Torchfeld.astype(torch.where(tiefe > 0, 255, 0), torch.uint8)])
                 Image.fromarray(rgba, 'RGBA').save(str(ziel))
         finally:
             renderer.delete()
@@ -93,12 +94,12 @@ class Mesh3dansicht:
         tief, hoch = szene_tm.bounds
         mitte = (tief + hoch) / 2.0
         spanne = float(max(hoch[0] - tief[0], hoch[1] - tief[1]))
-        if not np.isfinite(spanne) or spanne <= 0:
+        if not Torchfeld.isfinite(spanne) or spanne <= 0:
             raise ValueError('Netz ohne Ausdehnung: %s' % glb)
         szene = pyrender.Scene.from_trimesh_scene(szene_tm, bg_color=cls.HINTERGRUND, ambient_light=cls.UMGEBUNG)
         halb = spanne * cls.RAND / 2.0
-        lage = np.eye(4)
-        lage[:3, 3] = [mitte[0], mitte[1], hoch[2] + max(spanne, float(hoch[2] - tief[2])) + 1.0]
+        lage = torch.eye(4, dtype=torch.float64, device='cuda')
+        lage[:3, 3] = Torchfeld.feld([mitte[0], mitte[1], hoch[2] + max(spanne, float(hoch[2] - tief[2])) + 1.0])
         szene.add(pyrender.OrthographicCamera(xmag=halb, ymag=halb, znear=0.05, zfar=1000.0), pose=lage)
         szene.add(pyrender.DirectionalLight(color=[1.0, 1.0, 1.0], intensity=cls.LICHT), pose=lage)
         renderer = pyrender.OffscreenRenderer(kante, kante)
@@ -106,6 +107,6 @@ class Mesh3dansicht:
             farbe, tiefe = renderer.render(szene)
         finally:
             renderer.delete()
-        rgba = np.dstack([farbe[:, :, :3], np.where(tiefe > 0, 255, 0).astype(np.uint8)])
+        rgba = Torchfeld.dstack([farbe[:, :, :3], Torchfeld.astype(torch.where(tiefe > 0, 255, 0), torch.uint8)])
         Image.fromarray(rgba, 'RGBA').save(str(ziel))
         return ziel

@@ -9,7 +9,8 @@ getroffenen Dreiecks Base Color, Roughness und Normal aus (`Hautgraph.auswerten`
 Die Texel eines Materials werden in Stapeln (`STAPEL`) ausgewertet. Texel, deren Material keinen Graph hat (kein Principled BSDF), bleiben schwarz/flach und stehen in `ohne_graph`.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 from ..hautbackenkachel import Hautbackenkachel
@@ -37,7 +38,7 @@ class Hautbackengraph:
         kachel = Hautbackenkachel(figur, px, g)
         treffer = kachel.schiessen(quelle, self.AUSZUG_M, self.STRAHL_M)
         face_np = treffer.face.numpy().reshape(-1)
-        treffer_idx = np.nonzero(face_np >= 0)[0].astype(np.int32)
+        treffer_idx = Torchfeld.astype(torch.nonzero(face_np >= 0, as_tuple=True)[0], torch.int32)
         material = self.s.material[face_np[treffer_idx]]
         n = px * px
         bilder = {}
@@ -46,23 +47,23 @@ class Hautbackengraph:
         if 'rauheit' in kanaele:
             bilder['rauheit'] = wp.zeros(n * 3, dtype=wp.uint8, device=g)
         if 'normalen' in kanaele:
-            bilder['normalen'] = wp.array(np.tile(np.array([128, 128, 255], dtype=np.uint8), n), dtype=wp.uint8, device=g)
+            bilder['normalen'] = wp.array(torch.tile(Torchfeld.feld([128, 128, 255], dtype=torch.uint8, copy=True), (n,)), dtype=wp.uint8, device=g)
         ids = kachel.ids.reshape(-1)
         bary = kachel.bary.reshape(-1)
         f_tri = wp.array(figur.dreiecke, dtype=wp.vec3i, device=g)
         f_nor = kachel._nor
-        f_pos = wp.array(figur.punkte.astype(np.float32), dtype=wp.vec3, device=g)
+        f_pos = wp.array(Torchfeld.astype(figur.punkte, torch.float32), dtype=wp.vec3, device=g)
         f_uv = wp.array(figur.uv_ecken.reshape(-1, 2), dtype=wp.vec2, device=g)
-        f_tang = wp.array(np.ascontiguousarray(figur_tangenten, dtype=np.float32).reshape(-1, 4), dtype=wp.vec4, device=g)
+        f_tang = wp.array(Torchfeld.feld(figur_tangenten, dtype=torch.float32).reshape(-1, 4), dtype=wp.vec4, device=g)
         face_f, hu_f, hv_f = treffer.face.reshape(-1), treffer.hu.reshape(-1), treffer.hv.reshape(-1)
-        ohne_graph = np.zeros(0, dtype=np.int32)
+        ohne_graph = torch.zeros(0, dtype=torch.int32, device='cuda')
         glanz, alpha = Hautglanz(g), Hautalpha(g)
         korrektur = {'gerechnet': {}, 'ungerechnet': {}}
-        for m in np.unique(material):
+        for m in Torchfeld.liste(Torchfeld.unique(material)):
             idx_m = treffer_idx[material == m]
             graph = self.graphen.get(int(m))
             if graph is None:
-                ohne_graph = np.concatenate([ohne_graph, idx_m])
+                ohne_graph = Torchfeld.cat([ohne_graph, idx_m])
                 continue
             for von in range(0, len(idx_m), self.STAPEL):
                 idx = wp.array(idx_m[von:von + self.STAPEL], dtype=wp.int32, device=g)
@@ -85,7 +86,7 @@ class Hautbackengraph:
                     wp.launch(aus_kern.schreiben_normale, dim=k, inputs=[idx, welt, ids, bary, f_tri, f_nor, f_tang, bilder['normalen']], device=g)
         aus = {name: feld.numpy().reshape(px, px, 3) for name, feld in bilder.items()}
         aus['maske'] = (face_np >= 0).reshape(px, px)
-        aus['material'] = np.where(face_np >= 0, self.s.material[np.maximum(face_np, 0)], -1).reshape(px, px)
+        aus['material'] = torch.where(face_np >= 0, self.s.material[Torchfeld.maximum(face_np, 0)], -1).reshape(px, px)
         aus['treffer'] = treffer
         aus['ohne_graph'] = int(len(ohne_graph))
         aus['glanz_korrektur'] = korrektur['ungerechnet']

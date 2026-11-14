@@ -18,7 +18,9 @@ import logging
 import threading
 from types import SimpleNamespace
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -41,9 +43,9 @@ class Meshfigurteile:
         """Die Bestandteile dieses Laufs mit `maske` (F,) bool und `objekt` (`{datei, …}`, `{hinweis}` oder `{fehler}`) — leer, wenn es keine Stimmen gibt. Schreibt die Objekte beim ersten Aufruf."""
         ablage = lauf.ablage
         dateien = [ablage.arbeit(cls.DATEI), ablage.arbeit('genesis_ende.npz'), ablage.arbeit('posiert.npy')]
-        if not all(p.is_file() for p in dateien):
+        if not all(Npztorch.da(p) for p in dateien):
             return []
-        schluessel = tuple((p.stat().st_size, p.stat().st_mtime_ns) for p in dateien)
+        schluessel = tuple((Npztorch.stat(p).st_size, Npztorch.stat(p).st_mtime_ns) for p in dateien)
         with cls._sperre:
             gemerkt = cls._vorrat.get(lauf.job.kennung)
             if gemerkt and gemerkt[0] == schluessel:
@@ -63,7 +65,7 @@ class Meshfigurteile:
         gewaehlt = [t['maske'] for t in teile if (t.get('objekt') or {}).get('datei') and (gruppen is None or t['gruppe'] in gruppen)]
         if not gewaehlt:
             return None
-        return np.logical_or.reduce(gewaehlt)
+        return Torchfeld.logical_or_reduce(gewaehlt)
 
     # ------------------------------------------------------------- Rechnung
 
@@ -82,12 +84,12 @@ class Meshfigurteile:
             return []
         teile = Bestandteile.zerlegen(daten, scan.flaechen, scan.flaecheninhalte() * 1e4)
         cls._anschliessen(scan, teile, cls._klassen(ablage, len(scan.flaechen)))
-        with np.load(ablage.arbeit('genesis_ende.npz')) as d:
-            kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
-            teil = np.asarray(d['teil']) if 'teil' in d.files else None
-        ruhelage = Meshfigurkleidungsruhelage(kaefig_ruhe, np.load(ablage.arbeit('posiert.npy')).astype(np.float64), teil)
+        with Npztorch.lesen(ablage.arbeit('genesis_ende.npz')) as d:
+            kaefig_ruhe = Torchfeld.feld(d['punkte'], dtype=torch.float64)
+            teil = Torchfeld.feld(d['teil']) if 'teil' in d.files else None
+        ruhelage = Meshfigurkleidungsruhelage(kaefig_ruhe, Torchfeld.astype(Npztorch.lesen(ablage.arbeit('posiert.npy')), torch.float64), teil)
         lage = SimpleNamespace(h=ruhelage.h, teil=ruhelage.teil, kaefig_posiert=ruhelage.posiert, kaefig_ruhe=ruhelage.entposen.ruhe,
-                               finger_bewegt=np.zeros(len(ruhelage.posiert), dtype=bool), ins_netz=lambda p: np.asarray(p, dtype=np.float64), entposen=lambda: ruhelage.entposen)
+                               finger_bewegt=torch.zeros(len(ruhelage.posiert), dtype=torch.bool, device='cuda'), ins_netz=lambda p: Torchfeld.feld(p, dtype=torch.float64), entposen=lambda: ruhelage.entposen)
         from .meshfighaltung import Meshfighaltung
 
         haltung = Meshfighaltung.holen(lauf)
@@ -105,10 +107,10 @@ class Meshfigurteile:
     def _klassen(ablage, flaechen):
         """Die Sapiens-Stimmen des Netzes (F, 28) oder None, wenn es sie nicht gibt oder sie zu einem anderen Netz gehören."""
         pfad = ablage.arbeit('sapiens_flaechen.npz')
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
-            klassen = np.asarray(d['klassen']) if 'klassen' in d.files else None
+        with Npztorch.lesen(pfad) as d:
+            klassen = Torchfeld.feld(d['klassen']) if 'klassen' in d.files else None
         return klassen if klassen is not None and len(klassen) == flaechen else None
 
     @staticmethod
@@ -118,13 +120,13 @@ class Meshfigurteile:
         from .meshfigurhalter import Meshfigurhalter
         from .meshfigurteileanschluss import Meshfigurteileanschluss
 
-        belegt = np.zeros(len(scan.flaechen), dtype=bool)
+        belegt = torch.zeros(len(scan.flaechen), dtype=torch.bool, device='cuda')
         for t in teile:
             belegt |= t['maske']
         haende = Meshfigurhalter.haendeflaechen(klassen)
         cm2 = None
         for t in teile:
-            if not Meshfigurhalter.stabfoermig(scan.punkte[np.unique(scan.flaechen[t['maske']].reshape(-1))]):
+            if not Meshfigurhalter.stabfoermig(scan.punkte[Torchfeld.unique(scan.flaechen[t['maske']].reshape(-1))]):
                 continue
             nie = belegt & ~t['maske']
             if haende is not None:
@@ -142,13 +144,13 @@ class Meshfigurteile:
         from Genesis9.koerperteile import G9koerperteile
 
         pfad = ablage.arbeit('sapiens_flaechen.npz')
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
-            klassen = np.asarray(d['klassen']) if 'klassen' in d.files else None
+        with Npztorch.lesen(pfad) as d:
+            klassen = Torchfeld.feld(d['klassen']) if 'klassen' in d.files else None
         if klassen is None or len(klassen) != flaechen or ruhelage.teil is None:
             return None
-        haende = {s: np.asarray(ruhelage.posiert)[np.asarray(ruhelage.teil) == G9koerperteile.NUMMER[s + '_hand']].mean(axis=0) for s in ('r', 'l')}
+        haende = {s: Torchfeld.feld(ruhelage.posiert)[Torchfeld.feld(ruhelage.teil) == G9koerperteile.NUMMER[s + '_hand']].mean(axis=0) for s in ('r', 'l')}
         return klassen, haende
 
     @classmethod
@@ -172,12 +174,12 @@ class Meshfigurteile:
 
         if not scan.hat_aussehen():
             return {'fehler': 'Netz ohne Textur und ohne Farben je Punkt'}
-        genutzt, neu = np.unique(scan.flaechen[t['maske']].reshape(-1), return_inverse=True)
+        genutzt, neu = Torchfeld.unique(scan.flaechen[t['maske']].reshape(-1), return_inverse=True)
         dreiecke = neu.reshape(-1, 3)
         punkte = scan.punkte[genutzt]
         abstand, _ = ruhelage.entposen.baum.query(punkte, workers=-1)
-        t['abstand_median_mm'] = round(float(np.median(abstand)) * 1000.0, 1)
-        if float(np.median(abstand)) < cls.FLACH_M:
+        t['abstand_median_mm'] = round(float(Torchfeld.median(abstand)) * 1000.0, 1)
+        if float(Torchfeld.median(abstand)) < cls.FLACH_M:
             return {'hinweis': 'liegt an der Oberfläche (Median %.1f mm vom Käfig)' % t['abstand_median_mm']}
         from .meshfigurhautgewichte import Meshfigurhautgewichte
 

@@ -21,7 +21,9 @@ import subprocess
 import time
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..atomic_write import AtomarSchreiber
@@ -51,21 +53,21 @@ class Stoffsolverdrapierung:
         deltas, berichte = [], []
         for nummer, ((folger, _lage), punkte) in enumerate(zip(teile, kaefige, strict=True)):
             dreiecke = Engine2d3dKleiderblender._dreiecke(folger)
-            punkte = np.asarray(punkte, dtype=np.float64)
+            punkte = Torchfeld.feld(punkte, dtype=torch.float64)
             if dreiecke is None or not len(dreiecke) or len(punkte) < 4:
-                deltas.append(np.zeros_like(punkte))
+                deltas.append(torch.zeros_like(punkte))
                 continue
             stamm = self.ordner / ('%s_%d' % (kennung, nummer))
             fest = punkte[:, 1] >= y1 - float(fest_oben) * (y1 - y0)
             auftrag = self._schreiben(stamm, punkte, dreiecke, k_punkte, k_dreiecke, fest, bilder, druck, steifigkeit)
             bericht = self._laufen(Path(str(stamm) + '_auftrag.json'), Path(auftrag['bericht']))
-            with np.load(auftrag['aus']) as d:
-                nachher = np.asarray(d['punkte'], dtype=np.float64)
+            with Npztorch.lesen(auftrag['aus']) as d:
+                nachher = Torchfeld.feld(d['punkte'], dtype=torch.float64)
             delta = nachher - punkte
             delta[fest] = 0.0
             deltas.append(delta)
             bericht['fest'] = int(fest.sum())
-            bericht['weg_mittel_mm'] = round(float(np.linalg.norm(delta, axis=1).mean()) * 1e3, 2)
+            bericht['weg_mittel_mm'] = round(float(Torchfeld.linalg_norm(delta, dim=1).mean()) * 1e3, 2)
             berichte.append(bericht)
         brief = {'art': 'drapiert', 'motor': 'stoffsolver', 'bilder': int(bilder), 'druck': float(druck),
                  'steifigkeit': float(steifigkeit), 'fest_oben': float(fest_oben), 'schwerkraft': 'Y unten',
@@ -74,14 +76,12 @@ class Stoffsolverdrapierung:
 
     def _schreiben(self, stamm, punkte, dreiecke, k_punkte, k_dreiecke, fest, bilder, druck, steifigkeit):
         """Käfig und Körper als `.npz` (Reihenfolge der Punkte bleibt) und der Auftrag — dieselben Schlüssel wie bei Blender."""
-        np.savez_compressed(str(stamm) + '_koerper.npz', punkte=np.asarray(k_punkte, dtype=np.float32),
-                            dreiecke=np.asarray(k_dreiecke, dtype=np.int32))
-        np.savez_compressed(str(stamm) + '_stueck.npz', punkte=punkte.astype(np.float32),
-                            dreiecke=np.asarray(dreiecke, dtype=np.int32))
+        Npztorch.speichern(str(stamm) + '_koerper.npz', punkte=Torchfeld.feld(k_punkte, dtype=torch.float32), dreiecke=Torchfeld.feld(k_dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)          # `Drapierauftrag` (Stoffsolver) liest mit numpy
+        Npztorch.speichern(str(stamm) + '_stueck.npz', punkte=Torchfeld.astype(punkte, torch.float32), dreiecke=Torchfeld.feld(dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)
         auftrag = {'koerper': str(stamm) + '_koerper.npz', 'stueck': str(stamm) + '_stueck.npz',
                    'aus': str(stamm) + '_nachher.npz', 'bericht': str(stamm) + '_bericht.json', 'bilder': int(bilder),
                    'druck': float(druck), 'steifigkeit': float(steifigkeit), 'schwerkraft': self.SCHWERKRAFT,
-                   'anheften': np.flatnonzero(fest).tolist(), 'rechner': 'warp'}
+                   'anheften': torch.flatten(fest).nonzero()[:, 0].tolist(), 'rechner': 'warp'}
         AtomarSchreiber.json_schreiben(Path(str(stamm) + '_auftrag.json'), auftrag)
         return auftrag
 
@@ -90,7 +90,7 @@ class Stoffsolverdrapierung:
         if not skript.is_file():
             raise RuntimeError('Stoffsolver fehlt: %s' % skript)
         t0 = time.perf_counter()
-        bericht.unlink(missing_ok=True)
+        Npztorch.loeschen(bericht)
         prozess = subprocess.Popen([str(settings.PYTHON14), str(skript), '--auftrag', str(auftrag)], stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, cwd=str(skript.parent))
         try:
@@ -98,7 +98,7 @@ class Stoffsolverdrapierung:
         except subprocess.TimeoutExpired:
             prozess.kill()
             raise RuntimeError('Stoffsolver-Drapierung: Zeitgrenze %d s' % self.ZEIT_S) from None
-        if not bericht.is_file():
+        if not Npztorch.da(bericht):
             letzte = '\n'.join((aus or b'').decode('utf-8', errors='replace').splitlines()[-15:])
             raise RuntimeError('Stoffsolver-Drapierung ohne Bericht (Code %s):\n%s' % (prozess.returncode, letzte))
         daten = json.loads(bericht.read_text(encoding='utf-8'))

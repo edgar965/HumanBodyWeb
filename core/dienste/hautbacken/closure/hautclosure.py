@@ -15,7 +15,9 @@ Nicht gerechnet (der Grund steht im Bericht des Imports, die Normale bleibt ohne
 
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 import warp as wp
 
 from .hautclosurekernel import CUTOFF, normale_mittel
@@ -36,8 +38,8 @@ class Hautclosure:
 
     def __init__(self, geraet='cuda:0'):
         self.geraet = geraet
-        daten = np.load(self.TABELLEN)
-        self.tabellen = {k: wp.array(np.ascontiguousarray(daten[k], dtype=np.float32), dtype=wp.float32, device=geraet)
+        daten = Npztorch.lesen(self.TABELLEN)
+        self.tabellen = {k: wp.array(Torchfeld.feld(daten[k], dtype=torch.float32), dtype=wp.float32, device=geraet)
                          for k in ('ggx_E', 'ggx_Eavg', 'ggx_gen_schlick_ior_s', 'sheen_ltc', 'ggx_glass_E', 'ggx_glass_Eavg', 'ggx_glass_inv_E', 'ggx_glass_inv_Eavg')}
 
     @staticmethod

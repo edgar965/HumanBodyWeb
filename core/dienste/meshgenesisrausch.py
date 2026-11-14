@@ -15,7 +15,9 @@ Die Ausgabe des Netzes ist Soll plus Rauschen — nichts ist trainiert. Zwei Art
 import math
 import zlib
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.zufallsstrom import Zufallsstrom
 
 __all__ = ['Meshgenesisrausch']
 
@@ -30,11 +32,11 @@ class Meshgenesisrausch:
         self._phasen = {}
 
     def _erzeuger(self, schluessel):
-        return np.random.default_rng([self.seed, zlib.crc32(schluessel.encode('utf-8'))])
+        return Zufallsstrom.default_rng([self.seed, zlib.crc32(schluessel.encode('utf-8'))])
 
     def werte(self, schluessel, sigma):
         """Das Rauschen für `schluessel` (eine Zeile oder ein Teil der Probe) bei dem Pegel `sigma` (m, Skalar oder (n,))."""
-        sigma = np.atleast_1d(np.asarray(sigma, dtype=float))
+        sigma = Torchfeld.atleast_1d(Torchfeld.feld(sigma, dtype=torch.float64))
         n = len(sigma)
         s = sigma[:, None]
         if not self.weich:
@@ -43,4 +45,4 @@ class Meshgenesisrausch:
             z = self._erzeuger(schluessel)
             self._phasen[schluessel] = (z.uniform(*self.HZ, (n, 3)), z.uniform(0.0, 2 * math.pi, (n, 3)))
         f, phase = self._phasen[schluessel]
-        return s * math.sqrt(2.0) * np.sin(2 * math.pi * f * self.t + phase)
+        return s * math.sqrt(2.0) * Torchfeld.sin(2 * math.pi * f * self.t + phase)

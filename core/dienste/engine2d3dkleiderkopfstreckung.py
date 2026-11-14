@@ -18,7 +18,8 @@ import logging
 import os
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -36,7 +37,7 @@ class Engine2d3dKleiderkopfstreckung:
             wert = float(prozent)
         except (TypeError, ValueError):
             return 1.0
-        if not np.isfinite(wert) or wert <= 0:
+        if not Torchfeld.isfinite(wert) or wert <= 0:
             return 1.0
         return 1.0 + min(wert, cls.HOECHSTENS) / 100.0
 
@@ -61,7 +62,7 @@ class Engine2d3dKleiderkopfstreckung:
 
         szene = trimesh.load(str(quelle), process=False)
         tief, hoch = szene.bounds
-        matrix = np.eye(4)
+        matrix = torch.eye(4, dtype=torch.float64, device='cuda')
         matrix[1, 1] = faktor
         matrix[1, 3] = float((tief[1] + hoch[1]) / 2) * (1.0 - faktor)
         szene.apply_transform(matrix)

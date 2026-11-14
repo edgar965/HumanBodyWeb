@@ -16,7 +16,8 @@ Verschweißt wird nach Lage (UV-Nähte verdoppeln Punkte); verändert wird jeder
 
 from collections import defaultdict
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Netzputz']
 
@@ -63,17 +64,17 @@ class Netzputz:
     @classmethod
     def _glaetten(cls, linie):
         """Geschlossener Linienzug (n, 3): Taubin ohne Schrumpfen."""
-        p = linie.copy()
+        p = Torchfeld.kopie(linie)
         for _ in range(cls.RAND_SCHRITTE):
-            p = p + cls.LAM * (0.5 * (np.roll(p, 1, axis=0) + np.roll(p, -1, axis=0)) - p)
-            p = p + cls.MU * (0.5 * (np.roll(p, 1, axis=0) + np.roll(p, -1, axis=0)) - p)
+            p = p + cls.LAM * (0.5 * (torch.roll(p, 1, dims=0) + torch.roll(p, -1, dims=0)) - p)
+            p = p + cls.MU * (0.5 * (torch.roll(p, 1, dims=0) + torch.roll(p, -1, dims=0)) - p)
         return p
 
     @classmethod
     def teil(cls, t, dreiecke, haut):
         """Für `Standmodellglb.teile`: das Teil `t` (Wörterbuch aus `Kleidermodellbau.teile`) geputzt → (t, dreiecke, haut) mit neuen Punkten, Dreiecken (neue hinten angehängt: die
         Gruppen behalten ihre Bereiche, die Löcher landen im flachen Rest-Netz), UV und Hautgewichten (neue Mittelpunkte erben vom ersten Punkt ihrer Schleife); Normalen werden neu gerechnet."""
-        uv = None if t.get('uv') is None else np.asarray(t['uv'], dtype=np.float64).reshape(-1, 2)
+        uv = None if t.get('uv') is None else Torchfeld.feld(t['uv'], dtype=torch.float64).reshape(-1, 2)
         neu = cls.reparieren(t['punkte'], dreiecke, uv)
         ersatz = dict(t, punkte=neu['punkte'], dreiecke=neu['dreiecke'], normalen=None)
         if uv is not None:
@@ -83,9 +84,9 @@ class Netzputz:
 
     @classmethod
     def reparieren(cls, punkte, dreiecke, uv=None):
-        p = np.asarray(punkte, dtype=np.float64).copy()
-        d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        schluessel, erste, inv = np.unique(np.round(p * 1e5).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+        p = Torchfeld.kopie(Torchfeld.feld(punkte, dtype=torch.float64))
+        d = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        schluessel, erste, inv = Torchfeld.unique(Torchfeld.astype(Torchfeld.round(p * 1e5), torch.int64), axis=0, return_index=True, return_inverse=True)
         inv = inv.reshape(-1)
         wd = inv[d]
         ok = (wd[:, 0] != wd[:, 1]) & (wd[:, 1] != wd[:, 2]) & (wd[:, 0] != wd[:, 2])
@@ -97,7 +98,7 @@ class Netzputz:
         n = len(p)
         for s in schleifen:
             q = wp[s]
-            umfang = float(np.linalg.norm(q - np.roll(q, -1, axis=0), axis=1).sum())
+            umfang = float(Torchfeld.linalg_norm(q - torch.roll(q, -1, dims=0), dim=1).sum())
             if len(s) <= cls.LOCH_PUNKTE and umfang <= cls.LOCH_UMFANG:
                 mitte = q.mean(axis=0)
                 neue_p.append(mitte)
@@ -108,7 +109,7 @@ class Netzputz:
                     neue_d.append([kante[0], kante[1], n])
                 herkunft.append(int(erste[s[0]]))
                 if uv is not None:
-                    neue_uv.append(np.asarray(uv)[erste[s[0]]])
+                    neue_uv.append(Torchfeld.feld(uv)[erste[s[0]]])
                 n += 1
                 loecher += 1
             elif len(s) >= 6:
@@ -117,9 +118,9 @@ class Netzputz:
                     p[inv == a] = ziel
                 raender += 1
         if neue_p:
-            p = np.vstack([p, np.asarray(neue_p)])
-            d = np.vstack([d, np.asarray(neue_d, dtype=np.int64)])
-        aus = {'punkte': p, 'dreiecke': d, 'herkunft': np.asarray(herkunft, dtype=np.int64), 'loecher': loecher, 'raender': raender}
+            p = Torchfeld.vstack([p, Torchfeld.feld(neue_p)])
+            d = Torchfeld.vstack([d, Torchfeld.feld(neue_d, dtype=torch.int64)])
+        aus = {'punkte': p, 'dreiecke': d, 'herkunft': Torchfeld.feld(herkunft, dtype=torch.int64), 'loecher': loecher, 'raender': raender}
         if uv is not None:
-            aus['uv'] = np.vstack([np.asarray(uv), np.asarray(neue_uv)]) if neue_uv else np.asarray(uv)
+            aus['uv'] = Torchfeld.vstack([Torchfeld.feld(uv), Torchfeld.feld(neue_uv)]) if neue_uv else Torchfeld.feld(uv)
         return aus

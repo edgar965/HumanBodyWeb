@@ -21,10 +21,11 @@ Messreihe an „cute girl" (alte Figur, `ProjektTemp/_wegwerf/alt4_probe.py`; Kn
 Preis: Form Original → Modell p90 1,45 → 3,68 mm (das Stück wird bewusst an die Haut gehoben).
 Ohne Django.
 """
-import numpy as np
-import scipy.sparse as sp
-import scipy.sparse.linalg as spl
-from scipy.sparse import csgraph
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kartenduenn import Kartenduenn as sp
+from KoerperKI_alle.duennloeser import Duennloeser as spl
+from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
 __all__ = ['Schamtiefenfeld']
 
@@ -46,15 +47,15 @@ class Schamtiefenfeld:
     @staticmethod
     def randpunkte(dreiecke):
         """Nummern der Punkte an offenen Kanten (Kante in genau einem Dreieck)."""
-        kanten = np.sort(np.concatenate([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), axis=1)
-        roh, zaehl = np.unique(kanten, axis=0, return_counts=True)
-        return np.unique(roh[zaehl == 1])
+        kanten = torch.sort(Torchfeld.cat([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), dim=1, stable=True).values
+        roh, zaehl = Torchfeld.unique(kanten, axis=0, return_counts=True)
+        return Torchfeld.unique(roh[zaehl == 1])
 
     @staticmethod
     def aussenring(dreiecke):
         """`(Punktnummern des längsten Randrings in Reihenfolge, Zahl der übrigen Ringe)` — kleine Löcher im Innern sind kein Rand zur Haut."""
-        kanten = np.sort(np.concatenate([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), axis=1)
-        roh, zaehl = np.unique(kanten, axis=0, return_counts=True)
+        kanten = torch.sort(Torchfeld.cat([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), dim=1, stable=True).values
+        roh, zaehl = Torchfeld.unique(kanten, axis=0, return_counts=True)
         nachbarn = {}
         for a, b in roh[zaehl == 1].tolist():
             nachbarn.setdefault(a, []).append(b)
@@ -75,7 +76,7 @@ class Schamtiefenfeld:
                 vor, cur = cur, nxt
             ringe.append(folge)
         ringe.sort(key=len, reverse=True)
-        return np.asarray(ringe[0], dtype=np.int64), len(ringe) - 1
+        return Torchfeld.feld(ringe[0], dtype=torch.int64), len(ringe) - 1
 
     @classmethod
     def gewichte(cls, punkte, dreiecke):
@@ -85,41 +86,41 @@ class Schamtiefenfeld:
         for k in range(3):
             i, j, o = dreiecke[:, (k + 1) % 3], dreiecke[:, (k + 2) % 3], dreiecke[:, k]
             u, v = punkte[i] - punkte[o], punkte[j] - punkte[o]
-            kot = (u * v).sum(axis=1) / np.maximum(np.linalg.norm(np.cross(u, v), axis=1), 1e-18)
+            kot = (u * v).sum(axis=1) / Torchfeld.maximum(Torchfeld.linalg_norm(Torchfeld.cross(u, v), dim=1), 1e-18)
             zeilen += [i, j]
             spalten += [j, i]
             werte += [0.5 * kot, 0.5 * kot]
-        w = sp.coo_matrix((np.concatenate(werte), (np.concatenate(zeilen), np.concatenate(spalten))), shape=(n, n)).tocsr()
-        w.data = np.maximum(w.data, cls.GEWICHT_MIN)
+        w = sp.coo_matrix((Torchfeld.cat(werte), (Torchfeld.cat(zeilen), Torchfeld.cat(spalten))), shape=(n, n)).tocsr()
+        w.data = Torchfeld.maximum(w.data, cls.GEWICHT_MIN)
         return w
 
     @classmethod
     def fortsetzen(cls, punkte, dreiecke, rand, wert):
         """`(F, bericht)`: die Fortsetzung der Randwerte `wert` (len(rand), 3) auf alle Punkte (Laplace = 0, Rand fest). Punkte ohne Dreieck und der Rand selbst bekommen 0."""
-        benutzt = np.unique(dreiecke)
-        innen = np.setdiff1d(benutzt, rand)
+        benutzt = Torchfeld.unique(dreiecke)
+        innen = Torchfeld.setdiff1d(benutzt, rand)
         w = cls.gewichte(punkte, dreiecke)
-        laplace = (sp.diags(np.asarray(w.sum(axis=1)).ravel()) - w).tocsr()
-        f = np.zeros((len(punkte), 3))
-        f[innen] = spl.splu(laplace[innen][:, innen].tocsc()).solve(np.asarray(-(laplace[innen][:, rand] @ wert)))
-        betrag = np.linalg.norm(f[innen], axis=1)
-        return f, {'innen': int(len(innen)), 'rand': int(len(rand)), 'f_median_mm': round(float(np.median(betrag)) * 1000.0, 2), 'f_max_mm': round(float(betrag.max()) * 1000.0, 2)}
+        laplace = (sp.diags(Torchfeld.feld(w.sum(axis=1)).ravel()) - w).tocsr()
+        f = torch.zeros((len(punkte), 3), dtype=torch.float64, device='cuda')
+        f[innen] = spl.splu(laplace[innen][:, innen].tocsc()).solve(Torchfeld.feld(-(laplace[innen][:, rand] @ wert)))
+        betrag = Torchfeld.linalg_norm(f[innen], dim=1)
+        return f, {'innen': int(len(innen)), 'rand': int(len(rand)), 'f_median_mm': round(float(Torchfeld.median(betrag)) * 1000.0, 2), 'f_max_mm': round(float(betrag.max()) * 1000.0, 2)}
 
     @staticmethod
     def netzweg(punkte, dreiecke, rand):
         """Weg (mm) entlang der Kanten vom Ring zu jedem Punkt."""
         n = len(punkte)
-        a = np.concatenate([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
-        b = np.concatenate([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
-        graph = sp.csr_matrix((np.linalg.norm(punkte[a] - punkte[b], axis=1) * 1000.0 + 1e-9, (a, b)), shape=(n, n))
+        a = Torchfeld.cat([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
+        b = Torchfeld.cat([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
+        graph = sp.csr_matrix((Torchfeld.linalg_norm(punkte[a] - punkte[b], dim=1) * 1000.0 + 1e-9, (a, b)), shape=(n, n))
         return csgraph.dijkstra(graph, directed=False, indices=rand, min_only=True)
 
     @staticmethod
     def entlang_glaetten(wert, durchgaenge):
         """Gleitendes Mittel (1-2-1) entlang des geschlossenen Rings, `durchgaenge` mal."""
-        w = np.asarray(wert, dtype=np.float64).copy()
+        w = Torchfeld.kopie(Torchfeld.feld(wert, dtype=torch.float64))
         for _ in range(int(durchgaenge)):
-            w = 0.25 * np.roll(w, 1, axis=0) + 0.5 * w + 0.25 * np.roll(w, -1, axis=0)
+            w = 0.25 * torch.roll(w, 1, dims=0) + 0.5 * w + 0.25 * torch.roll(w, -1, dims=0)
         return w
 
     @classmethod
@@ -127,19 +128,19 @@ class Schamtiefenfeld:
         """`(neue Punkte, bericht)`. `rand_vorher` (k, 3): die Punkte des Stück-Rands VOR dem Einrasten (`Blendimportschamnaht`, Lage auf dem Original). Die Lücke je Punkt des äußeren Rings
         des fertigen Stücks ist Randpunkt − nächster Punkt aus `rand_vorher`, entlang des Rings geglättet; sie läuft als Feld ins Stück, vom Ring ab über `EINBLENDEN_MM` eingeblendet.
         Der Rand selbst bewegt sich nicht (er liegt schon auf dem Ring)."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        punkte = np.asarray(punkte, dtype=np.float64)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         rand, weitere = cls.aussenring(dreiecke)
         luecke = cls.entlang_glaetten(punkte[rand] - rand_vorher[cKDTree(rand_vorher).query(punkte[rand])[1]], cls.GLAETTEN)
         f, bericht = cls.fortsetzen(punkte, dreiecke, rand, luecke * float(cls.STAERKE))
         if cls.EINBLENDEN_MM > 0:
-            t = np.clip(cls.netzweg(punkte, dreiecke, rand) / cls.EINBLENDEN_MM, 0.0, 1.0)
+            t = Torchfeld.clip(cls.netzweg(punkte, dreiecke, rand) / cls.EINBLENDEN_MM, 0.0, 1.0)
             f = f * (t * t * (3.0 - 2.0 * t))[:, None]
         neu = punkte + f
-        n0 = np.cross(punkte[dreiecke[:, 1]] - punkte[dreiecke[:, 0]], punkte[dreiecke[:, 2]] - punkte[dreiecke[:, 0]])
-        n1 = np.cross(neu[dreiecke[:, 1]] - neu[dreiecke[:, 0]], neu[dreiecke[:, 2]] - neu[dreiecke[:, 0]])
-        betrag = np.linalg.norm(luecke, axis=1) * 1000.0
-        bericht.update({'weitere_ringe': int(weitere), 'luecke_median_mm': round(float(np.median(betrag)), 2), 'luecke_p90_mm': round(float(np.percentile(betrag, 90)), 2),
+        n0 = Torchfeld.cross(punkte[dreiecke[:, 1]] - punkte[dreiecke[:, 0]], punkte[dreiecke[:, 2]] - punkte[dreiecke[:, 0]])
+        n1 = Torchfeld.cross(neu[dreiecke[:, 1]] - neu[dreiecke[:, 0]], neu[dreiecke[:, 2]] - neu[dreiecke[:, 0]])
+        betrag = Torchfeld.linalg_norm(luecke, dim=1) * 1000.0
+        bericht.update({'weitere_ringe': int(weitere), 'luecke_median_mm': round(float(Torchfeld.median(betrag)), 2), 'luecke_p90_mm': round(float(Torchfeld.percentile(betrag, 90)), 2),
                         'luecke_max_mm': round(float(betrag.max()), 2), 'umgeklappt': int(((n0 * n1).sum(axis=1) < 0.0).sum())})
         return neu, bericht

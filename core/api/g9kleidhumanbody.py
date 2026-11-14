@@ -18,7 +18,7 @@ bis dahin ganz wegfiel: Pixie kam als kahle Kappe, Hime Cut und Viola gar nicht.
 import logging
 import time
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.http import JsonResponse
 from Genesis9.formung import G9formung
 from Genesis9.garderobe import G9garderobe
@@ -94,7 +94,7 @@ class G9kleidhumanbody:
         zusatz.update(G9passformvorgabe.werte(kennung, rumpf.get('regler_stueck')))
         zusatz.update(werte)
         zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
-        hoch = np.array([0.0, formung.boden(), 0.0])
+        hoch = Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
         schuh = cls.ist_schuh(eintrag)
         abstand = cls.HAUTABSTAND_SCHUH if schuh else cls.HAUTABSTAND
         stufen = G9netzstufe.browser()

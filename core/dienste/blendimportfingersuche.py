@@ -13,8 +13,9 @@ Original → Käfigpunkte Median 9,24 → 3,13 mm (p90 30,1 → 7,8), jede Auswe
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
-from scipy.optimize import least_squares
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kartenausgleich import least_squares
 
 __all__ = ['Blendimportfingersuche']
 
@@ -40,12 +41,12 @@ class Blendimportfingersuche:
         `modell.parameter`; ohne Vorteil die gestreckte Hand (Nullen)."""
         m = self.modell
         t0 = time.perf_counter()
-        null = np.zeros(m.anzahl)
+        null = torch.zeros(m.anzahl, dtype=torch.float64, device='cuda')
         wert0 = m.wert(null)
         beste, auswertungen = None, 0
 
         def ein_start(g):
-            start = np.clip(m.griffpose * g, m.unten, m.oben)
+            start = Torchfeld.clip(m.griffpose * g, m.unten, m.oben)
             return least_squares(lambda u: m.reste(u * self.EINHEIT), start / self.EINHEIT, bounds=(m.unten / self.EINHEIT, m.oben / self.EINHEIT),
                                  loss='soft_l1', f_scale=self.BREITE_M, diff_step=self.DIFFERENZ, max_nfev=self.SCHRITTE)
         # Die Starts hängen nicht voneinander ab: nebeneinander in Fäden (19.10.2026, `griff_starts_parallel_pruefen.py` an Damira0Tripo: je Start bitgleich, 25,1 → 14,9 s);

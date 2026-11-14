@@ -30,6 +30,10 @@ from core.dienste.bildmodellkopf import Bildmodellkopf
 from core.dienste.bildmodellkopfkatalog import Bildmodellkopfkatalog
 from core.dienste.bildmodelllauf import Bildmodelllauf
 from core.models import Bildmodellauftrag
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class FolgeTest(SimpleTestCase):
@@ -155,7 +159,7 @@ class _RunnerAntworten:
 
 def _maske(pfad, form=(5023, 3)):
     pfad.parent.mkdir(parents=True, exist_ok=True)
-    np.save(pfad, np.zeros(form, dtype=np.float32))
+    Npztorch.speichern_npy(pfad, np.zeros(form, dtype=np.float32))
 
 
 class KopfLaufTest(TestCase):

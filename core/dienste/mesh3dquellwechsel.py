@@ -23,6 +23,10 @@ from .blendimportformate import Blendimportformate
 from .blendimportloeschen import Blendimportloeschen
 from .blendimportquelle import Blendimportquelle
 from .blendimportweg import Blendimportweg
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -94,9 +98,9 @@ class Mesh3dquellwechsel:
         for name in self.ALTES_NETZ:
             ziel = self.ablage.arbeit(name)
             if ziel.is_dir():
-                shutil.rmtree(ziel, ignore_errors=True)
+                shutil.rmtree(ziel, ignore_errors=True)  # npz geprüft: Ordner
             else:
-                ziel.unlink(missing_ok=True)
+                Npztorch.loeschen(ziel)
 
     def _neues_netz_ablegen(self, datei, weg):
         """Beim Weg „netz“ das Körpernetz der neuen Datei sofort ablegen (`Blendimportnetz`, ~1 s) — damit steht es in der Mesh-Ansicht, und die leichte Vorschau wird gebaut (`Mesh3dnetzansicht.vorab`), ohne dass ein Lauf nötig ist.

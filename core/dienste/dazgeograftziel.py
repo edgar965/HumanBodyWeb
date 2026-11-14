@@ -10,7 +10,8 @@ import gzip
 import json
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Dazgeograftziel']
 
@@ -36,13 +37,13 @@ class Dazgeograftziel:
         self.ordner = G9pfade.eigene() / 'data' / 'EIGEN' / name
         self.bilder_ordner = G9pfade.eigene() / 'Runtime' / 'Textures' / 'EIGEN' / name
         dsf = self._lesen(self.ordner / ('EIGEN_%s.dsf' % stamm))['geometry_library'][0]
-        self.punkte = np.asarray(dsf['vertices']['values'], dtype=np.float64) * 0.01
-        zeilen = np.asarray(dsf['polylist']['values'], dtype=np.int64)
+        self.punkte = Torchfeld.feld(dsf['vertices']['values'], dtype=torch.float64) * 0.01
+        zeilen = Torchfeld.feld(dsf['polylist']['values'], dtype=torch.int64)
         if zeilen.shape[1] != 5:
             raise ValueError('%s: erwartet Dreiecke, bekam Flächen mit %d Ecken' % (name, zeilen.shape[1] - 2))
         self.dreiecke = zeilen[:, 2:5]
         uvsatz = self._lesen(self.ordner / 'UV Sets' / 'EIGEN' / 'Base' / 'default.dsf')['uv_set_library'][0]
-        self.uv_ecken = self._uv_ecken(np.asarray(uvsatz['uvs']['values'], dtype=np.float64), uvsatz.get('polygon_vertex_indices') or [])
+        self.uv_ecken = self._uv_ecken(Torchfeld.feld(uvsatz['uvs']['values'], dtype=torch.float64), uvsatz.get('polygon_vertex_indices') or [])
 
     @staticmethod
     def _lesen(pfad):
@@ -53,7 +54,7 @@ class Dazgeograftziel:
         """UV je Dreiecksecke `(T, 3, 2)`: Vorgabe ist die UV des Punkts, Nahtecken (`polygon_vertex_indices`: Dreieck, Punkt, UV-Nummer) nehmen ihre eigene."""
         ecken = uvs[self.dreiecke]
         for dreieck, punkt, nummer in aus_nahten:
-            platz = np.flatnonzero(self.dreiecke[dreieck] == punkt)
+            platz = torch.flatten(self.dreiecke[dreieck] == punkt).nonzero()[:, 0]
             if len(platz):
                 ecken[dreieck, platz[0]] = uvs[nummer]
         return ecken
@@ -73,50 +74,50 @@ class Dazgeograftziel:
         das Original ist in sich gleich herum gewickelt."""
         import trimesh
 
-        positionen = np.asarray(positionen, dtype=np.float64)
+        positionen = Torchfeld.feld(positionen, dtype=torch.float64)
         if normalen is None:
             stelle, _abstand, dreieck = trimesh.proximity.closest_point(self.netz(), positionen)
             return dreieck, trimesh.triangles.points_to_barycentric(self.netz().triangles[dreieck], stelle)
         if self._proben is None:
             self._proben = self._abtasten()
         baum, dreieck, bary = self._proben
-        i = baum.query(np.column_stack([positionen, self.NORMALEN_PREIS_M * np.asarray(normalen, dtype=np.float64)]), workers=-1)[1]
+        i = baum.query(Torchfeld.column_stack([positionen, self.NORMALEN_PREIS_M * Torchfeld.feld(normalen, dtype=torch.float64)]), workers=-1)[1]
         return dreieck[i], bary[i]
 
     def _abtasten(self):
         """Dichte Proben auf der Fläche: `(KD-Baum über Ort und Preis · Normale, Dreieck, Schwerpunktkoordinaten je Probe)`."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         ecken = self.punkte[self.dreiecke]
-        kante = np.maximum.reduce([np.linalg.norm(ecken[:, 1] - ecken[:, 0], axis=1), np.linalg.norm(ecken[:, 2] - ecken[:, 1], axis=1),
-                                   np.linalg.norm(ecken[:, 0] - ecken[:, 2], axis=1)])
-        teilung = np.maximum(1, np.ceil(kante / self.PROBE_M).astype(np.int64))
+        kante = Torchfeld.maximum_reduce([Torchfeld.linalg_norm(ecken[:, 1] - ecken[:, 0], dim=1), Torchfeld.linalg_norm(ecken[:, 2] - ecken[:, 1], dim=1),
+                                   Torchfeld.linalg_norm(ecken[:, 0] - ecken[:, 2], dim=1)])
+        teilung = Torchfeld.maximum(1, Torchfeld.astype(Torchfeld.ceil(kante / self.PROBE_M), torch.int64))
         dreieck, bary = [], []
-        for m in np.unique(teilung):
-            gruppe = np.flatnonzero(teilung == m)
-            ij = np.array([(i, j) for i in range(m + 1) for j in range(m + 1 - i)], dtype=np.float64) / m
-            b = np.column_stack([ij[:, 0], ij[:, 1], 1.0 - ij.sum(axis=1)])
-            dreieck.append(np.repeat(gruppe, len(b)))
-            bary.append(np.tile(b, (len(gruppe), 1)))
-        dreieck, bary = np.concatenate(dreieck), np.concatenate(bary)
-        ort = np.einsum('mk,mkj->mj', bary, ecken[dreieck])
-        richtung = np.einsum('mk,mkj->mj', bary, np.asarray(self.netz().vertex_normals)[self.dreiecke[dreieck]])
-        richtung /= np.maximum(np.linalg.norm(richtung, axis=1, keepdims=True), 1e-12)
-        return cKDTree(np.column_stack([ort, self.NORMALEN_PREIS_M * richtung])), dreieck, bary
+        for m in Torchfeld.liste(Torchfeld.unique(teilung)):
+            gruppe = torch.flatten(teilung == m).nonzero()[:, 0]
+            ij = Torchfeld.feld([(i, j) for i in range(m + 1) for j in range(m + 1 - i)], dtype=torch.float64, copy=True) / m
+            b = Torchfeld.column_stack([ij[:, 0], ij[:, 1], 1.0 - ij.sum(axis=1)])
+            dreieck.append(Torchfeld.repeat_interleave(gruppe, len(b)))
+            bary.append(torch.tile(b, (len(gruppe), 1)))
+        dreieck, bary = Torchfeld.cat(dreieck), Torchfeld.cat(bary)
+        ort = Torchfeld.einsum('mk,mkj->mj', bary, ecken[dreieck])
+        richtung = Torchfeld.einsum('mk,mkj->mj', bary, Torchfeld.feld(self.netz().vertex_normals)[self.dreiecke[dreieck]])
+        richtung /= Torchfeld.maximum(Torchfeld.linalg_norm(richtung, dim=1, keepdim=True), 1e-12)
+        return cKDTree(Torchfeld.column_stack([ort, self.NORMALEN_PREIS_M * richtung])), dreieck, bary
 
     def _rand_baum(self):
         """KD-Baum über dichte Proben entlang der offenen Kanten des Originals (Kanten mit genau einem Dreieck) — einmal gebaut."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         if self._rand is None:
             d = self.dreiecke
-            kanten = np.sort(np.concatenate([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), axis=1)
-            eindeutig, zahl = np.unique(kanten, axis=0, return_counts=True)
+            kanten = torch.sort(Torchfeld.cat([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), dim=1, stable=True).values
+            eindeutig, zahl = Torchfeld.unique(kanten, axis=0, return_counts=True)
             offen = eindeutig[zahl == 1]
             a, b = self.punkte[offen[:, 0]], self.punkte[offen[:, 1]]
-            teile = np.maximum(1, np.ceil(np.linalg.norm(b - a, axis=1) / self.RAND_PROBE_M).astype(np.int64))
-            t = np.concatenate([np.arange(n + 1) / n for n in teile])
-            kante = np.repeat(np.arange(len(offen)), teile + 1)
+            teile = Torchfeld.maximum(1, Torchfeld.astype(Torchfeld.ceil(Torchfeld.linalg_norm(b - a, dim=1) / self.RAND_PROBE_M), torch.int64))
+            t = Torchfeld.cat([Torchfeld.arange(n + 1) / n for n in Torchfeld.liste(teile)])
+            kante = Torchfeld.repeat_interleave(Torchfeld.arange(len(offen)), teile + 1)
             self._rand = cKDTree(a[kante] + t[:, None] * (b[kante] - a[kante]))
         return self._rand
 
@@ -125,17 +126,17 @@ class Dazgeograftziel:
         jenseits (dort gibt es keine Farbe des Originals: der Atlas setzt hinter der Kante nur den letzten Texel fort, und das Stück bekäme senkrechte Streifen — gemessen 11.10.2026 an „cute girl Daz Scham":
         10.069 Texel, ein Streifenband von 4–7 mm Tiefe)."""
         ecken = self.dreiecke[dreieck]
-        ort = np.einsum('mk,mkj->mj', bary, self.punkte[ecken])
-        n = np.einsum('mk,mkj->mj', bary, np.asarray(self.netz().vertex_normals)[ecken])
-        n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
-        d = np.asarray(positionen, dtype=np.float64) - ort
-        seitlich = np.linalg.norm(d - np.einsum('ij,ij->i', d, n)[:, None] * n, axis=1)
+        ort = Torchfeld.einsum('mk,mkj->mj', bary, self.punkte[ecken])
+        n = Torchfeld.einsum('mk,mkj->mj', bary, Torchfeld.feld(self.netz().vertex_normals)[ecken])
+        n /= Torchfeld.maximum(Torchfeld.linalg_norm(n, dim=1, keepdim=True), 1e-12)
+        d = Torchfeld.feld(positionen, dtype=torch.float64) - ort
+        seitlich = Torchfeld.linalg_norm(d - Torchfeld.einsum('ij,ij->i', d, n)[:, None] * n, dim=1)
         innen = self._rand_baum().query(ort)[0]
-        return np.where(innen < self.RAND_NAH_M, -seitlich, innen)
+        return torch.where(innen < self.RAND_NAH_M, -seitlich, innen)
 
     def jenseits(self, positionen, dreieck, bary):
         """`(M,)` Weg (m), den jede Position seitlich jenseits des Randes des Originals liegt (`randlage`), sonst 0."""
-        return np.maximum(-self.randlage(positionen, dreieck, bary), 0.0)
+        return Torchfeld.maximum(-self.randlage(positionen, dreieck, bary), 0.0)
 
     def farbe_an(self, punkte, normalen=None):
         """`(N, 3)` Farbe (0–255) des Original-Atlas am Punkt der Fläche zu jedem der `punkte` (`stelle`: mit `normalen` seitenbewusst) — für `Schammessungtextur.gegen_original`."""
@@ -144,11 +145,11 @@ class Dazgeograftziel:
         if self._farbe is None:
             return None
         dreieck, bary = self.stelle(punkte, normalen)
-        uv = np.einsum('mk,mkj->mj', bary, self.uv_ecken[dreieck])
+        uv = Torchfeld.einsum('mk,mkj->mj', bary, self.uv_ecken[dreieck])
         h, w = self._farbe.shape[:2]
-        x = np.clip((uv[:, 0] * w).astype(np.int64), 0, w - 1)
-        y = np.clip(((1.0 - uv[:, 1]) * h).astype(np.int64), 0, h - 1)
-        return self._farbe[y, x].astype(np.float64)
+        x = Torchfeld.clip(Torchfeld.astype(uv[:, 0] * w, torch.int64), 0, w - 1)
+        y = Torchfeld.clip(Torchfeld.astype((1.0 - uv[:, 1]) * h, torch.int64), 0, h - 1)
+        return Torchfeld.astype(self._farbe[y, x], torch.float64)
 
     def bild(self, kanal):
         """Das Atlasbild `kanal` (`farbe`, `normalen`, `rauheit`) als `(H, W, 3)` uint8 (RGB) — oder None, wenn es fehlt."""
@@ -157,5 +158,5 @@ class Dazgeograftziel:
         for endung in ('jpg', 'png'):
             pfad = self.bilder_ordner / ('EIGEN_%s_atlas_%s.%s' % (self.name.replace(' ', '_'), kanal, endung))
             if pfad.is_file():
-                return np.asarray(Image.open(pfad).convert('RGB'))
+                return Torchfeld.feld(Image.open(pfad).convert('RGB'))
         return None

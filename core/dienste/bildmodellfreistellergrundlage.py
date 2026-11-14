@@ -20,7 +20,8 @@ Verfeinern; Striche bei GrabCut und Positivliste). `speichern` rechnet unveränd
 Größe auf dem Server — dieselben Formeln (`Bildmodellfreisteller.alpha`)."""
 import base64
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Bildmodellfreistellergrundlage']
 
@@ -42,7 +43,7 @@ class Bildmodellfreistellergrundlage:
             ok, roh = cv2.imencode('.png', bild)
         if not ok:
             raise RuntimeError('Grundlage nicht kodiert (%s)' % art)
-        return 'data:image/%s;base64,%s' % (art, base64.b64encode(roh.tobytes()).decode('ascii'))
+        return 'data:image/%s;base64,%s' % (art, base64.b64encode(Torchfeld.als_bytes(roh)).decode('ascii'))
 
     def holen(self, datei, regler):
         """`{breite, hoehe, f, bild, maske, abstand, sicher}` für die Vorschau im Browser."""
@@ -59,24 +60,24 @@ class Bildmodellfreistellergrundlage:
         abstand = None
         maske = self.f.maske(datei, regler=regler)
         if regler.get('verfeinern') == 'grabcut':
-            a = K.grabcut(rgb, maske.astype(np.float32) / 255.0, regler.get('striche'))
-            maske = np.clip(a * 255.0 + 0.5, 0, 255).astype(np.uint8)
+            a = K.grabcut(rgb, Torchfeld.astype(maske, torch.float32) / 255.0, regler.get('striche'))
+            maske = Torchfeld.astype(Torchfeld.clip(a * 255.0 + 0.5, 0, 255), torch.uint8)
         kern = None
         if regler.get('positiv'):
             kern = H.kern(maske, regler)
             karte = H.abstandskarte(rgb, kern)
             if karte is not None:
-                abstand = np.clip(karte[0] * self.ABSTAND_MAL + 0.5, 0, 255).astype(np.uint8)
+                abstand = Torchfeld.astype(Torchfeld.clip(karte[0] * self.ABSTAND_MAL + 0.5, 0, 255), torch.uint8)
                 abstand = cv2.resize(abstand, groesse, interpolation=cv2.INTER_LINEAR)
-            kern = cv2.resize(kern.astype(np.uint8) * 255, groesse, interpolation=cv2.INTER_AREA) if f < 1.0 \
-                else kern.astype(np.uint8) * 255
+            kern = cv2.resize(Torchfeld.roh(Torchfeld.astype(kern, torch.uint8) * 255), groesse, interpolation=cv2.INTER_AREA) if f < 1.0 \
+                else Torchfeld.astype(kern, torch.uint8) * 255
         klein = cv2.resize(rgb, groesse, interpolation=cv2.INTER_AREA) if f < 1.0 else rgb
         maske_klein = cv2.resize(maske, groesse, interpolation=cv2.INTER_AREA) if f < 1.0 else maske
         return {
             'breite': groesse[0], 'hoehe': groesse[1], 'f': f, 'sicher': self.f.SICHER,
-            'bild': self._daten(np.ascontiguousarray(klein), 'jpeg'),
-            'maske': self._daten(np.ascontiguousarray(maske_klein), 'png'),
-            'abstand': self._daten(np.ascontiguousarray(abstand), 'png') if abstand is not None else None,
+            'bild': self._daten(Torchfeld.feld(klein), 'jpeg'),
+            'maske': self._daten(Torchfeld.feld(maske_klein), 'png'),
+            'abstand': self._daten(Torchfeld.feld(abstand), 'png') if abstand is not None else None,
             'abstand_mal': self.ABSTAND_MAL,
-            'kern': self._daten(np.ascontiguousarray(kern), 'png') if kern is not None else None,
+            'kern': self._daten(Torchfeld.feld(kern), 'png') if kern is not None else None,
         }

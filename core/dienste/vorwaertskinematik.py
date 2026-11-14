@@ -13,7 +13,8 @@ annimmt, bekommt Gliedmaßen, die in die falsche Richtung ausschlagen — und zw
 nur bei den Dateien mit abweichender Ordnung, also scheinbar zufällig.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.knochenmatrizen import G9knochenmatrizen
 
 
@@ -31,10 +32,10 @@ class Vorwaertskinematik:
         kanalwerte = self._kanalwerte(werte)
         matrizen, positionen = {}, {}
         for gelenk in self.baum.gelenke:
-            eltern = matrizen.get(self.baum.eltern.get(gelenk), np.eye(4))
+            eltern = matrizen.get(self.baum.eltern.get(gelenk), torch.eye(4, dtype=torch.float64, device='cuda'))
             welt = eltern @ self._ortsmatrix(gelenk, kanalwerte)
             matrizen[gelenk] = welt
-            positionen[gelenk] = welt[:3, 3].copy()
+            positionen[gelenk] = Torchfeld.kopie(welt[:3, 3])
         return positionen
 
     def _kanalwerte(self, werte):
@@ -51,21 +52,21 @@ class Vorwaertskinematik:
     def _ortsmatrix(self, gelenk, kanalwerte):
         """Die 4x4-Matrix dieses Gelenks relativ zu seinem Eltern-Gelenk."""
         kanaele = self.baum.kanaele.get(gelenk, [])
-        matrix = np.eye(4)
+        matrix = torch.eye(4, dtype=torch.float64, device='cuda')
         matrix[:3, :3] = self._drehung(gelenk, kanaele, kanalwerte)
         matrix[:3, 3] = self._versatz(gelenk, kanaele, kanalwerte)
         return matrix
 
     def _versatz(self, gelenk, kanaele, kanalwerte):
         """Verschiebung: die feste des Gelenks, beim Wurzelgelenk aus Kanälen."""
-        versatz = list(self.baum.verschiebung.get(gelenk, np.zeros(3)))
+        versatz = list(self.baum.verschiebung.get(gelenk, torch.zeros(3, dtype=torch.float64, device='cuda')))
         for achse, kanal in enumerate(('Xposition', 'Yposition', 'Zposition')):
             if kanal in kanaele:
                 versatz[achse] = kanalwerte.get((gelenk, kanal), 0)
         return versatz
 
     def _drehung(self, gelenk, kanaele, kanalwerte):
-        matrix = np.eye(3)
+        matrix = torch.eye(3, dtype=torch.float64, device='cuda')
         for kanal in kanaele:
             if kanal.endswith('rotation'):
                 matrix = matrix @ self.achsendrehung(kanal[0], kanalwerte.get((gelenk, kanal), 0))

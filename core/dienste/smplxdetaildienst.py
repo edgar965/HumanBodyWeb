@@ -18,7 +18,7 @@ import json
 import logging
 import os
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -79,7 +79,7 @@ class Smplxdetaildienst:
             return None
         mit = haupt.replace('_haut.jpg', '_haut_mitbrauen.jpg')
         quelle = mit if os.path.isfile(mit) else haupt
-        return np.asarray(Image.open(quelle).convert('RGB'))
+        return Torchfeld.feld(Image.open(quelle).convert('RGB'))
 
     @classmethod
     def _bauen(cls, geschlecht):

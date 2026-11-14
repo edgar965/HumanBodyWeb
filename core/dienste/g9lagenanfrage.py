@@ -25,11 +25,13 @@ import os
 import threading
 from collections import OrderedDict
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.lagen import G9lagen
 
 from .g9lagenanatomie import G9lagenanatomie
+from .g9lagenhaar import G9lagenhaar
 
 logger = logging.getLogger('core')
 
@@ -71,8 +73,8 @@ class G9lagenanfrage:
         Ohne getragene Stuecke die Haut selbst und zwei leere Listen."""
         if not self.eintraege and not self.gc:
             return self.lagen.koerper, [], []
-        kaefig = np.vstack([self.lagen.gehoben(folger, punkte) for folger, punkte in teile]
-                           or [np.zeros((0, 3))])
+        kaefig = Torchfeld.vstack([self.lagen.gehoben(folger, punkte) for folger, punkte in teile]
+                           or [torch.zeros((0, 3), dtype=torch.float64, device='cuda')])
         andere = []
         for nummer, eintrag in enumerate(self.eintraege):
             andere_kennung = self._kennung(eintrag.get('kennung'))
@@ -121,23 +123,12 @@ class G9lagenanfrage:
 
     @classmethod
     def _haar_aussen(cls, kennung, innen, aussen):
-        u"""Haar liegt über der Kleidung, auch wo die Tiefenregel anders misst.
+        u"""Haar über Kleidung, Kopfbedeckung über Haar (`G9lagenhaar`), auch wo die Tiefenregel anders misst."""
+        return G9lagenhaar.ordnen(kennung, innen, aussen, cls._art, cls._kopfbedeckung)
 
-        17.10.2026, Edgar mit Bild („02 Stretching G9B": Shirt zerrissen, die Pose dauerte 30–60 s):
-        Mit erhobenen Armen liegen die Ärmel am Haar; dort stand das Haar näher an der Haut (des
-        Arms) und galt als INNERES Stück. Das Shirt wurde über beide Haare gehoben —
-        `_aeussere_stuecke` rechnete über 7.389 + 319.503 + 433.212 Punkte 20,8 s, ohne Pose 0,24 s
-        (`ProjektTemp/_wegwerf/posen_lagen_diag.py`). In Daz weicht ebenso das Haar der Kleidung
-        aus, nicht umgekehrt. Nur zwischen Haar und Kleidung; Haar gegen Haar und Requisiten
-        bleiben bei der Tiefenregel."""
-        art = cls._art(kennung)
-        if art == 'haar':
-            return (innen + [k for k in aussen if cls._art(k) == 'kleidung'],
-                    [k for k in aussen if cls._art(k) != 'kleidung'])
-        if art == 'kleidung':
-            return ([k for k in innen if cls._art(k) != 'haar'],
-                    aussen + [k for k in innen if cls._art(k) == 'haar'])
-        return innen, aussen
+    @classmethod
+    def _kopfbedeckung(cls, kennung):
+        return G9lagenhaar.ist_kopfbedeckung(kennung)
 
     def _fuss(self, kennung, punkte):
         u"""Der Fussabdruck eines starren Stuecks (Anatomie) auf der Haut — sonst None (`G9lagenflaeche.flaeche`)."""
@@ -239,15 +230,15 @@ class G9lagenanfrage:
         try:
             with open(pfad, encoding='utf-8') as datei:
                 daten = json.load(datei)
-            projekt = np.asarray(daten.get('punkte') or [], dtype=np.float64)
-            dreiecke = np.asarray(daten.get('dreiecke') or [], dtype=np.int64).reshape(-1, 3)
+            projekt = Torchfeld.feld(daten.get('punkte') or [], dtype=torch.float64)
+            dreiecke = Torchfeld.feld(daten.get('dreiecke') or [], dtype=torch.int64).reshape(-1, 3)
         except (OSError, ValueError) as fehler:
             logger.warning('Genesis 9: GarmentCode-Stück %s nicht lesbar: %s',
                            os.path.basename(pfad), fehler)
             return None
         if projekt.ndim != 2 or projekt.shape[1] != 3 or not len(projekt):
             return None
-        netz = (np.column_stack([projekt[:, 0], projekt[:, 2], -projekt[:, 1]]), dreiecke)
+        netz = (Torchfeld.column_stack([projekt[:, 0], projekt[:, 2], -projekt[:, 1]]), dreiecke)
         with self._schloss:
             self._kaefige[schluessel] = netz
             while len(self._kaefige) > self.KAEFIGE_MAX:
@@ -267,15 +258,15 @@ class G9lagenanfrage:
         if not roh:
             return None
         try:
-            feld = np.frombuffer(base64.b64decode(roh, validate=True), dtype=np.float32)
+            feld = torch.frombuffer(bytearray(base64.b64decode(roh, validate=True)), dtype=torch.float32).to(Torchfeld.KARTE)
         except (ValueError, TypeError) as fehler:
             logger.warning('Genesis 9: Punkte von %s nicht lesbar: %s', eintrag.get('stueck'), fehler)
             return None
         zahl = len(feld) // 3
-        if not len(feld) or len(feld) % 3 or zahl > cls.GC_PUNKTE_MAX or not np.isfinite(feld).all():
+        if not len(feld) or len(feld) % 3 or zahl > cls.GC_PUNKTE_MAX or not Torchfeld.isfinite(feld).all():
             logger.warning('Genesis 9: Punkte von %s verworfen (%d Werte)', eintrag.get('stueck'), len(feld))
             return None
-        return feld.reshape(-1, 3).astype(np.float64)
+        return Torchfeld.astype(feld.reshape(-1, 3), torch.float64)
 
     @staticmethod
     def _kennung(wert):

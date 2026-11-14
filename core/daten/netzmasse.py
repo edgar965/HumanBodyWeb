@@ -17,7 +17,7 @@ anders rechnet als der Backvorgang, bekommt ein Netz, das um einen konstanten
 Faktor daneben liegt; deshalb steht die Rechnung an einer Stelle.
 """
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Netzmasse:
@@ -31,7 +31,7 @@ class Netzmasse:
     VORGABE_HOEHE = 1080
 
     def __init__(self, vertices, img_w, img_h):
-        punkte = np.asarray(vertices)
+        punkte = Torchfeld.feld(vertices)
         self.img_w = img_w
         self.img_h = img_h
         x_min, x_max = punkte[:, 0].min(), punkte[:, 0].max()

@@ -18,7 +18,8 @@ Retusche liegt unter `media/hauttexturen/`.
 
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .brauenbogen import Brauenbogen
 from .brauendecal import Brauendecal
@@ -106,9 +107,9 @@ class Hautbild:
     @classmethod
     def toenen(cls, bild, farbe):
         """Albedo mal Hautfarbe, linear wie in Three.js (`color` × `map`)."""
-        lin = (np.asarray(bild, dtype=np.float32) / 255.0) ** 2.2
-        ton = (np.asarray(farbe, dtype=np.float32) / 255.0) ** 2.2
-        return np.clip(255 * (lin * ton) ** (1 / 2.2), 0, 255).astype(np.uint8)
+        lin = (Torchfeld.feld(bild, dtype=torch.float32) / 255.0) ** 2.2
+        ton = (Torchfeld.feld(farbe, dtype=torch.float32) / 255.0) ** 2.2
+        return Torchfeld.astype(Torchfeld.clip(255 * (lin * ton) ** (1 / 2.2), 0, 255), torch.uint8)
 
     @classmethod
     def grund(cls, details, body_type):
@@ -119,9 +120,9 @@ class Hautbild:
         farbe = cls.hautfarbe(details, body_type)
         pfad = cls.albedo(details)
         if pfad is None:
-            return np.full((cls.GROESSE, cls.GROESSE, 3), farbe, dtype=np.uint8)
+            return Torchfeld.full((cls.GROESSE, cls.GROESSE, 3), farbe, dtype=torch.uint8)
         with Image.open(Brauenretusche.fuer(pfad)) as bild:
-            roh = np.asarray(bild.convert('RGB'))
+            roh = Torchfeld.feld(bild.convert('RGB'))
         if (details or {}).get('haut'):
             return cls.toenen(roh, farbe)
         return roh
@@ -140,13 +141,11 @@ class Hautbild:
         x0, x1 = int(round(u0 * breite)), int(round(u1 * breite))
         y0, y1 = int(round((1 - v1) * hoehe)), int(round((1 - v0) * hoehe))
         with Image.open(Brauendecal.bild(geschlecht, regler)) as decal:
-            braue = np.asarray(
-                decal.convert('RGBA').resize((x1 - x0, y1 - y0), Image.LANCZOS), dtype=np.float32
-            )
+            braue = Torchfeld.feld(decal.convert('RGBA').resize((x1 - x0, y1 - y0), Image.LANCZOS), dtype=torch.float32)
         alpha = braue[..., 3:4] / 255.0
-        fenster = grund[y0:y1, x0:x1].astype(np.float32)
-        aus = np.array(grund)
-        aus[y0:y1, x0:x1] = np.clip(fenster * (1 - alpha) + braue[..., :3] * alpha, 0, 255).astype(np.uint8)
+        fenster = Torchfeld.astype(grund[y0:y1, x0:x1], torch.float32)
+        aus = Torchfeld.feld(grund, copy=True)
+        aus[y0:y1, x0:x1] = Torchfeld.astype(Torchfeld.clip(fenster * (1 - alpha) + braue[..., :3] * alpha, 0, 255), torch.uint8)
         return aus
 
     @classmethod

@@ -12,7 +12,8 @@ würde, wird halbiert. Das Stück liegt danach auf der geglätteten Linie, und d
 dieselbe Strecke (`Hauteinzug`, `stueckloch.js`) — die Naht bleibt dicht, die Linie ist glatt. Ohne Django.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportschamring']
 
@@ -31,32 +32,32 @@ class Blendimportschamring:
     def normalen(punkte, dreiecke):
         """Flächengewichtete Punktnormalen (Länge 1)."""
         a, b, c = (punkte[dreiecke[:, i]] for i in range(3))
-        flaeche = np.cross(b - a, c - a)
-        summe = np.zeros_like(punkte)
+        flaeche = Torchfeld.cross(b - a, c - a)
+        summe = torch.zeros_like(punkte)
         for i in range(3):
-            np.add.at(summe, dreiecke[:, i], flaeche)
-        return summe / np.maximum(np.linalg.norm(summe, axis=1, keepdims=True), 1e-12)
+            Torchfeld.add_at(summe, dreiecke[:, i], flaeche)
+        return summe / Torchfeld.maximum(Torchfeld.linalg_norm(summe, dim=1, keepdim=True), 1e-12)
 
     @classmethod
     def glaetten(cls, lage, normalen):
         """Die geglätteten Ecken `(k, 3)` des geschlossenen Rings `lage` mit den Normalen der Haut an seinen Ecken."""
-        ziel = np.asarray(lage, dtype=np.float64).copy()
-        n = np.asarray(normalen, dtype=np.float64)
+        ziel = Torchfeld.kopie(Torchfeld.feld(lage, dtype=torch.float64))
+        n = Torchfeld.feld(normalen, dtype=torch.float64)
         grenze = cls.MAX_MM / 1000.0
         for _ in range(cls.DURCHGAENGE):
-            mittel = 0.5 * (np.roll(ziel, 1, axis=0) + np.roll(ziel, -1, axis=0))
+            mittel = 0.5 * (torch.roll(ziel, 1, dims=0) + torch.roll(ziel, -1, dims=0))
             d = mittel - ziel
             d -= (d * n).sum(axis=1, keepdims=True) * n
             ziel = ziel + cls.ANTEIL * d
             v = ziel - lage
-            laenge = np.linalg.norm(v, axis=1, keepdims=True)
-            ziel = lage + v * np.minimum(1.0, grenze / np.maximum(laenge, 1e-12))
+            laenge = Torchfeld.linalg_norm(v, dim=1, keepdim=True)
+            ziel = lage + v * Torchfeld.minimum(1.0, grenze / Torchfeld.maximum(laenge, 1e-12))
         return ziel
 
     @staticmethod
     def flaechennormalen(punkte, dreiecke):
         """Nicht normierte Flächennormale je Dreieck."""
-        return np.cross(punkte[dreiecke[:, 1]] - punkte[dreiecke[:, 0]], punkte[dreiecke[:, 2]] - punkte[dreiecke[:, 0]])
+        return Torchfeld.cross(punkte[dreiecke[:, 1]] - punkte[dreiecke[:, 0]], punkte[dreiecke[:, 2]] - punkte[dreiecke[:, 0]])
 
     @classmethod
     def ziehen(cls, punkte, dreiecke, im_loch, ring_punkte, lage, normalen):
@@ -66,26 +67,26 @@ class Blendimportschamring:
         `punkte`/`dreiecke`: die Haut; `im_loch` je Dreieck; `ring_punkte`: die Nummern der Figurpunkte der Ecken (eine Nummer je
         Lage — Doppelgänger an UV-Nähten gelten gleich, sie liegen auf derselben Lage und ziehen mit)."""
         ziel = cls.glaetten(lage, normalen)
-        schluessel = np.round(punkte / 1e-6).astype(np.int64)
-        _, rep = np.unique(schluessel, axis=0, return_inverse=True)
+        schluessel = Torchfeld.astype(Torchfeld.round(punkte / 1e-6), torch.int64)
+        _, rep = Torchfeld.unique(schluessel, axis=0, return_inverse=True)
         rep = rep.ravel()
         je_ecke = {int(rep[p]): i for i, p in enumerate(ring_punkte)}
         aussen = dreiecke[~im_loch]
-        ecke_je_punkt = np.array([je_ecke.get(int(r), -1) for r in rep])
+        ecke_je_punkt = Torchfeld.feld([je_ecke.get(int(r), -1) for r in rep], copy=True)
         betroffen = (ecke_je_punkt[aussen] >= 0).any(axis=1)
         aussen = aussen[betroffen]
-        halbiert = np.zeros(len(lage), dtype=bool)
+        halbiert = torch.zeros(len(lage), dtype=torch.bool, device='cuda')
         for _ in range(cls.HALBIERUNGEN + 1):
-            verschiebung = np.zeros_like(punkte)
+            verschiebung = torch.zeros_like(punkte)
             gehoert = ecke_je_punkt >= 0
             verschiebung[gehoert] = (ziel - lage)[ecke_je_punkt[gehoert]]
             vorher = cls.flaechennormalen(punkte, aussen)
             schlecht = (vorher * cls.flaechennormalen(punkte + verschiebung, aussen)).sum(axis=1) <= 0.0
             if not schlecht.any():
                 break
-            ecken = np.unique(ecke_je_punkt[aussen[schlecht]].ravel())
+            ecken = Torchfeld.unique(ecke_je_punkt[aussen[schlecht]].ravel())
             ecken = ecken[ecken >= 0]
             ziel[ecken] = lage[ecken] + 0.5 * (ziel[ecken] - lage[ecken])
             halbiert[ecken] = True
-        ids = np.flatnonzero(ecke_je_punkt >= 0)
-        return ziel, {'punkte': ids.astype(np.int64), 'd': (ziel - lage)[ecke_je_punkt[ids]], 'halbiert': int(halbiert.sum())}
+        ids = torch.flatten(ecke_je_punkt >= 0).nonzero()[:, 0]
+        return ziel, {'punkte': Torchfeld.astype(ids, torch.int64), 'd': (ziel - lage)[ecke_je_punkt[ids]], 'halbiert': int(halbiert.sum())}

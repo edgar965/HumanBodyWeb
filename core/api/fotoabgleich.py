@@ -19,7 +19,8 @@ import json
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.npztorch import Npztorch
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -99,10 +100,10 @@ class Fotoabgleich:
         """
         kamera = daten.get('cam_data')
         pfad = Smplxablage.datei(job_id)
-        if not (kamera and os.path.isfile(pfad)):
+        if not (kamera and Npztorch.da(pfad)):
             return None
         try:
-            npz = np.load(pfad)
+            npz = Npztorch.lesen(pfad)
             if 'posed_vertices' not in npz:
                 return None
             posiert = npz['posed_vertices']

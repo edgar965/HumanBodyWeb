@@ -30,7 +30,10 @@ Hinter dem Hemd eines nackten Bauchs liegt die Rückseite des Hemds mehr als `MA
 
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from .blendimportnachformung import Blendimportnachformung
 
 logger = logging.getLogger('core')
@@ -67,30 +70,30 @@ class Blendimportunterkleid:
         """Maske der Punkte (Ruhelage, Y oben, Z nach vorn) im Kasten am Becken — nur die Vorderseite."""
         unten, oben = sohle + cls.HOEHE[0] * hoehe, sohle + cls.HOEHE[1] * hoehe
         breit = cls.BREITE_M * hoehe / 1.75
-        return ((punkte[:, 1] > unten) & (punkte[:, 1] < oben) & (np.abs(punkte[:, 0]) < breit)
-                & (punkte[:, 2] > float(np.median(punkte[:, 2]))))
+        return ((punkte[:, 1] > unten) & (punkte[:, 1] < oben) & (Torchfeld.abs(punkte[:, 0]) < breit)
+                & (punkte[:, 2] > float(Torchfeld.median(punkte[:, 2]))))
 
     @staticmethod
     def ohne(maske, ausnehmen):
         """`maske` ohne die Punkte in `ausnehmen` (Maske über die Hautpunkte; `None` = nichts auszunehmen)."""
         if ausnehmen is None:
             return maske
-        return maske & ~np.asarray(ausnehmen, dtype=bool)[:len(maske)]
+        return maske & ~Torchfeld.feld(ausnehmen, dtype=torch.bool)[:len(maske)]
 
     @classmethod
     def vorderste(cls, huelle, punkte, maske):
         """`(N,)` z der vordersten Kleiderfläche in der Spalte (x, y) jedes Punkts in `maske`, von vorn gesehen — `-inf` ohne Kleidung dort
         und außerhalb der Maske. `huelle`: `trimesh.Trimesh` aller Kleider in der Ruhelage."""
-        aus = np.full(len(punkte), -np.inf)
-        idx = np.flatnonzero(maske)
+        aus = Torchfeld.full(len(punkte), -math.inf)
+        idx = torch.flatten(maske).nonzero()[:, 0]
         if not len(idx) or huelle is None:
             return aus
         vor = float(max(punkte[idx, 2].max(), huelle.vertices[:, 2].max())) + 0.1
-        herkunft = np.column_stack([punkte[idx, 0], punkte[idx, 1], np.full(len(idx), vor)])
-        ort, strahl, _ = huelle.ray.intersects_location(herkunft, np.tile([0.0, 0.0, -1.0], (len(idx), 1)), multiple_hits=True)
-        vorn = np.full(len(idx), -np.inf)
+        herkunft = Torchfeld.column_stack([punkte[idx, 0], punkte[idx, 1], Torchfeld.full(len(idx), vor)])
+        ort, strahl, _ = huelle.ray.intersects_location(herkunft, torch.tile([0.0, 0.0, -1.0], (len(idx), 1)), multiple_hits=True)
+        vorn = Torchfeld.full(len(idx), -math.inf)
         if len(strahl):
-            np.maximum.at(vorn, strahl, ort[:, 2])
+            Torchfeld.maximum_at(vorn, strahl, ort[:, 2])
         aus[idx] = vorn
         return aus
 
@@ -98,10 +101,10 @@ class Blendimportunterkleid:
     def verschiebung(cls, haut, huelle, maske):
         """`(N, 3)`: je Punkt in `maske`, der von vorn gesehen VOR der Kleiderfläche liegt (und höchstens `MAX_M` davor), der Weg in −z
         bis `LUFT_M` hinter sie; alles andere bleibt 0."""
-        aus = np.zeros((len(haut), 3))
+        aus = torch.zeros((len(haut), 3), dtype=torch.float64, device='cuda')
         vorn = cls.vorderste(huelle, haut, maske)
         ueber = haut[:, 2] - vorn                                  # > 0: die Haut steht vor der vordersten Kleiderfläche
-        schieben = np.isfinite(vorn) & (ueber > 0.0) & (ueber <= cls.MAX_M)
+        schieben = Torchfeld.isfinite(vorn) & (ueber > 0.0) & (ueber <= cls.MAX_M)
         aus[schieben, 2] = vorn[schieben] - cls.LUFT_M - haut[schieben, 2]
         return aus
 
@@ -110,7 +113,7 @@ class Blendimportunterkleid:
         """Bericht: Punkte im Kasten, davon mit Kleidung in der Spalte, davon vor ihr (ab `MELDEN_AB_M`, höchstens `MAX_M`) mit größtem Überstand (mm)
         und `weit`: Punkte, deren vorderste Kleiderfläche mehr als `MAX_M` dahinterliegt (nackte Haut vor einem Rücken — bleibt unberührt)."""
         vorn = cls.vorderste(huelle, haut, maske)
-        ueber = (haut[:, 2] - vorn)[np.isfinite(vorn)]
+        ueber = (haut[:, 2] - vorn)[Torchfeld.isfinite(vorn)]
         davor = ueber[(ueber > cls.MELDEN_AB_M) & (ueber <= cls.MAX_M)]
         return {'punkte': int(maske.sum()), 'mit_kleidung': int(len(ueber)), 'davor': int(len(davor)),
                 'davor_max_mm': round(float(davor.max()) * 1000.0, 1) if len(davor) else 0.0, 'weit': int((ueber > cls.MAX_M).sum())}
@@ -122,8 +125,8 @@ class Blendimportunterkleid:
 
         if not teile:
             return None
-        versatz = np.cumsum([0] + [len(p) for p, _ in teile[:-1]])
-        return trimesh.Trimesh(np.vstack([p for p, _ in teile]), np.vstack([d + int(v) for (_, d), v in zip(teile, versatz, strict=True)]),
+        versatz = Torchfeld.cumsum([0] + [len(p) for p, _ in teile[:-1]])
+        return trimesh.Trimesh(Torchfeld.roh(Torchfeld.vstack([p for p, _ in teile])), Torchfeld.roh(Torchfeld.vstack([d + int(v) for (_, d), v in zip(teile, versatz, strict=True)])),
                                process=False)
 
     def huelle(self, lage):
@@ -135,12 +138,12 @@ class Blendimportunterkleid:
         for rolle in self.rollen:
             if rolle['rolle'] != 'kleid' or rolle['name'] not in self.inventar or rolle.get('ordner') == 'shoes':
                 continue
-            with np.load(self.ablage.export(self.inventar[rolle['name']]['datei'])) as d:
-                punkte, dreiecke = np.asarray(d['punkte']), np.asarray(d['dreiecke'], dtype=np.int64)
+            with Npztorch.lesen(self.ablage.export(self.inventar[rolle['name']]['datei'])) as d:
+                punkte, dreiecke = Torchfeld.feld(d['punkte']), Torchfeld.feld(d['dreiecke'], dtype=torch.int64)
             if Blendimportrequisit(lage).erkennen(punkte):
                 continue
             erlaubt = Blendimportteile.erlaubt(rolle.get('ordner'), '%s %s' % (rolle['name'], rolle.get('art', '')))
-            teile.append((np.asarray(lage.stueck_ruhelage(punkte, dreiecke, erlaubt), dtype=np.float64), dreiecke))
+            teile.append((Torchfeld.feld(lage.stueck_ruhelage(punkte, dreiecke, erlaubt), dtype=torch.float64), dreiecke))
         return self.zu_huelle(teile)
 
     # ----------------------------------------------------------------- Lauf
@@ -162,11 +165,11 @@ class Blendimportunterkleid:
             return None, {'aus': 'kein Kleid in der Ruhelage'}
         stufe = G9basisnetz.holen().netzstufe(1)
         anzahl = len(G9basisnetz.holen().punkte)
-        kaefig0 = np.asarray(G9reglerableitung.lage(G9formung(lage.stellung()))[0], dtype=np.float64)
-        zusatz = np.zeros_like(kaefig0)
+        kaefig0 = Torchfeld.feld(G9reglerableitung.lage(G9formung(lage.stellung()))[0], dtype=torch.float64)
+        zusatz = torch.zeros_like(kaefig0)
         bericht = {}
         for durchgang in range(self.DURCHGAENGE + 1):
-            haut = np.asarray(stufe.punkte(kaefig0 + zusatz), dtype=np.float64)
+            haut = Torchfeld.feld(stufe.punkte(kaefig0 + zusatz), dtype=torch.float64)
             maske = self.kasten(haut, float(haut[:, 1].min()), float(haut[:, 1].max() - haut[:, 1].min()))
             maske = self.ohne(maske, ausnehmen)
             if not maske.any():
@@ -177,13 +180,13 @@ class Blendimportunterkleid:
                 bericht['nachher'] = self.sicht(haut, huelle, maske)
                 break
             rest = self.verschiebung(haut, huelle, maske)[:anzahl]
-            if not np.linalg.norm(rest, axis=1).any():
+            if not Torchfeld.linalg_norm(rest, dim=1).any():
                 # Kein Käfigpunkt steht mehr vor der Kleidung (ein Rest an Zwischenpunkten der Fläche bleibt): gemessen wird die Haut, wie sie jetzt liegt.
                 bericht['nachher'] = self.sicht(haut, huelle, maske)
                 break
-            zusatz = zusatz + self.ENTSPANNUNG * G9restmorph.glaetten(rest, (np.linalg.norm(rest, axis=1) > 0).astype(float), *self.GLAETTEN)
+            zusatz = zusatz + self.ENTSPANNUNG * G9restmorph.glaetten(rest, Torchfeld.astype(Torchfeld.linalg_norm(rest, dim=1) > 0, torch.float64), *self.GLAETTEN)
             self.melden(0.96, 'Haut unter die Kleidung')
-        bericht['zusatz_max_mm'] = round(float(np.linalg.norm(zusatz, axis=1).max()) * 1000.0, 1)
+        bericht['zusatz_max_mm'] = round(float(Torchfeld.linalg_norm(zusatz, dim=1).max()) * 1000.0, 1)
         return (zusatz if bericht['zusatz_max_mm'] > 0.0 else None), bericht
 
     def formen(self, zusatzregler=None, ausnehmen=None, endung=None):

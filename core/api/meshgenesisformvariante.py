@@ -15,7 +15,9 @@ Figur und Lauf kommen nie als Pfad aus der Adresse: die Figur ist ein direkter U
 
 import re
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
@@ -72,14 +74,14 @@ class Meshgenesisformvarianteendpunkte:
             raise Http404('Keine Wolke %s/%s für %s im Lauf' % (nr, k, figur))
         datei = Meshgenesisformvariante.finden(figur) / 'proben' / ('%04d' % int(nr)) / ('%s_%d.npz' % (daten['lauf']['eingang'], int(k)))
         try:
-            with np.load(datei) as z:
+            with Npztorch.lesen(datei) as z:
                 punkte, farbe = z['punkte'], z['farbe']
-                etikett = z['etikett'].astype(int).tolist() if 'etikett' in z.files else None
+                etikett = Torchfeld.astype(z['etikett'], torch.int64).tolist() if 'etikett' in z.files else None
         except (OSError, ValueError, KeyError) as fehler:
             raise Http404('Wolke %s nicht lesbar (%s)' % (datei.name, fehler)) from fehler
         # float64 vor dem Runden (float32 gerundet gibt in JSON lange Ziffernfolgen, `Meshgenesisdaten.eingabe`).
-        return JsonResponse({'nr': int(nr), 'k': int(k), 'datei': datei.name, 'punkte': np.round(punkte.astype(float), 3).tolist(),
-                             'farbe': np.clip(np.round(farbe.astype(float) * 255), 0, 255).astype(int).tolist(), 'etikett': etikett})
+        return JsonResponse({'nr': int(nr), 'k': int(k), 'datei': datei.name, 'punkte': Torchfeld.round(Torchfeld.astype(punkte, torch.float64), 3).tolist(),
+                             'farbe': Torchfeld.astype(Torchfeld.clip(Torchfeld.round(Torchfeld.astype(farbe, torch.float64) * 255), 0, 255), torch.int64).tolist(), 'etikett': etikett})
 
     @staticmethod
     @require_GET

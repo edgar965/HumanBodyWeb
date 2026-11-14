@@ -15,6 +15,10 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 from pymafxbild import Pymafxbild  # noqa: E402
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class DasUmbenennen(unittest.TestCase):
@@ -25,8 +29,8 @@ class DasUmbenennen(unittest.TestCase):
                 f.write(b'x')
             ziel = Pymafxbild.umbenennen(fest, os.path.join(ordner, 'kopf_04.jpg'), Pymafxbild.KOPF)
             self.assertEqual(os.path.basename(ziel), 'kopf_04_flame.npy')
-            self.assertTrue(os.path.isfile(ziel))
-            self.assertFalse(os.path.exists(fest))
+            self.assertTrue(Npztorch.da(ziel))
+            self.assertFalse(Npztorch.da(fest))
 
     def test_zwei_bilder_ueberschreiben_sich_nicht(self):
         with Pruefablage.ordner() as ordner:

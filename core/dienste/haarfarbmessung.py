@@ -7,7 +7,8 @@ Farbe des Haars im Foto neben die im Render — über die Pixel, in denen BEIDE 
 `befund['haarabgleich']['farbe']`: `{foto, render, verhaeltnis, pixel}` — `verhaeltnis` = Mittelwert Render ÷ Mittelwert Foto (1,0 = gleich hell; unter 1 = der Render ist zu dunkel).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Haarfarbmessung']
 
@@ -19,13 +20,13 @@ class Haarfarbmessung:
     @classmethod
     def ansicht(cls, render_rgb, foto_rgb, foto_haar, render_haar):
         """`(Pixel, Mittel Foto, Mittel Render)` (Farben 0…1) einer Ansicht — None bei zu wenigen gemeinsamen Haarpixeln. Alle Felder haben dieselbe Form (Pixel des Kopfausschnitts)."""
-        from scipy.ndimage import binary_erosion
-        beide = binary_erosion(np.asarray(foto_haar, dtype=bool) & np.asarray(render_haar, dtype=bool), iterations=cls.RAND)
+        from KoerperKI_alle.kartenbild import binary_erosion
+        beide = binary_erosion(Torchfeld.feld(foto_haar, dtype=torch.bool) & Torchfeld.feld(render_haar, dtype=torch.bool), iterations=cls.RAND)
         n = int(beide.sum())
         if n < cls.MINDESTENS:
             return None
-        foto = np.asarray(foto_rgb, dtype=np.float64)[..., :3][beide].mean(axis=0) / 255.0
-        render = np.asarray(render_rgb, dtype=np.float64)[..., :3][beide].mean(axis=0) / 255.0
+        foto = Torchfeld.feld(foto_rgb, dtype=torch.float64)[..., :3][beide].mean(axis=0) / 255.0
+        render = Torchfeld.feld(render_rgb, dtype=torch.float64)[..., :3][beide].mean(axis=0) / 255.0
         return n, foto, render
 
     @classmethod

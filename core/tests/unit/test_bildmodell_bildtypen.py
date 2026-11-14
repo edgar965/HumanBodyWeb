@@ -23,6 +23,10 @@ from core.dienste.bildmodelltextur import Bildmodelltextur
 from core.models import Bildmodellauftrag
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class BildtypenTest(unittest.TestCase):
@@ -159,7 +163,7 @@ class DateienTest(unittest.TestCase):
             self.assertFalse(d.bild_entfernen('foto_z1.jpg'), 'z2 braucht das Original noch')
             self.assertTrue((a.original() / 'foto.jpg').is_file())
             self.assertFalse((a.zuschnitt() / 'foto_z1.jpg').exists())
-            self.assertFalse((a.schaetzung() / 'foto_z1_posed.npy').exists(), 'Schätzernetz geht mit')
+            self.assertFalse(Npztorch.da(a.schaetzung() / 'foto_z1_posed.npy'), 'Schätzernetz geht mit')
             self.assertEqual([b['datei'] for b in job.bilder], ['foto_z2.jpg'])
             self.assertTrue(d.bild_entfernen('foto_z2.jpg'), 'der letzte Ausschnitt nimmt das Original mit')
             self.assertFalse((a.original() / 'foto.jpg').exists())
@@ -267,8 +271,8 @@ class EndpunkteTest(TransactionTestCase):  # `zustand` ist async (eigener Faden,
             self.assertEqual(r.status_code, 200, r.content[:200])
             self.assertEqual(r.json()['neue'], ['a.jpg'])
             self.assertEqual(r.json()['bilder'], [])
-            self.assertTrue((ablage.original() / 'a.jpg').is_file())
-            self.assertFalse((ablage.original() / 'a.png').exists())
+            self.assertTrue(Npztorch.da(ablage.original() / 'a.jpg'))
+            self.assertFalse(Npztorch.da(ablage.original() / 'a.png'))
             # Löschen des Originals
             r = self.client.post('/api/bildmodell/%s/original/a.jpg/loeschen/' % job.id)
             self.assertEqual(r.status_code, 200)

@@ -51,6 +51,21 @@ export class Kleidungsmass {
         return aus;
     }
 
+    /**
+     * Wie viele Kanten aufreißen: länger als in Ruhe um mehr als `mm` (Meter) UND um mehr als das `faktor`-fache. Das Verhältnis allein
+     * zählt die Nullkanten eines gekürzten Stücks mit (`dehnung_max` ist dort sinnlos), der Zuwachs allein jede weite Bewegung grober Kanten.
+     */
+    static risse(ruhe, bewegt, kanten, mm, faktor) {
+        let zahl = 0;
+        for (let e = 0; e < kanten.a.length; e++) {
+            const i = 3 * kanten.a[e], j = 3 * kanten.b[e];
+            const l0 = Math.hypot(ruhe[i] - ruhe[j], ruhe[i + 1] - ruhe[j + 1], ruhe[i + 2] - ruhe[j + 2]);
+            const l1 = Math.hypot(bewegt[i] - bewegt[j], bewegt[i + 1] - bewegt[j + 1], bewegt[i + 2] - bewegt[j + 2]);
+            if (l1 - l0 > mm && l1 > faktor * l0) zahl++;
+        }
+        return zahl;
+    }
+
     /** Flächengewichtete Punktnormalen (n·3, Länge 1) aus einem Dreiecksindex. */
     static normalen(punkte, index, n) {
         const aus = new Float64Array(n * 3);

@@ -35,7 +35,7 @@ class Dazgeograftmorphe:
         """Die Formmorphe von `quelle` als Regler des Stücks `stueck` (Garderobenkennung) ablegen → Namen. `bau`: der `Dazgeograft` (für `stufe_punkte`)."""
         from Genesis9.garderobe import G9garderobe
         from Genesis9.kleidmorphe import G9kleidmorphe
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         G9garderobe.vergessen()
         teile, kaefige, _y0, _y1, _mitte, _eintrag = G9kleidmorphe.kaefige(stueck)

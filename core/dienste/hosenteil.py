@@ -11,7 +11,8 @@ Render der Runde nur um 3 % — die Bilder wussten nichts davon.
 Fotos). Das Höhenband (Saum bis Bund) nimmt es vom Hosenteil, wie `Standmodellglb._hose`; die Textur (weiß mit den Seitenstreifen) liegt als PNG in `ordner`.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hosenteil']
 
@@ -30,7 +31,7 @@ class Hosenteil:
     @staticmethod
     def _bauen(teil, koerper, ordner):
         from .hosenkoerper import Hosenkoerper
-        y = np.asarray(teil['punkte'], dtype=np.float64)[:, 1]
+        y = Torchfeld.feld(teil['punkte'], dtype=torch.float64)[:, 1]
         gebaut = Hosenkoerper(koerper['punkte'], koerper['dreiecke']).bauen(float(y.min()), float(y.max()) - Hosenkoerper.BUND_UNTER_HOSE)
         ordner.mkdir(parents=True, exist_ok=True)
         bild = ordner / 'hose_textur.png'

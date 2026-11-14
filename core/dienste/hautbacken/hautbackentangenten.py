@@ -41,7 +41,8 @@ liefert `(T,3,3)` und `(T,3)`; mit dem Vorzeichen in `w` als `(T,3,4)`:
 nimmt die Hülle wie Blender (`normalen=None`) oder von Blender gelesen (`vertex_normals`).
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .hautbackenmikkdll import Hautbackenmikkdll
 
@@ -53,8 +54,8 @@ MODI = {'cycles': 0, 'blender': 1}
 class Hautbackentangenten:
     @staticmethod
     def _felder(punkte, dreiecke):
-        p = np.ascontiguousarray(punkte, dtype=np.float32)
-        d = np.ascontiguousarray(dreiecke, dtype=np.int32)
+        p = Torchfeld.feld(punkte, dtype=torch.float32)
+        d = Torchfeld.feld(dreiecke, dtype=torch.int32)
         if p.ndim != 2 or p.shape[1] != 3:
             raise ValueError('punkte muss (N,3) sein, ist %s' % (p.shape,))
         if d.ndim != 2 or d.shape[1] != 3:
@@ -73,27 +74,27 @@ class Hautbackentangenten:
         if modus not in MODI:
             raise ValueError('modus muss einer von %s sein, ist %r' % (sorted(MODI), modus))
         p, d = cls._felder(punkte, dreiecke)
-        uv = np.ascontiguousarray(uv_ecken, dtype=np.float32)
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float32)
         if uv.shape != (len(d), 3, 2):
             raise ValueError('uv_ecken muss (%d,3,2) sein, ist %s' % (len(d), uv.shape))
         if len(d) == 0:
-            return np.zeros((0, 3, 3), dtype=np.float32), np.zeros((0, 3), dtype=np.float32)
+            return torch.zeros((0, 3, 3), dtype=torch.float32, device='cuda'), torch.zeros((0, 3), dtype=torch.float32, device='cuda')
         e = None
         n = None
         if ecken_normalen is not None:
-            e = np.ascontiguousarray(ecken_normalen, dtype=np.float32)
+            e = Torchfeld.feld(ecken_normalen, dtype=torch.float32)
             if e.shape != (len(d), 3, 3):
                 raise ValueError('ecken_normalen muss (%d,3,3) sein, ist %s' % (len(d), e.shape))
         elif normalen is None:
             n = Hautbackenmikkdll.punktnormalen(p, d)
         else:
-            n = np.ascontiguousarray(normalen, dtype=np.float32)
+            n = Torchfeld.feld(normalen, dtype=torch.float32)
             if n.shape != p.shape:
                 raise ValueError('normalen muss %s sein, ist %s' % (p.shape, n.shape))
         if glatt is None:
-            g = np.ones(len(d), dtype=np.uint8)
+            g = torch.ones(len(d), dtype=torch.uint8, device='cuda')
         else:
-            g = np.ascontiguousarray(glatt, dtype=bool).astype(np.uint8)
+            g = Torchfeld.astype(Torchfeld.feld(glatt, dtype=torch.bool), torch.uint8)
         if g.shape != (len(d),):
             raise ValueError('glatt muss (%d,) sein, ist %s' % (len(d), g.shape))
         return Hautbackenmikkdll.tangenten(p, d, uv, n, e, g, MODI[modus])

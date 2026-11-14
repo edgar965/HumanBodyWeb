@@ -15,7 +15,9 @@ der nächsten Runde läuft auf der geformten Fläche. Während der Auftrag rechn
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
@@ -39,7 +41,7 @@ class Engine2d3dKleiderformendpunkte:
             z = float(wert)
         except (TypeError, ValueError):
             return vorgabe
-        return min(max(z, lo), hi) if np.isfinite(z) else vorgabe
+        return min(max(z, lo), hi) if Torchfeld.isfinite(z) else vorgabe
 
     @staticmethod
     def _rundenkoerper(job):
@@ -48,10 +50,10 @@ class Engine2d3dKleiderformendpunkte:
         if not runde:
             return None
         pfad = Engine2d3dKleiderablage(job.kennung).iterationen('runde_%03d_formbezug.npz' % runde)
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
-            return np.asarray(d['koerper'], dtype=np.float64)
+        with Npztorch.lesen(pfad) as d:
+            return Torchfeld.feld(d['koerper'], dtype=torch.float64)
 
     @staticmethod
     @require_POST

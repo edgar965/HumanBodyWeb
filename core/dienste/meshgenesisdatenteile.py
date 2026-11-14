@@ -13,7 +13,8 @@ Alle Mitten kommen aus dem SOLL; Soll und Ausgabe werden um dieselbe Strecke ger
     Meshgenesisdatenteile.teile(soll, ausgabe)      -> {zeile: {kennzahlen, rig, ausschnitte, eingabe}}          (je Probe)
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .meshgenesisbild import Meshgenesisbild
 from .meshgenesishaende import Meshgenesishaende
@@ -50,14 +51,14 @@ class Meshgenesisdatenteile:
         namen = [k['name'] for k in knochen]
         if schluessel == 'gesicht':
             kopf, hals = soll[namen.index('head')], soll[namen.index('neck2')]
-            achse = (kopf - hals) / max(float(np.linalg.norm(kopf - hals)), 1e-9)
-            return [(kopf + cls.KOPFMITTE_M * achse, np.zeros(3), cls.RADIUS_M['gesicht'], list(indizes))]
+            achse = (kopf - hals) / max(float(Torchfeld.linalg_norm(kopf - hals)), 1e-9)
+            return [(kopf + cls.KOPFMITTE_M * achse, torch.zeros(3, dtype=torch.float64, device='cuda'), cls.RADIUS_M['gesicht'], list(indizes))]
         if schluessel == 'haende':
             aus = []
             for name, seite, gruppen, art in cls.HAENDE:
                 eigene = [i for i in indizes if namen[i].startswith(seite) and knochen[i]['gruppe'] in gruppen]
                 platz = Meshgenesishaende.PLAETZE[name]
-                aus.append((soll[eigene].mean(axis=0), np.array([platz[0], platz[1], 0.0]), cls.RADIUS_M[art], eigene))
+                aus.append((soll[eigene].mean(axis=0), Torchfeld.feld([platz[0], platz[1], 0.0], copy=True), cls.RADIUS_M[art], eigene))
             return aus
         return []
 
@@ -70,7 +71,7 @@ class Meshgenesisdatenteile:
         for schluessel in cls.TITEL:
             indizes = beschr['zeilen'][schluessel]
             ausschnitte = cls._ausschnitte(schluessel, soll, indizes, knochen)
-            verschub = np.zeros((len(knochen), 3))
+            verschub = torch.zeros((len(knochen), 3), dtype=torch.float64, device='cuda')
             for mitte, ziel, _r, eigene in ausschnitte:
                 verschub[eigene] = ziel - mitte
             s, a = soll[indizes] + verschub[indizes], ausgabe[indizes] + verschub[indizes]
@@ -84,6 +85,6 @@ class Meshgenesisdatenteile:
             aus[schluessel] = {
                 'kennzahlen': k, 'eingabe': {'echt': True},
                 'rig': {'kennzahlen': {'mittel_mm': k['mittel_mm'], 'groesster_mm': k['groesster_mm'], 'groesster_knochen': k['groesster_gelenk'], 'knochen': len(indizes)}},
-                'ausschnitte': [{'mitte': np.round(m, 4).tolist(), 'ziel': np.round(z, 4).tolist(), 'radius': r, 'knochen': e} for m, z, r, e in ausschnitte],
+                'ausschnitte': [{'mitte': Torchfeld.round(m, 4).tolist(), 'ziel': Torchfeld.round(z, 4).tolist(), 'radius': r, 'knochen': e} for m, z, r, e in ausschnitte],
             }
         return aus

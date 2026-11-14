@@ -16,7 +16,8 @@ Die Schwellen sind Augenmaß, am Randy-Stand nicht nachgemessen außer der Füll
 
 import hashlib
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Stoffweissung']
 
@@ -29,13 +30,13 @@ class Stoffweissung:
     UNSCHAERFE = 2.0                    # Weichzeichnung (Pixel) der Innenmaske
 
     def __init__(self, innen_uv=None):
-        self.innen_uv = None if innen_uv is None or not len(innen_uv) else np.asarray(innen_uv, dtype=np.float64)
-        text = b'' if self.innen_uv is None else np.round(self.innen_uv, 4).tobytes()
+        self.innen_uv = None if innen_uv is None or not len(innen_uv) else Torchfeld.feld(innen_uv, dtype=torch.float64)
+        text = b'' if self.innen_uv is None else Torchfeld.als_bytes(Torchfeld.round(self.innen_uv, 4))
         self.schluessel = hashlib.sha1(text).hexdigest()[:12] if text else 'ohne'
 
     @staticmethod
     def _weich(x):
-        x = np.clip(x, 0.0, 1.0)
+        x = Torchfeld.clip(x, 0.0, 1.0)
         return x * x * (3.0 - 2.0 * x)
 
     def _maske(self, groesse):
@@ -46,19 +47,19 @@ class Stoffweissung:
         zeichner = ImageDraw.Draw(maske)
         for dreieck in self.innen_uv:
             zeichner.polygon([(float(u) * breite, float(v) * hoehe) for u, v in dreieck], fill=255)
-        return np.asarray(maske.filter(ImageFilter.GaussianBlur(self.UNSCHAERFE)), dtype=np.float64) / 255.0
+        return Torchfeld.feld(maske.filter(ImageFilter.GaussianBlur(self.UNSCHAERFE)), dtype=torch.float64) / 255.0
 
     def __call__(self, bild):
         from PIL import Image
-        a = np.asarray(bild.convert('RGB'), dtype=np.float64)
-        bunt = a.max(axis=2) - a.min(axis=2)
-        hell = a @ np.array([0.299, 0.587, 0.114])
+        a = Torchfeld.feld(bild.convert('RGB'), dtype=torch.float64)
+        bunt = Torchfeld.amax(a, dim=2) - Torchfeld.amin(a, dim=2)
+        hell = a @ Torchfeld.feld([0.299, 0.587, 0.114], copy=True)
         w = (1.0 - self._weich((bunt - self.BUNT_VON) / (self.BUNT_BIS - self.BUNT_VON))) * self._weich((hell - self.HELL_VON) / (self.HELL_BIS - self.HELL_VON))
-        struktur = (1.0 - self.STRUKTUR) + self.STRUKTUR * np.clip((hell - 150.0) / 90.0, 0.0, 1.0)
+        struktur = (1.0 - self.STRUKTUR) + self.STRUKTUR * Torchfeld.clip((hell - 150.0) / 90.0, 0.0, 1.0)
         if self.innen_uv is not None:
-            m = self._maske(bild.size)
-            w = np.maximum(w, m)
+            m = self._maske(Torchfeld.groesse(bild))
+            w = Torchfeld.maximum(w, m)
             struktur = struktur * (1.0 - m) + 0.96 * m          # die Innenseite ohne Fleckenrest: gleichmäßig helles Weiß
-        ziel = np.asarray(self.WEISS)[None, None, :] * struktur[..., None]
+        ziel = Torchfeld.feld(self.WEISS)[None, None, :] * struktur[..., None]
         aus = a * (1.0 - w[..., None]) + ziel * w[..., None]
-        return Image.fromarray(np.clip(np.rint(aus), 0, 255).astype(np.uint8), 'RGB')
+        return Image.fromarray(Torchfeld.roh(Torchfeld.astype(Torchfeld.clip(Torchfeld.round(aus), 0, 255), torch.uint8)), 'RGB')

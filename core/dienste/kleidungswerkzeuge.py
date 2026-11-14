@@ -10,7 +10,9 @@ Uebernahme der Knochengewichte vom Koerper auf das Kleidungsstueck
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from .skingewichte import Skingewichte
@@ -55,18 +57,16 @@ class Kleidungswerkzeuge:
         Koerpers gelegt, sonst schwebt die ganze Verschiebung.
         """
         pfad = os.path.join(str(settings.MAKEHUMAN_ROOT), 'base_vertices.npy')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             logger.error('[T→A] No MH base_vertices.npy')
             return None
-        roh = np.load(pfad)
+        roh = Npztorch.lesen(pfad)
         anzahl = min(roh.shape[0], body_verts.shape[0])
-        tpose = np.column_stack(
-            [
+        tpose = Torchfeld.column_stack([
                 roh[:anzahl, 0] * 0.1,
                 -roh[:anzahl, 2] * 0.1,
                 roh[:anzahl, 1] * 0.1,
-            ]
-        )
+            ])
         tpose[:, 2] -= tpose[:, 2].min()
         tpose[:, 2] += body_verts[:, 2].min()
         return tpose
@@ -79,10 +79,10 @@ class Kleidungswerkzeuge:
         wuerde nur Artefakte einbauen.
         """
         pfad = os.path.join(str(settings.MAKEHUMAN_ROOT), 'mh_base_apose.npy')
-        if not os.path.isfile(pfad):
+        if not Npztorch.da(pfad):
             logger.error('[T→A] No mh_base_apose.npy — skipping displacement')
             return None
-        apose = np.load(pfad)
+        apose = Npztorch.lesen(pfad)
         if apose.shape != mh_tpose.shape:
             logger.error('[T→A] Shape mismatch: tpose=%s apose=%s', mh_tpose.shape, apose.shape)
             return None
@@ -98,7 +98,7 @@ class Kleidungswerkzeuge:
         from humanbody_core.nachbarsuche import Nachbarsuche
 
         abstaende, kennungen = Nachbarsuche(mh_tpose).naechste(garment_verts, k=cls.NACHBARN)
-        ergebnis = garment_verts.copy().astype(np.float64)
+        ergebnis = Torchfeld.astype(Torchfeld.kopie(garment_verts), torch.float64)
         for punkt in range(len(garment_verts)):
             gewicht = 1.0 / (abstaende[punkt] + 1e-6)
             gewicht /= gewicht.sum()
@@ -106,7 +106,7 @@ class Kleidungswerkzeuge:
         logger.info(
             '[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose, K=%d)', len(ergebnis), cls.NACHBARN
         )
-        return ergebnis.astype(np.float32)
+        return Torchfeld.astype(ergebnis, torch.float32)
 
     @staticmethod
     def glaetten(verts, faces, iterations=3, factor=0.5):
@@ -121,17 +121,17 @@ class Kleidungswerkzeuge:
                 for j in range(len(f)):
                     if i != j:
                         adj[f[i]].add(f[j])
-        result = verts.copy().astype(np.float64)
+        result = Torchfeld.astype(Torchfeld.kopie(verts), torch.float64)
         for _ in range(iterations):
-            new_verts = result.copy()
+            new_verts = Torchfeld.kopie(result)
             for vi in range(n):
                 neighbors = adj.get(vi)
                 if not neighbors or len(neighbors) < 2:
                     continue
-                avg = np.mean(result[list(neighbors)], axis=0)
+                avg = Torchfeld.mean(result[list(neighbors)], axis=0)
                 new_verts[vi] = result[vi] + factor * (avg - result[vi])
             result = new_verts
-        return result.astype(np.float32)
+        return Torchfeld.astype(result, torch.float32)
 
     @staticmethod
     def _zuordnung(garment_verts, body_verts, ref_body=None):
@@ -166,14 +166,14 @@ class Kleidungswerkzeuge:
         """Compute skin indices for garment by nearest-body-vertex transfer."""
         si, _sw = Kleidungswerkzeuge._gewichtsfelder(gender)
         nearest = Kleidungswerkzeuge._zuordnung(garment_verts, body_verts, ref_body)
-        return si[nearest].astype(np.float32).tobytes()
+        return Torchfeld.als_bytes(Torchfeld.astype(si[nearest], torch.float32))
 
     @staticmethod
     def knochengewichte(garment_verts, body_verts, gender='female', ref_body=None):
         """Compute skin weights for garment by nearest-body-vertex transfer."""
         _si, sw = Kleidungswerkzeuge._gewichtsfelder(gender)
         nearest = Kleidungswerkzeuge._zuordnung(garment_verts, body_verts, ref_body)
-        return sw[nearest].astype(np.float32).tobytes()
+        return Torchfeld.als_bytes(Torchfeld.astype(sw[nearest], torch.float32))
 
     @staticmethod
     def _gewichtsfelder(gender):

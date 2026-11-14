@@ -19,9 +19,11 @@ Mittel über die Nachbardreiecke (die Kontur verliert Zacken und Kerben) → gr�
 ungeschweißt, 104 verschweißt).
 """
 
-import numpy as np
-from scipy import sparse
-from scipy.sparse import csgraph
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kartenduenn import Kartenduenn as sparse
+from KoerperKI_alle.kartengraph import Kartengraph as csgraph
 
 __all__ = ['Blendimportschamloch']
 
@@ -41,10 +43,10 @@ class Blendimportschamloch:
 
     def __init__(self, punkte, dreiecke):
         """`punkte` (n, 3) und `dreiecke` (m, 3): die Haut der Figur in Ruhelage (Stufe 1 — die Dreiecke des Browsers)."""
-        self.punkte = np.asarray(punkte, dtype=np.float64)
-        self.dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        schluessel = np.round(self.punkte / self.LAGE_M).astype(np.int64)
-        _, erste, self.rep = np.unique(schluessel, axis=0, return_index=True, return_inverse=True)
+        self.punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).reshape(-1, 3)
+        schluessel = Torchfeld.astype(Torchfeld.round(self.punkte / self.LAGE_M), torch.int64)
+        _, erste, self.rep = Torchfeld.unique(schluessel, axis=0, return_index=True, return_inverse=True)
         self.rep = self.rep.ravel()
         #: Je verschweißtem Punkt der erste Punkt der Figur (für Gewichte und Lage).
         self.figurpunkt = erste
@@ -60,25 +62,25 @@ class Blendimportschamloch:
         a = self.verschweisst[:, [0, 1, 2]].ravel()
         b = self.verschweisst[:, [1, 2, 0]].ravel()
         n = int(self.rep.max()) + 1
-        lo, hi = np.minimum(a, b), np.maximum(a, b)
+        lo, hi = Torchfeld.minimum(a, b), Torchfeld.maximum(a, b)
         schluessel = lo * n + hi
-        dreieck = np.repeat(np.arange(m), 3)
-        ordnung = np.argsort(schluessel, kind='stable')
+        dreieck = Torchfeld.repeat_interleave(Torchfeld.arange(m), 3)
+        ordnung = torch.argsort(schluessel, stable=True)
         s, t = schluessel[ordnung], dreieck[ordnung]
         gleich = s[1:] == s[:-1]
-        if np.any(s[2:] == s[:-2]):
+        if Torchfeld.any(s[2:] == s[:-2]):
             raise ValueError('Haut hat eine Kante mit mehr als zwei Dreiecken')
         paar_a, paar_b = t[:-1][gleich], t[1:][gleich]
         self.n_punkte = n
         self._schluessel, self._dreieck = s, t
-        self.nachbar = sparse.coo_matrix((np.ones(len(paar_a) * 2), (np.r_[paar_a, paar_b], np.r_[paar_b, paar_a])), shape=(m, m)).tocsr()
-        self.grad = np.asarray(self.nachbar.sum(axis=1)).ravel()
+        self.nachbar = sparse.coo_matrix((torch.ones(len(paar_a) * 2, dtype=torch.float64, device='cuda'), (Torchfeld.r_[paar_a, paar_b], Torchfeld.r_[paar_b, paar_a])), shape=(m, m)).tocsr()
+        self.grad = Torchfeld.feld(self.nachbar.sum(axis=1)).ravel()
 
     def _abstand_zu(self, maske):
         """Weg (m) über die Dreiecksmitten zum nächsten Dreieck in `maske` (Infinity, wo keines erreichbar ist)."""
-        quellen = np.flatnonzero(maske)
+        quellen = torch.flatten(maske).nonzero()[:, 0]
         if not len(quellen):
-            return np.full(len(maske), np.inf)
+            return Torchfeld.full(len(maske), math.inf)
         graph = self._weglaenge()
         return csgraph.dijkstra(graph, directed=False, indices=quellen, min_only=True)
 
@@ -86,8 +88,8 @@ class Blendimportschamloch:
         """Die Nachbarschaftsmatrix, gewichtet mit dem Abstand der Dreiecksmitten (m); einmal gebaut."""
         if self._graph is None:
             mitte = self.punkte[self.dreiecke].mean(axis=1)
-            a, b = self.nachbar.nonzero()
-            gewicht = np.linalg.norm(mitte[a] - mitte[b], axis=1) + 1e-12
+            a, b = torch.nonzero(Torchfeld.feld(self.nachbar), as_tuple=True)
+            gewicht = Torchfeld.linalg_norm(mitte[a] - mitte[b], dim=1) + 1e-12
             self._graph = sparse.csr_matrix((gewicht, (a, b)), shape=self.nachbar.shape)
         return self._graph
 
@@ -106,8 +108,8 @@ class Blendimportschamloch:
 
     def komponenten(self, maske):
         """Nummer der zusammenhängenden Gruppe je Dreieck in `maske` (−1 außerhalb) und die Anzahl der Gruppen."""
-        idx = np.flatnonzero(maske)
-        marke = -np.ones(len(maske), dtype=np.int64)
+        idx = torch.flatten(maske).nonzero()[:, 0]
+        marke = -torch.ones(len(maske), dtype=torch.int64, device='cuda')
         if not len(idx):
             return marke, 0
         n, lab = csgraph.connected_components(self.nachbar[idx][:, idx], directed=False)
@@ -118,18 +120,18 @@ class Blendimportschamloch:
         marke, n = self.komponenten(maske)
         if n == 0:
             return maske
-        return marke == int(np.bincount(marke[marke >= 0]).argmax())
+        return marke == int(Torchfeld.bincount(marke[marke >= 0]).argmax())
 
     # --------------------------------------------------------------------- Loch
 
     def loch(self, werte):
         """Bool je Dreieck: im Loch. `werte` je Punkt der Figur, negativ = im Schnittbereich (Mitte des Dreiecks zählt)."""
-        werte = np.asarray(werte, dtype=np.float64)
+        werte = Torchfeld.feld(werte, dtype=torch.float64)
         h = self.groesste(werte[self.dreiecke].mean(axis=1) < 0.0)
         h = self.groesste(self._oeffnen(h, self.RADIUS_M))
         h = self._schliessen(h, self.RADIUS_M)
-        f = h.astype(np.float64)
-        teiler = np.maximum(self.grad, 1.0)
+        f = Torchfeld.astype(h, torch.float64)
+        teiler = Torchfeld.maximum(self.grad, 1.0)
         for _ in range(self.GLAETTEN):
             # Mehrheit der Nachbarn mit wenig Eigengewicht: ein Dreieck, das nur an einer Kante im Loch hängt (Ohr), fällt weg, eine
             # Kerbe (zwei von drei Nachbarn im Loch) füllt sich. Mit halbem Eigengewicht blieben Ohren stehen (0,5 + 0,5/3 > 0,5).
@@ -145,7 +147,7 @@ class Blendimportschamloch:
         marke, n = self.komponenten(~h)
         if n <= 1:
             return h
-        zahl = np.bincount(marke[marke >= 0], minlength=n)
+        zahl = Torchfeld.bincount(marke[marke >= 0], minlength=n)
         aussen = int(zahl.argmax())
         for k in range(n):
             if k != aussen:
@@ -155,25 +157,25 @@ class Blendimportschamloch:
     def randkanten(self, h):
         """Kanten (verschweißte Punktnummern, je `(klein, groß)`), die genau ein Dreieck des Lochs berühren."""
         s, t = self._schluessel, self._dreieck
-        gleich = np.r_[s[1:] == s[:-1], False]          # Kante `i` hat ein Paar mit `i + 1`
-        paar = np.flatnonzero(gleich)
-        einzel = np.ones(len(s), dtype=bool)
+        gleich = Torchfeld.r_[s[1:] == s[:-1], False]          # Kante `i` hat ein Paar mit `i + 1`
+        paar = torch.flatten(gleich).nonzero()[:, 0]
+        einzel = torch.ones(len(s), dtype=torch.bool, device='cuda')
         einzel[paar] = False
         einzel[paar + 1] = False
-        rand = np.r_[paar[h[t[paar]] != h[t[paar + 1]]], np.flatnonzero(einzel & h[t])]
+        rand = Torchfeld.r_[paar[h[t[paar]] != h[t[paar + 1]]], torch.flatten(einzel & h[t]).nonzero()[:, 0]]
         schluessel = s[rand]
-        return np.stack([schluessel // self.n_punkte, schluessel % self.n_punkte], axis=1)
+        return Torchfeld.stack([schluessel // self.n_punkte, schluessel % self.n_punkte], axis=1)
 
     def _engstellen_schliessen(self, h):
         """Ein Punkt mit mehr als zwei Randkanten ist eine Engstelle (der Rand berührt sich selbst): die Dreiecke um ihn, die nicht im
         Loch liegen, kommen dazu, bis der Rand einfach ist."""
         for _ in range(self.ENGSTELLEN_MAX):
             kanten = self.randkanten(h)
-            zahl = np.bincount(kanten.ravel(), minlength=self.n_punkte)
-            eng = np.flatnonzero(zahl > 2)
+            zahl = Torchfeld.bincount(kanten.ravel(), minlength=self.n_punkte)
+            eng = torch.flatten(zahl > 2).nonzero()[:, 0]
             if not len(eng):
                 return h
-            enger = np.zeros(self.n_punkte, dtype=bool)
+            enger = torch.zeros(self.n_punkte, dtype=torch.bool, device='cuda')
             enger[eng] = True
             h = h | enger[self.verschweisst].any(axis=1)
             h = self._eingeschlossene_fuellen(self.groesste(h))
@@ -201,18 +203,18 @@ class Blendimportschamloch:
             vor, cur = cur, nxt
         if len(folge) != len(nachbarn):
             raise ValueError('Hautloch: der Rand hat mehrere Ringe (%d von %d Punkten im ersten)' % (len(folge), len(nachbarn)))
-        return np.asarray(folge, dtype=np.int64)
+        return Torchfeld.feld(folge, dtype=torch.int64)
 
     def lage(self, ring):
         """Die Punkte des Rings (m): Lage des ersten Punkts der Figur je verschweißtem Punkt."""
-        return self.punkte[self.figurpunkt[np.asarray(ring)]]
+        return self.punkte[self.figurpunkt[Torchfeld.feld(ring)]]
 
     def ringpunkte(self, ring):
         """Die Nummern der Figurpunkte zum Ring (der erste Punkt jeder Lage — Gewichte sind je Lage gleich)."""
-        return self.figurpunkt[np.asarray(ring)]
+        return self.figurpunkt[Torchfeld.feld(ring)]
 
     def bericht(self, h, ring):
         lage = self.lage(ring)
-        seg = np.linalg.norm(np.diff(np.vstack([lage, lage[:1]]), axis=0), axis=1)
+        seg = Torchfeld.linalg_norm(Torchfeld.diff(Torchfeld.vstack([lage, lage[:1]]), dim=0), dim=1)
         return {'dreiecke': int(h.sum()), 'ring_punkte': int(len(ring)), 'ring_mm': round(float(seg.sum()) * 1000.0, 1),
                 'segment_max_mm': round(float(seg.max()) * 1000.0, 1)}

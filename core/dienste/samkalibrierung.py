@@ -13,7 +13,9 @@ Läuft einmal je Rechner (rund 2,5 Minuten, GPU), `manage.py sam_kalibrieren`; o
 
 import logging
 
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.figurglb import G9figurglb
 from Genesis9.formung import G9formung
 from Genesis9.netzlandmarken import G9netzlandmarken
@@ -55,11 +57,11 @@ class Samkalibrierung:
         best = Posebestimmung(ordner, 'SAM-Kalibrierung ' + basis, melden)
         sam, neu = best.sam(ansicht, schluessel=Mesh3dansicht.eingaben(glb))
         e = best.abbilden(glb, ansicht, sam, 0)
-        roh = np.asarray(e['roh'], float)
-        gelenke = {k['name']: np.asarray(k['kopf'], float) for k in G9formung(grund).skelett().gelenkknochen()}
-        versatz = np.full((len(G9netzlandmarken.ANKER), 3), np.nan)
+        roh = Torchfeld.feld(e['roh'], dtype=torch.float64)
+        gelenke = {k['name']: Torchfeld.feld(k['kopf'], dtype=torch.float64) for k in G9formung(grund).skelett().gelenkknochen()}
+        versatz = Torchfeld.full((len(G9netzlandmarken.ANKER), 3), math.nan)
         for i, (nummer, knochen) in enumerate(G9netzlandmarken.ANKER.items()):
-            if np.isfinite(roh[nummer]).all():
+            if Torchfeld.isfinite(roh[nummer]).all():
                 versatz[i] = roh[nummer] - gelenke[knochen]
             else:
                 logger.warning('SAM-Kalibrierung %s: Gelenk %d (%s) nicht gefunden', basis, nummer, knochen)

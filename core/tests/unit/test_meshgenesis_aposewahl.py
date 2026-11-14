@@ -22,6 +22,10 @@ from core.dienste.meshgenesistest import Meshgenesistest
 from core.dienste.meshgenesiswege import Meshgenesiswege
 
 from ._pruefablage import Pruefablage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 def _wahl(wert):
@@ -46,8 +50,7 @@ class JobseiteTest(SimpleTestCase):
         lauf = Path(ordner)
         wege = [{'schluessel': k, 'name': k, 'text': ''} for k in ('vorstufe', 'direkt', 'rig')]
         (lauf / 'wege.json').write_text(json.dumps({'fassung': Meshgenesiswege.FASSUNG, 'standard': 'vorstufe', 'wege': wege}), encoding='utf-8')
-        np.savez(lauf / 'wege.npz', nr=np.array([1]), **{'%s_rig' % k: np.zeros((1, 3, 3), np.float32) for k in ('vorstufe', 'direkt', 'rig')},
-                 **{'%s_dreh' % k: np.tile(np.eye(3, dtype=np.float32), (1, 3, 1, 1)) for k in ('vorstufe', 'direkt', 'rig')})
+        Npztorch.speichern(lauf / 'wege.npz', nr=np.array([1]), **{'%s_rig' % k: np.zeros((1, 3, 3), np.float32) for k in ('vorstufe', 'direkt', 'rig')}, **{'%s_dreh' % k: np.tile(np.eye(3, dtype=np.float32), (1, 3, 1, 1)) for k in ('vorstufe', 'direkt', 'rig')})
         return lauf
 
     def test_3_mia_und_rig_behalten_die_vorgabe_des_laufs(self):
@@ -99,12 +102,11 @@ class MethodeTest(SimpleTestCase):
         ablage.mkdir(parents=True, exist_ok=True)
         (ablage / 'kette.json').write_text(json.dumps(kette), encoding='utf-8')
         (ablage / self.NETZ).mkdir(exist_ok=True)
-        np.savez(ablage / self.NETZ / 'anzeige_Figur.npz', punkte=np.zeros((1, 3), np.float32))
+        Npztorch.speichern(ablage / self.NETZ / 'anzeige_Figur.npz', punkte=np.zeros((1, 3), np.float32))
         wege = [{'schluessel': k, 'name': 'Rig → A-Pose → Netz' if k == 'vorstufe' else k, 'text': 'Vorstufe: alter Text.'} for k in ('vorstufe', 'direkt', 'rig')]
         (lauf / ('%s.json' % datei)).write_text(json.dumps({'fassung': Meshgenesiswege.FASSUNG, 'standard': 'vorstufe', 'wege': wege, 'ablage': str(ablage), 'netz_vorstufe': self.NETZ,
                                                             'proben': {'1': {'vorstufe': {'mm': mm}}}}), encoding='utf-8')
-        np.savez(lauf / ('%s.npz' % datei), nr=np.array([1]), **{'%s_rig' % k: np.full((1, 3, 3), mm, np.float32) for k in ('vorstufe', 'direkt', 'rig')},
-                 **{'%s_dreh' % k: np.tile(np.eye(3, dtype=np.float32), (1, 3, 1, 1)) for k in ('vorstufe', 'direkt', 'rig')})
+        Npztorch.speichern(lauf / ('%s.npz' % datei), nr=np.array([1]), **{'%s_rig' % k: np.full((1, 3, 3), mm, np.float32) for k in ('vorstufe', 'direkt', 'rig')}, **{'%s_dreh' % k: np.tile(np.eye(3, dtype=np.float32), (1, 3, 1, 1)) for k in ('vorstufe', 'direkt', 'rig')})
 
     def _lauf(self, o, alt_kette=None, mit_alt=True):
         wurzel = Path(o)
@@ -141,7 +143,7 @@ class MethodeTest(SimpleTestCase):
         with Pruefablage.ordner('aposewahl_') as o:
             lauf = self._lauf(o, alt_kette={'weg': 'rig', 'weg_grund': 'MIA DURCHGEFALLEN: Hand'})
             (lauf / 'wege.json').unlink()
-            (lauf / 'wege.npz').unlink()
+            Npztorch.loeschen(lauf / 'wege.npz')
             with _wahl('mia'):
                 w = Meshgenesiswege.lesen(lauf, 3)
             self.assertFalse(w['fehlt'])

@@ -12,14 +12,16 @@ Genesis 1) und die Auto-Fit-Schablone (`Base/Tools/Clones/CloneGenesis.dsj`, `G9
 3. ZUORDNUNG: Jeder Käfigpunkt in Klon-Gestalt bekommt den nächsten Punkt auf der gedrehten Haut von Genesis 1 (Dreieck, Schwerpunktkoordinaten) — nur Haut (`HAUT`), nicht Augen, Zähne,
    Mundraum, Wimpern, Tränen. Das Feld dort ist der gewichtete Mittelwert der drei Ecken; Käfigpunkte weiter als `WEIT_M` von der Haut bekommen ihr Feld aus den Nachbarn (`G9feldputz`).
 """
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.autofit import G9autofit
 from Genesis9.dson import G9dson
 from Genesis9.feldputz import G9feldputz
 from Genesis9.haut import G9haut
 from Genesis9.knochenmatrizen import G9knochenmatrizen
 from Genesis9.pfade import G9pfade
-from scipy.spatial import cKDTree
+from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
 __all__ = ['G1klonuebertragung']
 
@@ -42,9 +44,9 @@ class G1klonuebertragung:
         self.doc = G9dson.lesen(G9pfade.figur_fremd(self.KLON))
         geo = self.doc.geometrie()
         #: (19296, 3) Meter: Genesis 1 in T-Stellung.
-        self.grund = np.asarray(geo['vertices']['values'], dtype=np.float64) * self.CM
+        self.grund = Torchfeld.feld(geo['vertices']['values'], dtype=torch.float64) * self.CM
         self.dreiecke = self.dreiecke_der_haut(geo)
-        self.hautpunkte = np.unique(self.dreiecke)
+        self.hautpunkte = Torchfeld.unique(self.dreiecke)
         self.haut = G9haut.aus_dokument(self.doc)
         self.autofit = G9autofit.holen(self.KLON)
         self.reihenfolgen = {k['id']: str(k.get('rotation_order') or 'XYZ') for k in self.doc.knochen()}
@@ -63,7 +65,7 @@ class G1klonuebertragung:
             ecken = p[2:]
             for i in range(1, len(ecken) - 1):
                 aus.append((ecken[0], ecken[i], ecken[i + 1]))
-        return np.asarray(aus, dtype=np.int64)
+        return Torchfeld.feld(aus, dtype=torch.int64)
 
     # ------------------------------------------------------------ Stellung
 
@@ -75,17 +77,17 @@ class G1klonuebertragung:
         for k in self.autofit.roh:
             k = dict(k, reihenfolge=self.reihenfolgen.get(k['name'], 'XYZ'))
             if k['name'] in ausrichtung:
-                k['orientation'] = np.asarray(k['orientation'], dtype=np.float64) + np.asarray(ausrichtung[k['name']], dtype=np.float64)
+                k['orientation'] = Torchfeld.feld(k['orientation'], dtype=torch.float64) + Torchfeld.feld(ausrichtung[k['name']], dtype=torch.float64)
             roh.append(k)
-        return G9knochenmatrizen({}, versatz or {}, roh=roh, drehung=self.autofit.drehung).anwenden(np.asarray(punkte, dtype=np.float64), self.haut)
+        return G9knochenmatrizen({}, versatz or {}, roh=roh, drehung=self.autofit.drehung).anwenden(Torchfeld.feld(punkte, dtype=torch.float64), self.haut)
 
     def gelenke_schaetzen(self, form):
         u"""`{knochen: {'center_point': (dx, dy, dz)}}` (cm) einer Form ohne Gelenkformeln: je Gelenk das Mittel der Form (T-Stellung, m) über die `UM_GELENK` nächsten Hautpunkte."""
         baum = cKDTree(self.grund[self.hautpunkte])
         aus = {}
         for k in self.autofit.roh:
-            _d, i = baum.query(np.asarray(k['kopf'], dtype=np.float64) * self.CM, k=self.UM_GELENK)
-            aus[k['name']] = {'center_point': tuple(float(x) for x in np.asarray(form)[self.hautpunkte[i]].mean(axis=0) / self.CM)}
+            _d, i = baum.query(Torchfeld.feld(k['kopf'], dtype=torch.float64) * self.CM, k=self.UM_GELENK)
+            aus[k['name']] = {'center_point': tuple(float(x) for x in Torchfeld.feld(form)[self.hautpunkte[i]].mean(axis=0) / self.CM)}
         return aus
 
     # ----------------------------------------------------------- Zuordnung
@@ -97,13 +99,13 @@ class G1klonuebertragung:
         d00, d01, d11 = (ab * ab).sum(1), (ab * ac).sum(1), (ac * ac).sum(1)
         d20, d21 = (ap * ab).sum(1), (ap * ac).sum(1)
         nenner = d00 * d11 - d01 * d01
-        nenner = np.where(np.abs(nenner) < 1e-20, 1e-20, nenner)
+        nenner = torch.where(Torchfeld.abs(nenner) < 1e-20, 1e-20, nenner)
         v = (d11 * d20 - d01 * d21) / nenner
         w = (d00 * d21 - d01 * d20) / nenner
-        g = np.stack([1.0 - v - w, v, w], axis=1).clip(0.0, None)
-        g /= np.maximum(g.sum(axis=1, keepdims=True), 1e-12)
+        g = Torchfeld.stack([1.0 - v - w, v, w], axis=1).clip(0.0, None)
+        g /= Torchfeld.maximum(g.sum(axis=1, keepdims=True), 1e-12)
         q = g[:, :1] * a + g[:, 1:2] * b + g[:, 2:] * c
-        return g, np.linalg.norm(p - q, axis=1)
+        return g, Torchfeld.linalg_norm(p - q, dim=1)
 
     def zuordnen(self):
         u"""`(dreieck (M,), gewichte (M, 3), abstand (M,))` je Käfigpunkt in Klon-Gestalt auf der gedrehten Haut von Genesis 1 — einmal."""
@@ -111,21 +113,21 @@ class G1klonuebertragung:
             return self._zuordnung
         haut = self.stellen(self.grund)
         tri = self.dreiecke
-        klon = np.asarray(self.autofit.punkte, dtype=np.float64)
+        klon = Torchfeld.feld(self.autofit.punkte, dtype=torch.float64)
         ecken = tri.ravel()
-        folge = np.argsort(ecken, kind='stable')
+        folge = torch.argsort(ecken, stable=True)
         sortiert = ecken[folge]
-        alle = np.arange(len(self.grund))
-        start, ende = np.searchsorted(sortiert, alle), np.searchsorted(sortiert, alle, side='right')
+        alle = Torchfeld.arange(len(self.grund))
+        start, ende = Torchfeld.searchsorted(sortiert, alle), Torchfeld.searchsorted(sortiert, alle, side='right')
         _d, naechste = cKDTree(haut[self.hautpunkte]).query(klon, k=self.KANDIDATEN)
         naechste = self.hautpunkte[naechste]
-        dreieck = np.zeros(len(klon), dtype=np.int64)
-        gewichte = np.zeros((len(klon), 3))
-        abstand = np.full(len(klon), np.inf)
+        dreieck = torch.zeros(len(klon), dtype=torch.int64, device='cuda')
+        gewichte = torch.zeros((len(klon), 3), dtype=torch.float64, device='cuda')
+        abstand = Torchfeld.full(len(klon), math.inf)
         for j in range(self.KANDIDATEN):
             v = naechste[:, j]
             for r in range(int((ende - start).max())):
-                idx = np.nonzero(ende[v] - start[v] > r)[0]
+                idx = torch.nonzero(ende[v] - start[v] > r, as_tuple=True)[0]
                 if not len(idx):
                     break
                 t = folge[start[v[idx]] + r] // 3
@@ -139,7 +141,7 @@ class G1klonuebertragung:
     def uebertragen(self, feld):
         u"""(25182, 3) Käfigfeld aus einem Feld (N, 3) auf den Punkten von Genesis 1 — in der Stellung der Zuordnung (A-Stellung)."""
         dreieck, gewichte, abstand = self.zuordnen()
-        f = np.asarray(feld, dtype=np.float64)
+        f = Torchfeld.feld(feld, dtype=torch.float64)
         aus = (gewichte[:, :, None] * f[self.dreiecke[dreieck]]).sum(axis=1)
         weit = abstand > self.WEIT_M
         if weit.any():

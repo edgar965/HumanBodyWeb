@@ -27,6 +27,9 @@ import logging
 import os
 import sys
 
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+
 logger = logging.getLogger(__name__)
 
 
@@ -170,7 +173,7 @@ class Testkern:
         cls._unterteiler = klasse(netz.faces, face_materials=netz.face_materials, uvs=netz.uvs, levels=1)
         logger.info(
             'Test-Unterteiler: %d Grund- -> %d Unterpunkte',
-            netz.faces.max() + 1,
+            int(Torchfeld.feld(netz.faces).to(torch.int64).max()) + 1,     # uint16 von der Platte: `max` gibt es dafür auf der Karte nicht (14.11.2026)
             cls._unterteiler.sub_vertex_count,
         )
         cls._referenznormalen()

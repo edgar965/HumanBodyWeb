@@ -41,7 +41,8 @@ import math
 import re
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ..atomic_write import AtomarSchreiber
 from .dienstfehler import DienstFehler
@@ -160,7 +161,7 @@ class Posenablage:
                 continue
             matrix = BONE_TRANSFORM.get(kontrolle)
             if matrix is not None:
-                q = list(np.linalg.inv(matrix) @ np.array(q, dtype=float))
+                q = list(Torchfeld.linalg_inv(matrix) @ Torchfeld.feld(q, dtype=torch.float64, copy=True))
             steuer[kontrolle] = [round(float(x), 8) for x in q]
         return steuer, sorted(uebersprungen)
 

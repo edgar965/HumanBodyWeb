@@ -39,6 +39,10 @@ from core.dienste.bildmodellgvhmr import Bildmodellgvhmr
 from core.dienste.bildmodelllauf import Bildmodelllauf
 from core.dienste.bildmodelloptionen import Bildmodelloptionen
 from core.dienste.bildmodellstart import Bildmodellstart
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 with Wrapperpfad():
     from smplxlage import Smplxlage
@@ -192,8 +196,8 @@ class Netz3dTest(SimpleTestCase):
                 dienst.ordner().mkdir(parents=True)
                 punkte = np.array([[0, 0, 0], [0, 1.6, 0.1], [0.2, 0.8, 0]], np.float32)
                 dreiecke = np.array([[0, 1, 2]], np.uint32)
-                np.save(dienst.ordner() / 'a_gvhmr.npy', punkte)
-                np.save(dienst.ordner() / 'smplx_dreiecke.npy', dreiecke)
+                Npztorch.speichern_npy(dienst.ordner() / 'a_gvhmr.npy', punkte)
+                Npztorch.speichern_npy(dienst.ordner() / 'smplx_dreiecke.npy', dreiecke)
                 eintrag = {'datei': 'a.jpg', 'gvhmr': {'netz': 'a_gvhmr.npy', 'hoehe_m': 1.6, 'betas': [1]}}
                 aus = dienst.netz3d(eintrag)
                 zurueck = np.frombuffer(base64.b64decode(aus['punkte']), np.float32).reshape(-1, 3)
@@ -204,7 +208,7 @@ class Netz3dTest(SimpleTestCase):
                 self.assertNotIn('gelenke', aus)  # ein Lauf vor dem Rig: kein Rig, kein Fehler
                 # Mit Rig: Gelenke und Eltern kommen mit
                 gelenke = np.array([[0, 0.9, 0], [0.1, 0.9, 0]], np.float32)
-                np.save(dienst.ordner() / 'a_gvhmr_gelenke.npy', gelenke)
+                Npztorch.speichern_npy(dienst.ordner() / 'a_gvhmr_gelenke.npy', gelenke)
                 eintrag['gvhmr'].update({'gelenke': 'a_gvhmr_gelenke.npy', 'eltern': [-1, 0]})
                 aus = dienst.netz3d(eintrag)
                 self.assertEqual(aus['eltern'], [-1, 0])
@@ -219,7 +223,7 @@ class Netz3dTest(SimpleTestCase):
                 self.assertNotIn('kamera', dienst.netz3d(eintrag))
                 # Mit Kameradatei: Punkte in Kamerasicht bitgleich, Brennweite und Fotogröße dabei.
                 kamera = np.array([[0, -0.2, -1.2], [0, 1.4, -1.3], [0.2, 0.6, -1.2]], np.float32)
-                np.save(dienst.ordner() / 'a_gvhmr_kamera.npy', kamera)
+                Npztorch.speichern_npy(dienst.ordner() / 'a_gvhmr_kamera.npy', kamera)
                 aus = dienst.netz3d(eintrag)
                 self.assertEqual((aus['kamera']['fx'], aus['kamera']['breite'], aus['kamera']['hoehe']),
                                  (1500.0, 922, 2626))

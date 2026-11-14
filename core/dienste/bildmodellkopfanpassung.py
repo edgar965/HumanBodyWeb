@@ -23,7 +23,8 @@ RMS über alle gewichteten Punkte) und die Kopfzahlen (`variablen`, `regler`, `v
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -57,7 +58,7 @@ class Bildmodellkopfanpassung:
             logger.info('Kopf-Fit: der Satz %s hat keine Kopfregler', satz)
             return None
         teil = G9koerperteile.genesis_punkte(G9haut.holen())
-        kopfgewicht = np.where(teil == G9koerperteile.NUMMER[self.TEIL], np.asarray(gewicht, float), 0.0)
+        kopfgewicht = torch.where(teil == G9koerperteile.NUMMER[self.TEIL], Torchfeld.feld(gewicht, dtype=torch.float64), 0.0)
         if not (kopfgewicht > 0).any():
             logger.warning('Kopf-Fit: das Ziel hat keine gewichteten Kopfpunkte')
             return None
@@ -81,7 +82,7 @@ class Bildmodellkopfanpassung:
             )
         )
         return {
-            'ergebnis': self._gesamt(koerper, e, np.asarray(gewicht, float)),
+            'ergebnis': self._gesamt(koerper, e, Torchfeld.feld(gewicht, dtype=torch.float64)),
             'variablen': len(am_koerper.namen),
             'regler': {k: v for k, v in e['regler'].items()
                        if k not in koerper['regler'] or abs(koerper['regler'][k] - v) > 1e-6},
@@ -96,9 +97,9 @@ class Bildmodellkopfanpassung:
         """Das Ergebnis beider Stufen in der Form von `G9formanpassung.anpassen`: Regler und
         Rest aus der Kopfstufe (sie enthält den Körper als Grund), RMS neu über alle
         gewichteten Punkte, Gelenke und Teile aus der Körperstufe, der Kopfteil aus der Kopfstufe."""
-        rest = np.asarray(kopf['rest'], float)
+        rest = Torchfeld.feld(kopf['rest'], dtype=torch.float64)
         halten = gewicht > 0
-        rms = np.sqrt(((rest[halten] ** 2).sum(1) * gewicht[halten]).sum() / gewicht[halten].sum())
+        rms = Torchfeld.sqrt(((rest[halten] ** 2).sum(1) * gewicht[halten]).sum() / gewicht[halten].sum())
         teile = dict(koerper['teile'])
         teile.update(kopf['teile'])
         return {

@@ -25,6 +25,10 @@ from core.api import netzanfrage as modul
 from core.api.netzanfrage import Netzanfrage
 
 from ._sicher import Sicher
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class NetzAttrappe:
@@ -217,7 +221,7 @@ class PoseTest(NetzanfrageBasis):
 
     def ablegen(self, feld):
         ordner = self.temp()
-        np.save(ordner / Netzanfrage.TPOSE, feld)
+        Npztorch.speichern_npy(ordner / Netzanfrage.TPOSE, feld)
         return ordner
 
     def test_passende_datei_wird_eingesetzt(self):

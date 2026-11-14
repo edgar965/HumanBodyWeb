@@ -22,7 +22,8 @@ die brauchbaren Punkte. Beide Aufrufstellen bekommen jetzt die NaN-feste
 Fassung — vorher hatte sie nur eine von beiden.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 
 class Bildrahmen:
@@ -44,10 +45,10 @@ class Bildrahmen:
         warnen und `NaN` liefern, was im Browser ein Rechteck ohne Ausdehnung
         ergäbe.
         """
-        punkte = np.asarray(punkte, dtype=float)
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64)
         if punkte.ndim != 2 or punkte.shape[0] == 0 or punkte.shape[1] < 2:
             return None
-        gueltig = np.isfinite(punkte[:, 0]) & np.isfinite(punkte[:, 1])
+        gueltig = Torchfeld.isfinite(punkte[:, 0]) & Torchfeld.isfinite(punkte[:, 1])
         if not gueltig.any():
             return None
         x = punkte[gueltig, 0]

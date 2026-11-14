@@ -11,7 +11,7 @@ Die Endpunkte, die diese Klasse benutzen, stehen seit dem 27.08.2026 in
 
 import logging
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from ...daten.netzantwort import Netzantwort
 from .testkern import Testkern
@@ -77,7 +77,7 @@ class Testnetz:
     def _dreiecke(flaechen):
         """Vierecke -> zwei Dreiecke; Dreiecke nur umgedreht (Umlaufrichtung)."""
         if flaechen.ndim == 2 and flaechen.shape[1] == 4:
-            return np.concatenate([flaechen[:, [0, 2, 1]], flaechen[:, [0, 3, 2]]], axis=0)
+            return Torchfeld.cat([flaechen[:, [0, 2, 1]], flaechen[:, [0, 3, 2]]], axis=0)
         if flaechen.shape[1] == 3:
             return flaechen[:, [0, 2, 1]]
         return flaechen

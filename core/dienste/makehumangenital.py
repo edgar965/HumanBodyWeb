@@ -22,7 +22,8 @@ aus wie bei jedem Anatomie-Stück. Wie es im Bild aussieht, ist mit dem Bau nich
 """
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -54,31 +55,31 @@ class Makehumangenital:
         """`(kaefig, s, R, bericht)`: der Helfer starr auf Genesis — `s·R·p + t` aus den Hautpunkten um den Ansatz (hm08 → Klon, Umeyama ohne Spiegelung)."""
         from Genesis9.mhklon import G9mhklon
         from MakeHuman.basisnetz import Mhbasisnetz
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         mh = Mhbasisnetz.holen()
-        alle = np.arange(len(mh.punkte))
-        vorlage = np.asarray(mh.punkte_am_boden(alle), dtype=np.float64)
-        klon = np.asarray(G9mhklon.holen().punkte(), dtype=np.float64)
+        alle = Torchfeld.arange(len(mh.punkte))
+        vorlage = Torchfeld.feld(mh.punkte_am_boden(alle), dtype=torch.float64)
+        klon = Torchfeld.feld(G9mhklon.holen().punkte(), dtype=torch.float64)
         koerper = mh._punktnummern(('koerper',))
         kanten = {}
         for viereck in quelle.vierecke:
-            for a, b in zip(viereck, np.roll(viereck, -1), strict=True):
+            for a, b in zip(viereck, torch.roll(viereck, -1), strict=True):
                 kanten[tuple(sorted((int(a), int(b))))] = kanten.get(tuple(sorted((int(a), int(b)))), 0) + 1
         ansatz = quelle.nummern[sorted({p for k, n in kanten.items() if n == 1 for p in k})]
         abstand, _n = cKDTree(vorlage[ansatz]).query(vorlage[koerper])
         anker = koerper[abstand < self.ANKER_M]
         a, b = vorlage[anker], klon[anker]
         ma, mb = a.mean(axis=0), b.mean(axis=0)
-        u, sigma, vt = np.linalg.svd((b - mb).T @ (a - ma) / len(a))
-        d = np.diag([1.0, 1.0, np.sign(np.linalg.det(u @ vt))])
+        u, sigma, vt = Torchfeld.linalg_svd(Torchfeld.feld((b - mb).T @ (a - ma) / len(a)))
+        d = Torchfeld.diag(Torchfeld.feld([1.0, 1.0, Torchfeld.sign(Torchfeld.linalg_det(u @ vt))]))
         drehung = u @ d @ vt
-        s = float(np.trace(np.diag(sigma) @ d) / ((a - ma) ** 2).sum(axis=1).mean())
+        s = float(Torchfeld.trace(Torchfeld.diag(sigma) @ d) / ((a - ma) ** 2).sum(axis=1).mean())
         kaefig = s * (vorlage[quelle.nummern] - ma) @ drehung.T + mb
-        rest = np.linalg.norm(s * (a - ma) @ drehung.T + mb - b, axis=1) * 1000.0
-        winkel = float(np.degrees(np.arccos(np.clip((np.trace(drehung) - 1.0) / 2.0, -1.0, 1.0))))
+        rest = Torchfeld.linalg_norm(s * (a - ma) @ drehung.T + mb - b, dim=1) * 1000.0
+        winkel = float(Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip((Torchfeld.trace(drehung) - 1.0) / 2.0, -1.0, 1.0))))
         return kaefig, s, drehung, {'anker': int(len(anker)), 'massstab': round(s, 4), 'drehung_grad': round(winkel, 2),
-                                    'anker_rest_mm': [round(float(np.median(rest)), 1), round(float(rest.max()), 1)]}
+                                    'anker_rest_mm': [round(float(Torchfeld.median(rest)), 1), round(float(rest.max()), 1)]}
 
     def bauen(self):
         """Das Stück schreiben, seine sechs MakeHuman-Regler und die Regler des Penis bauen → Bilanz von `G9eigenstueck.schreiben` mit `bericht`."""
@@ -90,9 +91,9 @@ class Makehumangenital:
         kaefig, massstab, drehung, lage = self.lage(quelle)
         polys, uvs, ueber = quelle.kaefig_daz()
         stufe = G9netzstufe('mh_genital', polys, [self.MATERIAL], uvs, ueber, None, self.STUFE)
-        roh = np.asarray(stufe.punkte(kaefig), dtype=np.float64)
-        dreiecke = np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3)
-        uv_ecken = np.asarray(stufe.uv, dtype=np.float64)[dreiecke]
+        roh = Torchfeld.feld(stufe.punkte(kaefig), dtype=torch.float64)
+        dreiecke = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).reshape(-1, 3)
+        uv_ecken = Torchfeld.feld(stufe.uv, dtype=torch.float64)[dreiecke]
         erste, rep = self.nahtfrei(roh)
         punkte, dreiecke = roh[erste], rep[dreiecke]
         aussen = self.aussen(punkte, dreiecke)
@@ -100,7 +101,7 @@ class Makehumangenital:
             dreiecke, uv_ecken = dreiecke[:, [0, 2, 1]], uv_ecken[:, [0, 2, 1]]
         bilanz = self.schreiben(punkte, dreiecke, uv_ecken)
         bericht = {'helfer_punkte': int(len(quelle.nummern)), 'helfer_vierecke': int(len(quelle.vierecke)), 'stufe': self.STUFE, 'lage': lage,
-                   'aussen_anteil': round(max(aussen, 1.0 - aussen), 3), 'hoehe_mm': [round(float(np.ptp(punkte[:, 1])) * 1000.0, 1)]}
+                   'aussen_anteil': round(max(aussen, 1.0 - aussen), 3), 'hoehe_mm': [round(float(Torchfeld.ptp(punkte[:, 1])) * 1000.0, 1)]}
         bericht['regler'] = self.regler(quelle, stufe, kaefig, erste, massstab * quelle.massstab * drehung, bilanz['stueck'])
         bericht['regler_gebaut'], bericht['regler_gescheitert'] = self._penis(bilanz['stueck'])
         bilanz['bericht'] = bericht
@@ -116,7 +117,7 @@ class Makehumangenital:
     def aussen(punkte, dreiecke):
         """Anteil der Dreiecke, deren Normale von der Mitte des Stücks weg zeigt."""
         a, b, c = (punkte[dreiecke[:, i]] for i in range(3))
-        normale = np.cross(b - a, c - a)
+        normale = Torchfeld.cross(b - a, c - a)
         return float(((normale * ((a + b + c) / 3.0 - punkte.mean(axis=0))).sum(axis=1) > 0).mean())
 
     def schreiben(self, punkte, dreiecke, uv_ecken):
@@ -135,10 +136,10 @@ class Makehumangenital:
         ordner.mkdir(parents=True, exist_ok=True)
         material = {'name': self.MATERIAL, 'farbe': self.FARBE, 'bild': None, 'shininess': 0.4, 'opacity': None}
         netz = G9objleser.lesen(str(Blendimportbilder.obj(ordner, punkte, dreiecke, uv_ecken, material)))
-        roh = np.asarray(netz['punkte'], dtype=np.float64)
+        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
         bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, self.KATEGORIE, material, heben=False, wicklung=False, knochen=self.KNOCHEN)
         figur = Dazgeografthaut.grundfigur()
-        hoehe = np.round(Blendimportschamhoehe.ueber_figur(roh, trimesh.Trimesh(figur['punkte'], figur['dreiecke'], process=False)), 1).tolist()
+        hoehe = Torchfeld.round(Blendimportschamhoehe.ueber_figur(roh, trimesh.Trimesh(figur['punkte'], figur['dreiecke'], process=False)), 1).tolist()
         G9stueckersatz.schreiben(bilanz['duf'], [], haut_tiefe_mm=self.HAUT_TIEFE_MM, anatomie=self.ANATOMIE, eigene_gewichte=True, hoehe_mm=hoehe)
         return bilanz
 
@@ -146,22 +147,22 @@ class Makehumangenital:
         """Je Ziel und Seite einen Morph des Stücks ablegen → `{name: weg_max_mm}`. `faktor` (3 × 3): MakeHumans Verschiebung → Meter auf Genesis (s·0,1·R)."""
         from Genesis9.garderobe import G9garderobe
         from Genesis9.kleidmorphe import G9kleidmorphe
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         G9garderobe.vergessen()
         teile, kaefige, _y0, _y1, _mitte, _eintrag = G9kleidmorphe.kaefige(stueck)
         if len(teile) != 1:
             raise ValueError('%s hat %d Teile — erwartet EINS' % (stueck, len(teile)))
-        grund = np.asarray(stufe.punkte(kaefig), dtype=np.float64)[erste]
+        grund = Torchfeld.feld(stufe.punkte(kaefig), dtype=torch.float64)[erste]
         abstand, nummer = cKDTree(grund).query(kaefige[0])
         if float(abstand.max()) > self.MAX_ABSTAND_M:
             raise ValueError('Ein Punkt des Stücks liegt %.2f mm neben dem gerechneten Netz (Grenze %.1f mm)' % (abstand.max() * 1e3, self.MAX_ABSTAND_M * 1e3))
         aus = {}
         for endung, ziel, anzeige in quelle.ZIELE:
-            delta = np.asarray(stufe.punkte(kaefig + quelle.ziel(ziel) @ faktor.T), dtype=np.float64)[erste] - grund
+            delta = Torchfeld.feld(stufe.punkte(kaefig + quelle.ziel(ziel) @ faktor.T), dtype=torch.float64)[erste] - grund
             regler = {'anzeige': '%s (MakeHuman)' % anzeige, 'min': 0.0, 'max': 1.0, 'vorgabe': 0.0, 'gruppe': self.REGLERGRUPPE}
             brief = G9kleidmorphe.ablegen(stueck, self.PRAEFIX + endung, [f.kennung for f, _lage in teile], [delta[nummer]],
-                                          {'regler': regler, 'makehuman_ziel': ziel, 'faktor': np.round(faktor, 6).tolist()})
+                                          {'regler': regler, 'makehuman_ziel': ziel, 'faktor': Torchfeld.round(faktor, 6).tolist()})
             aus[self.PRAEFIX + endung] = brief['weg_max_mm']
         return aus
 

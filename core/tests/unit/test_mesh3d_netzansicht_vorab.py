@@ -48,6 +48,21 @@ class VorabTest(SimpleTestCase):
                 mock.patch.object(Mesh3dnetzansicht, 'anstossen', side_effect=OSError('Platte voll')):
             self.assertIsNone(Mesh3dnetzansicht.vorab('2026.10.12.10.00.00'))
 
+    def test_4_auftraege_der_kette_bauen_die_vorschau_erst_beim_oeffnen(self):
+        """12.11.2026: Aufträge „Nur Rig“ der Mesh-Genesis-Kette tragen `vorschau_vorab: False` — kein zweiter Prozess neben dem Skriptdienst; ohne den Schlüssel wie bisher."""
+        with mock.patch.object(Blendimportablage, 'stand', return_value={'bereich': 'mesh3d', 'vorschau_vorab': False}), \
+                mock.patch.object(Mesh3dnetzansicht, 'anstossen') as anstossen:
+            self.assertIsNone(Mesh3dnetzansicht.vorab('2026.10.12.10.00.00'))
+        anstossen.assert_not_called()
+        with mock.patch.object(Blendimportablage, 'stand', return_value={'bereich': 'mesh3d', 'vorschau_vorab': True}), \
+                mock.patch.object(Mesh3dnetzansicht, 'anstossen', return_value={'status': 'baut'}) as anstossen:
+            self.assertEqual(Mesh3dnetzansicht.vorab('2026.10.12.10.00.00'), {'status': 'baut'})
+
+    def test_5_die_kette_legt_ihre_auftraege_ohne_vorab_an(self):
+        """Wächter am Quelltext (nichts gestartet): `Vorstufenrig.anlegen` schreibt `vorschau_vorab: False` in den Stand."""
+        text = (Path(__file__).resolve().parents[4] / 'meshgenesis' / 'meshgenesis_vorstufe_rig.py').read_text(encoding='utf-8')
+        self.assertIn("'vorschau_vorab': False", text)
+
 
 class QuelleTest(SimpleTestCase):
     databases = set()

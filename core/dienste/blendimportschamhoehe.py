@@ -10,7 +10,8 @@ VORZEICHEN: plus = vor der Figurfläche (außen), minus = dahinter (das Stück l
 Die Richtung der Flächennormalen entscheidet; sie gilt nicht als gegeben: stünden die Punkte, die mehr als `SICHER_MM` von der Fläche weg sind,
 überwiegend „hinter" ihr, ist die Fläche nach innen gewickelt und das Vorzeichen wird für alle gedreht.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportschamhoehe']
 
@@ -24,12 +25,12 @@ class Blendimportschamhoehe:
         """`(N,)` Höhe (mm, mit Vorzeichen) jedes Punkts über der Figurfläche `flaeche` (trimesh, Ruhelage); Punkte in Metern."""
         import trimesh
 
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         nah, abstand, dreieck = trimesh.proximity.closest_point(flaeche, p)
-        vorzeichen = np.sign(((p - nah) * flaeche.face_normals[dreieck]).sum(axis=1))
+        vorzeichen = Torchfeld.sign(((p - nah) * flaeche.face_normals[dreieck]).sum(axis=1))
         vorzeichen[vorzeichen == 0.0] = 1.0
         hoehe = abstand * 1000.0 * vorzeichen
-        weit = np.abs(hoehe) > cls.SICHER_MM
-        if int(weit.sum()) and float(np.sign(hoehe[weit]).mean()) < 0.0:
+        weit = Torchfeld.abs(hoehe) > cls.SICHER_MM
+        if int(weit.sum()) and float(Torchfeld.sign(hoehe[weit]).mean()) < 0.0:
             hoehe = -hoehe
         return hoehe

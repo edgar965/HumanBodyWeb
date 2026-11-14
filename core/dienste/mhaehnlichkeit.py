@@ -22,7 +22,8 @@ Rest 10 cm); mit der Achse sinkt er auf 2,2 cm.
 DIE GELENKE: Für die Ähnlichkeit sind sie bekannt (`(s − 1)·(Gelenk − C)`, Kopf und Ende); nur der Rest wird aus der Haut geschätzt (`G9gelenkversatz.fuer_morph(…, aehnlich=…)`) —
 sonst schöbe die Schätzung aus der Haut (Oberflächenpunkte um das Gelenk) die Wirbelsäulengelenke beim Baby um rund 100 mm daneben (gemessen: `spine4` +98 mm bei reiner Ähnlichkeit).
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.aehnlichkeit import G9aehnlichkeit
 from Genesis9.basisnetz import G9basisnetz
 
@@ -43,11 +44,11 @@ class Mhaehnlichkeit:
     def zerlegen(self, delta):
         u"""`(s, unter, zentrum, rest)` für ein hm08-Delta (dm): Höhenverhältnis, Abstand des besten Mittelpunkts unter dem Boden (m), der Mittelpunkt in MakeHuman (dm) und das Delta ohne die Ähnlichkeit (dm)."""
         koerper = self.bauer.uebertragung.koerper
-        p0 = np.asarray(self.bauer.vorgabe, dtype=np.float64)
-        delta = np.asarray(delta, dtype=np.float64)
-        s = float(np.ptp((p0 + delta)[koerper][:, 1])) / float(np.ptp(p0[koerper][:, 1]))
+        p0 = Torchfeld.feld(self.bauer.vorgabe, dtype=torch.float64)
+        delta = Torchfeld.feld(delta, dtype=torch.float64)
+        s = float(Torchfeld.ptp((p0 + delta)[koerper][:, 1])) / float(Torchfeld.ptp(p0[koerper][:, 1]))
         beste_hoehe = float((p0[koerper][:, 1] - delta[koerper][:, 1] / (s - 1.0)).mean())          # kleinste Quadrate: C = Mittel(P − Δ/(s − 1)); x und z liegen auf der Körperachse
-        zentrum = np.array([0.0, beste_hoehe, 0.0])
+        zentrum = Torchfeld.feld([0.0, beste_hoehe, 0.0], copy=True)
         unter = (float(p0[koerper][:, 1].min()) - beste_hoehe) * self.bauer.METER
         return s, unter, zentrum, delta - (s - 1.0) * (p0 - zentrum)
 
@@ -55,6 +56,6 @@ class Mhaehnlichkeit:
         u"""`(feld, rest, s, unter, zentrum)`: das Käfigfeld (m) = Ähnlichkeit + übertragener Rest, dazu der Rest allein (für die Gelenke), `s`, der Abstand `unter` und der Mittelpunkt im Rahmen des Käfigs."""
         s, unter, _zentrum_mh, rest_dm = self.zerlegen(delta)
         rest = self.bauer.uebertragung.uebertragen(rest_dm * self.bauer.METER)
-        basis = np.asarray(G9basisnetz.holen().punkte, dtype=np.float64)
+        basis = Torchfeld.feld(G9basisnetz.holen().punkte, dtype=torch.float64)
         zentrum = G9aehnlichkeit.zentrum(float(basis[:, 1].min()), unter)
         return (s - 1.0) * (basis - zentrum) + rest, rest, s, unter, zentrum

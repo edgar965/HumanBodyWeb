@@ -5,16 +5,17 @@ Nur die Daten: Punkte, Dreiecke und UV je Dreiecksecke. Normalen und Tangenten r
 diese Klasse — frühere Näherungen hier (winkelgewichtete Normalen in float64, Tangenten aus Summen je UV-Naht) sind weg, sie waren nicht Blenders Rechnung.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hautbackenflaeche']
 
 
 class Hautbackenflaeche:
     def __init__(self, punkte, dreiecke, uv_ecken):
-        self.punkte = np.ascontiguousarray(punkte, dtype=np.float64)
-        self.dreiecke = np.ascontiguousarray(dreiecke, dtype=np.int32)
-        self.uv_ecken = np.ascontiguousarray(uv_ecken, dtype=np.float32)
+        self.punkte = Torchfeld.feld(punkte, dtype=torch.float64)
+        self.dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int32)
+        self.uv_ecken = Torchfeld.feld(uv_ecken, dtype=torch.float32)
         if self.dreiecke.ndim != 2 or self.dreiecke.shape[1] != 3 or self.uv_ecken.shape != (len(self.dreiecke), 3, 2):
             raise ValueError('Dreiecke %s und UV je Ecke %s passen nicht zusammen' % (self.dreiecke.shape, self.uv_ecken.shape))
 
@@ -35,4 +36,4 @@ class Hautbackenflaeche:
             for k in range(1, len(f) - 1):                      # Fächer: ein Viereck wird zwei Dreiecke
                 dreiecke.append([f[0][0], f[k][0], f[k + 1][0]])
                 uv_ecken.append([uv[f[0][1]], uv[f[k][1]], uv[f[k + 1][1]]])
-        return cls(np.array(v), np.array(dreiecke), np.array(uv_ecken))
+        return cls(Torchfeld.feld(v, copy=True), Torchfeld.feld(dreiecke, copy=True), Torchfeld.feld(uv_ecken, copy=True))

@@ -18,7 +18,8 @@ import json
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 logger = logging.getLogger('core')
 
@@ -42,13 +43,13 @@ class Kleidertanz:
     def bild(self, spuren, nummer):
         """Die Punkte aller Teile im Bild `nummer` — ein Teil ohne Haut bleibt in Ruhe."""
         welt = self.haut.matrizen(spuren, nummer)
-        return [self.haut.haeuten(t['punkte'], t['haut'], welt) if t.get('haut') else np.asarray(t['punkte'])
+        return [self.haut.haeuten(t['punkte'], t['haut'], welt) if t.get('haut') else Torchfeld.feld(t['punkte'])
                 for t in self.teile]
 
     def film(self, spuren, aus, bilder, breite, hoehe, fortschritt=None):
         """→ {video, bilder, bildrate, sekunden, teile: {sorte: {abstand_mm: [erstes, letztes], weg_mm}}}."""
         import cv2
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         from .genesishaarrender import Genesishaarrender
         t0 = time.perf_counter()
@@ -81,8 +82,8 @@ class Kleidertanz:
                                   0.0, pfad, groesse=(int(breite), int(hoehe)))
                 bgr = cv2.imread(str(pfad), cv2.IMREAD_UNCHANGED)
                 if bgr.shape[2] == 4:                       # Alpha auf Weiß
-                    alpha = bgr[:, :, 3:4].astype(np.float32) / 255.0
-                    bgr = (bgr[:, :, :3].astype(np.float32) * alpha + 255.0 * (1.0 - alpha)).astype(np.uint8)
+                    alpha = Torchfeld.astype(bgr[:, :, 3:4], torch.float32) / 255.0
+                    bgr = Torchfeld.astype(Torchfeld.astype(bgr[:, :, :3], torch.float32) * alpha + 255.0 * (1.0 - alpha), torch.uint8)
                 schreiber.write(bgr)
                 if i in (0, len(nummern) // 2):     # Anfang und Mitte: Anfang und Ende einer Schleife sind gleich
                     stand[i] = punkte
@@ -100,7 +101,7 @@ class Kleidertanz:
         aus = {}
         for i, t in enumerate(self.teile):
             if t['art'] == 'koerper':
-                weg = float(np.linalg.norm(letztes[i] - erstes[i], axis=1).mean()) * 1e3
+                weg = float(Torchfeld.linalg_norm(letztes[i] - erstes[i], dim=1).mean()) * 1e3
                 aus['koerper'] = {'weg_mm': round(weg, 1)}
                 continue
             abstand = []
@@ -108,5 +109,5 @@ class Kleidertanz:
                 d, _ = cKDTree(punkte[0]).query(punkte[i])
                 abstand.append(round(float(d.mean()) * 1e3, 1))
             aus[t['sorte']] = {'abstand_mm': abstand,
-                               'weg_mm': round(float(np.linalg.norm(letztes[i] - erstes[i], axis=1).mean()) * 1e3, 1)}
+                               'weg_mm': round(float(Torchfeld.linalg_norm(letztes[i] - erstes[i], dim=1).mean()) * 1e3, 1)}
         return aus

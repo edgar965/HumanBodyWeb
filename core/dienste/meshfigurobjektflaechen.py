@@ -11,7 +11,9 @@ Jeder Objektbauer schreibt hier die Maske, die er wirklich benutzt hat (`arbeit/
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -31,7 +33,7 @@ class Meshfigurobjektflaechen:
         """Die Ablage eines früheren Laufs entfernen (vor dem Bau der Objekte)."""
         for pfad in cls._pfade(ablage):
             try:
-                pfad.unlink()
+                Npztorch.loeschen(pfad)          # .pt seit 13.11.2026
             except OSError:
                 logger.warning('Objektflächen: %s nicht entfernt', pfad, exc_info=True)
 
@@ -39,7 +41,7 @@ class Meshfigurobjektflaechen:
     def schreiben(cls, ablage, name, maske):
         """Die Flächen des Objekts `name` (`kleidung`, `haar`, `teil_<begriff>`) ablegen. Ein Fehler hier bricht den Bau des Objekts nie ab."""
         try:
-            np.savez_compressed(ablage.arbeit(cls.PRAEFIX + name + '.npz'), maske=np.asarray(maske, dtype=bool))
+            Npztorch.speichern(ablage.arbeit(cls.PRAEFIX + name + '.npz'), maske=Torchfeld.feld(maske, dtype=torch.bool), komprimiert=True)
         except OSError:
             logger.warning('Objektflächen: %s nicht geschrieben', name, exc_info=True)
 
@@ -48,6 +50,6 @@ class Meshfigurobjektflaechen:
         """`{objekt: (F,) bool}` — alles, was in dieser Ablage steht."""
         aus = {}
         for pfad in cls._pfade(ablage):
-            with np.load(pfad) as d:
-                aus[pfad.name[len(cls.PRAEFIX):-len('.npz')]] = np.asarray(d['maske'], dtype=bool)
+            with Npztorch.lesen(pfad) as d:
+                aus[pfad.name[len(cls.PRAEFIX):-len('.npz')]] = Torchfeld.feld(d['maske'], dtype=torch.bool)
         return aus

@@ -15,6 +15,10 @@ import numpy as np
 from django.conf import settings
 
 from core.dienste.meshgenesisrechenlauf import Meshgenesisrechenlauf
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 
 class RechenlaufRueckfallTest(unittest.TestCase):
@@ -33,7 +37,7 @@ class RechenlaufRueckfallTest(unittest.TestCase):
         felder = {'punkte': np.zeros((3, 3), dtype=np.float32)}
         if weg is not None:
             felder['weg'] = np.array(weg)
-        np.savez(d / 'apose.npz', **felder)
+        Npztorch.speichern(d / 'apose.npz', **felder)
 
     def test_mia_apose_jungste_kette(self):
         self.assertFalse(self.lauf.mia_apose())

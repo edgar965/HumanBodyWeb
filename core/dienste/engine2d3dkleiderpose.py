@@ -16,7 +16,8 @@ Ist das Häkchen an und die Pose veraltet oder nie gerechnet, bricht die Körper
 import logging
 import os
 
-import numpy as np
+from KoerperKI_alle.npztorch import Npztorch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.utils import timezone
 
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
@@ -104,7 +105,7 @@ class Engine2d3dKleiderpose:
                      'liegt': bool((x1 - x0) > self.LIEGT_AB * (y1 - y0)), 'seitenverhaeltnis': round((x1 - x0) / float(y1 - y0), 2)},
             'abbildung': {'variante': abbildung.variante, 'iou': round(abbildung.iou, 3), 'alle_iou': {k: round(v, 3) for k, v in abbildung.alle_iou.items()},
                           'pixel_je_einheit': [round(abbildung.sx, 2), round(abbildung.sy, 2)]},
-            'netz_ausdehnung': [round(float(w), 4) for w in np.ptp(scan.punkte, axis=0)],
+            'netz_ausdehnung': [round(float(w), 4) for w in Torchfeld.liste(Torchfeld.ptp(scan.punkte, axis=0))],
             'gelenke': {'gesetzt': int((treffer > 0).sum()), 'haupt_gesetzt': sum(1 for g in liste if g['name'] in haupt), 'weggelassen': list(weglassen),
                         'ausserhalb': [g['name'] for g in liste if g['stand'] == 'ausserhalb'], 'liste': liste},
             'masstab': masstab, 'bilder': bilder, 'datei': 'landmarken.npz', 'dauer_sam_s': sam.get('dauer_s'),
@@ -133,7 +134,7 @@ class Engine2d3dKleiderpose:
         pose = (job.ergebnis or {}).get('pose')
         if not pose:
             return None, 'noch nicht gerechnet'
-        if not ablage.pose(str(pose.get('datei') or '-')).is_file():
+        if not Npztorch.da(ablage.pose(str(pose.get('datei') or '-'))):          # Name aus dem Stand, Datei seit 13.11.2026 .pt
             return pose, 'Landmarken-Datei fehlt'
         jetzt = Engine2d3dKleideroptionen.pose(job.optionen)
         anders = [k for k in ('drehung', 'weglassen', 'masstab') if (pose.get('optionen') or {}).get(k) != jetzt[k]]

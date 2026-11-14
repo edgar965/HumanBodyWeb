@@ -11,7 +11,8 @@ als numpy hinein, Felder als numpy heraus. Abweichungen sind Rundung (float32 st
 
 import math
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 import warp as wp
 
 from ..blendimportnormalen import Blendimportnormalen
@@ -145,14 +146,14 @@ class Hautnachnormalen:
         self.filter = Hautnachfilter(geraet)
 
     def _auf(self, a, dtype):
-        return wp.array(np.ascontiguousarray(a), dtype=dtype, device=self.geraet)
+        return wp.array(Torchfeld.feld(a), dtype=dtype, device=self.geraet)
 
     def saeubern(self, normal, leer=None, grad=None):
         """`(neue Karte, Anteil der geänderten Texel in %)` — `normal` (H, W, 3) uint8; wie `Blendimportnormalen.saeubern`; ändert die Eingabe nicht."""
         h, w = normal.shape[:2]
         g = self.geraet
         n = self._auf(normal, wp.uint8)
-        fehl = self._auf(np.zeros((h, w), np.uint8) if leer is None else leer.astype(np.uint8), wp.uint8)
+        fehl = self._auf(torch.zeros((h, w), dtype=torch.uint8, device='cuda') if leer is None else Torchfeld.astype(leer, torch.uint8), wp.uint8)
         schlecht = wp.zeros((h, w), dtype=wp.uint8, device=g)
         wp.launch(_falsche, dim=(h, w), inputs=[n, fehl, math.cos(math.radians(Blendimportnormalen.GRENZE_GRAD if grad is None else grad)), schlecht], device=g)
         if Blendimportnormalen.RAND_PX:
@@ -171,7 +172,7 @@ class Hautnachnormalen:
             teiler = 1
         sigma = (Blendimportnormalen.FORM_PX if sigma_px is None else float(sigma_px)) / teiler
         n = self._auf(normal, wp.uint8)
-        fehl = self._auf(np.zeros((h, w), np.uint8) if leer is None else leer.astype(np.uint8), wp.uint8)
+        fehl = self._auf(torch.zeros((h, w), dtype=torch.uint8, device='cuda') if leer is None else Torchfeld.astype(leer, torch.uint8), wp.uint8)
         tx, ty, gueltig = (wp.empty((h, w), dtype=wp.float32, device=g) for _ in range(3))
         wp.launch(_neigung, dim=(h, w), inputs=[n, fehl, tx, ty, gueltig], device=g)
         tief = [self._tief(f, gueltig, sigma, teiler) for f in (tx, ty)]

@@ -10,7 +10,8 @@ Punkt des Bestandteils: am Zauberer-Stab 4.338 Handflächen binnen 4 cm der Achs
 (höchstens `MAX_ENTFERNUNG_M`). `stabfoermig` (längste durch zweitlängste Ausdehnung ab `STAB_VERHAELTNIS`): Stab, Schwert, Schirm hängen an der Schwerkraft (Ruhelage: `Blendimportrequisit.ruhelage_gehalten`), ein Schild nicht.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Meshfigurhalter']
 
@@ -33,27 +34,27 @@ class Meshfigurhalter:
         """(F,) bool — die Flächen, die Sapiens als Hand sieht (beide Etiketten, mindestens `MIN_STIMMEN` Pixel); `klassen` (F, 28) Stimmen oder None."""
         if klassen is None:
             return None
-        return (klassen.max(axis=1) >= cls.MIN_STIMMEN) & np.isin(klassen.argmax(axis=1), cls.HAND_KLASSEN)
+        return (Torchfeld.amax(klassen, dim=1) >= cls.MIN_STIMMEN) & torch.isin(klassen.argmax(axis=1), Torchfeld.feld(cls.HAND_KLASSEN))
 
     @classmethod
     def pruefen(cls, scan, klassen, bestandteil, haende):
         """`{seite, zentrum, flaechen, stabfoermig}` oder `None`. `scan` mit `punkte`/`flaechen` (Lage des Netzes), `klassen` (F, 28) Sapiens-Stimmen, `bestandteil` (P, 3) Punkte des Bestandteils,
         `haende` `{'r': (3,), 'l': (3,)}` — die Handmitten der Figur in der Haltung."""
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
-        flaechen, punkte = np.asarray(scan.flaechen), np.asarray(scan.punkte)
+        flaechen, punkte = Torchfeld.feld(scan.flaechen), Torchfeld.feld(scan.punkte)
         gesehen = cls.haendeflaechen(klassen)
         if not gesehen.any() or not len(bestandteil):
             return None
         mitten = punkte[flaechen[gesehen]].mean(axis=1)
-        abstand, _ = cKDTree(np.asarray(bestandteil)).query(mitten, workers=-1)
+        abstand, _ = cKDTree(Torchfeld.feld(bestandteil)).query(mitten, workers=-1)
         beruehrt = abstand < cls.NAH_M
         if int(beruehrt.sum()) < cls.MIN_FLAECHEN:
             return None
         zentrum = mitten[beruehrt].mean(axis=0)
         seite, naechste = None, cls.MAX_ENTFERNUNG_M
         for s, mitte in haende.items():
-            d = float(np.linalg.norm(np.asarray(mitte) - zentrum))
+            d = float(Torchfeld.linalg_norm(Torchfeld.feld(mitte) - zentrum))
             if d < naechste:
                 seite, naechste = s, d
         if seite is None:
@@ -63,9 +64,9 @@ class Meshfigurhalter:
     @classmethod
     def stabfoermig(cls, punkte):
         """Ist der Gegenstand lang und dünn (Stab, Schwert, Schirm)?"""
-        p = np.asarray(punkte, dtype=np.float64)
+        p = Torchfeld.feld(punkte, dtype=torch.float64)
         if len(p) < 10:
             return False
-        s = np.linalg.svd(p - p.mean(axis=0), compute_uv=False)
+        s = Torchfeld.linalg_svd(p - p.mean(axis=0), compute_uv=False)
         # Ohne Division: eine ganz gerade Linie (zweite Ausdehnung 0) ist der dünnste Stab, nicht „kein Stab" (vorher `s[1] > 0 and …`).
         return bool(s[0] > 0 and s[0] >= cls.STAB_VERHAELTNIS * s[1])

@@ -16,7 +16,9 @@ bietet den Schalter nicht an. Ergebnis: `ergebnis.haltung = {gueltig, drehung, r
 
 import logging
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 logger = logging.getLogger('core')
 
@@ -33,12 +35,12 @@ class Meshfighaltung:
 
     def __init__(self, r, t):
         """`r` (3, 3), `t` (3,): Netz ≈ gebackene Figur @ r.T + t."""
-        self.r = np.asarray(r, dtype=np.float64)
-        self.t = np.asarray(t, dtype=np.float64)
+        self.r = Torchfeld.feld(r, dtype=torch.float64)
+        self.t = Torchfeld.feld(t, dtype=torch.float64)
 
     def punkte(self, netz):
         """(M, 3) — Punkte des Netzes (Lage der Erkennung, Meter) im Raum der gebackenen Figur."""
-        return (np.asarray(netz, dtype=np.float64) - self.t) @ self.r
+        return (Torchfeld.feld(netz, dtype=torch.float64) - self.t) @ self.r
 
     # ------------------------------------------------------------- Rechnung
 
@@ -55,21 +57,21 @@ class Meshfighaltung:
     @staticmethod
     def _kabsch(quelle, ziel):
         mq, mz = quelle.mean(0), ziel.mean(0)
-        u, _, vt = np.linalg.svd((quelle - mq).T @ (ziel - mz))
-        vorzeichen = np.sign(np.linalg.det(vt.T @ u.T))
-        r = vt.T @ np.diag([1.0, 1.0, vorzeichen]) @ u.T
+        u, _, vt = Torchfeld.linalg_svd(Torchfeld.feld((quelle - mq).T @ (ziel - mz)))
+        vorzeichen = Torchfeld.sign(Torchfeld.linalg_det(vt.T @ u.T))
+        r = vt.T @ Torchfeld.diag(Torchfeld.feld([1.0, 1.0, vorzeichen])) @ u.T
         return r, mz - mq @ r.T
 
     @classmethod
     def ausrichten(cls, quelle, ziel):
         """`(r, t, abstand)` — starr, ohne Maßstab: `ziel ≈ quelle @ r.T + t`; `abstand` (N,) in Metern über ALLE Punkte. Der erste Durchgang nimmt alle Punkte, die weiteren nur die `ANTEIL` besten (Finger und Gelenkkorrekturen ziehen sonst an der Lage)."""
-        quelle, ziel = np.asarray(quelle, dtype=np.float64), np.asarray(ziel, dtype=np.float64)
+        quelle, ziel = Torchfeld.feld(quelle, dtype=torch.float64), Torchfeld.feld(ziel, dtype=torch.float64)
         r, t = cls._kabsch(quelle, ziel)
         for _ in range(cls.DURCHGAENGE - 1):
-            abstand = np.linalg.norm(quelle @ r.T + t - ziel, axis=1)
-            gut = abstand <= np.quantile(abstand, cls.ANTEIL)
+            abstand = Torchfeld.linalg_norm(quelle @ r.T + t - ziel, dim=1)
+            gut = abstand <= Torchfeld.quantile(abstand, cls.ANTEIL)
             r, t = cls._kabsch(quelle[gut], ziel[gut])
-        return r, t, np.linalg.norm(quelle @ r.T + t - ziel, axis=1)
+        return r, t, Torchfeld.linalg_norm(quelle @ r.T + t - ziel, dim=1)
 
     @classmethod
     def rechnen(cls, lauf):
@@ -80,34 +82,34 @@ class Meshfighaltung:
         job, ablage = lauf.job, lauf.ablage
         zustand, ende, posiert = ablage.arbeit('zustand.npz'), ablage.arbeit('genesis_ende.npz'), ablage.arbeit('posiert.npy')
         stellung = job.stellung()
-        if not (zustand.is_file() and ende.is_file() and posiert.is_file() and stellung):
+        if not (Npztorch.da(zustand) and Npztorch.da(ende) and Npztorch.da(posiert) and stellung):
             job.ergebnis['haltung'] = {'gueltig': False, 'grund': 'Zustand der Anpassung, Figur oder Regler fehlen'}
             return job.ergebnis['haltung']
-        with np.load(zustand) as z:
-            theta = np.asarray(z['theta'], dtype=np.float64)
-        with np.load(ende) as d:
-            frei, namen = np.asarray(d['frei']), [str(n) for n in d['knochen']]
+        with Npztorch.lesen(zustand) as z:
+            theta = Torchfeld.feld(z['theta'], dtype=torch.float64)
+        with Npztorch.lesen(ende) as d:
+            frei, namen = Torchfeld.feld(d['frei']), [str(n) for n in d['knochen']]
         if len(theta) != len(frei):
             job.ergebnis['haltung'] = {'gueltig': False, 'grund': 'Zustand (%d Knochen) und Figur (%d freie Knochen) passen nicht zusammen' % (len(theta), len(frei))}
             return job.ergebnis['haltung']
         drehung = cls.drehung_aus(theta, frei, namen)
         # Genau der Weg der Netzanfrage des Browsers (`G9figur.formung` → `G9koerpernetz`): Regler begrenzt, Haltung gebacken, Füße auf 0.
         punkte, _, _ = G9reglerableitung.lage(G9formung.aus_abfrage(dict(stellung), drehung))
-        r, t, abstand = cls.ausrichten(punkte, np.load(posiert))
+        r, t, abstand = cls.ausrichten(punkte, Npztorch.lesen(posiert))
         mm = abstand * 1000.0
-        rms = float(np.sqrt((mm ** 2).mean()))
+        rms = float(Torchfeld.sqrt((mm ** 2).mean()))
         gueltig = rms <= cls.MAX_RMS_MM
-        np.savez(ablage.arbeit(cls.DATEI), r=r, t=t)
+        Npztorch.speichern(ablage.arbeit(cls.DATEI), r=r, t=t, komprimiert=False)
         job.ergebnis['haltung'] = {
             'gueltig': bool(gueltig),
             'quelle': 'zustand.npz',
             'drehung': drehung,
             'knochen': len(drehung),
             'rest_rms_mm': round(rms, 2),
-            'rest_p95_mm': round(float(np.quantile(mm, 0.95)), 2),
+            'rest_p95_mm': round(float(Torchfeld.quantile(mm, 0.95)), 2),
             'rest_max_mm': round(float(mm.max()), 1),
             'verschiebung_m': [round(float(x), 4) for x in t],
-            'drehwinkel_grad': round(float(np.degrees(np.arccos(np.clip((np.trace(r) - 1.0) / 2.0, -1.0, 1.0)))), 2),
+            'drehwinkel_grad': round(float(Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip((Torchfeld.trace(r) - 1.0) / 2.0, -1.0, 1.0)))), 2),
         }
         if not gueltig:
             job.ergebnis['haltung']['grund'] = 'Die gebackene Figur liegt %.1f mm RMS neben der angepassten (Grenze %.0f mm)' % (rms, cls.MAX_RMS_MM)
@@ -120,7 +122,7 @@ class Meshfighaltung:
         if not (lauf.job.ergebnis.get('haltung') or {}).get('gueltig'):
             return None
         pfad = lauf.ablage.arbeit(cls.DATEI)
-        if not pfad.is_file():
+        if not Npztorch.da(pfad):
             return None
-        with np.load(pfad) as d:
+        with Npztorch.lesen(pfad) as d:
             return cls(d['r'], d['t'])

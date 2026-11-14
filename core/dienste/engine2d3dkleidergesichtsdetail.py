@@ -16,6 +16,10 @@ import threading
 from django.conf import settings
 
 from .engine2d3dkleidergesichtslage import Engine2d3dKleiderGesichtslage
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 logger = logging.getLogger('core')
 
@@ -42,7 +46,7 @@ class Engine2d3dKleiderGesichtsdetail:
             raise ValueError('Noch kein Modell des Stands (`ergebnis/stand.json`) — erst nach dem Schritt „Körper“.')
         modell = json.loads(stand.read_text(encoding='utf-8')).get('fassung') or 'ohne'
         posiert = ablage.arbeit('posiert.npy')
-        stempel = posiert.stat().st_mtime_ns if posiert.is_file() else 0
+        stempel = Npztorch.stat(posiert).st_mtime_ns if Npztorch.da(posiert) else 0
         art = 'k' if Engine2d3dKleiderGesichtslage.netzart(job, ablage) == 'Kopfnetz' else 'n'
         return 'v%d_%s_%s_%x' % (cls.DARSTELLUNG, art, modell, stempel)
 

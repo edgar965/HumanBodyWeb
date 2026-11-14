@@ -66,7 +66,28 @@ class Hbaufwaermen:
             # ausschliesslich wegen `skin_colors` aufgerufen (`character_core.
             # js loadSkinColors`), zieht aber `Testkern.morphdaten()` mit.
             ('morphs', Testkern.morphdaten),
+            # Karten-Kerne von Figur und Retarget (14.11.2026, Edgar: „auch kalt muss der torch umbau besser sein“): CUDA lädt jeden Kern erst beim ersten Aufruf, 40–90 ms
+            # je Kern; das erste Retarget nach dem Start brauchte 1,6–2,1 s statt 0,25 s. Ein Retarget eines BVH mit zwei Bildern lädt alle — die Pirouette (457 Bilder)
+            # danach 0,265 s DEF / 0,497 s Genesis 9 wie warm (`ProjektTemp/_wegwerf/hb_torch/retarget_vorlauf_probe.py`).
+            ('figur mit Regler', cls._figur),
+            ('retarget def', lambda: cls._retarget('def')),
+            ('retarget genesis9', lambda: cls._retarget('genesis9')),
         ]
+
+    @staticmethod
+    def _figur():
+        from .charakterdaten import Charakterdaten
+        zustand = Charakterdaten.zustand('Female_Caucasian')
+        namen = [m['name'] if isinstance(m, dict) else m for m in zustand.get_morph_list()][:2]
+        for name in namen:
+            zustand.set_morph(name, 0.3)
+        zustand.compute()
+
+    @staticmethod
+    def _retarget(ziel):
+        from django.conf import settings
+        from .retargetdaten import Retargetdaten
+        Retargetdaten(str(settings.OBJECTS_ROOT / 'animations' / 'bvh' / 'Mixamo' / 't_pose.bvh'), ziel=ziel)._rechnen()
 
     @classmethod
     def laufen(cls):

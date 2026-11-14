@@ -10,7 +10,7 @@
 Die Figur der 3D-Ansicht ist `stellung` samt Kopf-Eigen (Wert `wert`), mit den Kacheln `fototextur`.
 """
 
-import numpy as np
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Gesichtsformantwort']
 
@@ -75,8 +75,8 @@ class Gesichtsformantwort:
         aus = {}
         for k in G9gesichtsrahmen.KONTUREN:
             for j in G9gesichtsrahmen.KONTUREN[k]:
-                if np.isfinite(landmarken[j]).all():
-                    aus[str(j)] = np.round(landmarken[j][:2] * 1000, 2).tolist()
+                if Torchfeld.isfinite(landmarken[j]).all():
+                    aus[str(j)] = Torchfeld.round(landmarken[j][:2] * 1000, 2).tolist()
         return aus
 
     def _block(self, messung, rahmen):
@@ -98,5 +98,5 @@ class Gesichtsformantwort:
     def _ziel(self, ziel):
         from Genesis9.gesichtsschnitte import G9gesichtsschnitte as S
 
-        punkte = {str(j): np.round(np.asarray(v[:2]) * 1000, 2).tolist() for j, v in ziel['punkte'].items()}
+        punkte = {str(j): Torchfeld.round(Torchfeld.feld(v[:2]) * 1000, 2).tolist() for j, v in ziel['punkte'].items()}
         return {'schnitte': S.als_liste(ziel['schnitte']), 'punkte': punkte}

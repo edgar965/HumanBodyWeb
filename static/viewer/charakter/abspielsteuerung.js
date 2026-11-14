@@ -1,4 +1,5 @@
 import { Figurmerker } from './figurmerker.js';
+import { Posenabsatz } from './posenabsatz.js';
 
 /**
  * Abspielsteuerung — Play, Stop, Zeitleiste und Tempo im Animation-Reiter,
@@ -150,6 +151,7 @@ export class Abspielsteuerung {
             if (!clip) return;
             state.currentAction.time = (parseInt(zeitleiste.value, 10) / 100) * clip.duration;
             if (state.mixer) state.mixer.update(0);
+            Posenabsatz.nachMixer();          // Absatz und Fußhaltung der Schuhe gelten auch am Zeitregler (12.11.2026)
         });
         const tempo = knopf('anim-speed');
         const tempoText = knopf('speed-label');

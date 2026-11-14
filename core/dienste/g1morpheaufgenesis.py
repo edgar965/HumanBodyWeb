@@ -21,7 +21,8 @@ import logging
 import time
 from urllib.parse import unquote
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.aehnlichkeit import G9aehnlichkeit
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.dson import G9dson
@@ -54,7 +55,7 @@ class G1morpheaufgenesis:
     def vorbereiten(self):
         if self.uebertragung is None:
             self.uebertragung = G1klonuebertragung()
-            self.basis = np.asarray(G9basisnetz.holen().punkte, dtype=np.float64)
+            self.basis = Torchfeld.feld(G9basisnetz.holen().punkte, dtype=torch.float64)
         return self
 
     # ------------------------------------------------------------ Lesen
@@ -63,9 +64,9 @@ class G1morpheaufgenesis:
         u"""`(delta (19296, 3) m, formeln)` eines Genesis-1-Morphs."""
         d = G9dson.roh(G9pfade.daten().joinpath(*self.MORPHORDNER) / (datei + '.dsf'))
         m = d['modifier_library'][0]
-        werte = np.asarray(m['morph']['deltas']['values'], dtype=np.float64)
-        delta = np.zeros_like(self.uebertragung.grund)
-        delta[werte[:, 0].astype(np.int64)] = werte[:, 1:] * self.CM
+        werte = Torchfeld.feld(m['morph']['deltas']['values'], dtype=torch.float64)
+        delta = torch.zeros_like(self.uebertragung.grund)
+        delta[Torchfeld.astype(werte[:, 0], torch.int64)] = werte[:, 1:] * self.CM
         return delta, m.get('formulas') or []
 
     @staticmethod
@@ -107,9 +108,9 @@ class G1morpheaufgenesis:
             logger.info('G1-Morphs: %s — s %.3f, %d Gelenke, %d Ausrichtungen aus Formeln, %d Formeln übergangen', auftrag['kennung'], s, len(versatz), len(ausrichtung), uebergangen)
             return s, float(p[u.hautpunkte, 1].min()), delta, versatz, ausrichtung          # Daz skaliert die Figur um den Ursprung (0, 0, 0)
         h = u.hautpunkte
-        s = float(np.ptp((p + delta)[h, 1])) / float(np.ptp(p[h, 1]))
+        s = float(Torchfeld.ptp((p + delta)[h, 1])) / float(Torchfeld.ptp(p[h, 1]))
         hoehe = float((p[h, 1] - delta[h, 1] / (s - 1.0)).mean())                             # kleinste Quadrate auf der Körperachse (wie `Mhaehnlichkeit.zerlegen`)
-        form = (delta - (s - 1.0) * (p - np.array([0.0, hoehe, 0.0]))) / s
+        form = (delta - (s - 1.0) * (p - Torchfeld.feld([0.0, hoehe, 0.0], copy=True))) / s
         return s, float(p[h, 1].min()) - hoehe, form, u.gelenke_schaetzen(form), {}
 
     def feld(self, auftrag):
@@ -132,10 +133,10 @@ class G1morpheaufgenesis:
         gelenkversatz = G9gelenkversatz()
         for nr, a in enumerate(self.AUFTRAEGE, 1):
             plus, rest, s, unter, zentrum = self.feld(a)
-            nummern = np.nonzero(np.abs(plus).max(axis=1) > 0)[0]
-            null = np.zeros((len(nummern), 3))
+            nummern = torch.nonzero(Torchfeld.amax(Torchfeld.abs(plus), dim=1) > 0, as_tuple=True)[0]
+            null = torch.zeros((len(nummern), 3), dtype=torch.float64, device='cuda')
             gelenke = gelenkversatz.fuer_morph(nummern, rest[nummern], null, aehnlich=(s, zentrum))
-            hoehe = float(np.ptp(self.basis[:, 1] + plus[:, 1]))
+            hoehe = float(Torchfeld.ptp(self.basis[:, 1] + plus[:, 1]))
             quelle = {'quelle': u'Genesis 1 (Daz), über den Klon CloneGenesis', 'anzeige': a['anzeige'], 'kategorie': 'Alter', 'bereich': 'g1_alter', 'reihe': a['reihe'],
                       'min': 0.0, 'max': 1.0, 'rig': True, 'aehnlichkeit': round(s, 4), 'aehnlichkeit_unter': round(unter, 4), 'hoehe_m': round(hoehe, 3),
                       'hinweis': u'%s von Genesis 1 (Daz): Proportionen und Gesicht eines Kindes, Größe %d %% — auf der Grundfigur %.2f m. Übertragen über Daz’ Klon von Genesis 1. '

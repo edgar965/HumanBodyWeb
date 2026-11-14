@@ -49,6 +49,7 @@ import time
 from pathlib import Path
 
 from django.http import HttpResponse
+from Genesis9.bauart import G9bauart
 from Genesis9.stueckstand import G9stueckstand
 
 from ..daten.netzausgabe import Netzausgabe
@@ -187,9 +188,14 @@ class G9antworten(G9antwortvorrat):
 
     @classmethod
     def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None, binaer=False, fassung=None):
-        text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung() if fassung is None else fassung,
-                           cls._eigenstand(rumpf, eintrag), [G9stueckstand.von(eintrag), G9stueckstand.griffe(rumpf)], binaer],
-                          sort_keys=True, default=str)
+        teile = [art, name, rumpf, gewaehlt, eintrag, cls.fassung() if fassung is None else fassung,
+                 cls._eigenstand(rumpf, eintrag), [G9stueckstand.von(eintrag), G9stueckstand.griffe(rumpf)], binaer]
+        # Die am Stück gesetzte Bauart (`G9bauart`, 12.11.2026) — nur wenn es eine gibt: die Schlüssel aller anderen Stücke bleiben bitgleich, der
+        # dauerhafte Vorrat (`G9modellvorrat`) bleibt erreichbar.
+        bauart = G9bauart.stand(eintrag)
+        if bauart is not None:
+            teile.append(['bauart', bauart])
+        text = json.dumps(teile, sort_keys=True, default=str)
         return '%s_%s_%s' % (art, cls._sicher(name),
                              hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])
 

@@ -13,14 +13,19 @@ Blender-Quelltext vom 10.10.2026 und 11.10.2026:
 Nicht übernommen: Fließkommabilder (`FLOAT`/`HALF`: EXR, HDR), geteilte Kacheln (UDIM), Bildfolgen — der Fehler sagt, was es ist.
 """
 
+from pathlib import Path
+
 import cv2
-import numpy as np
+import torch
 import warp as wp
 
 from .hautgraphfehler import Hautgraphfehler
 from .hauttexturkernel import CLIP, CLOSEST, CUBIC, EXTEND, LINEAR, MIRROR, REPEAT, abtasten
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Hauttextur']
+
+KARTE = torch.device('cuda')
 
 INTERPOLATION = {'Linear': LINEAR, 'Closest': CLOSEST, 'Cubic': CUBIC, 'Smart': CUBIC}          # `ImageInterpolator::interp`: alles andere ist kubisch
 ERWEITERUNG = {'REPEAT': REPEAT, 'EXTEND': EXTEND, 'CLIP': CLIP, 'MIRROR': MIRROR}
@@ -41,7 +46,7 @@ class Hauttextur:
         rgba = self._lesen(eintrag['datei'])
         self.hoehe, self.breite = rgba.shape[:2]
         # Cycles hält die Zeilen unten-zuerst (der Lader spiegelt Dateien beim Lesen, Blenders Bildspeicher ist von Haus aus so).
-        self.feld = wp.array(np.ascontiguousarray(rgba[::-1]).reshape(-1), dtype=wp.uint16, device=geraet)
+        self.feld = wp.from_torch(rgba.flip(0).reshape(-1).to(torch.int16).contiguous(), dtype=wp.uint16)     # Bitmuster der uint16-Werte (Probe `warp_uint16_probe.py`)
 
     @staticmethod
     def pruefen(name, eintrag):
@@ -63,34 +68,38 @@ class Hauttextur:
         return ''
 
     def _lesen(self, pfad):
-        """`(h, w, 4)` uint16 RGBA (8-Bit-Dateien als Wert · 257), Alpha nach `conform_pixels` behandelt."""
-        roh = cv2.imdecode(np.fromfile(str(pfad), dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-        if roh is None:
+        """`(h, w, 4)` int32 auf der Karte mit den uint16-Werten RGBA (8-Bit-Dateien als Wert · 257), Alpha nach `conform_pixels` behandelt (Ganzzahlen)."""
+        datei = torch.frombuffer(bytearray(Path(pfad).read_bytes()), dtype=torch.uint8)     # cpu gewollt: Dateibytes für den Dekoder
+        gelesen = cv2.imdecode(datei.numpy(), cv2.IMREAD_UNCHANGED)                         # Dekoder (cv2) liest aus einem Feld im Arbeitsspeicher
+        if gelesen is None:
             raise Hautgraphfehler('Bild „%s" nicht lesbar: %s' % (self.name, pfad))
-        if roh.dtype not in (np.uint8, np.uint16):
-            raise Hautgraphfehler('Bild „%s": %s je Kanal — Fließkommabilder sind noch nicht übernommen (nur 8 und 16 Bit)' % (self.name, roh.dtype))
-        maximum = 65535 if roh.dtype == np.uint16 else 255            # `util_image_cast_from_float<…>(1.0f)`: der Wert „voll" des Speichertyps
-        if roh.ndim == 2:
-            rgba = np.stack([roh, roh, roh, np.full_like(roh, maximum)], axis=-1)
+        typ = str(gelesen.dtype)
+        if typ not in ('uint8', 'uint16'):
+            raise Hautgraphfehler('Bild „%s": %s je Kanal — Fließkommabilder sind noch nicht übernommen (nur 8 und 16 Bit)' % (self.name, typ))
+        maximum = 65535 if typ == 'uint16' else 255                 # `util_image_cast_from_float<…>(1.0f)`: der Wert „voll" des Speichertyps
+        roh = torch.as_tensor(gelesen).to(KARTE, torch.int32)
+        voll = torch.full(tuple(roh.shape[:2]) + (1,), maximum, dtype=torch.int32, device=KARTE)
+        if roh.dim() == 2:
+            rgba = torch.stack([roh, roh, roh, voll[..., 0]], dim=-1)
             kanaele = 1
         elif roh.shape[2] == 2:
-            rgba = np.stack([roh[..., 0], roh[..., 0], roh[..., 0], roh[..., 1]], axis=-1)
+            rgba = torch.stack([roh[..., 0], roh[..., 0], roh[..., 0], roh[..., 1]], dim=-1)
             kanaele = 2
         elif roh.shape[2] == 3:
-            rgba = np.concatenate([roh[..., ::-1], np.full(roh.shape[:2] + (1,), maximum, roh.dtype)], axis=-1)
+            rgba = torch.cat([roh.flip(-1), voll], dim=-1)
             kanaele = 3
         else:
-            rgba = np.concatenate([roh[..., 2::-1], roh[..., 3:4]], axis=-1)
+            rgba = torch.cat([roh[..., :3].flip(-1), roh[..., 3:4]], dim=-1)
             kanaele = 4
         # `finalize`: unassociated = STRAIGHT und kein Daten-Bild; dann `conform_pixels`: Farben mit Alpha multiplizieren (nur bei vier Kanälen), `util_image_multiply_native`: (a · b) / Maximum
         if kanaele == 4 and self.alpha_modus == 'STRAIGHT' and not self.daten_farbraum:
-            rgb = (rgba[..., :3].astype(np.uint32) * rgba[..., 3:4].astype(np.uint32)) // maximum
-            rgba = np.concatenate([rgb.astype(roh.dtype), rgba[..., 3:4]], axis=-1)
+            rgb = (Torchfeld.astype(rgba[..., :3], torch.int64) * Torchfeld.astype(rgba[..., 3:4], torch.int64)) // maximum
+            rgba = torch.cat([Torchfeld.astype(rgb, torch.int32), rgba[..., 3:4]], dim=-1)
         if self.alpha_modus == 'NONE':
-            rgba = rgba.copy()
+            rgba = rgba.clone()
             rgba[..., 3] = maximum
-        if roh.dtype == np.uint8:
-            rgba = rgba.astype(np.uint16) * np.uint16(257)
+        if typ == 'uint8':
+            rgba = rgba * 257
         return rgba
 
     def abtasten(self, koordinate, interpolation, erweiterung, entassoziieren, aus):

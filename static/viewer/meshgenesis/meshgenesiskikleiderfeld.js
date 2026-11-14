@@ -11,10 +11,11 @@ import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 import { Meshfighautstueck } from '../meshfigur/meshfighautstueck.js';
 
 export class Meshgenesiskikleiderfeld {
-    static WEGE = new Set(['k', 's', 'h', 'f', 'g']);
+    // z (12.11.2026, „Genesis zuerst“): Stück der Garderobe, Server `Meshgenesistestkikleider`
+    static WEGE = new Set(['k', 's', 'h', 'f', 'g', 'z']);
     /** = `Kleiderverdeckung.TIEFE_KOSTUEM_M` auf dem Server (ProjektTemp/_wegwerf/meshgenesis_kleider_verdeckung.py) */
     static STOFF_TIEFE_M = 0.040;
-    static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Schnitt aus der Fläche', g: 'Schicht aus der KI', h: 'Frisur der Garderobe (Bibliothek)' };
+    static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Schnitt aus der Fläche', g: 'Schicht aus der KI', h: 'Frisur der Garderobe (Bibliothek)', z: 'Garderobe' };
 
     /** → {gruppe, rig, namen: [Text je Stück]} oder null (keine KI-Kleider gewählt). */
     static async laden(ki) {

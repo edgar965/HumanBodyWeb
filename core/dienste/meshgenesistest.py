@@ -23,7 +23,9 @@ import logging
 import re
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 
 from ..atomic_write import AtomarSchreiber
@@ -111,9 +113,9 @@ class Meshgenesistest:
         """{Figur: Rest der Anpassung in mm} der Figuren, deren Ergebnis im Ordner liegt — neue Ablage `ergebnis_<Figur>.npz`, alte nur `ergebnis.npz` für `figur`."""
         aus = {}
         for name, wert in (info.get('figuren') or {}).items():
-            if (p / ('ergebnis_%s%s.npz' % (name, endung))).is_file():
+            if Npztorch.da(p / ('ergebnis_%s%s.npz' % (name, endung))):
                 aus[name] = wert['rest_mm'] if isinstance(wert, dict) else float(wert)
-        if not aus and (p / 'ergebnis.npz').is_file():
+        if not aus and Npztorch.da(p / 'ergebnis.npz'):
             aus[info.get('figur') or cls.MODELL] = info.get('ik_rest_mm')
         return aus
 
@@ -133,7 +135,7 @@ class Meshgenesistest:
         f = (info.get('form') or {}).get(geschlecht)
         fig = p / ('form_%s' % geschlecht)
         datei = p / ('ergebnis_Form_%s.npz' % geschlecht)
-        if not isinstance(f, dict) or not datei.is_file() or not (fig / 'kinematik.json').is_file() or not (fig / 'anzeige' / 'netz.npz').is_file():
+        if not isinstance(f, dict) or not Npztorch.da(datei) or not (fig / 'kinematik.json').is_file() or not Npztorch.da(fig / 'anzeige' / 'netz.npz'):
             return None
         try:
             regler = json.loads((fig / 'modell.json').read_text(encoding='utf-8'))['figur']['regler']
@@ -141,7 +143,7 @@ class Meshgenesistest:
             regler = {}
         # Zahl der Formregler, die das Netz vorhersagt (Fassung des Laufs: 815, 911, 1.318 …) — die Seite schrieb bis 17.10.2026 fest „von 815“.
         try:
-            with np.load(p / 'form.npz') as z:
+            with Npztorch.lesen(p / 'form.npz') as z:
                 gesamt = int(z['regler'].shape[0])
         except (OSError, ValueError, KeyError):
             gesamt = None
@@ -152,7 +154,7 @@ class Meshgenesistest:
     def form_ordner(cls, kennung, geschlecht):
         """Ordner der vorhergesagten Figur relativ zu `meshgenesis/` (für `Meshgenesisflaechennetz`) oder `None`."""
         p = cls.pfad(kennung)
-        if p is None or geschlecht not in cls.GESCHLECHTER or not (p / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz').is_file():
+        if p is None or geschlecht not in cls.GESCHLECHTER or not Npztorch.da(p / ('form_%s' % geschlecht) / 'anzeige' / 'netz.npz'):
             return None
         return '_test/%s/form_%s' % (kennung, geschlecht)
 
@@ -194,7 +196,7 @@ class Meshgenesistest:
                 info['figur'] = 'Form (vorhergesagt)' if cls.form(p, info, info['geschlecht']) else cls.wahl(p, info, info['geschlecht'], e)[0]
             except (OSError, ValueError) as fehler:
                 info = {'kennung': p.name, 'name': p.name, 'fehler': str(fehler)}
-            info['fertig'] = bool(info.get('figur')) and (p / ('vorschau%s.glb' % e)).is_file()
+            info['fertig'] = bool(info.get('figur')) and Npztorch.da(p / ('vorschau%s.glb' % e))
             info['tripo'] = tripo
             aus.append(info)
         return sorted(aus, key=lambda i: str(i.get('name', '')).lower())
@@ -227,14 +229,14 @@ class Meshgenesistest:
             if figur is None:
                 return None
             datei = p / ('ergebnis_%s%s.npz' % (figur, endung))
-            if not datei.is_file():
+            if not Npztorch.da(datei):
                 datei = p / 'ergebnis.npz'
             job = cls.job_der_figur(figur)
             if job is None:
                 logger.warning('Meshgenesistest: Test %s nennt die Figur %s, es gibt keinen Job mit diesem Datensatz', kennung, figur)
                 return None
             kin_datei = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / figur / 'kinematik.json'
-        e = np.load(datei)
+        e = Npztorch.lesen(datei)
         kin = json.loads(kin_datei.read_text(encoding='utf-8'))['knochen']
         beschr = Meshgenesisrig.beschreibung()
         if [k['name'] for k in kin] != [k['name'] for k in beschr['knochen']]:
@@ -252,9 +254,9 @@ class Meshgenesistest:
             # Die Figur als Genesis-Modell (22.10.2026, Animation der Ausgabe wie Mesh-3D): dieselbe wie im Ergebnis der Jobseite eines Tripo-Jobs (`Meshgenesisergebnisfigur`).
             # Seit 31.10.2026 mit der Haut der KI als `fototextur` (`Meshgenesistesthaut.kacheln`) — sonst trug sie die Katalog-Haut, anders als das Standbild.
             'figur_genesis': dict(Meshgenesisergebnisfigur._figur(geschlecht, form['regler']), fototextur=Meshgenesistesthaut.kacheln(kennung, geschlecht)) if form else None,
-            'ausgabe': np.round(e['rig'].astype(float), 4).tolist(),
-            'dreh': np.round(Meshgenesisdaten._quaternionen(e['dreh'].astype(float)), 5).tolist(),
-            'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist(),
+            'ausgabe': Torchfeld.round(Torchfeld.astype(e['rig'], torch.float64), 4).tolist(),
+            'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(Torchfeld.astype(e['dreh'], torch.float64)), 5).tolist(),
+            'ruhezentren': Torchfeld.round(Torchfeld.feld([k['zentrum'] for k in kin], copy=True), 6).tolist(),
             'netz': '/api/meshgenesis/test/%s/netz/?v=%d%s' % (kennung, int((p / ('vorschau%s.glb' % endung)).stat().st_mtime), endung),
             # Kapseln um die Glieder für die Kollision der Stücke in der Bewegung (31.10.2026 nachts, `KoerperKI_alle.Koerperkollision` → `meshgenesiskollision.js`)
             'kapseln': cls.kapseln(p, geschlecht),
@@ -286,4 +288,4 @@ class Meshgenesistest:
         if p is None:
             return None
         datei = p / ('vorschau%s.glb' % cls.endung(p, Meshgenesisaposewahl.gewaehlt()))
-        return datei if datei.is_file() else None
+        return datei if Npztorch.da(datei) else None

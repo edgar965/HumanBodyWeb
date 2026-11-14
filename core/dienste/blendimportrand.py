@@ -9,7 +9,8 @@ Browser als Nähte um die Schamlippen). Hier bekommen die Pixel im Saum (`RAND_P
 gültigen Pixel daneben; die Fehlstelle selbst füllt weiter die Kachel von „Mesh to 3D".
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportrand']
 
@@ -21,28 +22,28 @@ class Blendimportrand:
     @classmethod
     def saum(cls, leer, rand=None):
         """Maske der Saumpixel: höchstens `rand` Pixel neben einer Fehlstelle, selbst keine."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         rand = cls.RAND_PX if rand is None else int(rand)
         if rand <= 0 or not leer.any():
-            return np.zeros_like(leer)
+            return torch.zeros_like(leer)
         return ndimage.binary_dilation(leer, iterations=rand) & ~leer
 
     @classmethod
     def schliessen(cls, farbe, leer, rand=None):
         """`(neue Farbe, Saummaske)` — `farbe` (H, W, 3) uint8; die Saumpixel werden aus den gültigen Pixeln in ihrer Nähe
         (Gaußgewicht, Radius `rand`) gemittelt; die Eingabe bleibt unverändert, `leer` selbst wird nicht angefasst."""
-        from scipy import ndimage
+        from KoerperKI_alle.kartenbild import Kartenbild as ndimage
 
         rand = cls.RAND_PX if rand is None else int(rand)
         saum = cls.saum(leer, rand)
         if not saum.any():
             return farbe, saum
         kern = ~(saum | leer)
-        gewicht = ndimage.gaussian_filter(kern.astype(np.float32), rand)
+        gewicht = ndimage.gaussian_filter(Torchfeld.astype(kern, torch.float32), rand)
         ok = saum & (gewicht > 1e-3)
-        neu = farbe.copy()
+        neu = Torchfeld.kopie(farbe)
         for k in range(farbe.shape[2]):
-            summe = ndimage.gaussian_filter(farbe[..., k].astype(np.float32) * kern, rand)
-            neu[..., k][ok] = np.clip(summe[ok] / gewicht[ok], 0, 255).astype(farbe.dtype)
+            summe = ndimage.gaussian_filter(Torchfeld.astype(farbe[..., k], torch.float32) * kern, rand)
+            neu[..., k][ok] = Torchfeld.clip(summe[ok] / gewicht[ok], 0, 255).to(farbe.dtype)
         return neu, saum

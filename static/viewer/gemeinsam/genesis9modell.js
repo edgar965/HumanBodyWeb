@@ -27,6 +27,9 @@ import { Augentextur } from './augentextur.js';
 import { Genesis9augen } from './genesis9augen.js';
 import { Genesis9teilmaterial } from './genesis9teilmaterial.js';
 import { Koerperdetails } from './koerperdetails.js';
+import { Bauart } from './bauart.js';
+import { Starrbindung } from './starrbindung.js';
+import { Dqhaut } from './dqhaut.js';
 
 /**
  * Genesis9Modell — die Daz-Figur Genesis 9 als `Modell` für jede Seite.
@@ -184,6 +187,10 @@ export class Genesis9Modell extends Modell {
             this.skelettBauen(daten.skelett);
             this.eigeneKnochen = daten.skelett?.eigene || [];
         }
+        // Die Fußhaltung getragener Schuhe je Knochen (12.11.2026, `Genesis9/griffkette.py` `deltas`): eine Animation setzt die Füße je
+        // Bild neu, `charakter/posenabsatz.js` legt diese Drehung danach wieder auf — dieselben Felder wie beim Absatz der HumanBody-Figuren.
+        const griffdeltas = daten.griffdeltas && Object.keys(daten.griffdeltas).length ? daten.griffdeltas : null;
+        if (JSON.stringify(griffdeltas) !== JSON.stringify(this.absatzDeltas || null)) { this.absatzDeltas = griffdeltas; this._absatzGemischt = {}; }
         // Fotokacheln des Modells statt der Daz-Albedo (27.09.2026, `Genesis9fototextur`).
         const wahl = { haut: this.haut, praesets: this.praesets, augenGewaehlt: this._augenGewaehlt, brauenstil: this.brauenstil };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel (ein Brauenstil nimmt die gemalten Brauen aus der Kopfkachel)
         const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur, wahl) };
@@ -233,7 +240,13 @@ export class Genesis9Modell extends Modell {
     _einhaengen(netz, haut) {
         const gebunden = (this.skelett && haut) ? Eigenhaut.binden(netz, this.skelett, haut) : netz;
         gebunden.userData.hautgewichte = haut || null;
+        // Bauart starr (12.11.2026, `bauart.js`): je Insel ein Knochen, und die Hautbindung schiebt nicht — das Stück behält seine Form.
+        if (gebunden !== netz && Starrbindung.gilt(gebunden, Bauart.von(gebunden))) {
+            Starrbindung.anwenden(gebunden);
+            if (gebunden.geometry.userData) gebunden.geometry.userData.bindung = null;
+        }
         Eigenhaut.einhaengen(this.group, gebunden, this.skelett);
+        Dqhaut.einschalten(gebunden);        // wie Daz: halb linear, halb Dual Quaternion (12.11.2026, `dqhaut.js`)
         // Anliegende Kleidung folgt der Oberflaeche je Bild (Attribute aus `Genesis9kleidung`).
         Oberflaechenbindung.verdrahten(this, gebunden);
         Genesis9ersatz.nachziehen(this);     // ein neu gebauter Körper ersetzt die Netze neu: Ersatz-Stücke erneut gelten lassen

@@ -21,6 +21,10 @@ from core.dienste.hautbacken import Hautbackenquelle
 from core.dienste.hautbacken.graph import Hautbackengraph, Hautgraph, Hautschattungbau
 from core.tests.unit.hautbacken_szene import Hautbackenszene
 from core.tests.unit.hautbacken_zoo_materialien import definitionen
+import sys as _npz_sys  # noqa: E402
+if r'A:\3DTools' not in _npz_sys.path:
+    _npz_sys.path.append(r'A:\3DTools')
+from KoerperKI_alle.npztorch import Npztorch  # noqa: E402
 
 __all__ = ['Hautbackenzoo']
 
@@ -47,7 +51,7 @@ class Hautbackenzoo:
         q = szene.quelle()
         uv = q.uv_ecken
         uv2 = np.stack([0.9 - 0.8 * uv[..., 1], 0.1 + 0.7 * uv[..., 0]], axis=-1)
-        np.savez(self.ordner / 'szene.npz', punkte=q.punkte, dreiecke=q.dreiecke, uv_ecken=uv, uv2_ecken=uv2)
+        Npztorch.speichern(self.ordner / 'szene.npz', punkte=q.punkte, dreiecke=q.dreiecke, uv_ecken=uv, uv2_ecken=uv2, fuer_numpy=True)          # Blender liest mit numpy
         bilder = self.ordner / 'bilder'
         bilder.mkdir(exist_ok=True)
         for name, feld in self.bilder().items():
@@ -106,13 +110,13 @@ class Hautbackenzoo:
 
     def lage(self):
         """Die Körperpunkte in der Ruhelage der Figur (Blender-Achsen)."""
-        return np.load(self.ordner / 'lage.npy')
+        return Npztorch.lesen_numpy(self.ordner / 'lage.npy')
 
     def satz_daten(self, satz):
         """`(netz-Eintrag, npz, Namen, spec_lesen(material))` aus dem Arbeitsordner — `Hautbackenzoogolden` liest sie aus den gepackten Daten."""
         s = self.ordner / ('satz_%02d' % satz)
         netz = json.loads((s / 'export' / 'inventar.json').read_text(encoding='utf-8'))['netze'][0]
-        npz = dict(np.load(s / 'export' / netz['datei']))
+        npz = dict(Npztorch.lesen_numpy(s / 'export' / netz['datei']))
         namen = json.loads((s / 'namen.json').read_text(encoding='utf-8'))
         return netz, npz, namen, lambda m: json.loads((s / 'export' / m['graph']).read_text(encoding='utf-8'))
 

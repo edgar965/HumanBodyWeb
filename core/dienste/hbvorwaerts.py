@@ -13,7 +13,8 @@ mittlere Delta, am Rand faellt es mit der Dichte der Treffer ab. Die Staerke kan
 
 Nur Koerperteile mit Haut: `face_internal` (Mundinnenraum, Augen, Zaehne — bei Genesis Anhaenge) bleibt aussen vor, sonst landeten Iris- und Zahnregler auf dem Lid.
 """
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.kollision import G9kollision
 
 __all__ = ['Hbvorwaerts']
@@ -36,9 +37,9 @@ class Hbvorwaerts:
 
     def __init__(self, paar, hb, suche, ursprung, zahl, nachbar):
         u"""`suche`: Genesis-Browserpunkte im HumanBody-Raum (`Hbzuordnung.suchpunkte`), `nachbar`: (Kaefigpunkte, k) naechste Kaefigpunkte."""
-        self.paar, self.hb, self.suche = paar, hb, np.asarray(suche, dtype=np.float64)
-        self.ursprung = np.asarray(ursprung, dtype=np.int64)
-        self.zahl, self.nachbar = int(zahl), np.asarray(nachbar, dtype=np.int64)
+        self.paar, self.hb, self.suche = paar, hb, Torchfeld.feld(suche, dtype=torch.float64)
+        self.ursprung = Torchfeld.feld(ursprung, dtype=torch.int64)
+        self.zahl, self.nachbar = int(zahl), Torchfeld.feld(nachbar, dtype=torch.int64)
         self._baeume = {}
 
     def _baum(self, teil, g9_idx):
@@ -49,36 +50,36 @@ class Hbvorwaerts:
     def treffer(self, hb_delta):
         u"""`(S (Kaefig, 3), W (Kaefig,))` — die summierten Deltas und Gewichte; `W` ist null, wo nichts getroffen wurde."""
         paar, hb = self.paar, self.hb
-        delta = np.asarray(hb_delta, dtype=np.float64)
-        betrag = np.linalg.norm(delta, axis=1)
+        delta = Torchfeld.feld(hb_delta, dtype=torch.float64)
+        betrag = Torchfeld.linalg_norm(delta, dim=1)
         quelle = betrag > self.QUELLE_ANTEIL * max(float(betrag.max()), 1e-12)
-        summe = np.zeros((len(paar['g9_punkte']), 3))
-        gewicht = np.zeros(len(paar['g9_punkte']))
+        summe = torch.zeros((len(paar['g9_punkte']), 3), dtype=torch.float64, device='cuda')
+        gewicht = torch.zeros(len(paar['g9_punkte']), dtype=torch.float64, device='cuda')
         for teil, (g9_idx, hb_idx) in paar['segmente'].items():
             if teil in self.AUSSEN or not len(g9_idx):
                 continue
-            hb_idx = np.asarray(hb_idx)
+            hb_idx = Torchfeld.feld(hb_idx)
             q = hb_idx[quelle[hb_idx]]
             if not len(q):
                 continue
-            g9_idx = np.asarray(g9_idx)
+            g9_idx = Torchfeld.feld(g9_idx)
             k = min(self.SUCHE, len(g9_idx))
             abstand, nr = G9kollision.naechste(self._baum(teil, g9_idx), hb['punkte'][q], k=k)
-            abstand, nr = np.asarray(abstand, dtype=np.float64).reshape(len(q), -1), np.asarray(nr).reshape(len(q), -1)
+            abstand, nr = Torchfeld.feld(abstand, dtype=torch.float64).reshape(len(q), -1), Torchfeld.feld(nr).reshape(len(q), -1)
             ziel = g9_idx[nr]
-            einig = np.einsum('ik,ijk->ij', hb['normalen'][q], paar['g9_normalen'][ziel]) > self.EINIG
+            einig = Torchfeld.einsum('ik,ijk->ij', hb['normalen'][q], paar['g9_normalen'][ziel]) > self.EINIG
             nah = abstand <= self.NAEHE_M
             gut = einig & nah
-            rang = np.cumsum(gut, axis=1)
+            rang = Torchfeld.cumsum(gut, dim=1)
             gut &= rang <= self.K                                   # die K naechsten mit gleichsinniger Normale
-            w = np.where(gut, 1.0 / np.maximum(abstand, 1e-3), 0.0)
+            w = torch.where(gut, 1.0 / Torchfeld.maximum(abstand, 1e-3), 0.0)
             # seit 08.11.2026 im Weltraum wie `Hbmorphuebertragung.uebertragen` (die Zerlegung in Punktrahmen gab Rauschen, Kopf von `hbmorphuebertragung.py`)
-            im_ziel = np.broadcast_to(delta[q][:, None, :], ziel.shape + (3,)) / paar['massstab']
-            np.add.at(summe, ziel, w[..., None] * im_ziel)
-            np.add.at(gewicht, ziel, w)
-        kaefig_s, kaefig_w = np.zeros((self.zahl, 3)), np.zeros(self.zahl)
-        np.add.at(kaefig_s, self.ursprung, summe)
-        np.add.at(kaefig_w, self.ursprung, gewicht)
+            im_ziel = Torchfeld.broadcast_to(delta[q][:, None, :], ziel.shape + (3,)) / paar['massstab']
+            Torchfeld.add_at(summe, ziel, w[..., None] * im_ziel)
+            Torchfeld.add_at(gewicht, ziel, w)
+        kaefig_s, kaefig_w = torch.zeros((self.zahl, 3), dtype=torch.float64, device='cuda'), torch.zeros(self.zahl, dtype=torch.float64, device='cuda')
+        Torchfeld.add_at(kaefig_s, self.ursprung, summe)
+        Torchfeld.add_at(kaefig_w, self.ursprung, gewicht)
         return kaefig_s, kaefig_w
 
     def uebertragen(self, hb_delta):
@@ -86,8 +87,8 @@ class Hbvorwaerts:
         s, w = self.treffer(hb_delta)
         getroffen = w[w > 0]
         if not len(getroffen):
-            return np.zeros((self.zahl, 3))
-        bezug = float(np.median(getroffen))
+            return torch.zeros((self.zahl, 3), dtype=torch.float64, device='cuda')
+        bezug = float(Torchfeld.median(getroffen))
         for _ in range(self.GLAETTEN):
             s, w = s[self.nachbar].mean(axis=1), w[self.nachbar].mean(axis=1)
-        return s / np.maximum(w, bezug)[:, None]
+        return s / Torchfeld.maximum(w, bezug)[:, None]

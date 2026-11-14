@@ -21,7 +21,9 @@ import struct
 import zipfile
 from pathlib import Path
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisaposewahl import Meshgenesisaposewahl
 from .meshgenesiswege import Meshgenesiswege
@@ -57,7 +59,7 @@ class Meshgenesisapose:
         if not wege or not wege.get('ablage') or not wege.get('netz_vorstufe'):
             return None
         ordner = Path(wege['ablage']) / wege['netz_vorstufe']
-        dateien = sorted(ordner.glob('anzeige_*.npz')) if ordner.is_dir() else []
+        dateien = sorted(Npztorch.glob(ordner, 'anzeige_*.npz')) if ordner.is_dir() else []
         if len(dateien) > 1:
             logger.warning('Meshgenesisapose: %s hat %d Zwischenbilder — das erste gilt (%s)', ordner, len(dateien), dateien[0].name)
         return dateien[0] if dateien else None
@@ -83,8 +85,8 @@ class Meshgenesisapose:
         if datei is None:
             return None
         try:
-            with np.load(datei) as z:
-                punkte, dreiecke, farbe = z['punkte'].astype('<f4'), z['dreiecke'].astype('<u4'), z['farbe'].astype(np.uint8)
+            with Npztorch.lesen(datei) as z:
+                punkte, dreiecke, farbe = Torchfeld.astype(z['punkte'], Torchfeld.dtype('<f4')), Torchfeld.astype(z['dreiecke'], Torchfeld.dtype('<u4')), Torchfeld.astype(z['farbe'], torch.uint8)
                 ix = {str(n): i for i, n in enumerate(z['knochen'])}
                 rig, netz = z['rig'], z['netz']
                 # Seit 17.10.2026 abends füllt der Schritt „apose“ die Löcher (`Vorstufenluecken`): Zahl der Fülldreiecke, die hinten an der Fläche hängen; ältere Ablagen ohne das Feld: 0.
@@ -93,7 +95,7 @@ class Meshgenesisapose:
                     logger.warning('Meshgenesisapose: %s kennt nicht alle Knochen des Rigs — nicht ausgeliefert', datei)
                     return None
                 sel = [ix[n] for n in namen]
-                rig, netz = rig[sel].astype(float), netz[sel].astype(float)
+                rig, netz = Torchfeld.astype(rig[sel], torch.float64), Torchfeld.astype(netz[sel], torch.float64)
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as fehler:
             logger.warning('Meshgenesisapose: %s nicht lesbar (%s)', datei, fehler)
             return None
@@ -101,12 +103,12 @@ class Meshgenesisapose:
         wege = wege or {}
         # `methode` (18.10.2026 abends): MeshToRigToPose_MIA oder MeshToRigToPose — der Text unter dem Feld beschreibt, was DIESE Methode tat.
         kopf = {'methode': Meshgenesisaposewahl.methode(kette), 'methode_name': Meshgenesisaposewahl.name_des_laufs(kette), 'weg_grund': kette.get('weg_grund', ''),
-                'punkte': int(len(punkte)), 'dreiecke': int(len(dreiecke)), 'rig': np.round(rig, 5).tolist(), 'netz': np.round(netz, 5).tolist(),
-                'abstand_mm': round(float(1000 * np.linalg.norm(netz - rig, axis=1).mean()), 1), 'ablage': Path(wege.get('ablage', '')).name,
+                'punkte': int(len(punkte)), 'dreiecke': int(len(dreiecke)), 'rig': Torchfeld.round(rig, 5).tolist(), 'netz': Torchfeld.round(netz, 5).tolist(),
+                'abstand_mm': round(float(1000 * Torchfeld.linalg_norm(netz - rig, dim=1).mean()), 1), 'ablage': Path(wege.get('ablage', '')).name,
                 'mesh3d': wege.get('mesh3d'), 'netz_vorstufe': wege.get('netz_vorstufe'), 'figur': datei.stem.replace('anzeige_', ''),
                 'eingabe': cls.eingabe(wege), 'gefuellt': gefuellt}
         text = json.dumps(kopf).encode('utf-8')
         text += b' ' * (-len(text) % 4)
-        farbteil = farbe.tobytes()
+        farbteil = Torchfeld.als_bytes(farbe)
         farbteil += b'\0' * (-len(farbteil) % 4)
-        return b''.join([struct.pack('<I', len(text)), text, punkte.tobytes(), dreiecke.tobytes(), farbteil])
+        return b''.join([struct.pack('<I', len(text)), text, Torchfeld.als_bytes(punkte), Torchfeld.als_bytes(dreiecke), farbteil])

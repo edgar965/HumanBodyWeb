@@ -2,7 +2,8 @@
 """Blendimportbilder — kleine Bildhelfer der Stücke aus einer .blend (herausgelöst aus `Blendimportstuecke`, 09.10.2026: die Datei
 stand bei 297 Zeilen, Grenze 300): Format für den Browser, Deckkraft als Graubild, Farbumrechnung, das OBJ des Stücks."""
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportbilder']
 
@@ -51,11 +52,11 @@ class Blendimportbilder:
         """`stueck.obj` (+ MTL ohne Bild: das Material geht getrennt an den Schreiber) — Punkte in Ruhe (m, Y oben),
         UV je Dreiecksecke."""
         (ordner / 'stueck.mtl').write_text('newmtl Stoff\nKd 1 1 1\n', encoding='utf-8')
-        uv = np.asarray(uv_ecken, dtype=np.float64).reshape(-1, 2)
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2)
         zeilen = ['mtllib stueck.mtl', 'usemtl Stoff'] + ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
+        zeilen += ['vt %.6f %.6f' % tuple(t) for t in Torchfeld.liste(uv)]
         zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                   for i, (a, b, c) in enumerate(np.asarray(dreiecke, dtype=np.int64))]
+                   for i, (a, b, c) in enumerate(Torchfeld.feld(dreiecke, dtype=torch.int64))]
         pfad = ordner / 'stueck.obj'
         pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
         return pfad

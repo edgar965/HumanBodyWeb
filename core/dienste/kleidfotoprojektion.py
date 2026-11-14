@@ -13,7 +13,8 @@ die Runde nicht auf.
 import logging
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.kleidfototextur import G9kleidfototextur
 from Genesis9.uvraster import G9uvraster
 from iterationen2d3d.fotoprojektion import Fotoprojektion
@@ -55,7 +56,7 @@ class Kleidfotoprojektion:
 
             masken = Teilmasken.messen(len(teile), kennbild)
             with Image.open(pfad) as bild:
-                abbildung = Iterationsbild.abbildung(np.asarray(bild.convert('RGBA'))[..., 3] > 127)
+                abbildung = Iterationsbild.abbildung(Torchfeld.feld(bild.convert('RGBA'))[..., 3] > 127)
             if abbildung is None:
                 continue
             foto = Iterationsreferenz.bild(self.ablage, r.datei, self.GROESSE)
@@ -68,7 +69,7 @@ class Kleidfotoprojektion:
         kam die Hand vor der Hose dazu. Den Farbton des Stücks gibt die reinste Ansicht (`Kleidhautfilter.reinster`) — ohne Körper oder ohne Unterschied zur Haut gibt es keinen Ausschluss (None je Ansicht)."""
         if not haut:
             return [None] * len(ansichten)
-        hautmasken = [np.any([masken[i] for i in haut], axis=0) for _r, _a, _f, masken in ansichten]
+        hautmasken = [Torchfeld.any(Torchfeld.feld([masken[i] for i in haut]), dim=0) for _r, _a, _f, masken in ansichten]
         bezug = Kleidhautfilter.reinster([Kleidhautfilter.bezug(foto.farbe, foto.maske, tm, hm) for (_r, _a, foto, _m), tm, hm in zip(ansichten, teilmasken, hautmasken)])
         if bezug is None:
             return [None] * len(ansichten)
@@ -80,7 +81,7 @@ class Kleidfotoprojektion:
         if not wuensche or not referenzen:
             return {}
         t0 = time.perf_counter()
-        alle = np.vstack([np.asarray(t['punkte']) for t in teile])
+        alle = Torchfeld.vstack([Torchfeld.feld(t['punkte']) for t in teile])
         kamera = Fotoprojektion.aus_render(alle, self.render.RAND, self.GROESSE)
         ansichten = self._ansichten(teile, referenzen)
         aus = {}
@@ -92,7 +93,7 @@ class Kleidfotoprojektion:
                 continue
             projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE, hoehenprofil=True, figurrand=self.FIGURRAND)
             haut = [i for i, t in enumerate(teile) if t.get('art') == 'koerper' and t.get('sorte') == 'koerper']
-            teilmasken = [np.any([masken[i] for i in indizes], axis=0) for _r, _a, _f, masken in ansichten]
+            teilmasken = [Torchfeld.any(Torchfeld.feld([masken[i] for i in indizes]), dim=0) for _r, _a, _f, masken in ansichten]
             ausschluesse = self._hautausschluesse(ansichten, teilmasken, haut)
             for (r, abbildung, foto, _masken), teilmaske, ausschluss in zip(ansichten, teilmasken, ausschluesse):
                 projektion.ansicht(r.winkel, abbildung, foto.farbe, foto.maske, teilmaske, ausschluss=ausschluss)

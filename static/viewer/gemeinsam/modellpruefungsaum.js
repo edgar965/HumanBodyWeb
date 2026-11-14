@@ -23,7 +23,8 @@ export class Modellpruefungsaum {
     static UEBERLAENGE = 0.025;
 
     static pruefen(koerper, lage, netze) {
-        const M = Modellpruefungsaum, saeume = [], kleider = Modellpruefungdurchstoss.kleider(netze.filter((o) => o !== koerper));
+        // Starre Stücke (Bauart, `Starrbindung`, 12.11.2026) haben keinen Saum: die Kanten einer Waffe sind Form, kein Stoffrand (Fallout Ranger: Laserwaffe 615 mm „Zacken 6,4 mm“).
+        const M = Modellpruefungsaum, saeume = [], kleider = Modellpruefungdurchstoss.kleider(netze.filter((o) => o !== koerper && !o.userData?.starrbindung));
         let loecher = 0;
         for (const o of kleider) {
             const p = M.verschweisst(o);

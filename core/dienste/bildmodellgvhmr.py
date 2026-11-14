@@ -23,7 +23,9 @@ import shutil
 import subprocess
 import time
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 from django.utils import timezone
 
@@ -102,11 +104,11 @@ class Bildmodellgvhmr:
         g = eintrag.get(self.FELD) or {}
         stamm = os.path.splitext(eintrag.get('datei') or '')[0]
         try:
-            punkte = np.load(self.ordner() / os.path.basename(g['netz']))
-            dreiecke = np.load(self.ordner() / os.path.basename(g.get('dreiecke') or 'smplx_dreiecke.npy'))
+            punkte = Npztorch.lesen(self.ordner() / os.path.basename(g['netz']))
+            dreiecke = Npztorch.lesen(self.ordner() / os.path.basename(g.get('dreiecke') or 'smplx_dreiecke.npy'))
             gelenke = None
-            if g.get('gelenke') and (self.ordner() / os.path.basename(g['gelenke'])).is_file():
-                gelenke = np.load(self.ordner() / os.path.basename(g['gelenke']))
+            if g.get('gelenke') and Npztorch.da(self.ordner() / os.path.basename(g['gelenke'])):
+                gelenke = Npztorch.lesen(self.ordner() / os.path.basename(g['gelenke']))
             self.ablage.ergebnis().mkdir(parents=True, exist_ok=True)
             name = self.BILD % stamm
             kamera = self.kamera(g)
@@ -201,17 +203,17 @@ class Bildmodellgvhmr:
         g = (eintrag or {}).get(self.FELD) or {}
         if not g.get('netz'):
             raise FileNotFoundError(g.get('fehler') or 'GVHMR für dieses Bild noch nicht gerechnet')
-        punkte = np.load(self.ordner() / os.path.basename(g['netz']))
-        dreiecke = np.load(self.ordner() / os.path.basename(g.get('dreiecke') or 'smplx_dreiecke.npy'))
+        punkte = Npztorch.lesen(self.ordner() / os.path.basename(g['netz']))
+        dreiecke = Npztorch.lesen(self.ordner() / os.path.basename(g.get('dreiecke') or 'smplx_dreiecke.npy'))
         aus = {
             'ok': True, 'datei': eintrag.get('datei'), 'anzahl': int(punkte.shape[0]),
-            'punkte': self._b64(punkte, np.float32), 'dreiecke': self._b64(dreiecke, np.uint32),
+            'punkte': self._b64(punkte, torch.float32), 'dreiecke': self._b64(dreiecke, torch.uint32),
             'hoehe_cm': round(float(g.get('hoehe_m') or punkte[:, 1].max()) * 100.0, 1),
             'betas': g.get('betas'), 'frames': g.get('frames'), 'stand': g.get('stand'),
         }
         rig = self.ordner() / os.path.basename(g.get('gelenke') or '')
-        if g.get('gelenke') and g.get('eltern') and rig.is_file():
-            aus['gelenke'] = self._b64(np.load(rig), np.float32)
+        if g.get('gelenke') and g.get('eltern') and Npztorch.da(rig):
+            aus['gelenke'] = self._b64(Npztorch.lesen(rig), torch.float32)
             aus['eltern'] = [int(e) for e in g['eltern']]
         # Dasselbe Netz in der Kamera des Fotos: `kamera.punkte`/`gelenke` (base64, OpenGL-Sicht,
         # Kamera im Ursprung blickt nach −z) mit fx/fy/cx/cy und Fotogröße — das Fenster stellt
@@ -219,9 +221,9 @@ class Bildmodellgvhmr:
         kamera = self.kamera(g)
         if kamera:
             aus['kamera'] = {n: kamera[n] for n in ('fx', 'fy', 'cx', 'cy', 'breite', 'hoehe')}
-            aus['kamera']['punkte'] = self._b64(kamera['punkte'], np.float32)
+            aus['kamera']['punkte'] = self._b64(kamera['punkte'], torch.float32)
             if kamera.get('gelenke') is not None:
-                aus['kamera']['gelenke'] = self._b64(kamera['gelenke'], np.float32)
+                aus['kamera']['gelenke'] = self._b64(kamera['gelenke'], torch.float32)
         return aus
 
     def kamera(self, g):
@@ -229,15 +231,15 @@ class Bildmodellgvhmr:
         wenn der Lauf vor dem 20.09. abends lag (dann „Neu rechnen" — der Runner liest nur)."""
         k = (g or {}).get('kamera') or {}
         pfad = self.ordner() / os.path.basename(k.get('netz') or '')
-        if not (k.get('netz') and k.get('fx') and pfad.is_file()):
+        if not (k.get('netz') and k.get('fx') and Npztorch.da(pfad)):
             return None
         aus = {n: float(k[n]) for n in ('fx', 'fy', 'cx', 'cy')}
-        aus.update(breite=int(k['breite']), hoehe=int(k['hoehe']), punkte=np.load(pfad))
+        aus.update(breite=int(k['breite']), hoehe=int(k['hoehe']), punkte=Npztorch.lesen(pfad))
         rig = self.ordner() / os.path.basename(k.get('gelenke') or '')
-        if k.get('gelenke') and rig.is_file():
-            aus['gelenke'] = np.load(rig)
+        if k.get('gelenke') and Npztorch.da(rig):
+            aus['gelenke'] = Npztorch.lesen(rig)
         return aus
 
     @staticmethod
     def _b64(feld, art):
-        return base64.b64encode(np.ascontiguousarray(feld, dtype=art).tobytes()).decode('ascii')
+        return base64.b64encode(Torchfeld.als_bytes(Torchfeld.feld(feld, dtype=art))).decode('ascii')

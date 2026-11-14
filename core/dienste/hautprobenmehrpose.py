@@ -8,7 +8,8 @@ Summen der Ansichten zusammen — dieselbe Rechnung wie `Hautproben.farbe`, nur 
 Dieselben Aufrufe wie bei `Hautproben` (`sammeln`, `licht_schaetzen`, `farbe`, `projektion`), damit `Koerperfotoprojektion` beide gleich behandelt.
 """
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 
 from .hautproben import Hautproben
 
@@ -40,7 +41,7 @@ class Hautprobenmehrpose:
         """`karten_je_ansicht`: je Ansicht die Gruppenkarten der Kachel in DER Haltung dieser Ansicht → wie `Hautproben.sammeln`, dazu `proben` (die Proben je Ansicht); Maske, Texel und Hand stammen aus der ersten."""
         ps = [pr.sammeln(karten) for pr, karten in zip(self.proben, karten_je_ansicht, strict=True)]
         for p in ps[1:]:
-            if not np.array_equal(p['index'], ps[0]['index']):
+            if not Torchfeld.equal(p['index'], ps[0]['index']):
                 raise ValueError('Hautprobenmehrpose: das Texelraster hängt an der Haltung — UV und Dreiecke sollten es bestimmen')
         return dict(ps[0], proben=ps)
 
@@ -54,5 +55,5 @@ class Hautprobenmehrpose:
         summe = gewicht = beste = 0.0
         for pr, pv in zip(self.proben, p['proben'], strict=True):
             s, g, b = pr.summen(pv)
-            summe, gewicht, beste = summe + s, gewicht + g, np.maximum(beste, b)
+            summe, gewicht, beste = summe + s, gewicht + g, Torchfeld.maximum(beste, b)
         return Hautproben.abschluss(summe, gewicht, beste, p['hand'])

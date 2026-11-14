@@ -39,7 +39,8 @@ HumanBody (`hairColorData`).
 import logging
 import os
 
-import numpy as np
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
 
 from Genesis9.kollision import G9kollision
@@ -97,14 +98,14 @@ class G9frisur:
         for knoten in szene.graph.nodes_geometry:
             matrix, name = szene.graph.get(knoten)
             geo = szene.geometry[name]
-            m = np.asarray(matrix, dtype=np.float64)
-            p = np.asarray(geo.vertices, dtype=np.float64) @ m[:3, :3].T + m[:3, 3]
+            m = Torchfeld.feld(matrix, dtype=torch.float64)
+            p = Torchfeld.feld(geo.vertices, dtype=torch.float64) @ m[:3, :3].T + m[:3, 3]
             punkte.append(p)
-            dreiecke.append(np.asarray(geo.faces, dtype=np.int64) + versatz)
+            dreiecke.append(Torchfeld.feld(geo.faces, dtype=torch.int64) + versatz)
             versatz += len(p)
         if not punkte:
             raise ValueError('GLB ohne Flaechen: %s' % os.path.basename(pfad))
-        return np.concatenate(punkte), np.concatenate(dreiecke)
+        return Torchfeld.cat(punkte), Torchfeld.cat(dreiecke)
 
     # -------------------------------------------------------------- Kopf
 
@@ -114,18 +115,18 @@ class G9frisur:
         if geschlecht not in cls._hb_kopf:
             hb = Hbtraeger.laden(geschlecht, None, {}, {})
             kopf = list(hb['knochen']).index(cls.HB_KOPF)
-            p = np.asarray(hb['punkte'])
+            p = Torchfeld.feld(hb['punkte'])
             # Die Gewichte (Stufe 1) beginnen mit den Kaefigpunkten.
-            maske = np.array([any(int(k) == kopf and w > cls.KOPFGEWICHT for k, w in hb['gewichte'][i])
-                              for i in range(len(p))])
+            maske = Torchfeld.feld([any(int(k) == kopf and w > cls.KOPFGEWICHT for k, w in hb['gewichte'][i])
+                              for i in range(len(p))], copy=True)
             cls._hb_kopf[geschlecht] = cls._kasten(p[maske])
         return cls._hb_kopf[geschlecht]
 
     def kopf_g9(self):
         haut = self.figur.haut()
         kopf = list(haut['knochen']).index(self.G9_KOPF)
-        maske = ((np.asarray(haut['index']) == kopf)
-                 & (np.asarray(haut['gewicht']) > self.KOPFGEWICHT)).any(axis=1)
+        maske = ((Torchfeld.feld(haut['index']) == kopf)
+                 & (Torchfeld.feld(haut['gewicht']) > self.KOPFGEWICHT)).any(axis=1)
         return self._kasten(self.figur.punkte()[maske])
 
     def zieltiefe(self, punkte):
@@ -133,16 +134,16 @@ class G9frisur:
         soll: `ABSTAND` — oder seine Tiefe auf HumanBody, wenn er dort in der
         Haut steckt (Modulkopf, der Dutt)."""
         hb = Hbtraeger.laden(self.geschlecht, None, {}, {})
-        fein = np.asarray(hb['fein'], dtype=np.float64)
-        tiefe = G9kollision.tiefe(punkte, fein, np.asarray(hb['fein_normalen'], dtype=np.float64),
+        fein = Torchfeld.feld(hb['fein'], dtype=torch.float64)
+        tiefe = G9kollision.tiefe(punkte, fein, Torchfeld.feld(hb['fein_normalen'], dtype=torch.float64),
                                   G9kollision.baum(fein))
-        return np.minimum(tiefe, self.ABSTAND)
+        return Torchfeld.minimum(tiefe, self.ABSTAND)
 
     @staticmethod
     def _kasten(p):
         if not len(p):
             raise ValueError('Kein Kopfpunkt gefunden')
-        return {'min': p.min(axis=0), 'max': p.max(axis=0), 'scheitel': p[p[:, 1].argmax()]}
+        return {'min': Torchfeld.amin(p, dim=0), 'max': Torchfeld.amax(p, dim=0), 'scheitel': p[p[:, 1].argmax()]}
 
     # ------------------------------------------------------------- bauen
 
@@ -153,14 +154,14 @@ class G9frisur:
         punkte, dreiecke = self.laden(self.pfad(name))
         ziel = self.zieltiefe(punkte)
         hb, g9 = self.kopf_hb(self.geschlecht), self.kopf_g9()
-        skala = (g9['max'] - g9['min']) / np.maximum(hb['max'] - hb['min'], 1e-6)
+        skala = (g9['max'] - g9['min']) / Torchfeld.maximum(hb['max'] - hb['min'], 1e-6)
         mitte_hb = self._bezug(hb)
         mitte_g9 = self._bezug(g9)
         gelegt = (punkte - mitte_hb) * skala + mitte_g9
         fein, normalen, baum = G9koerpernetz(self.figur.formung, stufen=stufen).koerperflaeche()
         frei = G9kollision.hinaus(gelegt, fein, normalen, abstand=ziel, baum=baum,
                                   durchgaenge=self.DURCHGAENGE)
-        hub = float(np.linalg.norm(frei - gelegt, axis=1).max()) * 1e3
+        hub = float(Torchfeld.linalg_norm(frei - gelegt, dim=1).max()) * 1e3
         logger.info('Genesis 9: Frisur %s — %d Punkte, Skala %.3f/%.3f/%.3f, Hub max %.1f mm',
                     name, len(frei), *skala, hub)
         n = len(frei)
@@ -169,12 +170,12 @@ class G9frisur:
             'normalen': Hbtraeger.nach_aussen(frei, Hbtraeger.normalen(frei, dreiecke)),
             'uv': None, 'gruppen': [], 'name': name, 'hub_mm': round(hub, 1),
             'haut': {'knochen': [self.G9_KOPF],
-                     'index': np.zeros((n, 4), dtype=np.int64),
-                     'gewicht': np.tile([1.0, 0.0, 0.0, 0.0], (n, 1))},
+                     'index': torch.zeros((n, 4), dtype=torch.int64, device='cuda'),
+                     'gewicht': torch.tile([1.0, 0.0, 0.0, 0.0], (n, 1))},
         }
 
     @staticmethod
     def _bezug(kasten):
         u"""Kastenmitte in Breite und Tiefe, Scheitel in der Hoehe."""
         lo, hi = kasten['min'], kasten['max']
-        return np.array([(lo[0] + hi[0]) / 2, kasten['scheitel'][1], (lo[2] + hi[2]) / 2])
+        return Torchfeld.feld([(lo[0] + hi[0]) / 2, kasten['scheitel'][1], (lo[2] + hi[2]) / 2], copy=True)

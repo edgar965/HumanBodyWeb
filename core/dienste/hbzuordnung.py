@@ -11,7 +11,9 @@ AUSGERICHTET (17.10.2026): Genesis' Gesicht sitzt 9–25 mm anders als das von H
 Abbildung wie beim MakeHuman-Klon) auf HumanBodys Kopf. Sie ist NICHT besser fuer alle Regler (Mund: `Mouth_UpperlipVolume` 0,94 → 0,03 mm) — `Hbmorphuebertragung`
 nimmt sie nur als Rueckfall fuer Regler, die sonst verschluckt wuerden.
 """
-import numpy as np
+import math
+import torch
+from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.kollision import G9kollision
 
 from .g9aufhumanbody import G9aufhumanbody
@@ -35,7 +37,7 @@ class Hbzuordnung:
         u"""`paar`: Paarung (`G9aufhumanbody`), `hb`: `{punkte, normalen}` der Grundfigur, `ursprung`: Browserpunkt -> Kaefigpunkt, `zahl`: Kaefigpunkte."""
         self.paar = paar
         self.hb = hb
-        self.ursprung = np.asarray(ursprung, dtype=np.int64)
+        self.ursprung = Torchfeld.feld(ursprung, dtype=torch.int64)
         self.zahl = int(zahl)
         self.ausgerichtet = bool(ausgerichtet)
         self._suche = None
@@ -48,9 +50,9 @@ class Hbzuordnung:
     def suchpunkte(self):
         u"""(27087, 3) die Genesis-Browserpunkte im HumanBody-Raum, an denen gesucht wird."""
         if self._suche is None:
-            suche = np.asarray(self.paar['skaliert'], dtype=np.float64)
+            suche = Torchfeld.feld(self.paar['skaliert'], dtype=torch.float64)
             if self.ausgerichtet:
-                hb = np.asarray(self.hb['punkte'], dtype=np.float64)
+                hb = Torchfeld.feld(self.hb['punkte'], dtype=torch.float64)
                 kinn = Mhkopfanker.finden(hb)['kinn'][1]
                 suche = Mhkopfausrichtung.berechnen(suche, hb, [], [], y_null=kinn - self.HALS_M).anwenden(suche)
             self._suche = suche
@@ -66,35 +68,35 @@ class Hbzuordnung:
         u"""(Kaefigpunkte,) True, wo es kein HumanBody-Gegenstueck gibt: naechster Kandidat weiter als `LUECKE_M` oder nur mit gegenlaeufiger Normale."""
         if self._luecke is None:
             self.kandidaten()
-            kaefig = np.zeros(self.zahl)
-            np.maximum.at(kaefig, self.ursprung, np.where(np.isfinite(self._naehe), self._naehe, 9.0))
-            ohne = np.zeros(self.zahl)
-            np.maximum.at(ohne, self.ursprung, self._ohne.astype(float))
+            kaefig = torch.zeros(self.zahl, dtype=torch.float64, device='cuda')
+            Torchfeld.maximum_at(kaefig, self.ursprung, torch.where(Torchfeld.isfinite(self._naehe), self._naehe, 9.0))
+            ohne = torch.zeros(self.zahl, dtype=torch.float64, device='cuda')
+            Torchfeld.maximum_at(ohne, self.ursprung, Torchfeld.astype(self._ohne, torch.float64))
             self._luecke = (kaefig > self.LUECKE_M) | (ohne > 0)
         return self._luecke
 
     def _rechnen(self):
         paar, hb, suche = self.paar, self.hb, self.suchpunkte()
         zahl = len(paar['g9_punkte'])
-        kand = np.tile(paar['zu'][:, None], (1, self.KANDIDATEN))
-        gewicht = np.zeros((zahl, self.KANDIDATEN))
+        kand = torch.tile(paar['zu'][:, None], (1, self.KANDIDATEN))
+        gewicht = torch.zeros((zahl, self.KANDIDATEN), dtype=torch.float64, device='cuda')
         gewicht[:, 0] = 1.0
         #: Abstand (m, HumanBody-Lage) des naechsten Kandidaten je Genesis-Browserpunkt — gross = kein Gegenstueck (Mundinnenraum, Zehen).
-        self._naehe = np.full(zahl, np.inf)
-        self._ohne = np.zeros(zahl, dtype=bool)
+        self._naehe = Torchfeld.full(zahl, math.inf)
+        self._ohne = torch.zeros(zahl, dtype=torch.bool, device='cuda')
         for _teil, (g9_idx, hb_idx) in paar['segmente'].items():
             if not len(g9_idx) or len(hb_idx) < self.KANDIDATEN:
                 continue
             abstand, nr = G9kollision.naechste(G9kollision.baum(hb['punkte'][hb_idx]), suche[g9_idx], k=self.KANDIDATEN)
-            self._naehe[g9_idx] = np.asarray(abstand, dtype=np.float64)[:, 0]
-            nr = hb_idx[np.asarray(nr)]
-            w = 1.0 / np.maximum(np.asarray(abstand, dtype=np.float64), 1e-4)
-            einig = np.einsum('ik,ijk->ij', paar['g9_normalen'][g9_idx], hb['normalen'][nr]) > self.EINIG
+            self._naehe[g9_idx] = Torchfeld.feld(abstand, dtype=torch.float64)[:, 0]
+            nr = hb_idx[Torchfeld.feld(nr)]
+            w = 1.0 / Torchfeld.maximum(Torchfeld.feld(abstand, dtype=torch.float64), 1e-4)
+            einig = Torchfeld.einsum('ik,ijk->ij', paar['g9_normalen'][g9_idx], hb['normalen'][nr]) > self.EINIG
             keiner = ~einig.any(axis=1)
             einig[keiner, 0] = True                 # sonst der naechste, wie `zu`
             # ... aber mit gegenlaeufiger Normale kippt das Vorzeichen jedes Deltas entlang der Normale — fuer Felder zaehlt so ein Punkt als „ohne Gegenstueck“.
-            self._ohne[np.asarray(g9_idx)[keiner]] = True
-            w = np.where(einig, w, 0.0)
+            self._ohne[Torchfeld.feld(g9_idx)[keiner]] = True
+            w = torch.where(einig, w, 0.0)
             kand[g9_idx] = nr
             gewicht[g9_idx] = w / w.sum(axis=1, keepdims=True)
         self._kand, self._gewicht = kand, gewicht

@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Fusshaltung } from '../gemeinsam/fusshaltung.js';
 
 /**
  * Posenabsatz — der Absatzschuh als Teil der Pose einer Figur.
@@ -93,7 +94,17 @@ export class Posenabsatz {
 
     /** Nach dem Mixer: die Fussdeltas auf die animierte Figur mischen. */
     static takt() {
-        if (!state.mixer || !state.playing) return 0;
+        if (!state.playing) return 0;
+        return Posenabsatz.nachMixer();
+    }
+
+    /**
+     * Nach JEDEM `mixer.update` außerhalb der Szenenschleife (Zeitregler, `Animationszugriff.stellen`, Proben, Aufnahme) — der Mixer
+     * hat die Füße auch dort neu gestellt (12.11.2026, Fallout Ranger: im pausierten Bild stand der Stiefel gekippt neben dem Fuß).
+     * `mischen` fasst nur Knochen an, die der Mixer seit dem letzten Mischen verändert hat; ein zweiter Aufruf im selben Bild tut nichts.
+     */
+    static nachMixer() {
+        if (!state.mixer) return 0;
         const wurzel = state.mixer.getRoot();
         let gemischt = 0;
         for (const figur of state.characters.values()) {
@@ -103,26 +114,9 @@ export class Posenabsatz {
         return gemischt;
     }
 
-    /** Fussdeltas auf die Knochen multiplizieren, die der Mixer neu gesetzt hat. */
+    /** Fussdeltas auf die Knochen multiplizieren, die der Mixer neu gesetzt hat — die Rechnung steht seit 12.11.2026 in `gemeinsam/fusshaltung.js` (das Studio braucht sie auch). */
     static mischen(figur) {
-        let skelett = null;
-        figur.group.traverse((teil) => {
-            if (!skelett && teil.isSkinnedMesh && teil.skeleton) skelett = teil.skeleton;
-        });
-        if (!skelett) return 0;
-        const gemischt = figur._absatzGemischt || (figur._absatzGemischt = {});
-        let n = 0;
-        for (const [name, wert] of Object.entries(figur.absatzDeltas)) {
-            const knochen = skelett.getBoneByName(name.replace(/\./g, '_'));
-            if (!knochen) continue;
-            const vorher = gemischt[name];
-            if (vorher && knochen.quaternion.equals(vorher)) continue;
-            const Quat = knochen.quaternion.constructor;
-            knochen.quaternion.multiply(new Quat(wert[0], wert[1], wert[2], wert[3]));
-            gemischt[name] = knochen.quaternion.clone();
-            n++;
-        }
-        return n;
+        return Fusshaltung.mischen(figur);
     }
 
     /** Hängt die Mixer-Wurzel in der Gruppe dieser Figur? */
