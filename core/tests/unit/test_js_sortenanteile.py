@@ -5,7 +5,7 @@ Edgar, 30.09.2026: „wenn ich einen anteil eines neuen haares hinzumische, soll
 anteil der anderen proportional sinken, so dass die Summe aller Anteile immer 100% ist".
 
 Geprueft wird die Rechnung ohne DOM — die Summe bleibt 1, das Verhaeltnis der anderen
-bleibt erhalten (und kehrt zurueck, wenn die neue Sorte wieder auf 0 geht), die einzige
+bleibt erhalten (und kehrt zurueck, wenn die neue Sorte wieder auf 0 geht), Baerte (`_beard`) zaehlen nicht mit, die einzige
 Sorte bleibt bei 100 %, und in die gespeicherten Werte kommt genau, was von der Vorgabe
 abweicht — sonst naehme der Server fuer die Grundsorte wieder 1,0 an.
 """
@@ -71,6 +71,9 @@ pruefe('6 kin auf Vorgabe weg', !('sorte.kin' in regler));
 pruefe('7 sorte', Sortenanteile.ist('sorte.kin_hair'));
 pruefe('7 morph', !Sortenanteile.ist('kin_hair.Feathered'));
 pruefe('7 zuletzt', !Sortenanteile.ist('sorte_zuletzt'));
+// Bärte (`_beard`) werden zusätzlich getragen, wie `G9haargenerisch.ZUSATZ` (16.11.2026: „Eigen Bart“ zog „Eigen Haar“ auf 0)
+pruefe('7 bart', !Sortenanteile.ist('sorte.eigen_beard'));
+pruefe('7 daz-bart', !Sortenanteile.ist('sorte.mavick_beard'));
 
 console.log(JSON.stringify({ok: true}));
 """

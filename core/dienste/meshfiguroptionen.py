@@ -242,10 +242,10 @@ class Meshfiguroptionen:
             'art': 'wahl',
             'vorgabe': 'beste',
             'werte': [
-                ('beste', 'Die dem Netzhaar am nächsten kommt (Daz oder „Haar Eigen")'),
+                ('beste', 'Die dem Netzhaar am nächsten kommt (Daz-Frisuren mit Formachsen)'),
                 ('daz', 'Nur Daz-Frisuren'),
                 ('herren', 'Nur Herrenfrisuren (für männliche Figuren gebaute Stücke und das eigene Herrenhaar)'),
-                ('eigen', '„Haar Eigen" (Länge, Kurz, Dichte, Wellig, Dutt)'),
+                ('eigen', 'Kin mit Formachsen (Länge, Kurz, Dichte, Wellig, Dutt)'),
                 ('aus', 'Keine'),
             ],
         },

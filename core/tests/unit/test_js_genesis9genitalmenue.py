@@ -29,22 +29,28 @@ class GenitalmenueJsTest(SimpleTestCase):
         self.assertIn('Genesis9garderobekategorien.stand()', text)
         menue = quelltext('charakter', 'genesis9', 'genesis9genitalmenue.js')
         self.assertIn("kasten.querySelector(':scope > summary')", menue, 'der Kopf, nicht der ganze Kasten (darin liegen die Regler)')
-        self.assertIn('Kontextmenue.binden(ziel, eintraege)', menue)
+        # Seit 16.11.2026 setzt `Genesis9stueckmenue` das Menü zusammen — dieselbe Klasse wie in der Garderobe.
+        self.assertIn('Genesis9stueckmenue.binden(ziel, stueck, () => Genesis9genitalmenue.optionen(kasten, stueck))', menue)
 
     def test_2_drei_eintraege_wie_in_der_garderobe(self):
         menue = quelltext('charakter', 'genesis9', 'genesis9genitalmenue.js')
-        self.assertIn('Genesis9garderobekategorien.verschiebenEintrag(', menue)
         self.assertIn("'In der Garderobe verschieben nach'", menue)
-        self.assertIn("text: 'Umbenennen …'", menue)
-        self.assertIn("text: 'Löschen'", menue)
+        stueckmenue = quelltext('charakter', 'genesis9', 'genesis9stueckmenue.js')
+        self.assertIn('Genesis9garderobekategorien.verschiebenEintrag(stueck, neuzeichnen, garderobezeile, text)', stueckmenue)
+        self.assertIn("text: 'Umbenennen …'", stueckmenue)
+        self.assertIn("text: 'Löschen'", stueckmenue)
         kategorien = quelltext('charakter', 'genesis9', 'genesis9garderobekategorien.js')
         self.assertIn('static verschiebenEintrag(stueck, neuzeichnen, zeile, text = \'Verschieben nach\')', kategorien)
-        # Das Menü der Garderobe selbst nimmt denselben Eintrag — es gibt keine zweite Fassung der Combo-Box.
-        self.assertIn('Genesis9garderobekategorien.verschiebenEintrag(stueck, neuzeichnen, zeile)', kategorien)
+        # Die Garderobe nimmt dieselbe Klasse — es gibt keine zweite Fassung der Einträge.
+        garderobe = quelltext('charakter', 'genesis9', 'genesis9garderobe.js')
+        self.assertIn('Genesis9stueckmenue.binden(zeile, stueck, { zeile, neuzeichnen })', garderobe)
+        self.assertNotIn('verschiebenEintrag(', menue + garderobe)
 
     def test_3_loeschen_nimmt_die_garderobenzeile_mit_und_baut_nichts_neu(self):
         menue = quelltext('charakter', 'genesis9', 'genesis9genitalmenue.js')
-        self.assertIn('Genesis9garderobepflege.loeschen(stueck, null, kasten)', menue)
+        self.assertIn('zeile: kasten', menue, 'der Kasten ist die Zeile, die beim Löschen sofort verschwindet')
+        stueckmenue = quelltext('charakter', 'genesis9', 'genesis9stueckmenue.js')
+        self.assertIn('Genesis9garderobepflege.loeschen(stueck, neuzeichnen, zeile)', stueckmenue)
         self.assertNotIn('Genesis9garderobe.aktualisieren', menue, 'kein Neuaufbau der Garderobe (Edgar, 18.10.2026)')
         pflege = quelltext('charakter', 'genesis9', 'genesis9garderobepflege.js')
         # Die Pflege nimmt auf dem Erfolgsweg mit, was vom Stück noch steht — ob die Zeile oder der Kasten angeklickt wurde.

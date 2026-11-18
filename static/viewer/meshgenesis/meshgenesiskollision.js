@@ -19,6 +19,7 @@
  * `versch` je Knochen in der Reihenfolge der Kinematik): der Punkt in der Haltung steht im Attribut `kollisionStand`, die Enden der Kapsel in `kollisionAH`/`kollisionBH`. Ohne `haltung` (Fassung 2) nur die Ruhe.
  */
 import * as THREE from 'three';
+import { Shaderpatch } from '../gemeinsam/shaderpatch.js';
 
 export class Meshgenesiskollision {
     static MAX = 96;
@@ -162,18 +163,18 @@ transformed = kollisionStart + kollisionSchub * (kollisionDeckel / max(length(ko
         const regel = kapseln.regel?.schub_fassung ?? Meshgenesiskollision.SCHUB_FASSUNG;
         const weich = (kapseln.regel?.weich_m ?? Meshgenesiskollision.WEICH_M).toFixed(4);
         const deckelNormale = (kapseln.regel?.deckel_normale_m ?? Meshgenesiskollision.DECKEL_NORMALE_M).toFixed(4);
-        const klonen = m => {
-            const neu = m.clone();
-            neu.onBeforeCompile = shader => {
-                Object.assign(shader.uniforms, u);
-                shader.vertexShader = shader.vertexShader
-                    .replace('#include <common>', `#include <common>\n#define KOLLISION_ZAHL ${zahl}\n#define KOLLISION_FREMD ${fremd}\n#define KOLLISION_DECKEL ${deckel}\n`
-                        + `#define KOLLISION_REGEL ${regel}\n#define KOLLISION_WEICH ${weich}\n#define KOLLISION_DECKEL_NORMALE ${deckelNormale}\n${haltung ? '#define KOLLISION_HALTUNG\n' : ''}${Meshgenesiskollision.KOPF}`)
-                    .replace('#include <skinning_vertex>', `#include <skinning_vertex>\n${Meshgenesiskollision.RUMPF}`);
-            };
-            neu.customProgramCacheKey = () => `meshgenesiskollision4_${zahl}_${fremd}_${deckel}_${regel}_${weich}_${deckelNormale}_${haltung ? 1 : 0}`;
-            return neu;
+        // über `Shaderpatch` (16.11.2026): `Meshgenesishaarschwung` hängt sich an dasselbe Material — ein direktes `onBeforeCompile` hätte einen der beiden still gelöscht.
+        // Geklont ohne die Eingriffe des Ausgangsmaterials, wie zuvor `m.clone()`.
+        const kennung = `meshgenesiskollision4_${zahl}_${fremd}_${deckel}_${regel}_${weich}_${deckelNormale}_${haltung ? 1 : 0}`;
+        const eingriff = shader => {
+            Object.assign(shader.uniforms, u);
+            shader.vertexShader = shader.vertexShader
+                .replace('#include <common>', `#include <common>\n#define KOLLISION_ZAHL ${zahl}\n#define KOLLISION_FREMD ${fremd}\n#define KOLLISION_DECKEL ${deckel}\n`
+                    + `#define KOLLISION_REGEL ${regel}\n#define KOLLISION_WEICH ${weich}\n#define KOLLISION_DECKEL_NORMALE ${deckelNormale}\n${haltung ? '#define KOLLISION_HALTUNG\n' : ''}${Meshgenesiskollision.KOPF}`)
+                .replace('#include <skinning_vertex>', `#include <skinning_vertex>\n${Meshgenesiskollision.RUMPF}`);
         };
+        eingriff.kennung = () => kennung;
+        const klonen = m => Shaderpatch.anhaengen(m.clone(), 'meshgenesiskollision', eingriff);
         mesh.material = Array.isArray(mesh.material) ? mesh.material.map(klonen) : klonen(mesh.material);
         return zahl;
     }

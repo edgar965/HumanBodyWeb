@@ -38,6 +38,7 @@ from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9bauartapi import G9bauartapi
 from .api.g9garderobepflege import G9garderobepflegeapi
+from .api.g9posenapi import G9posenapi
 from .api.g9hautebenen import G9hautebenenapi
 from .api.g9koerperkoordinaten import G9koerperkoordinatenapi
 from .api.g9hautmaskenapi import G9hautmaskenapi
@@ -192,7 +193,7 @@ CHARAKTER = [
     path('api/character/genesis9-figur/', G9figur.liste, name='g9_figur_liste'),
     path('api/character/genesis9-figur/regler/', G9figur.regler,
          name='g9_figur_regler'),
-    path('api/character/genesis9-figur/posen/', G9garderobeapi.posen,
+    path('api/character/genesis9-figur/posen/', G9posenapi.posen,
          name='g9_figur_posen'),
     path('api/character/genesis9-figur/garderobe/', G9garderobeapi.garderobe,
          name='g9_figur_garderobe'),

@@ -45,14 +45,14 @@ class EigeneGewichteTest(SimpleTestCase):
         folger = mock.MagicMock()
         with mock.patch.object(G9garderobe, 'eintrag', return_value={'zeigbar': True, 'name': 'x', 'art': 'kleidung'}), \
                 mock.patch.object(G9garderobe, 'datei', return_value=Path('x.duf')), \
-                mock.patch.object(G9garderobe, '_knoten', return_value=[('p', {'id': 'g'}, 'k')]), \
-                mock.patch('Genesis9.garderobe.G9dson.lesen', return_value=object()), \
+                mock.patch.object(G9garderobe, '_knoten', return_value=[('p', {'id': 'g'}, {'id': 'k'})]), \
+                mock.patch('Genesis9.garderobeteile.G9dson.lesen', return_value=object()), \
                 mock.patch('Genesis9.requisit.G9requisit.aus_knoten', return_value=lage), \
                 mock.patch('Genesis9.requisit.G9requisit.definition_fuer', return_value=None), \
-                mock.patch('Genesis9.garderobe.G9garderobekategorien.kategorie', return_value='Hose'), \
-                mock.patch('Genesis9.garderobe.G9knotensicht.sichtbar', return_value=True), \
+                mock.patch('Genesis9.garderobeteile.G9garderobekategorien.kategorie', return_value='Hose'), \
+                mock.patch('Genesis9.garderobeteile.G9knotensicht.sichtbar', return_value=True), \
                 mock.patch('Genesis9.stoff.G9stoff.entscheiden'), \
-                mock.patch('Genesis9.garderobe.G9folger.holen', return_value=folger) as holen, \
+                mock.patch('Genesis9.garderobeteile.G9folger.holen', return_value=folger) as holen, \
                 mock.patch.object(G9stueckersatz, 'eigene_gewichte_fuer', return_value=eigene):
             G9garderobe.teile('x')
         return holen.call_args.kwargs['koerperhaut']

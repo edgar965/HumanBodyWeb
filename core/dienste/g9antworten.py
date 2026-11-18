@@ -139,8 +139,8 @@ class G9antworten(G9antwortvorrat):
         cls._letzte_anfrage = time.time()
         binaer = Netzausgabe.will_binaer(request)
         schluessel = cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer)
-        # Erst dieser Vorrat, dann der dauerhafte über Code-Änderungen hinweg (`G9modellvorrat`, 19.10.2026: sofort, im Hintergrund neu), dann rechnen.
-        dauer = G9vorratanfrage(request, cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer, fassung='stabil'))
+        # Erst dieser Vorrat, dann der dauerhafte über Code-Änderungen hinweg (`G9modellvorrat`, 19.10.2026; älterer Code nur als Vorschau, 17.11.2026), dann rechnen.
+        dauer = G9vorratanfrage(request, cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer, fassung='stabil'), cls.fassung())
         antwort = dauer.liefern(cls.holen(schluessel), lambda: cls.rechnen(schluessel, bauen, platte=cls.platte_an(), binaer=binaer), cls.inhaltstyp(binaer))
         if gewaehlt != cls.VORAUS and antwort.status_code < 400:
             cls.vorausrechnen(art, name, rumpf, bauen, eintrag, binaer)

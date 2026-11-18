@@ -37,15 +37,15 @@ class GarderobeKategorienJsTest(SimpleTestCase):
         kategorien = quelltext('charakter', 'genesis9', 'genesis9garderobekategorien.js')
         self.assertIn('static offen(name, enthaeltGewaehltes = false)', kategorien)
         self.assertNotIn('static ZU', kategorien, 'keine Ausnahme mehr — die Vorgabe ist zu')
-        self.assertIn('Genesis9garderobekategorien.menue(zeile, stueck, neuzeichnen)', text)
+        self.assertIn('Genesis9stueckmenue.binden(zeile, stueck, { zeile, neuzeichnen })', text)   # das Menü: `Genesis9stueckmenue` (16.11.2026)
         self.assertIn('escapeHtml(titel)', text, 'Kategorienamen kommen von Edgar — als Text')
 
     def test_2_adresse_stimmt_mit_django_ueberein(self):
         text = quelltext('charakter', 'genesis9', 'genesis9garderobekategorien.js')
         adresse = reverse('g9_figur_garderobe_kategorien')
         self.assertIn(f"static ADRESSE = '{adresse}';", text)
-        self.assertIn("Kontextmenue.binden(zeile", text)
         self.assertIn("'Neue Kategorie …'", text)
+        self.assertIn('Kontextmenue.binden(ziel', quelltext('charakter', 'genesis9', 'genesis9stueckmenue.js'))
 
     def test_3_misslungenes_anziehen_nimmt_das_haekchen_zurueck(self):
         """08.10.2026 (Edgar: „T-Shirt hinzugefügt – funktioniert nicht"): `anziehen` trägt die Wahl VOR der

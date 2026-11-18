@@ -7,6 +7,7 @@ import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
 import { Normalenarbeit } from '../gemeinsam/normalenarbeit.js';
 import { Genesis9antwortspeicher } from '../gemeinsam/genesis9antwortspeicher.js';
 import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
+import { Genesis9anatomievorgabe } from './genesis9/genesis9anatomievorgabe.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -69,6 +70,8 @@ export class Starteinstellungen {
         Genesis9antwortspeicher.einstellen(eigene.netzantworten);
         // Bis zu welcher Stufe die Anzeigen dauerhaft auf dem Server liegen und vorab gefüllt werden (Einstellungen → Charakter, Vorgabe ultrafein).
         Genesis9vorrat.einstellen(eigene.netzvorrat);
+        // Katalogfiguren mit dem Anatomie-Stück ihres Geschlechts (Einstellungen → Charakter, Vorgabe an).
+        Genesis9anatomievorgabe.einstellen(eigene[Genesis9anatomievorgabe.SCHLUESSEL]);
     }
 
     _mhKleidung(eigene) {

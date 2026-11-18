@@ -17,13 +17,11 @@ von `Koerperkollision`, Polarzerlegung; zur CPU gehen nur die Versätze der gesc
 """
 import ctypes
 import os
-import sys
 from contextlib import contextmanager
 from types import SimpleNamespace
 
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
-from django.conf import settings
 from KoerperKI_alle.drehung import Drehung as Rotation
 
 from .exportleisterendermodell import Exportleisterendermodell
@@ -127,9 +125,8 @@ class Exportleistekollision:
         import torch
         if not torch.cuda.is_available():
             raise RuntimeError('Kollision im Export: keine CUDA-Karte')
-        mesh = str(settings.TOOLS_ROOT / 'meshgenesis')
-        if mesh not in sys.path:
-            sys.path.insert(0, mesh)
+        from .meshgenesissuchpfad import Meshgenesissuchpfad
+        Meshgenesissuchpfad.einhaengen()
         from meshgenesis_gpusperre import Gpusperre
         k = ctypes.windll.kernel32
         k.GetCurrentProcess.restype = ctypes.c_void_p

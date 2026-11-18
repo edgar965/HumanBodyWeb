@@ -1,6 +1,4 @@
-import { Kontextmenue } from '../../gemeinsam/kontextmenue.js';
-import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
-import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
+import { Genesis9stueckmenue } from './genesis9stueckmenue.js';
 import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
 import { Genesis9genitalkasten } from './genesis9genitalkasten.js';
 
@@ -34,22 +32,17 @@ export class Genesis9genitalmenue {
     static binden(kasten, zeile, inst, stueck, titel) {
         Genesis9genitalkasten.merken(kasten, stueck, titel);
         const kopf = kasten.querySelector(':scope > summary');
-        const eintraege = () => Genesis9genitalmenue.eintraege(kasten, stueck);
         for (const ziel of [kopf, zeile]) {
-            if (ziel) Kontextmenue.binden(ziel, eintraege);
+            if (ziel) Genesis9stueckmenue.binden(ziel, stueck, () => Genesis9genitalmenue.optionen(kasten, stueck));
         }
     }
 
-    /** Die Einträge des Menüs; die Zeile der Garderobe wird beim Öffnen gesucht — sie kann inzwischen gebaut worden sein. */
-    static eintraege(kasten, stueck) {
-        const verschieben = Genesis9garderobekategorien.verschiebenEintrag(
-            stueck, null, Genesis9garderobezeile.zeileVon(stueck.id), 'In der Garderobe verschieben nach');
-        return [
-            ...(verschieben ? [verschieben, null] : []),
-            // Kopf und Garderobenzeile setzt `Genesis9garderobepflege` nach dem Umbenennen aus dem frischen Katalog.
-            { symbol: 'fa-pen', text: 'Umbenennen …', tun: () => Genesis9garderobepflege.umbenennen(stueck, null) },
-            // Der Kasten ist die „Zeile": er verschwindet sofort, bei einem Fehler kommt er zurück; die Garderobenzeile nimmt die Pflege mit.
-            { symbol: 'fa-trash', text: 'Löschen', tun: () => Genesis9garderobepflege.loeschen(stueck, null, kasten) },
-        ];
+    /**
+     * Die Optionen des Menüs (`Genesis9stueckmenue`, seit 16.11.2026 dieselbe Klasse wie in der Garderobe). Der Kasten ist die „Zeile“:
+     * er verschwindet beim Löschen sofort und kommt bei einem Fehler zurück. Die Zeile der Garderobe wird beim Öffnen gesucht — sie kann
+     * inzwischen gebaut worden sein — und wandert beim Verschieben mit.
+     */
+    static optionen(kasten, stueck) {
+        return { zeile: kasten, garderobezeile: Genesis9garderobezeile.zeileVon(stueck.id), text: 'In der Garderobe verschieben nach' };
     }
 }

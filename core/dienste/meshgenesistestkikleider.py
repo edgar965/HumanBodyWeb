@@ -89,11 +89,8 @@ class Meshgenesistestkikleider:
     @staticmethod
     def _regel():
         """`Kleideranatomie` und `Kleiderverdeckung` aus der Kette (`A:/3DTools/meshgenesis`, nur numpy)."""
-        from django.conf import settings
-        import sys
-        mesh = str(settings.TOOLS_ROOT / 'meshgenesis')
-        if mesh not in sys.path:
-            sys.path.insert(0, mesh)
+        from .meshgenesissuchpfad import Meshgenesissuchpfad
+        Meshgenesissuchpfad.einhaengen()
         from meshgenesis_kleider_anatomie import Kleideranatomie
         from meshgenesis_kleider_verdeckung import Kleiderverdeckung
         return Kleideranatomie, Kleiderverdeckung

@@ -6,6 +6,7 @@ import { Genesis9lauf } from './genesis9lauf.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Genesis9stueckregler } from './genesis9stueckregler.js';
 import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
+import { Genesis9stueckmenue } from './genesis9stueckmenue.js';
 import { Reiterzuordnung } from '../../gemeinsam/reiterzuordnung.js';
 import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Stueckfarbe } from './stueckfarbe.js';
@@ -120,7 +121,7 @@ export class Genesis9garderobe {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         zeile.inst = inst;
-        Genesis9garderobekategorien.menue(zeile, stueck, neuzeichnen);
+        Genesis9stueckmenue.binden(zeile, stueck, { zeile, neuzeichnen });     // Rechtsklick: verschieben, umbenennen, löschen
         const herkunft = stueck.herkunft || (stueck.basis ? 'Genesis 8' : '');
         zeile.title = stueck.zeigbar
             ? (stueck.knochen ? `${stueck.datei} — an ${stueck.knochen}` : stueck.datei)

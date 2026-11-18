@@ -99,21 +99,30 @@ class G9antwortvorrat:
             if daten is not None:
                 cls._speicher.move_to_end(schluessel)
                 return daten
+        gelesen = cls._von_platte(schluessel)
+        if gelesen is None:
+            return None
+        cls._im_speicher(schluessel, gelesen[0])
+        return gelesen[0]
+
+    @classmethod
+    def _von_platte(cls, schluessel):
+        u"""(Bytes, Zusatz des Verweises) von der Platte — oder None. Der Verweis ist der sha1 des Inhalts, dahinter durch ein Leerzeichen
+        getrennt ein Zusatz (`G9modellvorrat`: die Code-Fassung, seit 17.11.2026); ohne Zusatz ''."""
         ordner = cls.ordner()
         verweis = ordner / (schluessel + cls.VERWEIS)
         try:
-            kennung = verweis.read_text(encoding='ascii').strip()
-            inhalt = ordner / cls.INHALT / (kennung + cls.ENDUNG)
+            teile = verweis.read_text(encoding='ascii').split()
+            inhalt = ordner / cls.INHALT / (teile[0] + cls.ENDUNG)
             daten = inhalt.read_bytes()
-        except OSError:
+        except (OSError, IndexError):
             return None
         for datei in (verweis, inhalt):     # juengst gebraucht — fuer das Ausduennen
             try:
                 os.utime(datei)
             except OSError:
                 pass
-        cls._im_speicher(schluessel, daten)
-        return daten
+        return daten, ' '.join(teile[1:])
 
     @classmethod
     def merken(cls, schluessel, daten, platte=True):
@@ -123,8 +132,8 @@ class G9antwortvorrat:
                              daemon=True, name='g9-antwort').start()
 
     @classmethod
-    def _schreiben(cls, schluessel, daten):
-        u"""Erst den Inhalt (falls neu), dann den Verweis — beides ganz oder gar nicht."""
+    def _schreiben(cls, schluessel, daten, zusatz=''):
+        u"""Erst den Inhalt (falls neu), dann den Verweis (sha1, dahinter `zusatz`) — beides ganz oder gar nicht."""
         try:
             ordner = cls.ordner()
             (ordner / cls.INHALT).mkdir(parents=True, exist_ok=True)
@@ -132,7 +141,8 @@ class G9antwortvorrat:
             inhalt = ordner / cls.INHALT / (kennung + cls.ENDUNG)
             if not inhalt.exists():
                 cls._ablegen(inhalt, daten)
-            cls._ablegen(ordner / (schluessel + cls.VERWEIS), kennung.encode('ascii'))
+            verweis = '%s %s' % (kennung, zusatz) if zusatz else kennung
+            cls._ablegen(ordner / (schluessel + cls.VERWEIS), verweis.encode('ascii'))
             cls._ausduennen(ordner)
         except OSError as fehler:
             logger.warning('Genesis 9: Antwort nicht ablegbar: %s', fehler)

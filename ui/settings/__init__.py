@@ -81,6 +81,10 @@ MIDDLEWARE = [
     # Der Keks `netzstufen` (Strg+Alt+H im Browser) waehlt die Unterteilungs-
     # stufe fuer DIESEN Browser — je Anfrage, vor der Einstellung (17.09.2026).
     'core.dienste.netzstufenwahl.Netzstufenwahl',
+    # Zuletzt, damit ihr `process_exception` zuerst drankommt: Hat Windows die
+    # Karte zurückgesetzt, kommt statt 500 eine 503 „Server neu starten"
+    # (17.11.2026, Vorfall in `ui/kartezurueckgesetzt.py`).
+    'ui.kartezurueckgesetzt.Kartezurueckgesetzt',
 ]
 
 ROOT_URLCONF = 'ui.urls'

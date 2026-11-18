@@ -16,6 +16,9 @@ import { Netzstufenstand } from './netzstufenstand.js';
  * 2. Danach jede Anfrage mit derselben Stellung wie beim Laden (Strg+Alt+H zurück auf eine Stufe, ein zweiter Stufenwechsel).
  * 3. Nach „Modell speichern" und nach dem Laden eines gespeicherten Modells im Charakter füllt `fuellen` die übrigen Stufen bis zur Einstellung VORAB
  *    (Kopf `X-G9-Vorrat-Nur`: der Server rechnet und legt ab, schickt aber nichts) — nach Ruhe, eine Anfrage nach der anderen.
+ * 4. Der Käfig des ersten Zugs, wenn eine feinere Stufe folgt, ist eine VORSCHAU (Kopf `X-G9-Vorrat-Vorschau`, nur `?stufen=0`): nur ihn darf der Server
+ *    mit älterem Code gerechnet liefern; alles andere rechnet er nach einer Code-Änderung neu (17.11.2026, Edgar: „fixe das: Nach einer Code-Änderung
+ *    zeigen sie beim ersten Laden noch den alten Stand").
  *
  * Die Stellung ist Adresse ohne Stufe plus Rumpf (wie `Genesis9antwortspeicher`): Sie bestimmt die Antwort, nicht die Stufe.
  */
@@ -23,6 +26,7 @@ export class Genesis9vorrat {
 
     static KOPF = 'X-G9-Vorrat';
     static KOPF_NUR = 'X-G9-Vorrat-Nur';
+    static KOPF_VORSCHAU = 'X-G9-Vorrat-Vorschau';
     static STUFEN = ['grob', 'fein', 'ultrafein'];
     /** Die Stufe in der Adresse der Vorab-Anfrage: grob = Käfig, fein = die Einstellung (auch bei gesetztem Keks), ultrafein = wie der Keks von Strg+Alt+H. */
     static ADRESSSTUFE = { grob: '0', fein: 'einstellung', ultrafein: '3' };
@@ -41,14 +45,16 @@ export class Genesis9vorrat {
         return JSON.stringify([adresse.replace(/[?&]stufen=[^&]*/, ''), nutzlast]);
     }
 
-    /** Während `arbeit` läuft, sind alle Anfragen der Figur Anzeigen (siehe oben, 1.). */
-    static async laden(inst, arbeit) {
+    /** Während `arbeit` läuft, sind alle Anfragen der Figur Anzeigen (siehe oben, 1.); mit `vorschau` ist ihr Käfig eine Vorschau (4.). */
+    static async laden(inst, arbeit, vorschau = false) {
         if (!inst) return arbeit();
         inst._vorratLaedt = (inst._vorratLaedt || 0) + 1;
+        if (vorschau) inst._vorratVorschau = (inst._vorratVorschau || 0) + 1;
         try {
             return await arbeit();
         } finally {
             inst._vorratLaedt -= 1;
+            if (vorschau) inst._vorratVorschau -= 1;
         }
     }
 
@@ -62,7 +68,10 @@ export class Genesis9vorrat {
         (inst._vorratAnfragen ??= new Map()).set(teil, { adresse, nutzlast, stellung });
         const anzeigen = inst._vorratAnzeige ??= new Map();
         if (inst._vorratLaedt > 0) anzeigen.set(teil, { adresse, nutzlast, stellung });
-        return anzeigen.get(teil)?.stellung === stellung ? { [Genesis9vorrat.KOPF]: '1' } : {};
+        // Nur der Käfig: ein Reglerzug während des ersten Zugs (ohne `?stufen=0`) bekommt nie eine Antwort älteren Codes (4.).
+        const kopf = inst._vorratVorschau > 0 && /[?&]stufen=0(&|$)/.test(adresse) ? { [Genesis9vorrat.KOPF_VORSCHAU]: '1' } : {};
+        if (anzeigen.get(teil)?.stellung === stellung) kopf[Genesis9vorrat.KOPF] = '1';
+        return kopf;
     }
 
     /** Der Stand JETZT gilt als Anzeige (nach „Modell speichern"): die letzten Anfragen je Teil, der Körper mit dem Rumpf von jetzt. */

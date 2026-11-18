@@ -24,6 +24,7 @@ from ..dienste.fotogenesispshumaneingabe import Fotogenesispshumaneingabe
 from ..dienste.fotogenesisseitendaten import Fotogenesisseitendaten
 from ..dienste.fotogenesistabellen import Fotogenesistabellen
 from ..dienste.fotogenesistextur import Fotogenesistextur
+from ..dienste.hautkilaufwahl import Hautkilaufwahl
 from ..dienste.meshgenesistexturwahl import Meshgenesistexturwahl
 
 __all__ = ['Fotogenesisendpunkte']
@@ -75,6 +76,9 @@ class Fotogenesisendpunkte:
                                                'pshuman_wege': Fotogenesispshuman.auswahl(),
                                                'pshuman_anzahlen': Fotogenesispshuman.ANZAHL,
                                                'pshuman_dichten': Fotogenesispshuman.DICHTEN,
+                                               'nachgeben_mm': Fotogenesispshuman.NACHGEBEN_MM, 'nachgeben_empfehlung': Fotogenesispshuman.NACHGEBEN_EMPFEHLUNG,
+                                               'haar_wellen': Fotogenesispshuman.HAAR_WELLEN, 'haar_welle_text': Fotogenesispshuman.BESCHREIBUNG['haar_welle'],
+                                               'haut_ki_laeufe': Hautkilaufwahl.auswahl(), 'haut_ki_lauf_text': Fotogenesispshuman.BESCHREIBUNG['haut_ki_lauf'],
                                                'geschlechter': Fotogenesisgeschlecht.WAHL,
                                                'pshuman_vorschlag': Fotogenesispshumaneingabe.VORSCHLAG})
 

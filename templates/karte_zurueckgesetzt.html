@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Grafikkarte zurückgesetzt{% endblock %}
+{% block topbar_title %}Grafikkarte zurückgesetzt{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+  <div class="alert alert-warning" role="alert">
+    <h5 class="alert-heading">Grafikkarte zurückgesetzt — Server neu starten</h5>
+    <p class="mb-2">{{ meldung }}</p>
+    <p class="mb-0 small text-body-secondary">Ursprünglicher Fehler: <code>{{ fehler }}</code></p>
+  </div>
+</div>
+{% endblock %}

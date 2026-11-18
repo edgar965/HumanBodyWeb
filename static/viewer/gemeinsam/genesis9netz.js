@@ -3,6 +3,8 @@ import { Netzgeometrie } from './netzgeometrie.js';
 import { Genesis9strang } from './genesis9strang.js';
 import { Genesis9haut } from './genesis9haut.js';
 import { Genesis9texturen } from './genesis9texturen.js';
+import { Genesis9kartenwerte as Karte } from './genesis9kartenwerte.js';
+import { Genesis9glanz as Glanz } from './genesis9glanz.js';
 import { Kleidfarbmischung } from './kleidfarbmischung.js';
 import { Stoffmischung } from './stoffmischung.js';
 import { base64ToFloat32 } from './kodierung.js';
@@ -114,10 +116,8 @@ export class Genesis9netz {
         for (const gruppe of gruppen || []) {
             const bilder = gruppe.bilder || {};
             dazu(bilder.albedo, true);
-            dazu(bilder.normalen);
-            dazu(bilder.alpha);
-            dazu(bilder.rauheit);
-            dazu(bilder.metall);
+            for (const art of Glanz.LINEAR) dazu(bilder[art]);      // Normalen, Deckkraft, Rauheit, Metall, Glanz-/Lack-/Höhenkarten
+            dazu(bilder.glanzfarbkarte, Boolean(bilder.glanzfarbkarte_srgb));
             // Die 8K-Detailnormale bleibt DRAUSSEN: 97 MB je Kachel
             // (`genesis9-inhalte.md`) — daran hinge das ganze Bündel.
             for (const art of ['farbe', 'gewicht', 'rauheit', 'glanz', 'normalen']) {
@@ -173,21 +173,13 @@ export class Genesis9netz {
             });
         }
         // Physical-Material: Klarlack/Metall der Schminke, Glanzgewicht (Eirgrid Shine), einstellbarer Glanz (`Genesis9teilmaterial`).
-        const material = Genesis9netz.haut(brauen || Boolean(bilder.schminke?.glanz) || bilder.glanzgewicht != null || Genesis9netz.EINSTELLBAR.test(gruppe.name));
+        const material = Genesis9netz.haut(brauen || Boolean(bilder.schminke?.glanz) || Glanz.physisch(bilder) || Genesis9netz.EINSTELLBAR.test(gruppe.name));
         if (Genesis9netz.farbe(bilder)) material.color.copy(Genesis9netz.farbe(bilder));
-        // Glanz ohne Bild: Rauheit als Zahl (nur ohne Rauheitskarte), Glanzgewicht als
-        // `specularIntensity`, Metallgewicht als Faktor der Metallkarte.
-        if (Number.isFinite(bilder.rauheitwert) && !bilder.rauheit) material.roughness = bilder.rauheitwert;
-        if (Number.isFinite(bilder.glanzgewicht) && material.isMeshPhysicalMaterial) {
-            material.specularIntensity = bilder.glanzgewicht;
-        }
+        // Rauheit, Glanz (Gewicht, F0), Klarlack, Höhe wie Iray (`Genesis9glanz`, 17.11.2026); Metallgewicht als Faktor der Metallkarte.
+        Glanz.werte(material, bilder);
         if (bilder.metall) material.metalness = Number.isFinite(bilder.metallgewicht) ? bilder.metallgewicht : 1;
-        // Durchsicht ohne Textur (MB-Stuecke ohne Alpha-Loecher, reiner Skalarwert
-        // aus `.mhmat` `opacity`, 25.09.2026): nur ohne Cutout-Bild, das hätte Vorrang.
-        if (Number.isFinite(bilder.alphawert) && !bilder.alpha && bilder.alphawert < 0.999) {
-            material.transparent = true;
-            material.opacity = bilder.alphawert;
-        }
+        // Durchsicht als Zahl (`.mhmat` opacity; Daz `Cutout Opacity`, See-through G9 0,7) und Metall ohne Karte: `Genesis9kartenwerte.werte`.
+        Karte.werte(material, bilder);
         if (bilder.durchlicht) Genesis9haut.durchlicht(material, bilder.durchlicht);
         if (bilder.schminke) Genesis9haut.schminke(material);
         // 8K-Detailnormalen (nur mit Strg+Alt+H, `Genesis9/browserbilder.py`) über den Grundnormalen.
@@ -247,7 +239,7 @@ export class Genesis9netz {
         const laden = (pfad, danach, srgb = false) => Genesis9texturen.holen(pfad, srgb, material, danach);
         if (bilder.albedo) {
             laden(bilder.albedo, bild => {
-                material.map = bild;
+                material.map = Karte.bild(bild, bilder, 'albedo');     // mit Wiederholung (`Genesis9kartenwerte`)
                 // Daz rechnet Farbe × Bild: die Haut ist weiß, die braunen Brauen
                 // sind ein helles Bild mal Braun. Ohne Angabe wäre der Hautton
                 // ein Ton zu viel — dann weiß.
@@ -257,9 +249,9 @@ export class Genesis9netz {
         }
         if (bilder.normalen) {
             laden(bilder.normalen, bild => {
-                material.normalMap = bild;
-                // DirectX-Normalen (Y nach unten, `Genesis9/browserbilder.py`): Y umkehren.
-                if (bilder.normalenachse === -1) material.normalScale.set(1, -1);
+                material.normalMap = Karte.bild(bild, bilder, 'normalen');
+                // Stärke (`Normal Map`) und DirectX-Normalen (Y nach unten, `Genesis9/browserbilder.py`): `Genesis9glanz.normalSkala`.
+                Glanz.normalSkala(material, bilder);
                 Genesis9haut.klarlackNormalen(material);
             });
         } else if (bilder.schminke?.normalen) {
@@ -271,7 +263,7 @@ export class Genesis9netz {
         }
         if (bilder.alpha) {
             laden(bilder.alpha, bild => {
-                material.alphaMap = bild;
+                material.alphaMap = bild = Karte.bild(bild, bilder, 'alpha');
                 // Feine Strähnen verschwimmen unter flachem Blick (Haarkarten am Hinterkopf): volle anisotrope Filterung.
                 if (Number.isFinite(bilder.alphaschwelle)) {
                     bild.anisotropy = Genesis9netz.ANISOTROPIE;
@@ -281,14 +273,15 @@ export class Genesis9netz {
         }
         if (bilder.rauheit) {
             laden(bilder.rauheit, bild => {
-                material.roughnessMap = bild;
-                material.roughness = 1.0;
+                material.roughnessMap = Karte.bild(bild, bilder, 'rauheit');
+                material.roughness = Number.isFinite(bilder.rauheitwert) ? bilder.rauheitwert : 1.0;     // Daz: Wert × Karte
             });
         }
         // Metallkarte (Ursula Facial Gloss): Three liest den Blaukanal — Graustufen passen.
         if (bilder.metall) {
-            laden(bilder.metall, bild => { material.metalnessMap = bild; });
+            laden(bilder.metall, bild => { material.metalnessMap = Karte.bild(bild, bilder, 'metall'); });
         }
+        Glanz.karten(material, bilder, laden);       // Glanz-, Glanzfarb-, Klarlack- und Höhenkarte
         for (const art of ['farbe', 'gewicht', 'rauheit', 'glanz', 'normalen']) {
             if (!bilder.schminke?.[art]) continue;
             laden(bilder.schminke[art], bild => Genesis9haut.schminkeBilder(material, { [art]: bild }),

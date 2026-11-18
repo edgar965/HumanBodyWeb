@@ -41,7 +41,11 @@ class Meshfigurfrisurstueck:
         return [None] + stile[: self.HOECHSTENS_STILE]
 
     def grenzen(self):
-        return {r['name']: (float(r['min']), float(r['max'])) for r in self.eintrag.get('regler') or []}
+        """Die Regler des Stücks und, wo die Ablage da ist, die fünf Formachsen (`G9haarachsen`; seit 16.11.2026 spät statt des Kin-Klons „Haar Eigen“, der in
+        „Haar – Generisch“ aufging)."""
+        from Genesis9.haarachsen import G9haarachsen
+
+        return {r['name']: (float(r['min']), float(r['max'])) for r in G9haarachsen.erweitern(self.eintrag)}
 
     def _zusatz(self, stil, regler=None):
         """`(zusatz, knochen)` wie `G9folger.punkte_zu` sie braucht: Vorgaben des Presets, darüber der Stil, darüber die Regler."""
@@ -54,10 +58,12 @@ class Meshfigurfrisurstueck:
         return zusatz, knochen
 
     def teilpunkte(self, stil=None, regler=None):
-        """`[(Nᵢ, 3)]` je Teil — die Form, die `G9haarachsen.anwenden` braucht (es rechnet je Netz)."""
+        """`[(Nᵢ, 3)]` je Teil, die Formachsen (`achse.*` in `regler`) addiert wie in der Antwort an den Browser (`G9stueckteile`)."""
+        from Genesis9.haarachsen import G9haarachsen
+
         zusatz, knochen = self._zusatz(stil, regler)
-        return [f.punkte_zu(self.formung, zusatz, drehung=knochen, lage=lage) - self.hoch
-                for f, lage in self.teile]
+        kaefige = [f.punkte_zu(self.formung, zusatz, drehung=knochen, lage=lage) - self.hoch for f, lage in self.teile]
+        return G9haarachsen.anwenden(self.kennung, self.teile, kaefige, G9haarachsen.werte(regler))
 
     def punkte(self, stil=None, regler=None):
         """(N, 3) alle Teile hintereinander."""
@@ -66,11 +72,14 @@ class Meshfigurfrisurstueck:
     def deltas(self, stil, namen):
         """`{regler: (N, 3)}` Wirkung bei Wert 1 über dem Stil — Daz-Morphe sind linear. Direkt auf den Punkten des Morphs (`Meshfigurfrisurdeltas`, 12.10.2026: Eirgrid 51 s → Sekunden); was dieser Weg nicht
         kann (Prop, Passform, ein Kanal, den auch der Körper stellt), rechnet wie bisher die volle Differenz."""
+        from Genesis9.haarachsen import G9haarachsen
+
         grund = self.punkte(stil)
         schnell = self._schnell(stil)
         aus = {}
         for n in namen:
-            delta = schnell.delta(n) if schnell is not None else None
+            achse = n.startswith(G9haarachsen.PRAEFIX)                    # keine Daz-Kanäle: der Schnellweg gäbe Nullen
+            delta = schnell.delta(n) if schnell is not None and not achse else None
             aus[n] = delta if delta is not None else self.punkte(stil, {n: 1.0}) - grund
         return grund, aus
 

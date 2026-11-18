@@ -1,5 +1,6 @@
 import { Figurwahlimporte } from './figurwahlimporte.js';
 import { Serverabruf } from './serverabruf.js';
+import { Standardmodellpflege } from './standardmodellpflege.js';
 
 /**
  * Figurkataloge — die Listen der sechs Figurarten, ohne Szene-Zustand.
@@ -81,7 +82,8 @@ export class Figurkataloge {
     static async modelle(quelle) {
         const angaben = Figurkataloge.QUELLEN[quelle];
         if (!angaben) throw new Error(`Unbekannte Figurart: ${quelle}`);
-        return Figurkataloge.zeilen(quelle, await Serverabruf.json(angaben.adresse));
+        // Umbenannte und ausgeblendete Standard-Modelle (`Standardmodellpflege`, 16.11.2026).
+        return Standardmodellpflege.anwenden(quelle, Figurkataloge.zeilen(quelle, await Serverabruf.json(angaben.adresse)));
     }
 
     /** Aus der Serverantwort die Zeilen — getrennt, damit es prüfbar ist. */

@@ -8,7 +8,7 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 const de = n => Number(n).toLocaleString('de-DE');
-const BEDINGUNG = { 1: 'muss 0 sein', 2: 'darf nicht mehr werden als vorher', 3: 'wird nur berichtet' };
+const BEDINGUNG = { 0: 'muss 0 sein, sonst keine Freigabe', 1: 'muss 0 sein', 2: 'darf nicht mehr werden als vorher', 3: 'wird nur berichtet' };
 const NETZ = { deckung: 'Schnitt (wo Stoff liegt)', form: 'Form (Höhe über der Haut)' };
 const KURZ = 90;
 
@@ -65,10 +65,10 @@ export class Meshgenesistestfaelle {
 
     _prios(d) {
         const je = d.je_prio || {};
-        const zeilen = [1, 2, 3].map(p => {
+        const zeilen = [0, 1, 2, 3].map(p => {
             const z = je[p] || je[String(p)];
             if (!z) return null;
-            const rot = z.fehler > 0 && (p === 1 || (p === 2 && z.vorher !== null && z.vorher !== undefined && z.fehler > z.vorher));
+            const rot = z.fehler > 0 && (p <= 1 || (p === 2 && z.vorher !== null && z.vorher !== undefined && z.fehler > z.vorher));
             return el('tr', {},
                 el('td', {}, `Prio ${p}`),
                 el('td', { class: rot ? 'meshgenesis-rot' : z.fehler === 0 ? 'meshgenesis-gruen' : null }, von(z.fehler, z.pruefungen)),

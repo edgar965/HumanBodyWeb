@@ -50,11 +50,19 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh-Genesis-Jobseite — darum
         <label title="{{ pshuman_wege.kleider_getrennt.beschreibung }}"><input type="checkbox" name="kleider_getrennt"{% if job.pshuman.kleider_getrennt %} checked{% endif %}> {{ pshuman_wege.kleider_getrennt.text }}</label>
         {# 12.11.2026, Edgar: „mach den Umbau“ — Konzept „Genesis zuerst“, Abschnitt 9: „Der neue Weg hängt an einem Häkchen am Job“; `Fotogenesispshuman`, job.json `pshuman.genesis_zuerst` #}
         <label title="{{ pshuman_wege.genesis_zuerst.beschreibung }}"><input type="checkbox" name="genesis_zuerst"{% if job.pshuman.genesis_zuerst %} checked{% endif %}> {{ pshuman_wege.genesis_zuerst.text }}</label>
+        {# 15.11.2026 nachts, Edgar: „mach oben bei den Jobs … einen Button ‚Haut gibt nach‘ … mach auch eine mm angabe (Combo) … Standardmäßig aktiviert … eine Empfehlung“ — `Fotogenesispshuman`, `Fotogenesishautnachgeben` #}
+        <label title="{{ pshuman_wege.haut_gibt_nach.beschreibung }}"><input type="checkbox" name="haut_gibt_nach"{% if job.pshuman.haut_gibt_nach %} checked{% endif %}> {{ pshuman_wege.haut_gibt_nach.text }}</label>
+        <select id="fotogenesis-nachgeben" name="haut_gibt_nach_mm" data-reihenfolge="fest" title="So tief weicht die Haut unter Kleid, Schuh und Haar nach innen aus.">{% for mm in nachgeben_mm %}<option value="{{ mm }}"{% if mm == job.pshuman.haut_gibt_nach_mm %} selected{% endif %}>{{ mm }} mm{% if mm == nachgeben_empfehlung %} (Empfehlung){% endif %}</option>{% endfor %}</select>
+        {# 16.11.2026, Edgar zur Entscheidungsvorlage Locken: „mach b,c,d“ — D: Schalter je Job, `Fotogenesispshuman.HAAR_WELLEN`, gelesen von `meshgenesis/haar_Bart/haarwelle.py` #}
+        <label for="fotogenesis-haarwelle" title="{{ haar_welle_text }}"><i class="fas fa-water"></i> Haar</label>
+        <select id="fotogenesis-haarwelle" name="haar_welle" data-reihenfolge="fest" title="{{ haar_welle_text }}">{% for w, t in haar_wellen %}<option value="{{ w }}"{% if w == job.pshuman.haar_welle %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
         <label title="{{ pshuman_wege.fototextur.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.fototextur.text }}</label>
         <label title="{{ pshuman_wege.textur_alle_fotos.beschreibung }}"><input type="checkbox" name="textur_alle_fotos"{% if job.pshuman.textur_alle_fotos %} checked{% endif %}> {{ pshuman_wege.textur_alle_fotos.text }}</label>
         <label title="{{ pshuman_wege.hand_ersatz.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.hand_ersatz.text }}</label>
         <label title="{{ pshuman_wege.up2you.beschreibung }}"><input type="checkbox" name="up2you"{% if job.pshuman.up2you %} checked{% endif %}> {{ pshuman_wege.up2you.text }}</label>
         <label title="{{ pshuman_wege.haut_ki.beschreibung }}"><input type="checkbox" name="haut_ki"{% if job.pshuman.haut_ki %} checked{% endif %}> {{ pshuman_wege.haut_ki.text }}</label>
+        {# 17.11.2026, Edgar: „mach einen Job n1-HautKI als Kopie von n1, mit der neuen HautKI“ — Lauf der Haut-KI je Job, `Hautkilaufwahl`, job.json `pshuman.haut_ki_lauf` #}
+        <select id="fotogenesis-hautkilauf" name="haut_ki_lauf" data-reihenfolge="fest" aria-label="Lauf der Haut-KI" title="{{ haut_ki_lauf_text }}">{% for w, t in haut_ki_laeufe %}<option value="{{ w }}"{% if w == job.pshuman.haut_ki_lauf %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
         <label title="{{ pshuman_wege.keine_kleider.beschreibung }}"><input type="checkbox" name="keine_kleider"{% if job.pshuman.keine_kleider %} checked{% endif %}> {{ pshuman_wege.keine_kleider.text }}</label>
         <span class="hb-hinweis" data-meldung></span>
     </form>{% endif %}

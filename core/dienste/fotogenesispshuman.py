@@ -44,12 +44,25 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
                  ‚Kleider getrennt‘“), Vorgabe aus. „Genesis rechnen“ gibt es an den neuen Test weiter (`Fotogenesisgenesisstart`, `einstellung.json` → `genesis_zuerst`): Körper nur über Regler,
                  Kleider, Haar und Requisit aus der Garderobe (`Meshgenesisrechenlauf.GENESIS_ZUERST`). PSHuman rechnet deshalb nicht neu.
 
-    POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, kleider_getrennt, genesis_zuerst, anzahl,
-                                            dichte}   → {ok, pshuman}
+  haut_gibt_nach  Edgar 15.11.2026 nachts: „mach oben bei den Jobs … auch einen Button ‚Haut gibt nach‘ … mach auch eine mm angabe (Combo) … Standardmäßig aktiviert … in der Combo
+                 eine Empfehlung“ — „Haut gibt nach ist eine allgemeine Funktion, die vor allem auch bei Animationen angewandt wird“. Vorgabe an, Tiefe `haut_gibt_nach_mm`
+                 (`NACHGEBEN_MM`, Empfehlung `NACHGEBEN_EMPFEHLUNG`): wirkt sofort an den Eigen-Stücken des Tests (`Fotogenesishautnachgeben`, als `nachgeben_mm` der Bauart —
+                 Browser `Bauart.nachgebenM`, überall, wo das Stück getragen wird) und in jedem neuen Lauf der Garderobe; aus = 0 mm
+
+  haar_welle     Edgar 16.11.2026 zur Entscheidungsvorlage Locken: „mach b,c,d“ (D = ein Schalter je Job): 'auto' (Vorgabe) misst die Welligkeit an der Haarschale des Netzes
+                 (`meshgenesis/haar_Bart/haarwelle.py`), 'wellig' / 'glatt' entscheiden selbst. Gilt für mittleres und langes Haar, liest die Garderobe (Weg z) beim nächsten Lauf selbst
+
+  haut_ki_lauf   Edgar 17.11.2026: „mach einen Job n1-HautKI als Kopie von n1, mit der neuen HautKI“: welcher Lauf der Haut-KI (`Hautkilaufwahl`), '' (Vorgabe) = der eingesetzte aus
+                 `ki_fassungen.json`; wirkt nur mit dem Häkchen „Haut-KI“, liest der Schritt „Haut“ von Mesh-Genesis beim nächsten Lauf selbst (`meshgenesis_hautki_einsatz.py`)
+
+    POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, kleider_getrennt, genesis_zuerst,
+                                            haut_gibt_nach, haut_gibt_nach_mm, haar_welle, haut_ki_lauf, anzahl, dichte}   → {ok, pshuman}
 """
 
 import json
 import logging
+
+from .hautkilaufwahl import Hautkilaufwahl
 
 logger = logging.getLogger('core')
 
@@ -59,13 +72,29 @@ __all__ = ['Fotogenesispshuman']
 class Fotogenesispshuman:
     FELD = 'pshuman'
     VORGABE = {'zeile1': False, 'drehteller': False, 'vae_bildweise': False, 'fototextur': False, 'textur_alle_fotos': True, 'hand_ersatz': False, 'up2you': False, 'haut_ki': False,  # noqa: RUF012 — nur gelesen
-               'keine_kleider': False, 'kleider_getrennt': False, 'genesis_zuerst': False}
+               'keine_kleider': False, 'kleider_getrennt': False, 'genesis_zuerst': False, 'haut_gibt_nach': True}
     WEGE = (('zeile1', 'Netz als Zeile 1'), ('drehteller', 'Drehteller'), ('vae_bildweise', 'VAE bildweise'), ('fototextur', 'Textur aus den Fotos'),
             ('textur_alle_fotos', 'Textur aus allen Fotos'), ('hand_ersatz', 'Hände ersetzen'), ('up2you', 'Ansichten aus UP2You'), ('haut_ki', 'Haut-KI'), ('keine_kleider', 'Keine Kleider'),
-            ('kleider_getrennt', 'Kleider getrennt'), ('genesis_zuerst', 'Genesis zuerst'))
+            ('kleider_getrennt', 'Kleider getrennt'), ('genesis_zuerst', 'Genesis zuerst'), ('haut_gibt_nach', 'Haut gibt nach'))
     ANZAHL = (1, 2, 3, 4, 5, 6)
     DICHTEN = ((480, 'normal'), (960, 'dicht'))
+    #: Tiefe „Haut gibt nach“ (mm, innerhalb `Genesis9.bauart.G9bauart.NACHGEBEN_MM` 0–50); Empfehlung 30 = Vorgabe der Bauart „anliegend“/„lose“ (Edgar 12.11.2026 abends:
+    #: starr 20, anliegend/lose 30 mm, `Bauart.NACHGEBEN_MM`)
+    NACHGEBEN_MM = (5, 10, 15, 20, 30, 40, 50)
+    NACHGEBEN_EMPFEHLUNG = 30
+    #: Welligkeit des Haars (Werte wie `Haarwelle.SCHALTER`), erster Eintrag = Vorgabe
+    HAAR_WELLEN = (('auto', 'aus dem Netz'), ('wellig', 'wellig'), ('glatt', 'glatt'))
+    #: Felder außer den Häkchen
+    ZAHLEN = ('anzahl', 'dichte', 'haut_gibt_nach_mm')
+    #: Textfelder mit eigener Prüfung (`setzen`)
+    TEXTE = ('haar_welle', Hautkilaufwahl.FELD)
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
+        'haut_ki_lauf': 'Welcher Lauf der Haut-KI die Hautkacheln rechnet, wenn „Haut-KI“ an ist. „eingesetzt“ (Vorgabe): der Lauf, der für alle Jobs gilt. '
+                        'Ein jüngerer Lauf gilt nur für diesen Job, die übrigen bleiben beim eingesetzten. Wirkt im Schritt „Haut“ von Mesh-Genesis beim nächsten Lauf.',
+        'haar_welle': 'Ob das Haar der Figur wellig wird (mittleres und langes Haar). „aus dem Netz“ (Vorgabe): gemessen an Rillen und hellen/dunklen Bändern der Haarschale. '
+                      '„wellig“ oder „glatt“ entscheidet selbst, wenn die Messung danebenliegt. Wirkt beim nächsten Lauf der Garderobe.',
+        'haut_gibt_nach': 'An (Vorgabe): Haut unter einem Stück weicht bis zur gewählten Tiefe nach innen aus, damit sie nicht durch Kleid, Schuh oder Haar kommt — im Stand und in '
+                          'jeder Animation. Gilt sofort für die Stücke dieses Jobs und in jedem neuen Lauf der Garderobe. Aus: die Haut bleibt, wo sie ist (0 mm).',
         'genesis_zuerst': 'Neuer Weg: Das Ergebnis ist eine Genesis-Figur aus der Bibliothek. Der Körper kommt nur aus den Genesis-Reglern (ohne freie Verschiebung), Kleider, Haar, Bart und '
                           'Requisit sind Stücke der Garderobe, gewählt nach den Körperstellen, die das Netz bedeckt, mit Länge, Weite und Farbe aus dem Netz. Aus dem Netz geschnittene Stücke '
                           'kommen nicht ins Ergebnis; was die Garderobe nicht hat, fehlt. Aus (Vorgabe): der bisherige Weg. Wirkt beim nächsten „Genesis rechnen“, PSHuman rechnet nicht neu.',
@@ -101,10 +130,19 @@ class Fotogenesispshuman:
     def lesen(cls, info):
         """Die Wahl aus einer job.json samt Vorgabe (fehlende Häkchen aus)."""
         roh = info.get(cls.FELD) or {}
-        anzahl, dichte = roh.get('anzahl'), roh.get('dichte')
+        anzahl, dichte, mm, welle = roh.get('anzahl'), roh.get('dichte'), roh.get('haut_gibt_nach_mm'), roh.get('haar_welle')
         return dict({k: bool(roh.get(k, v)) for k, v in cls.VORGABE.items()},
                     anzahl=int(anzahl) if anzahl in cls.ANZAHL else cls.ANZAHL[0],
-                    dichte=int(dichte) if dichte in dict(cls.DICHTEN) else cls.DICHTEN[0][0])
+                    dichte=int(dichte) if dichte in dict(cls.DICHTEN) else cls.DICHTEN[0][0],
+                    haut_gibt_nach_mm=int(mm) if mm in cls.NACHGEBEN_MM else cls.NACHGEBEN_EMPFEHLUNG,
+                    haar_welle=welle if welle in dict(cls.HAAR_WELLEN) else cls.HAAR_WELLEN[0][0],
+                    haut_ki_lauf=str(roh.get(Hautkilaufwahl.FELD) or ''))
+
+    @classmethod
+    def nachgeben_mm(cls, info):
+        """Wirksame Tiefe „Haut gibt nach“ eines Jobs (mm): die gewählte, 0 wenn aus."""
+        wahl = cls.lesen(info)
+        return wahl['haut_gibt_nach_mm'] if wahl['haut_gibt_nach'] else 0
 
     @classmethod
     def gerechnet(cls, ordner):
@@ -119,9 +157,16 @@ class Fotogenesispshuman:
         """Schreibt die Wahl in die job.json (mischend). `ValueError` bei unbekanntem Feld."""
         if job.get('art') != 'foto':
             raise ValueError('Nur Tests aus echten Fotos haben eine PSHuman-Wahl')
-        fremd = sorted(set(rumpf) - set(cls.VORGABE) - {'anzahl', 'dichte'})
+        fremd = sorted(set(rumpf) - set(cls.VORGABE) - set(cls.ZAHLEN) - set(cls.TEXTE))
         if fremd:
             raise ValueError('Unbekannte Felder %s' % (fremd,))
+        if 'haar_welle' in rumpf and rumpf['haar_welle'] not in dict(cls.HAAR_WELLEN):
+            raise ValueError('haar_welle %r: erlaubt %s' % (rumpf['haar_welle'], ', '.join(w for w, _t in cls.HAAR_WELLEN)))
+        lauf = Hautkilaufwahl.FELD
+        if lauf in rumpf and not (isinstance(rumpf[lauf], str) and Hautkilaufwahl.gueltig(rumpf[lauf])):
+            raise ValueError('%s %r: erlaubt leer oder %s' % (lauf, rumpf[lauf], ', '.join(Hautkilaufwahl.laeufe())))
+        if 'haut_gibt_nach_mm' in rumpf and (isinstance(rumpf['haut_gibt_nach_mm'], bool) or rumpf['haut_gibt_nach_mm'] not in cls.NACHGEBEN_MM):
+            raise ValueError('haut_gibt_nach_mm %r: erlaubt %s' % (rumpf['haut_gibt_nach_mm'], ', '.join(str(m) for m in cls.NACHGEBEN_MM)))
         if 'anzahl' in rumpf and (isinstance(rumpf['anzahl'], bool) or rumpf['anzahl'] not in cls.ANZAHL):
             raise ValueError('anzahl %r: erlaubt %d bis %d' % (rumpf['anzahl'], cls.ANZAHL[0], cls.ANZAHL[-1]))
         if 'dichte' in rumpf and (isinstance(rumpf['dichte'], bool) or rumpf['dichte'] not in dict(cls.DICHTEN)):
@@ -130,12 +175,14 @@ class Fotogenesispshuman:
         info = json.loads(datei.read_text(encoding='utf-8'))
         # 'weg' der ersten Fassung (03.11.2026, Combo-Box) fällt weg; die Bildplätze ('eingabe',
         # `Fotogenesispshumaneingabe`) bleiben
-        behalten = set(cls.VORGABE) | {'anzahl', 'dichte', 'eingabe'}
+        behalten = set(cls.VORGABE) | set(cls.ZAHLEN) | set(cls.TEXTE) | {'eingabe'}
         neu_wahl = {k: bool(rumpf[k]) for k in cls.VORGABE if k in rumpf}
-        if 'anzahl' in rumpf:
-            neu_wahl['anzahl'] = int(rumpf['anzahl'])
-        if 'dichte' in rumpf:
-            neu_wahl['dichte'] = int(rumpf['dichte'])
+        for zahl in cls.ZAHLEN:
+            if zahl in rumpf:
+                neu_wahl[zahl] = int(rumpf[zahl])
+        for text in cls.TEXTE:
+            if text in rumpf:
+                neu_wahl[text] = rumpf[text]
         alt = {k: v for k, v in (info.get(cls.FELD) or {}).items() if k in behalten}
         info[cls.FELD] = dict(alt, **neu_wahl)
         neu = datei.with_name('job.json.neu')

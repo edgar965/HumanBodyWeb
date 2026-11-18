@@ -112,9 +112,9 @@ export class Genesis9teilmaterial {
         material.needsUpdate = true;
     }
 
-    /** Der Ausgangswert dieses Materials: vor dem ersten Eingriff gemerkt; Rauheit mit Karte ist ein Faktor und steht auf 1. */
+    /** Der Ausgangswert dieses Materials: vor dem ersten Eingriff gemerkt; Rauheit mit Karte: Daz' Wert × Karte (`Genesis9glanz`, 17.11.2026), sonst 1. */
     static _basis(material, feld) {
-        if (feld === 'rauheit' && material.userData.gehoertKarte) return 1;   // `Genesis9netz.texturen`, auch wenn die Karte noch lädt
+        if (feld === 'rauheit' && material.userData.gehoertKarte) return material.userData.rauheitBasis ?? 1;   // auch wenn die Karte noch lädt
         return material.userData.teilStandard?.[feld];
     }
 

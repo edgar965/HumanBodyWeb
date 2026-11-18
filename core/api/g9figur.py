@@ -43,6 +43,7 @@ from ..dienste.blendimportplausibel import Blendimportplausibel
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9bedlamhaut import G9bedlamhaut  # noqa: F401  (trägt sich als Anbieter von Hautsätzen ein: BEDLAM, 17.10.2026)
 from ..dienste.g9eigenehaut import G9eigenehaut  # noqa: F401  (trägt sich als Anbieter von Hautsätzen ein: gespeicherte eigene Häute, 18.10.2026)
+from ..dienste.g9fotohaut import G9fotohaut  # noqa: F401  (trägt sich als Anbieter von Hautsätzen ein: Häute der Foto-Jobs, 18.11.2026)
 from ..dienste.g9hbpose import G9hbpose
 from .g9materialwahl import G9materialwahl
 from .g9netzantwort import G9netzantwort

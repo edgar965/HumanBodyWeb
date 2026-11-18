@@ -51,6 +51,7 @@ class G1klonuebertragung:
         self.autofit = G9autofit.holen(self.KLON)
         self.reihenfolgen = {k['id']: str(k.get('rotation_order') or 'XYZ') for k in self.doc.knochen()}
         self._zuordnung = None
+        self._suche = None
         self._putz = None
 
     @classmethod
@@ -111,19 +112,27 @@ class G1klonuebertragung:
         u"""`(dreieck (M,), gewichte (M, 3), abstand (M,))` je Käfigpunkt in Klon-Gestalt auf der gedrehten Haut von Genesis 1 — einmal."""
         if self._zuordnung is not None:
             return self._zuordnung
-        haut = self.stellen(self.grund)
+        self._zuordnung = self.naechste(Torchfeld.feld(self.autofit.punkte, dtype=torch.float64))
+        return self._zuordnung
+
+    def naechste(self, punkte):
+        u"""`(dreieck (M,), gewichte (M, 3), abstand (M,))` je Punkt (M, 3) m auf der gedrehten Haut der Fremdfigur — für die Käfigpunkte (`zuordnen`)
+        und seit 16.11.2026 für die Texel der Hautkacheln (`G8hautaufgenesis`). Die Suchhilfen (gedrehte Haut, Dreiecke je Punkt, Baum) einmal."""
+        if self._suche is None:
+            haut = self.stellen(self.grund)
+            ecken = self.dreiecke.ravel()
+            folge = torch.argsort(ecken, stable=True)
+            sortiert = ecken[folge]
+            alle = Torchfeld.arange(len(self.grund))
+            start, ende = Torchfeld.searchsorted(sortiert, alle), Torchfeld.searchsorted(sortiert, alle, side='right')
+            self._suche = (haut, folge, start, ende, cKDTree(haut[self.hautpunkte]))
+        haut, folge, start, ende, baum = self._suche
         tri = self.dreiecke
-        klon = Torchfeld.feld(self.autofit.punkte, dtype=torch.float64)
-        ecken = tri.ravel()
-        folge = torch.argsort(ecken, stable=True)
-        sortiert = ecken[folge]
-        alle = Torchfeld.arange(len(self.grund))
-        start, ende = Torchfeld.searchsorted(sortiert, alle), Torchfeld.searchsorted(sortiert, alle, side='right')
-        _d, naechste = cKDTree(haut[self.hautpunkte]).query(klon, k=self.KANDIDATEN)
+        _d, naechste = baum.query(punkte, k=self.KANDIDATEN)
         naechste = self.hautpunkte[naechste]
-        dreieck = torch.zeros(len(klon), dtype=torch.int64, device='cuda')
-        gewichte = torch.zeros((len(klon), 3), dtype=torch.float64, device='cuda')
-        abstand = Torchfeld.full(len(klon), math.inf)
+        dreieck = torch.zeros(len(punkte), dtype=torch.int64, device='cuda')
+        gewichte = torch.zeros((len(punkte), 3), dtype=torch.float64, device='cuda')
+        abstand = Torchfeld.full(len(punkte), math.inf)
         for j in range(self.KANDIDATEN):
             v = naechste[:, j]
             for r in range(int((ende - start).max())):
@@ -131,12 +140,11 @@ class G1klonuebertragung:
                 if not len(idx):
                     break
                 t = folge[start[v[idx]] + r] // 3
-                g, d = self.schwerpunkt(klon[idx], haut[tri[t, 0]], haut[tri[t, 1]], haut[tri[t, 2]])
+                g, d = self.schwerpunkt(punkte[idx], haut[tri[t, 0]], haut[tri[t, 1]], haut[tri[t, 2]])
                 besser = d < abstand[idx]
                 i = idx[besser]
                 dreieck[i], gewichte[i], abstand[i] = t[besser], g[besser], d[besser]
-        self._zuordnung = (dreieck, gewichte, abstand)
-        return self._zuordnung
+        return dreieck, gewichte, abstand
 
     def uebertragen(self, feld):
         u"""(25182, 3) Käfigfeld aus einem Feld (N, 3) auf den Punkten von Genesis 1 — in der Stellung der Zuordnung (A-Stellung)."""

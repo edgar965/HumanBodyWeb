@@ -2,7 +2,7 @@
 """Werkzeughaltung — Gruppe „Haltung, A-Pose, Rig und Posen“ des Reiters „Tools“ der Seite Hilfe → Architektur → 2D3D (03.10.2026).
 
 Schema: `Architektur2d3dwerkzeuge`. Gelesen am 03.10.2026: `ModellKoerperMixin`, `ModellMitKleidern`, `G9haltungshaut`, `Haltungsschaetzung`, `Haltungsfotos`,
-`G9skelett`, `G9figurrigglb`, `G9posen`, `G9gelenkkorrekturen`, die Endpunkte `Skelettdaten`, `G9garderobeapi.posen`, `G9felderapi`.
+`G9skelett`, `G9figurrigglb`, `G9posen`, `G9gelenkkorrekturen`, die Endpunkte `Skelettdaten`, `G9posenapi.posen`, `G9felderapi`.
 """
 
 __all__ = ['Werkzeughaltung']

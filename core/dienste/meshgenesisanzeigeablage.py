@@ -44,7 +44,8 @@ class Meshgenesisanzeigeablage:
             modell_stand = (Meshgenesisdatensatz.ordner(modell) / 'modell.json').stat().st_mtime_ns
         except OSError:
             modell_stand = None
-        h = hashlib.sha1(repr((cls.FASSUNG, stand, modell_stand, bool(matrix))).encode('utf-8')).hexdigest()[:16]
+        from .meshgenesishautdetail import Meshgenesishautdetail          # Relief und Rauheit der Grundhaut stehen im Kopf des Pakets (15.11.2026)
+        h = hashlib.sha1(repr((cls.FASSUNG, stand, modell_stand, bool(matrix), Meshgenesishautdetail.stand(modell))).encode('utf-8')).hexdigest()[:16]
         return ordner / ('stufe1_%s_%s.bin' % ('m' if matrix else 'o', h))
 
     @classmethod

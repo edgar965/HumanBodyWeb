@@ -21,6 +21,7 @@ import torch
 from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
+from Genesis9.materialteile import G9materialteile
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.passformvorgabe import G9passformvorgabe
 from Genesis9.stoffhuelle import G9stoffhuelle
@@ -131,7 +132,7 @@ class G9stueckteile:
             # muss von dort kommen, nicht aus der Ruhelage (20.09.2026).
             passform = (folger.passformhaut(zusatz)
                         if G9stueckfelder.folgt(folger, lage) else None)
-            netz = G9koerpernetz.folgernetz(folger, punkte, bilder or {}, stufen,
+            netz = G9koerpernetz.folgernetz(folger, punkte, G9materialteile.teil(bilder or {}, folger), stufen,   # Gruppen je Netz (17.11.2026)
                                             koerper=flaeche, werte=hd_werte,
                                             passform=passform,
                                             bindung=bindung if lage is None else None)

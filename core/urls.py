@@ -54,6 +54,8 @@ from .api.umatextur import Umatextur
 from .cloth_export_api import Stoffexport
 from .daten.kennungskonverter import Kennungskonverter
 from .urls_charakter import CHARAKTER
+from .urls_hautausgleich import HAUTAUSGLEICH
+from .urls_standardmodelle import STANDARDMODELLE
 from .urls_exportleiste import EXPORTLEISTE
 
 register_converter(Kennungskonverter, 'kennung')
@@ -281,6 +283,8 @@ urlpatterns = [
 # Die Charakter- und SMPL-Routen stehen in `urls_charakter.py` —
 # 74 Eintraege, die zusammengehoeren (30.08.2026).
 urlpatterns += CHARAKTER
+urlpatterns += STANDARDMODELLE      # Standard-Modelle umbenennen/ausblenden (16.11.2026)
+urlpatterns += HAUTAUSGLEICH        # Hautausgleich: Gleichmäßigkeit, Symmetrie, Schatten, Retusche (18.11.2026)
 
 # „Modell aus Dateien": Reiter 3D (Genesis) und Mesh (Fotos → Netz), 26.09.2026.
 urlpatterns += BILDMODELL

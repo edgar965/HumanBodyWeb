@@ -19,6 +19,8 @@ weil `Meshgenesisanatomie` aus ihnen das Stück backt. Im Kopf die Zahl, am Ende
 `normalen` (19.10.2026, Trainingspaare: die Normalen des Genesis-Exports, sonst knickt die Naht Haut ↔ Anatomie-Stück): im Kopf `normalen: true`, danach int8 (V·3, × 127, auf 4 aufgefüllt);
 `anatomie_fertig` im Kopf: das Stück trägt schon die Karte der Charakter-Seite, die Seite backt nicht neu.
 `punktfarbe` (21.10.2026 abends, Weg g Fassung 3 von Mesh-Genesis: Farbe je Punkt aus dem Eingang): im Kopf `punktfarbe: true`, danach uint8 sRGB (V·3, auf 4 aufgefüllt); die Dreiecke tragen Material −1.
+`leit` (16.11.2026, Einzelsträhnen von `haar_Bart`, Bewegung je Locke im Browser `Meshgenesishaarschwung`): im Kopf `leit` = [G, K+1], am Ende uint32 leit (V, Leitpunkt je Punkt
+= Leitsträhne · (K+1) + Schritt) und float32 leitpunkte (G·(K+1)·3, Ruhe).
 `stufe` 1 (09.11.2026, `paket(…, stufe=1)`, `Meshgenesisflaechennetzfein`): der Körper auf Netzstufe 1; im Kopf `stufe`, `kaefig_dreiecke` (Dreiecke des Netzes auf dem Käfig) und `eltern: true`, danach
 uint32 eltern (F, Käfigdreieck je Dreieck — Masken des Käfigs gelten so für die Kinder); mit `matrix` = [Zeilen, nnz] im Kopf die Unterteilungsmatrix der Körperpunkte: uint32 Zeilenanfänge
 (Zeilen + 1), uint16 Käfigpunkte (nnz, auf 4 aufgefüllt), float32 Gewichte (nnz).
@@ -45,7 +47,8 @@ class Meshgenesisflaechennetz:
     ORDNER = 'anzeige'
     FASSUNGEN = (1,)
     TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd', 'augen')         # `augen` seit 24.10.2026 (Figuren der Tests, `Ursula.TEILE`)
-    MATERIALWERTE = ('rauheit', 'glanz', 'metall', 'relief')
+    #: `opazitaet` (14.11.2026): Deckkraft eines Daz-Stücks ohne Deckkraftbild (`Kleiderbau.anzeige`)
+    MATERIALWERTE = ('rauheit', 'glanz', 'metall', 'relief', 'opazitaet')
     _ablage = {}
 
     @classmethod
@@ -86,6 +89,9 @@ class Meshgenesisflaechennetz:
                     daten['normalen'] = Torchfeld.astype(Torchfeld.clip(Torchfeld.round(Torchfeld.astype(z['normalen'], torch.float32) * 127), -127, 127), torch.int8)
                 if 'punktfarbe' in z.files and len(z['punktfarbe']) == len(daten['uv']):
                     daten['punktfarbe'] = Torchfeld.astype(z['punktfarbe'], torch.uint8)
+                if 'leit' in z.files and 'leitpunkte' in z.files and len(z['leit']) == len(daten['uv']):          # Einzelsträhnen: Leitpunkt je Punkt (Bewegung je Locke, 16.11.2026)
+                    daten['leit'] = Torchfeld.astype(z['leit'], torch.int64)
+                    daten['leitpunkte'] = Torchfeld.astype(z['leitpunkte'], torch.float32)
             daten['materialien'] = json.loads((ordner / 'materialien.json').read_text(encoding='utf-8'))
             daten['fassung'] = fassung
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as fehler:
@@ -126,15 +132,19 @@ class Meshgenesisflaechennetz:
             fein = Meshgenesisflaechennetzfein.netz(modell, d, Meshgenesisdatensatz.ordner(modell), (cls._ablage.get(modell) or {}).get('stand'))
             d = fein if fein is not None else d
         haut = int(d['knochen'].shape[1])
+        from .meshgenesishautdetail import Meshgenesishautdetail          # Relief und Rauheit der Grundhaut an den Hautkacheln einer Testfigur (15.11.2026)
+        detail = Meshgenesishautdetail.werte(modell, d['materialien'])
         kopf = {'fassung': d['fassung'], 'punkte': int(len(d['uv'])), 'dreiecke': int(len(d['dreiecke'])), 'haut': haut, 'teile': list(cls.TEILE),
                 'teilfarben': Torchfeld.astype(d['teilfarben'], torch.int64).tolist(),
                 # Rauheit, Glanz, Metall nur, wenn das Stück sie trägt (21.10.2026 nachts, Stufe 2 der Kleider-KI) — sonst bleibt die Vorgabe der Seite
                 'materialien': [dict({'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')}, **{k: m[k] for k in cls.MATERIALWERTE if isinstance(m.get(k), (int, float))},
-                                     **{k: m[k] for k in ('bild_material', 'bild_normal') if isinstance(m.get(k), str)})
-                                for m in d['materialien']], 'ruhe': 'ruhe' in d,
+                                     **{k: m[k] for k in ('bild_material', 'bild_normal', 'bild_alpha') if isinstance(m.get(k), str)},
+                                     **({'punktfarbe': True} if m.get('punktfarbe') is True else {}), **(w or {}))
+                                for m, w in zip(d['materialien'], detail, strict=True)], 'ruhe': 'ruhe' in d,
                 'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d, 'punktfarbe': 'punktfarbe' in d,
                 'stufe': 1 if 'eltern' in d else 0, 'kaefig_dreiecke': int(d.get('kaefig_dreiecke', len(d['dreiecke']))), 'eltern': 'eltern' in d,
-                'matrix': [int(d['matrix'].shape[0]), int(d['matrix'].nnz)] if matrix and 'matrix' in d else None}
+                'matrix': [int(d['matrix'].shape[0]), int(d['matrix'].nnz)] if matrix and 'matrix' in d else None,
+                'leit': [int(d['leitpunkte'].shape[0]), int(d['leitpunkte'].shape[1])] if 'leit' in d else None}
         text = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         a = cls._auffuellen
@@ -154,12 +164,16 @@ class Meshgenesisflaechennetz:
         if kopf['matrix']:
             w = d['matrix']
             teile += [Torchfeld.als_bytes(Torchfeld.astype(w.indptr, Torchfeld.dtype('<u4'))), a(Torchfeld.als_bytes(Torchfeld.astype(w.indices, Torchfeld.dtype('<u2')))), Torchfeld.als_bytes(Torchfeld.astype(w.data, Torchfeld.dtype('<f4')))]
+        if kopf['leit']:
+            teile += [Torchfeld.als_bytes(Torchfeld.astype(d['leit'], Torchfeld.dtype('<u4'))), Torchfeld.als_bytes(Torchfeld.astype(d['leitpunkte'], Torchfeld.dtype('<f4')))]
         return b''.join(teile)
 
     @classmethod
     def bild(cls, modell, name):
         # `m<n>_material.png` (21.10.2026 nachts): Materialkarte eines KI-Stücks der Stufe 2 — G Rauheit, B Metall, A Glanz (wie three.js die Karten liest)
-        if not re.fullmatch(r'm\d{1,4}(\.jpg|_material\.png|_normal\.png)', str(name)):
-            return None
+        # `m<n>_alpha.jpg` (14.11.2026): Deckkraftbild der Daz-Haarkarten (`Kleiderbau._backen_deckkraft`)
+        if not re.fullmatch(r'm\d{1,4}(\.jpg|_alpha\.jpg|_material\.png|_normal\.png)', str(name)):
+            from .meshgenesishautdetail import Meshgenesishautdetail      # `hautdetail_<kachel>_normal.png` / `_material.png` der Grundhaut (15.11.2026)
+            return Meshgenesishautdetail.bild(modell, name)
         pfad = cls.ordner(modell) / 'bilder' / name
         return pfad if pfad.is_file() else None

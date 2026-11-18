@@ -54,6 +54,8 @@ class Meshgenesislaufbeschreibung:
         ('meshgenesis_zerlegung_arten', 'Daten', 'Kleiderarten der Trainingsfiguren festhalten', None),
         ('meshgenesis_kleidervarianten', 'Daten', 'Trainingsfiguren in neuen Kleidern anlegen', None),
         ('meshgenesis_haarkatalog', 'Daten', 'Frisuren der Garderobe vermessen', None),
+        ('haarkatalog', 'Daten', 'Frisuren der Garderobe vermessen (Haarmaße, Deckkraft)', None),                  # 15.11.2026, `haar_Bart/haarkatalog.py`
+        ('haarmuster', 'Daten', 'Strähnenmuster und Kennwerte aus den Genesis-Haaren sammeln', None),            # 15.11.2026, `haar_Bart/haarmuster.py`
         ('meshgenesis_probenzerlegung', 'Kleider', 'Kleider und Haar erkennen', None),
         ('meshgenesis_kostuem_lauf', 'Kostüme', 'Kostüm erkennen, ausschneiden, auf die Figur legen und prüfen', None),
         ('meshgenesis_kopfangleich_lauf', 'Form', 'Kopf an das Mesh angleichen: Gesichtsmaße und Haut, in Runden', None),          # 24.10.2026, `Kopfangleich`

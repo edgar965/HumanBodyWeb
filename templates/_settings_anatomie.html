@@ -1,0 +1,17 @@
+{# Einstellungen → Charakter: Anatomie-Stück nach Geschlecht an Katalogfiguren (`viewer/charakter/genesis9/genesis9anatomievorgabe.js`, 16.11.2026) — eigene Datei wie `_settings_netzvorrat.html`. #}
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Anatomie nach Geschlecht anlegen</strong>
+                <small>Eine Genesis-9-Figur aus dem Katalog („Charakter hinzufügen“, die Startfigur) bekommt beim Laden „Daz Anatomie Mann“ bzw.
+                     „Daz Anatomie Frau“ — Daz' Charaktere bringen die Genitalien nicht mit, in Daz Studio sind sie ein eigenes Geograft. Figuren mit
+                     dem Geschlecht „neutral“ und gespeicherte Modelle (sie bringen ihre Kleidung mit) bleiben, wie sie sind.
+                     <br>Eingeschaltet (Vorgabe) mit, ausgeschaltet ohne. Wirkt nach dem Neuladen der Szene.</small>
+            </div>
+            <div class="settings-input">
+                <label class="kaestchenzeile">
+                    <input type="checkbox" name="anatomie_automatisch" id="anatomie-automatisch" value="1"
+                        {% if anatomie_automatisch %}checked{% endif %}>
+                    Aktiviert
+                </label>
+            </div>
+        </div>

@@ -34,9 +34,11 @@ class Meshgenesistesteigenstueck:
     #: Kante des gebackenen Bildes für Stücke nur mit Punktfarben (`_gebacken`)
     BACKEN_KANTE = 2048
 
-    def __init__(self, stueck_ordner, stueck, regler, praefix, rig_namen):
+    def __init__(self, stueck_ordner, stueck, regler, praefix, rig_namen, gewichte=None):
         """`stueck_ordner`: `kleider_<g>/b/<id>` (mit `anzeige/`); `stueck`: Eintrag aus `stuecke.json`; `regler`: Stellung der vorhergesagten Figur; `praefix`: Anfang des Stücknamens
-        („<Modell>“); `rig_namen`: die 138 Knochennamen in der Reihenfolge des Anzeigenetzes (für starre Stücke)."""
+        („<Modell>“); `rig_namen`: die 138 Knochennamen in der Reihenfolge des Anzeigenetzes (für starre Stücke); `gewichte` (14.11.2026, lose Eigen-Kleider, `Eigengewichte`):
+        Aufruf (Punkte (N, 3) float64) → `{knochen: [[punkt, gewicht], …]}` statt der drei nächsten Hautpunkte (`G9eigenstueck.schreiben(gewichte=…)`)."""
+        self.gewichte = gewichte
         self.ordner = stueck_ordner
         self.stueck = stueck
         self.regler = dict(regler)
@@ -49,25 +51,31 @@ class Meshgenesistesteigenstueck:
             h.update((Npztorch.datei(self.ordner / 'anzeige' / datei) or self.ordner / 'anzeige' / datei).read_bytes())          # die echte Datei (.pt seit 13.11.2026)  # npz geprüft: echte Datei über Npztorch.datei
         h.update(json.dumps(self.regler, sort_keys=True).encode('utf-8'))
         h.update(self.praefix.encode('utf-8'))
+        if self.gewichte is not None:
+            h.update(b'eigene gewichte')
         with Npztorch.lesen(self.ordner / 'anzeige' / 'netz.npz') as z:                # seit 31.10.2026 gebacken (`_gebacken`): ein früher einfarbig geschriebenes Stück passt nicht mehr
             if 'punktfarbe' in z.files and not Torchfeld.ptp(z['uv'], axis=0).any():
                 h.update(b'gebacken %d' % self.BACKEN_KANTE)
         return '%d:%s' % (self.FASSUNG, h.hexdigest()[:16])
 
     def holen(self):
-        """`{stueck, name, …}` — das geschriebene Stück (gemerkt) oder neu gebaut."""
+        """`{stueck, name, …}` — das geschriebene Stück (gemerkt) oder neu gebaut. Gemerkt nur, wenn auch das Stück in der Garderobe diese Marke trägt (`marke.txt` im Arbeitsordner):
+        seit 16.11.2026 spät teilen sich alle Tests eines Jobs ein Stück je Art (`Garderobeeigen.praefix_von`), ein anderer Test kann es überschrieben haben."""
+        from Genesis9.eigenstueck import G9eigenstueck
         from Genesis9.garderobe import G9garderobe
         marke = self._marke()
         merk = self.ordner / 'eigenstueck.json'
         try:
             alt = json.loads(merk.read_text(encoding='utf-8'))
-        except (OSError, ValueError):
-            alt = {}
-        if alt.get('marke') == marke and G9garderobe.eintrag(alt.get('stueck')) is not None:
+            im_stueck = (G9eigenstueck.arbeitsordner(alt['kennung']) / 'marke.txt').read_text(encoding='utf-8')
+        except (OSError, ValueError, KeyError):
+            alt, im_stueck = {}, None
+        if alt.get('marke') == marke == im_stueck and G9garderobe.eintrag(alt.get('stueck')) is not None:
             return dict(alt, gemerkt=True)
         bilanz = self.bauen()
         bilanz['marke'] = marke
         merk.write_text(json.dumps(bilanz, ensure_ascii=False, indent=1), encoding='utf-8')
+        (G9eigenstueck.arbeitsordner(bilanz['kennung']) / 'marke.txt').write_text(marke, encoding='utf-8')
         return bilanz
 
     def _gebacken(self, arbeit, kennung, punkte, dreiecke, farben):
@@ -107,11 +115,13 @@ class Meshgenesistesteigenstueck:
             dreiecke = Torchfeld.feld(z['dreiecke'], dtype=torch.int64)
             uv = Torchfeld.feld(z['uv'], dtype=torch.float64)
             punktfarbe = z['punktfarbe'] if 'punktfarbe' in z.files else None
+            # UV je Flächenecke (14.11.2026, eingepasste Eigen-Kleider: verschweißte Punkte, Bild auf dem Netz mit offenen Nähten gebacken, `Eigentextur`)
+            uv_feld = Torchfeld.feld(z['uv_ecken'], dtype=torch.float64).reshape(-1, 2) if 'uv_ecken' in z.files else None
         mat = json.loads((anzeige / 'materialien.json').read_text(encoding='utf-8'))[0]
         kennung, anzeige_name = G9eigenstueck.kennung_und_name('%s %s' % (self.praefix, self.stueck.get('name')))
         arbeit = G9eigenstueck.arbeitsordner(kennung)
         arbeit.mkdir(parents=True, exist_ok=True)
-        bild, uv_ecken = None, uv[dreiecke].reshape(-1, 2)
+        bild, uv_ecken = None, (uv_feld if uv_feld is not None else uv[dreiecke].reshape(-1, 2))
         if mat.get('bild'):
             bild = arbeit / ('%s_farbe.jpg' % kennung)
             shutil.copyfile(anzeige / 'bilder' / mat['bild'], bild)
@@ -127,7 +137,8 @@ class Meshgenesistesteigenstueck:
         kategorie, art, knochen = self._art()
 
         def schreiben(lage):
-            return G9eigenstueck.schreiben(lage, netz, kennung, anzeige_name, kategorie, material, heben=False, knochen=knochen, art_ordner=art)
+            gewichte = self.gewichte(Torchfeld.feld(lage, dtype=torch.float64)) if self.gewichte is not None and knochen is None else None
+            return G9eigenstueck.schreiben(lage, netz, kennung, anzeige_name, kategorie, material, heben=False, knochen=knochen, art_ordner=art, gewichte=gewichte)
 
         bilanz = schreiben(roh)
         ruhe, bericht = G9gcfigurbau.ruhelage(bilanz['stueck'], self.regler, roh, roh)

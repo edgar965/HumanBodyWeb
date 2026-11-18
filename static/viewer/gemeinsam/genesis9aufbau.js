@@ -52,7 +52,9 @@ export class Genesis9aufbau {
      * freigibt, bliebe die Figur sonst für immer auf der groben Stufe.
      */
     static async progressiv(inst) {
-        await Genesis9vorrat.laden(inst, () => Genesis9aufbau.alles(inst, Genesis9aufbau.GROB));   // eine Anzeige: der Server legt sie dauerhaft ab (`Genesis9vorrat`)
+        // Eine Anzeige: der Server legt sie dauerhaft ab (`Genesis9vorrat`). Folgt eine feinere Stufe, ist der Käfig eine Vorschau — nur er darf nach einer
+        // Code-Änderung noch mit altem Code gerechnet kommen (17.11.2026).
+        await Genesis9vorrat.laden(inst, () => Genesis9aufbau.alles(inst, Genesis9aufbau.GROB), Netzstufenstand.wahl !== 'grob');
         // Die Figur steht in der groben Stufe da; die Anzeige sagt es und dass die gewählte nachkommt (`Netzstufenstand`).
         Netzstufenstand.melden(inst, 'grob', Netzstufenstand.wahl !== 'grob');
         // Die gewählte Stufe stückweise und erst nach Ruhe nachholen (`Genesis9haeppchen`, Edgar 09.10.2026).

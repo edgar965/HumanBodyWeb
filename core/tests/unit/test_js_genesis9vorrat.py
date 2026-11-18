@@ -7,6 +7,7 @@ u"""`Genesis9vorrat` — welche Netzanfragen der Server dauerhaft ablegt (19.10.
 3. `festhalten` (nach „Modell speichern"): die letzten Anfragen je Teil werden die Anzeige; ausgezogene Stücke fallen weg; der Körper nimmt den Rumpf von jetzt
    (`koerperNutzlast`).
 4. `laden` zählt verschachtelt und gibt auch nach einem Fehler frei.
+5. `laden(…, vorschau=true)` (17.11.2026): nur der Käfig (`?stufen=0`) trägt `X-G9-Vorrat-Vorschau`, ein Reglerzug dabei nicht; danach keiner mehr.
 
 Sabotage (nicht gelaufen): in `kopf` die Stellung ohne `?stufen` vergleichen weglassen (ganze Adresse) → Fall 1 rot (der Stufenwechsel trüge keinen Kopf);
 `finally` in `laden` streichen → Fall 4 rot. Geschrieben, nicht gelaufen.
@@ -49,6 +50,13 @@ pruefe('festhalten: Körper mit dem Rumpf von jetzt', V.kopf(inst, 'koerper', '/
 await V.laden(inst, async () => { await V.laden(inst, async () => {}); pruefe('verschachtelt', inst._vorratLaedt, 1); });
 try { await V.laden(inst, async () => { throw new Error('x'); }); } catch (e) { /* gewollt */ }
 pruefe('nach Fehler frei', inst._vorratLaedt, 0);
+
+// 5. Vorschau nur für den Käfig
+const v = { id: 'v', kleidung: {} };
+const r5 = await V.laden(v, async () => [V.kopf(v, 'koerper', '/n/basis/netz/?stufen=0', { regler: {} }), V.kopf(v, 'koerper', '/n/basis/netz/', { regler: { x: 1 } })], true);
+pruefe('Vorschau: Käfig', r5[0], { 'X-G9-Vorrat-Vorschau': '1', 'X-G9-Vorrat': '1' });
+pruefe('Vorschau: Reglerzug ohne', r5[1]['X-G9-Vorrat-Vorschau'], undefined);
+pruefe('Vorschau danach aus', V.kopf(v, 'koerper', '/n/basis/netz/?stufen=0', { regler: { x: 1 } }), K);
 console.log(JSON.stringify({ ok: true }));
 """
 

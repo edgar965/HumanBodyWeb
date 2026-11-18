@@ -67,8 +67,11 @@ export class Serverabruf extends ServerabrufBasis {
                 ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal), headers: { ...gewuenscht, ...(wahl?.headers || {}) },
             }));
             if (!antwort.ok) throw await ServerabrufBasis._fehler(antwort, adresse);
-            if (Netzpaket.erkannt(antwort)) return Netzpaket.lesen(await antwort.arrayBuffer());
-            return antwort.json();
+            const daten = Netzpaket.erkannt(antwort) ? Netzpaket.lesen(await antwort.arrayBuffer()) : await antwort.json();
+            // Mit älterem Code gerechnet (Vorschau aus dem dauerhaften Vorrat, `G9vorratanfrage.KOPF_ALT`, 17.11.2026): nicht im RAM halten
+            // (`Genesis9antwortspeicher.ablegen`). Nicht aufzählbar — `kopie` trägt es nicht weiter.
+            if (antwort.headers.get('X-G9-Vorrat-Alt') && daten && typeof daten === 'object') Object.defineProperty(daten, 'vorratAlt', { value: true });
+            return daten;
         });
     }
 

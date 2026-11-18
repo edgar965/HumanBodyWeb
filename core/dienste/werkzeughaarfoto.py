@@ -60,8 +60,8 @@ class Werkzeughaarfoto:
          [(A + 'meshfigur.py', 'Meshfigurendpunkte'), (D + 'meshfigurfrisur.py', 'Meshfigurfrisur'),
           (D + 'meshfigurfrisurstueck.py', 'Meshfigurfrisurstueck'), (H + 'haarhuelle.py', 'Haarhuelle'),
           (H + 'frisurregler.py', 'Frisurregler'), (H + 'haarkarten.py', 'Haarkarten'), (H + 'haarglb.py', 'Haarglb'),
-          (G + 'haareigen.py', 'G9haareigen')],
-         'frisur: beste (Daz oder „Haar Eigen“) | daz | eigen | aus; haarkarten an | aus. A Frisurwahl: jede Frisur der Garderobe '
+          (G + 'haargenerisch.py', 'G9haargenerisch')],
+         'frisur: beste (Daz-Frisuren mit Formachsen) | daz | eigen (Kin mit Formachsen) | aus; haarkarten an | aus. A Frisurwahl: jede Frisur der Garderobe '
          '(Art haar, ohne Bart und Toon, auch die Klone G1/G2/G8) in jedem formenden Stil, gemessen als HÜLLE '
          '(Haarhuelle: je 5°-Feld um die Kopfmitte der größte Radius; fehlendes und überzähliges Haar zählen mit; Haar in '
          'Richtung des geschützten Gesichts +30 mm), nicht Punkt zu Punkt; die besten OBERSTE (2) Daz-Frisuren und „Haar '
@@ -112,6 +112,6 @@ class Werkzeughaarfoto:
         ('Meshfigurfrisur', 'ruft', 'Haarhuelle', 'Haarhuelle: Hülle des Netzhaars gegen die Hülle der Frisur (Abstand in mm, Deckung)'),
         ('Meshfigurfrisur', 'ruft', 'Frisurregler', 'Frisurregler(messung, grund, deltas, grenzen).suchen(): Regler der besten Frisuren stellen'),
         ('Meshfigurfrisur', 'ruft', 'Haarkarten', 'Haarkarten.schreiben(pfad): Weg C → haarkarten.glb'),
-        ('Meshfigurfrisur', 'ruft', 'G9haareigen', 'G9haareigen.sicherstellen(): baut „Haar Eigen“, wenn es fehlt'),
+        ('Meshfigurfrisur', 'ruft', 'G9haargenerisch', 'G9haargenerisch.frisuren(): die Frisuren der Garderobe ohne ausgeblendete; Kin mit Formachsen statt „Haar Eigen“'),
         ('Haarkarten', 'ruft', 'Haarglb', 'Haarglb().netz() und schreiben(): GLB mit Punktfarbe und Bild'),
     ]

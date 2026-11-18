@@ -2,6 +2,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Genesis9Figur } from './genesis9figur.js';
 import { Figuraufnahme } from '../figuraufnahme.js';
+import { Genesis9anatomievorgabe } from './genesis9anatomievorgabe.js';
 
 /**
  * Genesis9katalog — die Daz-Figuren anbieten und eine in die Szene stellen.
@@ -32,10 +33,14 @@ export class Genesis9katalog {
      * `data/models/` mit `quelle: genesis9`) geht den Modelldaten-Weg
      * (`charakterAusModelldaten`) — mit Reglern, Haut, Augen, Brauen und
      * Kleidung aus der Datei (17.09.2026).
+     *
+     * Eine Figur aus dem Katalog bekommt vor dem Bau das Anatomie-Stück ihres Geschlechts, wenn
+     * Einstellungen → Charakter es will (`Genesis9anatomievorgabe`, 16.11.2026).
      */
-    static hinzufuegen(figur, lage = null, eintrag = null) {
+    static async hinzufuegen(figur, lage = null, eintrag = null) {
         if (eintrag?.gespeichert) return fn.addCharacterFromPreset(figur, lage);
         const neu = new Genesis9Figur(Figuraufnahme.kennung(), { figur });
+        await Genesis9anatomievorgabe.anlegen(neu, eintrag);
         return Figuraufnahme.inDieSzene(neu, lage);
     }
 }

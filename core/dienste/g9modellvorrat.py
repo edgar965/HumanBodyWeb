@@ -7,10 +7,16 @@ WARUM DER ANTWORTVORRAT NICHT REICHTE: `G9antworten` legt jede Netzantwort ab �
 Antwortmodule). Jede Änderung dort macht ALLES ungültig; gemessen am 19.10.2026 lagen nach einem Tag Arbeit 6 Antworten (9,3 MB, alle grob) im Vorrat,
 jeder Ladevorgang rechnete Körper und Stücke neu (kalt 5–14 s je Stück). Hier liegt dieselbe Antwort OHNE Fassung im Schlüssel:
 
-    liefern: Vorrat dieser Fassung → sonst HIER (sofort ausliefern, im Hintergrund mit dem jetzigen Code neu rechnen) → sonst rechnen.
+    liefern: Vorrat dieser Fassung → sonst HIER, wenn mit dem jetzigen Code gerechnet → sonst rechnen.
 
-Der Inhalt ist also höchstens einen Ladevorgang alt („stale-while-revalidate"): wer nach einer Code-Änderung lädt, sieht einmal den alten Stand, der nächste den
-neuen. Das gilt für alles im Code — auch für Fehlerbehebungen am Netz.
+JEDER EINTRAG TRÄGT SEINE CODE-FASSUNG (17.11.2026, Edgar: „fixe das: Nach einer Code-Änderung zeigen sie beim ersten Laden noch den alten Stand"): im Verweis
+hinter dem sha1 (`G9antwortvorrat._von_platte`); Verweise von davor tragen keine und gelten als alt. Ein Eintrag älteren Codes geht nur noch hinaus
+* als VORSCHAU: der Käfig des ersten Zugs, den die gewählte Stufe gleich ersetzt (Kopf `X-G9-Vorrat-Vorschau`, `gemeinsam/genesis9vorrat.js`) — mit
+  `X-G9-Vorrat-Alt`, damit der Browser ihn nicht im RAM hält (`Genesis9antwortspeicher.ablegen`),
+* beim Vorab-Füllen (es geht nichts hinaus);
+dann rechnet `G9vorratnachlauf` ihn im Hintergrund neu. Sonst wird neu gerechnet und der Eintrag ersetzt: die gewählte Stufe kommt immer aus dem jetzigen
+Code und wird nach einer Code-Änderung beim ersten Laden neu gerechnet. Bis 17.11.2026 ging jeder alte Eintrag sofort hinaus („stale-while-revalidate"): wer
+nach einer Code-Änderung lud, sah einmal den alten Stand.
 
 WAS HINEINKOMMT: nur Anfragen, die der Browser als ANZEIGE einer Figur markiert (`X-G9-Vorrat`, `gemeinsam/genesis9vorrat.js`: das Laden einer Figur, der
 Stufenwechsel und das Vorab-Füllen nach dem Laden eines gespeicherten Modells) — Reglerzüge nicht, sonst läge jede Zwischenstellung hier. Und nur bis zur
@@ -47,6 +53,38 @@ class G9modellvorrat(G9antwortvorrat):
         return 'stabil'
 
     @classmethod
-    def vorhanden(cls, schluessel):
-        u"""Liegt der Schlüssel auf der Platte (ohne zu lesen)?"""
-        return (cls.ordner() / (schluessel + cls.VERWEIS)).is_file()
+    def lesen(cls, schluessel):
+        u"""(Bytes, Code-Fassung beim Ablegen) — oder None. Ein Verweis von vor dem 17.11.2026 trägt keine Fassung: ''."""
+        with cls._schloss:
+            eintrag = cls._speicher.get(schluessel)
+            if eintrag is not None:
+                cls._speicher.move_to_end(schluessel)
+                return eintrag
+        eintrag = cls._von_platte(schluessel)
+        if eintrag is not None:
+            cls._im_speicher(schluessel, eintrag)
+        return eintrag
+
+    @classmethod
+    def holen(cls, schluessel):
+        eintrag = cls.lesen(schluessel)
+        return None if eintrag is None else eintrag[0]
+
+    @classmethod
+    def merken(cls, schluessel, daten, fassung=''):
+        u"""Bytes ablegen, mit der Code-Fassung, die sie gerechnet hat (`G9antworten.fassung`)."""
+        cls._im_speicher(schluessel, (daten, fassung))
+        threading.Thread(target=cls._schreiben, args=(schluessel, daten, fassung), daemon=True, name='g9-modellvorrat').start()
+
+    @classmethod
+    def fassung_von(cls, schluessel):
+        u"""Die Code-Fassung des Eintrags ('' ohne) — None, wenn keiner liegt. Liest nur den Verweis, nicht den Inhalt."""
+        with cls._schloss:
+            eintrag = cls._speicher.get(schluessel)
+        if eintrag is not None:
+            return eintrag[1]
+        try:
+            teile = (cls.ordner() / (schluessel + cls.VERWEIS)).read_text(encoding='ascii').split()
+        except OSError:
+            return None
+        return ' '.join(teile[1:]) if teile else None

@@ -11,6 +11,7 @@ u"""Genesis-9-Garderobe (Daz) fuer Szene und Studio: Liste, Stuecknetz, Texturen
                             hautgewichte, knochen}], boden, stufen,
           innen: [kennung], aussen: [kennung]}
     GET  /api/character/genesis9-figur/textur/<pfad>          Bilddatei
+Posen seit 16.11.2026 in `g9posenapi.py`. „Eigen Haar“ (Haar-Engine, `G9eigenhaarbau`): Sorte von „Haar – Generisch“.
 
 Bis 18.09.2026 in `g9figur.py` (das wuchs ueber 300 Zeilen). `pose` ist
 die Kennung eines Daz-Posenpresets (`G9posen`): das Stueck muss auf
@@ -45,12 +46,12 @@ from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.passformvorgabe import G9passformvorgabe
 from Genesis9.pfade import G9pfade
-from Genesis9.posen import G9posen
 from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stuecklochstufen import G9stuecklochstufen
 from Genesis9.stueckstarr import G9stueckstarr
 
 from ..dienste.g9antworten import G9antworten
+from ..dienste.g9eigenhaarbau import G9eigenhaarbau
 from ..dienste.g9haarmischbau import G9haarmischbau
 from ..dienste.g9kleidmischbau import G9kleidmischbau
 from ..dienste.g9stueckteile import G9stueckteile
@@ -86,7 +87,8 @@ class G9garderobeapi:
         # `haar`-Eintrag ist also der erste in der Kategorie „Haare".
         # „Kleidung – Generisch“ (`G9kleidgenerisch`, 30.09.2026): je Kategorie ein Sammeleintrag, gleich hinter dem
         # Haar — der Browser gruppiert in der Reihenfolge dieser Liste, also stehen sie in ihrer Kategorie vorn.
-        roh = [G9haargenerisch.eintrag()] + G9kleidgenerisch.eintraege() + list(G9garderobe.liste())
+        # Der Generator „Eigen Haar“ ist seit 16.11.2026 spät eine Sorte von „Haar – Generisch“ (Edgar: „ich brauche nur einen“).
+        roh = [G9haargenerisch.eintrag(G9eigenhaarbau.sorten())] + G9kleidgenerisch.eintraege() + list(G9garderobe.liste())
         # `regler`: jede Frisur bekommt die fuenf gemeinsamen Formachsen dazu
         # (`G9haarachsen`) — erst hier, nicht in der abgelegten Liste je Stueck.
         # Dazu die eigenen Morphe aus den Iterationen von „2D3D Kleider" (`G9kleidmorphe`, Gruppe „Eigene Morphe").
@@ -145,10 +147,11 @@ class G9garderobeapi:
                 rumpf = dict(rumpf, getragen=getragen)
             humanbody = rumpf.get('figurart') == G9kleidhumanbody.FIGURART
             kleid = G9kleidhumanbody.antwort if humanbody else G9garderobeapi._kleid
-            bauen = lambda: G9haarmischbau.antwort(rumpf, kleid)
+            # Der Generator „Eigen Haar“ baut auf der Genesis-Figur (`G9figur.formung`); auf einer HumanBody-Figur fällt die Sorte aus.
+            bauen = lambda: G9haarmischbau.antwort(rumpf, kleid, None if humanbody else G9figur.formung)
             return await sync_to_async(G9antworten.liefern, thread_sensitive=False)(
                 'kleidhb' if humanbody else 'kleid', kennung, rumpf, bauen,
-                eintrag=G9haarmischbau.KENNZEICHEN, request=request)
+                eintrag=G9haarmischbau.kennzeichen(rumpf), request=request)
         # „Kleidung – Generisch“ MISCHT (`G9kleidmischbau`, 30.09.2026): Stehen mehrere Stuecke des Eintrags ueber 0,
         # wird jedes gebaut und dort zu EINER Flaeche gemischt, wo sie dieselbe Hautstelle bedecken. Ein einzelnes
         # Stueck baut wie bisher (unten).
@@ -192,13 +195,13 @@ class G9garderobeapi:
             art, kennung, rumpf, bauen, eintrag=eintrag, request=request)
 
     @staticmethod
-    def _kleid(kennung, eintrag, rumpf, vor_antwort=None):
+    def _kleid(kennung, eintrag, rumpf, vor_antwort=None, teile=None, bilder=None):
         u"""Das Antwort-Dict eines Stuecks — oder eine Fehlerantwort.
 
         `vor_antwort(nummer, netz) -> netz | None` greift je Teil ein, BEVOR es kodiert
         wird — `None` laesst das Teil weg. Genutzt von der Haarmischung
         (`G9haarmischbau`, 30.09.2026), die jede Sorte auf ihren Anteil ausduennt: Dafuer
-        braucht sie die rohen Felder, nicht die fertigen Bytes."""
+        braucht sie die rohen Felder, nicht die fertigen Bytes. `teile`/`bilder`: schon gebaut („Eigen Haar“, `G9eigenhaarbau`), sonst aus der Garderobe."""
         formung = G9figur.formung(rumpf, {})
         # Ein Genesis-8-Schuh mit Fusspose: der Fuss der Figur stellt sich, der
         # Schuh bleibt in seiner (schon getragenen) Ruhelage (`G9autofit`).
@@ -222,8 +225,8 @@ class G9garderobeapi:
         try:
             # Die Bilder erst hier: wie vorher erst nach `teile` — eine
             # unbekannte Kennung bleibt eine 404, keine 500.
-            teile = G9garderobe.teile(kennung)
-            bilder = G9garderobe.bilder(kennung, G9figur._name(rumpf.get('variante')))
+            teile = teile if teile is not None else G9garderobe.teile(kennung)
+            bilder = bilder if bilder is not None else G9garderobe.bilder(kennung, G9figur._name(rumpf.get('variante')))
             netze, innen, aussen, hoch = G9stueckteile.netze(
                 kennung, eintrag, rumpf, formung, koerpernetz.koerperflaeche(), stufen,
                 bilder=bilder, stueckformung=stueckformung, bindung=bindung,
@@ -282,19 +285,3 @@ class G9garderobeapi:
         u"""Ein Bild aus `Runtime/Textures` der Bibliothek oder einer Ablage (`schminke/…`, `G9ebenen`), mit ETag (unverändert → 304) — sonst 404. Auf `?kante=` oder
         `?format=bc` verkleinert bzw. als GPU-Block (`G9texturfassung`, 19.10.2026); ASYNC, weil eine Fassung beim ersten Abruf bis ~2 s rechnet."""
         return await sync_to_async(G9texturfassung.antwort, thread_sensitive=False)(request, pfad)
-
-    # ---------------------------------------------------------------- Posen
-
-    @staticmethod
-    @require_GET
-    def posen(request):
-        u"""`{posen: [{gruppe, eintraege}], ausdruecke: [...], formen: [...]}`
-        (`G9posen`; `formen` = Formpresets mit ihren Reglern, 18.09.2026)."""
-        if not G9pfade.vorhanden():
-            return JsonResponse({'posen': [], 'ausdruecke': [], 'formen': [],
-                                 'fehler': FEHLT})
-        # Ordner und Gelöschtes aus dem Reiter „Posen" (`G9poseneinteilung`, 17.10.2026) gelten auch hier.
-        from Genesis9.poseneinteilung import G9poseneinteilung as einteilung
-        return JsonResponse({'posen': einteilung.anwenden(G9posen.liste('pose'), G9posen.katalog()),
-                             'ausdruecke': einteilung.anwenden(G9posen.liste('ausdruck'), G9posen.katalog()),
-                             'formen': G9posen.liste('form')})

@@ -20,10 +20,14 @@
 export class Sortenanteile {
 
     static VORSATZ = 'sorte.';
+    /** Endung der Sorten, die ZUSÄTZLICH getragen werden (Bart) — wie `G9haargenerisch.ZUSATZ` auf dem Server: ihr Anteil ist ihre Dichte,
+     *  sie gehen nicht in die Aufteilung (16.11.2026: „Eigen Bart“ auf 100 % zog „Eigen Haar“ auf 0). */
+    static ZUSATZ = '_beard';
 
-    /** Ist das ein Sortenregler (Anteil einer Frisur)? */
+    /** Ist das ein Sortenregler, der zur Aufteilung gehört (Anteil einer Frisur, kein Bart)? */
     static ist(name) {
-        return String(name || '').startsWith(Sortenanteile.VORSATZ);
+        const n = String(name || '');
+        return n.startsWith(Sortenanteile.VORSATZ) && !n.endsWith(Sortenanteile.ZUSATZ);
     }
 
     /**

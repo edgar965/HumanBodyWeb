@@ -5,6 +5,7 @@ import { Figurwahlfuellung } from './figurwahlfuellung.js';
 import { Figurwahlordner } from './figurwahlordner.js';
 import { Figurwahlzeile } from './figurwahlzeile.js';
 import { Figurlagefelder } from './figurlagefelder.js';
+import { Standardmodellpflege } from './standardmodellpflege.js';
 
 /**
  * Figurwahldialog — „Charakter hinzufügen", ein Reiter je Figurart, mit Lage.
@@ -234,10 +235,17 @@ export class Figurwahldialog {
     }
 
     _zeile(eintrag, quelle) {
-        // Umbenennen und Löschen gibt es nur für Gespeichertes — ein
-        // Körpertyp oder ein Daz-Katalogeintrag ist keine Datei.
-        const pflege = Boolean(this.pflege) && Figurkataloge.QUELLEN[quelle].pflege
-            && (eintrag.bereich || 'standard') === 'gespeichert';
+        // Umbenennen und Löschen: Gespeichertes ändert die Datei; ein Standard-Modell (Körpertyp, Daz-Katalogeintrag) wird umbenannt oder
+        // ausgeblendet (`Standardmodellpflege`, Edgar 16.11.2026) — in jedem Reiter, wenn der Dialog Pflege hat (Szene „/Charakter/“).
+        const gespeichert = (eintrag.bereich || 'standard') === 'gespeichert';
+        const pflege = Boolean(this.pflege) && Figurkataloge.QUELLEN[quelle].pflege && gespeichert;
+        if (Boolean(this.pflege) && !gespeichert && !eintrag.verwaist) {
+            return Figurwahlzeile.bauen(eintrag, {
+                waehlen: () => this._waehlen({ quelle, name: eintrag.name, eintrag }),
+                laden: async () => { this.schliessen(); await this._laden({ quelle, name: eintrag.name, eintrag }); },
+                pflegen: (was) => this._pflegenStandard(quelle, eintrag, was),
+            });
+        }
         // Ein Modell aus einem Blender-Import lässt sich samt Import löschen; ein abgebrochener Import (`verwaist`, mit Warnzeichen)
         // ist kein Modell: nicht wählbar, nicht ladbar, nur „Import löschen" (10.10.2026).
         const werkzeuge = eintrag.verwaist ? ['importloeschen']
@@ -260,6 +268,16 @@ export class Figurwahldialog {
         try {
             const geschehen = await this.pflege[was](quelle, name, eintrag);
             if (!geschehen) return;
+            this._waehlen(null);
+            await this._fuellen(quelle);
+        } catch (fehler) {
+            window.alert(`Fehler: ${fehler.message}`);
+        }
+    }
+
+    async _pflegenStandard(quelle, eintrag, was) {
+        try {
+            if (!await Standardmodellpflege[was](quelle, eintrag)) return;
             this._waehlen(null);
             await this._fuellen(quelle);
         } catch (fehler) {

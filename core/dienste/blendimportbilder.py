@@ -52,11 +52,14 @@ class Blendimportbilder:
         """`stueck.obj` (+ MTL ohne Bild: das Material geht getrennt an den Schreiber) — Punkte in Ruhe (m, Y oben),
         UV je Dreiecksecke."""
         (ordner / 'stueck.mtl').write_text('newmtl Stoff\nKd 1 1 1\n', encoding='utf-8')
-        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2)
+        # je Feld EIN Holen von der Karte (14.11.2026: Zeile für Zeile über Karten-Tensoren wartete je Zahl auf die Karte, Minuten bei einem Requisit mit 200.000 Dreiecken)
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2).tolist()
+        punkte = Torchfeld.feld(punkte, dtype=torch.float64).tolist()
+        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).tolist()
         zeilen = ['mtllib stueck.mtl', 'usemtl Stoff'] + ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['vt %.6f %.6f' % tuple(t) for t in Torchfeld.liste(uv)]
+        zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
         zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                   for i, (a, b, c) in enumerate(Torchfeld.feld(dreiecke, dtype=torch.int64))]
+                   for i, (a, b, c) in enumerate(dreiecke)]
         pfad = ordner / 'stueck.obj'
         pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
         return pfad

@@ -186,6 +186,7 @@ export class Genesis9stueckregler {
         Sortenanteile.eintragen(werteRegler, aufteilung, vorgaben);
         const kasten = schieber.closest('.genesis9-stueckregler');
         for (const s of kasten?.querySelectorAll('input[data-regler^="sorte."]') || []) {
+            if (!Sortenanteile.ist(s.dataset.regler)) continue;      // Bart: zusätzlich getragen, behält seinen Schieber
             const wert = aufteilung[s.dataset.regler] ?? 0;
             s.value = String(wert);
             const text = s.closest('.slider-row')?.querySelector('.slider-value');

@@ -49,6 +49,8 @@ from Genesis9.garderobe import G9garderobe
 from Genesis9.haargenerisch import G9haargenerisch
 from Genesis9.haarmischung import G9haarmischung
 
+from .g9eigenhaarbau import G9eigenhaarbau
+
 __all__ = ['G9haarmischbau']
 
 logger = logging.getLogger('core')
@@ -64,22 +66,34 @@ class G9haarmischbau:
     KENNZEICHEN = {'mischung': 'dichte', 'fassung': 1}
 
     @classmethod
-    def antwort(cls, rumpf, kleid):
+    def kennzeichen(cls, rumpf):
+        u"""`KENNZEICHEN`, mit dem Stand der Haar-Engine, wenn der Generator „Eigen Haar“ mitgemischt wird (sonst entwertete jede Änderung an ihr alle Mischungen)."""
+        if any(G9eigenhaarbau.ist(k) for k in G9haargenerisch.anteile(rumpf.get('regler_stueck'), G9eigenhaarbau.sorten())):
+            return dict(cls.KENNZEICHEN, erzeugt=G9eigenhaarbau.kennzeichen())
+        return cls.KENNZEICHEN
+
+    @classmethod
+    def antwort(cls, rumpf, kleid, formen=None):
         u"""Das Antwort-Dict der Mischung — oder eine Fehlerantwort.
 
         `kleid` ist `G9garderobeapi._kleid` oder auf einer HumanBody-Figur
         `G9kleidhumanbody.antwort` (hereingereicht, damit dieser Dienst die API nicht
-        importiert — sie importiert ihn)."""
-        folge = G9haargenerisch.mischung(rumpf.get('regler_stueck'))
+        importiert — sie importiert ihn). `formen` = `G9figur.formung` für den Generator
+        „Eigen Haar“ (16.11.2026 spät); ohne (HumanBody) fällt seine Sorte aus. Er wird nicht
+        ausgedünnt: seine Dichte ist schon mal dem Anteil (`G9eigenhaarbau.antwort`)."""
+        folge = G9haargenerisch.mischung(rumpf.get('regler_stueck'), G9eigenhaarbau.sorten())
         if not folge:
             return JsonResponse({'fehler': 'Keine Frisur in der Garderobe'}, status=404)
         teile, innen, aussen = [], [], []
         boden = stufen = figurart = None
         for rang, (kennung, anteil, regler) in enumerate(folge):
             haupt = rang == 0
-            eintrag = G9garderobe.eintrag(kennung) or {}
-            aus = kleid(kennung, eintrag, dict(rumpf, regler_stueck=regler),
-                        vor_antwort=cls._ausduenner(kennung, anteil, haupt, G9haarmischung.ort_aus(regler)))
+            if G9eigenhaarbau.ist(kennung):
+                aus = (G9eigenhaarbau.antwort(dict(rumpf, regler_stueck=regler), kleid, formen, anteil, kennung) if formen is not None
+                       else JsonResponse({'fehler': u'Eigen Haar und Eigen Bart wachsen nur auf einer Genesis-9-Figur'}, status=404))
+            else:
+                aus = kleid(kennung, G9garderobe.eintrag(kennung) or {}, dict(rumpf, regler_stueck=regler),
+                            vor_antwort=cls._ausduenner(kennung, anteil, haupt, G9haarmischung.ort_aus(regler)))
             if isinstance(aus, HttpResponse):
                 if haupt:
                     return aus

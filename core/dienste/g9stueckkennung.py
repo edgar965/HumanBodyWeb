@@ -39,7 +39,7 @@ class G9stueckkennung:
 
     @staticmethod
     def kennung(anzeige):
-        """Die Kennung zu einem Dateinamen — wie `G9eigenstueck.schreiben` (`stueck_id`)."""
+        """Die Kennung zu einem Dateinamen — die, die `G9garderobekennung` einem freien Namen gibt (`plan` prüft, ob er frei ist)."""
         return re.sub(r'[^a-z0-9]+', '_', str(anzeige).lower()).strip('_')
 
     @classmethod
@@ -47,6 +47,7 @@ class G9stueckkennung:
         """{alt, neu, ersetzen, dateien: [(alt, neu)], arbeitsordner, modelle: [Pfad], pflege} — ändert nichts. `ValueError`, wenn es nicht geht."""
         from Genesis9.eigenstueck import G9eigenstueck
         from Genesis9.garderobe import G9garderobe
+        from Genesis9.garderobekennung import G9garderobekennung
         from Genesis9.pfade import G9pfade
         eintrag = G9garderobe.eintrag(alt)
         if eintrag is None:
@@ -67,22 +68,29 @@ class G9stueckkennung:
         dateien = []
         for p in sorted(wurzel.rglob('*')):
             rel = str(p.relative_to(wurzel))
-            if p.is_file() and (alt_name in rel or alt_netz in rel):
+            if p.is_file() and (cls._muster(alt_name).search(rel) or cls._muster(alt_netz).search(rel)):
                 ziel = wurzel / cls._ersetzt(rel, ersetzen)
                 if ziel.exists():
                     raise ValueError('%s gibt es schon' % ziel)
                 dateien.append((p, ziel))
-        if not any(a == duf for a, _z in dateien):
+        neu_duf = next((z for a, z in dateien if a == duf), None)
+        if neu_duf is None:
             raise ValueError('Die Datei des Stücks %s fehlt' % duf)
+        # Die Tabelle der festen Kennungen (`G9garderobekennung`, 16.11.2026) kennt auch Stücke, deren Datei fehlt (Papierkorb): hält eine andere
+        # Datei `neu`, hießen Liste und Modelle nach dem Umbenennen verschieden.
+        besitzer = G9garderobekennung.besitzer(neu)
+        if besitzer not in (None, G9garderobekennung.schluessel(neu_duf)):
+            raise ValueError('Die Kennung %s ist schon vergeben (%s)' % (neu, besitzer))
         arbeit = G9eigenstueck.arbeitsordner(alt_netz)
         modelle = [p for p in sorted(Path(settings.HUMANBODY_MODELS_DIR).glob('*.json')) if cls._verweist(cls._json(p), alt)]
-        return {'alt': alt, 'neu': neu, 'name': neu_name, 'ersetzen': ersetzen, 'dateien': dateien,
+        return {'alt': alt, 'neu': neu, 'name': neu_name, 'ersetzen': ersetzen, 'dateien': dateien, 'duf': (duf, neu_duf),
                 'arbeitsordner': (arbeit, G9eigenstueck.arbeitsordner(neu_netz)) if arbeit.is_dir() else None, 'modelle': modelle}
 
     @classmethod
     def umbenennen(cls, alt, neuer_name):
         """Führt `plan` aus; → Bilanz {alt, neu, dateien, inhalte, modelle, pflege}."""
         from Genesis9.garderobe import G9garderobe
+        from Genesis9.garderobekennung import G9garderobekennung
         from Genesis9.mbstuecke import G9mbstuecke
         plan = cls.plan(alt, neuer_name)
         inhalte = 0
@@ -101,6 +109,8 @@ class G9stueckkennung:
             while ordner != ordner.parent and ordner.is_dir() and not any(ordner.iterdir()):
                 ordner.rmdir()
                 ordner = ordner.parent
+        # Die neue Datei bekommt in der Tabelle genau die Kennung, auf die gleich Modelle und Pflege umgehängt werden — sonst vergäbe die Liste ihr eine eigene.
+        G9garderobekennung.umziehen(*plan['duf'], plan['neu'])
         if plan['arbeitsordner']:
             os.replace(*plan['arbeitsordner'])
             cls.arbeitsdateien(plan['arbeitsordner'][1], plan['ersetzen'])
@@ -125,10 +135,16 @@ class G9stueckkennung:
                 zahl += 1
         return zahl
 
-    @staticmethod
-    def _ersetzt(text, ersetzen):
+    @classmethod
+    def _muster(cls, name):
+        """Der Name nur als ganzer: nicht mitten in einem längeren (`Gold Handschuh 34` in `Gold Handschuh 34-2`, `Foo 3` in `Foo 34`); `_farbe`, `_Mat`, `.duf` dahinter gehören
+        dazu. Bis 16.11.2026 spät reine Teilzeichenfolge — das Umbenennen von goldprinzessin_handschuh_34 nahm goldprinzessin_handschuh_34_2 mit (`ProjektTemp/_wegwerf/eigenstuecke/machen.log`)."""
+        return re.compile(r'(?<![A-Za-z0-9])' + re.escape(name) + r'(?![A-Za-z0-9]|[-_ ]\d|%20\d)')
+
+    @classmethod
+    def _ersetzt(cls, text, ersetzen):
         for a, b in ersetzen:
-            text = text.replace(a, b)
+            text = cls._muster(a).sub(lambda _m, b=b: b, text)
         return text
 
     @staticmethod

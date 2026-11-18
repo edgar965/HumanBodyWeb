@@ -31,13 +31,7 @@ export class Genesis9garderobepflege {
 
     static ADRESSE = '/api/character/genesis9-figur/garderobe/';
 
-    /** Die zwei Einträge für das Kontextmenü einer Zeile (`Kontextmenue.binden`). */
-    static eintraege(stueck, neuzeichnen, zeile = null) {
-        return [
-            { symbol: 'fa-pen', text: 'Umbenennen …', tun: () => Genesis9garderobepflege.umbenennen(stueck, neuzeichnen) },
-            { symbol: 'fa-trash', text: 'Löschen', tun: () => Genesis9garderobepflege.loeschen(stueck, neuzeichnen, zeile) },
-        ];
-    }
+    // Die Menüeinträge setzt seit 16.11.2026 `Genesis9stueckmenue` zusammen (Garderobe und Genitalien); hier stehen nur die Handlungen.
 
     static adresse(stueck, aktion) {
         return `${Genesis9garderobepflege.ADRESSE}${encodeURIComponent(stueck.id)}/${aktion}/`;

@@ -106,6 +106,16 @@ export class Meshgenesisflaechennetz {
             ab += nnz * 4;
             this.matrix = { zeilen, anfang, spalte, wert };
         }
+        // Einzelsträhnen (16.11.2026, `haar_Bart`): Leitpunkt je Punkt und die Leitsträhnen in Ruhe [G, K+1] — Bewegung je Locke (`Meshgenesishaarschwung`)
+        this.leit = null;
+        this.leitpunkte = null;
+        if (this.kopf.leit) {
+            const [g, k1] = this.kopf.leit;
+            this.leit = new Uint32Array(puffer, ab, v);
+            ab += v * 4;
+            this.leitpunkte = new Float32Array(puffer, ab, g * k1 * 3);
+            ab += g * k1 * 12;
+        }
         this.uvAttribut = new THREE.BufferAttribute(this.uv, 2);
         /** Indexlisten, die nur an der Verbindung hängen (ganze Figur, nur Körper, Kleider) — für alle Proben dieselben (`Meshgenesisflaechen.teil`). */
         this.indexAblage = new Map();
@@ -172,6 +182,19 @@ export class Meshgenesisflaechennetz {
                 material.map.colorSpace = THREE.SRGBColorSpace;
                 material.map.anisotropy = 4;
             }
+            // Deckkraft der Daz-Stücke (14.11.2026, Zauberer: Haar und Bart standen als volle Flächen da) — Haarkarten wie `Genesis9netz.material`: MSAA-Deckung statt Schnitt
+            if (m.bild_alpha) {
+                material.alphaMap = lader.load(`${this.basis}/bild/${m.bild_alpha}`, () => Meshgenesisflaechennetz.nachLaden?.());
+                material.alphaMap.colorSpace = THREE.NoColorSpace;
+                material.alphaMap.anisotropy = 4;
+                material.alphaToCoverage = true;
+                material.alphaTest = 0.02;
+            } else if (Number.isFinite(m.opazitaet)) {
+                material.transparent = true;
+                material.opacity = m.opazitaet;
+            }
+            // Farbe je Punkt zu Bild und Deckkraft (14.11.2026, Haar und Bart in Weg z: die Karten in der Farbe des Netzhaars an ihrer Stelle, `Haarregler.faerben`)
+            if (m.punktfarbe) material.vertexColors = true;
             return material;
         });
         this._materialien.push(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }));

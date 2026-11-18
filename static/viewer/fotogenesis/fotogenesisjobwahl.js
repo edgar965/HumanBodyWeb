@@ -29,6 +29,15 @@ export class Fotogenesisjobwahl {
         geschlecht.addEventListener('change', () => speichern(geschlecht, `${basis}/geschlecht/`, { geschlecht: geschlecht.value }, `Genesis ${geschlecht.selectedOptions[0].textContent}`));
         const dichte = form.querySelector('select[name="dichte"]');
         dichte.addEventListener('change', () => speichern(dichte, `${basis}/pshuman/`, { dichte: Number(dichte.value) }, `Netz ${dichte.selectedOptions[0].textContent}`));
+        // „Haut gibt nach“ (15.11.2026): die Tiefe wirkt sofort an den Eigen-Stücken des Tests (`Fotogenesishautnachgeben`), neu geladen zeigt die Figur sie
+        const nachgeben = form.querySelector('select[name="haut_gibt_nach_mm"]');
+        if (nachgeben) nachgeben.addEventListener('change', () => speichern(nachgeben, `${basis}/pshuman/`, { haut_gibt_nach_mm: Number(nachgeben.value) }, `Haut gibt nach ${nachgeben.value} mm`));
+        // Welligkeit des Haars (16.11.2026, `Fotogenesispshuman.HAAR_WELLEN`): wirkt beim nächsten Lauf der Garderobe
+        const welle = form.querySelector('select[name="haar_welle"]');
+        if (welle) welle.addEventListener('change', () => speichern(welle, `${basis}/pshuman/`, { haar_welle: welle.value }, `Haar ${welle.selectedOptions[0].textContent}`));
+        // Lauf der Haut-KI je Job (17.11.2026, `Hautkilaufwahl`): wirkt mit dem Häkchen „Haut-KI“ im nächsten Lauf von Mesh-Genesis
+        const hautLauf = form.querySelector('select[name="haut_ki_lauf"]');
+        if (hautLauf) hautLauf.addEventListener('change', () => speichern(hautLauf, `${basis}/pshuman/`, { haut_ki_lauf: hautLauf.value }, `Haut-KI ${hautLauf.selectedOptions[0].textContent}`));
         for (const haken of form.querySelectorAll('input[type="checkbox"]')) {
             const text = haken.closest('label').textContent.trim();
             haken.addEventListener('change', () => speichern(haken, `${basis}/pshuman/`, { [haken.name]: haken.checked }, `${text} ${haken.checked ? 'an' : 'aus'}`));

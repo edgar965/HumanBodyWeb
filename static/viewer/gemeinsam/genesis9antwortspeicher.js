@@ -66,6 +66,8 @@ export class Genesis9antwortspeicher {
      */
     static ablegen(inst, teil, stellung, stufe, daten, material = null) {
         if (!Genesis9antwortspeicher.halten) { inst._antworten = null; return; }
+        // Eine Vorschau mit älterem Code gerechnet (`vorratAlt`, `Serverabruf._netzAbruf`, 17.11.2026): ein späterer Wechsel auf grob holt den Käfig neu.
+        if (daten?.vorratAlt) return;
         const ablage = inst._antworten ??= new Map();
         for (const name of [...ablage.keys()]) {
             if (name.startsWith('kleid:') && !inst.kleidung?.[name.slice('kleid:'.length)]) ablage.delete(name);

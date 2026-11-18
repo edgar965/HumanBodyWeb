@@ -172,7 +172,11 @@ class Fotogenesisaktionsendpunkte:
             wahl = Fotogenesispshuman.setzen(gefunden, rumpf)
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse({'ok': True, Fotogenesispshuman.FELD: wahl})
+        antwort = {'ok': True, Fotogenesispshuman.FELD: wahl}
+        if 'haut_gibt_nach' in rumpf or 'haut_gibt_nach_mm' in rumpf:     # „Haut gibt nach“ wirkt sofort an den Eigen-Stücken des Tests (15.11.2026)
+            from ..dienste.fotogenesishautnachgeben import Fotogenesishautnachgeben
+            antwort['haut_gibt_nach_stuecke'] = len(Fotogenesishautnachgeben.fuer_job(Fotogenesisjobs.job(job)))
+        return JsonResponse(antwort)
 
     @staticmethod
     @require_POST

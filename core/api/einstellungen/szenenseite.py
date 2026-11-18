@@ -54,6 +54,9 @@ class SzeneEinstellungen(Einstellungsseite):
         # Vorgabe AUS: Die Normalen der Gelenkkorrekturen rechnet dann der Hauptfaden wie bisher;
         # an rechnet sie ein Worker (`viewer/gemeinsam/normalenarbeit.js`), die Animation ruckelt weniger.
         prefs['normalen_worker'] = '1' if post.get('normalen_worker') else '0'
+        # Vorgabe AN (Edgar, 16.11.2026): Katalogfiguren bekommen das Anatomie-Stück
+        # ihres Geschlechts (`genesis9anatomievorgabe.js`).
+        prefs['anatomie_automatisch'] = '1' if post.get('anatomie_automatisch') else '0'
         # Womit der Blender-Import die Haut bäckt (`Blendimportbackenwahl`): nur ein bekannter Wert wird gespeichert, sonst bleibt die alte Wahl.
         wahl = F.text(post, Blendimportbackenwahl.SCHLUESSEL)
         if wahl in Blendimportbackenwahl.WAHLEN:
@@ -78,6 +81,7 @@ class SzeneEinstellungen(Einstellungsseite):
             'selection_opacity_pct': int(round(s.selection_opacity * 100)),
             'module_buendeln': str(prefs.get('module_buendeln', '1')) != '0',
             'normalen_worker': str(prefs.get('normalen_worker', '0')) == '1',
+            'anatomie_automatisch': str(prefs.get('anatomie_automatisch', '1')) != '0',
             'backen': Blendimportbackenwahl.aus(prefs),
             'backen_wahlen': list(Blendimportbackenwahl.WAHLEN.items()),
             'netzantworten': Netzantwortwahl.aus(prefs),

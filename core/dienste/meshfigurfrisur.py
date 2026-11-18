@@ -8,10 +8,12 @@ eingebackenem Licht, ohne Strähnen und ohne Durchsicht. Hier wird es zum ZIEL:
 A  Frisurwahl: jede Frisur der Garderobe (Daz, Genesis-8/1/2-Klone, ohne Bart und Toon) in jedem formenden
    Stil auf die angepasste Figur (`Meshfigurfrisurstueck`), gemessen als Hülle gegen die Hülle des Netzhaars
    (`Haar.haarhuelle`: je Richtung vom Kopf der weiteste Punkt; fehlendes und überzähliges Haar zählen mit).
-   Die besten `OBERSTE` Daz-Frisuren und „Haar Eigen" bekommen ihre Formregler gestellt
-   (`Haar.frisurregler`), die kleinste Hülle gewinnt. Farbe = Median des Netzhaars als Umfärbung (`farbe`).
-B  „Haar Eigen" (`G9haareigen`): Kin als eigenes Stück mit Länge, Kurz, Dichte, Wellig, Dutt — gebaut, wenn
-   es fehlt, und in der Wahl wie jede andere Frisur.
+   Die besten `OBERSTE` Frisuren und Kin bekommen ihre Formregler gestellt — Daz-Regler und die fünf
+   Formachsen (`G9haarachsen`) —, die kleinste Hülle gewinnt (`Haar.frisurregler`). Farbe = Median des
+   Netzhaars als Umfärbung (`farbe`).
+B  Kin mit den Formachsen Länge, Kurz, Dichte, Wellig, Dutt (Option `frisur = eigen`). Bis 16.11.2026 der Klon
+   „Haar Eigen" (`G9haareigen`); der ging in „Haar – Generisch" auf (Edgar: „ich brauche nur einen“) und ist
+   ausgeblendet — die Achsen trägt jede Frisur mit Ablage.
 C  Haarkarten aus der Schale (`Haar.haarkarten`, Option `haarkarten`): Strähnen von der Kopfhaut an der Schale
    entlang, als eigenes Objekt `ergebnis/haarkarten.glb` — parallel zu A, die Bühne wählt.
 
@@ -138,21 +140,13 @@ class Meshfigurfrisur:
     # ------------------------------------------------------------- Wahl A
 
     def kennungen(self, wahl):
-        from Genesis9.garderobe import G9garderobe
-        from Genesis9.haareigen import G9haareigen
+        """Die Frisuren der Wahl — aus `G9haargenerisch.frisuren` (Haare der Garderobe ohne ausgeblendete), ohne Bart und Toon."""
+        from Genesis9.haargenerisch import G9haargenerisch
 
-        eigen = G9haareigen.kennung()
         if wahl == 'eigen':
-            return [eigen]
-
-        def passt(eintrag):
-            if wahl == 'herren':
-                return self._herren(eintrag)
-            return wahl == 'beste' or eintrag['id'] != eigen
-
-        return [e['id'] for e in G9garderobe.liste()
-                if e.get('art') == 'haar' and e.get('zeigbar')
-                and not self.AUSSCHLUSS.search(e.get('name') or '') and passt(e)]
+            return [G9haargenerisch.VORGABE]
+        return [e['id'] for e in G9haargenerisch.frisuren()
+                if not self.AUSSCHLUSS.search(e.get('name') or '') and (wahl != 'herren' or self._herren(e))]
 
     @classmethod
     def _herren(cls, eintrag):
@@ -162,17 +156,9 @@ class Meshfigurfrisur:
         return bool(cls.HERREN_HERKUNFT.search(str(eintrag.get('herkunft') or ''))) or (eintrag.get('name') or '').lower() == Herrenhaarstueck.NAME.lower()
 
     def waehlen(self, wahl, formung, aus):
-        from Genesis9.haareigen import G9haareigen
-
         from .meshfigurfrisurstueck import Meshfigurfrisurstueck
 
         t = time.perf_counter()
-        if wahl in ('beste', 'eigen'):
-            try:
-                G9haareigen.sicherstellen(melden=lambda text: self.lauf.melden(0.02, text))
-            except Exception as fehler:  # noqa: BLE001 — ohne „Haar Eigen" wählen die Daz-Frisuren weiter
-                logger.exception('Mesh to 3D %s: Haar Eigen nicht gebaut', self.job.kennung)
-                aus['eigen_fehler'] = str(fehler)[:300]
         kennungen = self.kennungen(wahl)
         messungen, stuecke = [], {}
         for i, kennung in enumerate(kennungen):
@@ -207,16 +193,16 @@ class Meshfigurfrisur:
         return aus
 
     def _je_stueck(self, messungen):
-        """Je Stück die beste Stilvariante; davon die `OBERSTE` Daz-Frisuren und „Haar Eigen"."""
-        from Genesis9.haareigen import G9haareigen
+        """Je Stück die beste Stilvariante; davon die `OBERSTE` Frisuren und Kin (`G9haargenerisch.VORGABE`, mit Formachsen an der Stelle von „Haar Eigen")."""
+        from Genesis9.haargenerisch import G9haargenerisch
 
         je = {}
         for m in messungen:
             if 'mm' in m and (m['kennung'] not in je or m['mm'] < je[m['kennung']]['mm']):
                 je[m['kennung']] = m
         reihe = sorted(je.values(), key=lambda m: m['mm'])
-        eigen = [m for m in reihe if m['kennung'] == G9haareigen.kennung()]
-        return [m for m in reihe if m['kennung'] != G9haareigen.kennung()][: self.OBERSTE] + eigen
+        oben = reihe[: self.OBERSTE]
+        return oben + [m for m in reihe[self.OBERSTE:] if m['kennung'] == G9haargenerisch.VORGABE]
 
     def feinsuche(self, stueck, messung, i, n):
         from Haar.frisurregler import Frisurregler

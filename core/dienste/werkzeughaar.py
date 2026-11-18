@@ -199,7 +199,9 @@ class Werkzeughaar:
          'cli',
          'cd A:/3DTools && python14/Scripts/python.exe -m Genesis9.haareigen [Vorlage]',
          [(G + 'haareigen.py', 'G9haareigen'), (G + 'haareigenmorphe.py', 'G9haareigenmorphe')],
-         'Gebaut beim ersten Lauf von „Mesh to 3D“ (G9haareigen.sicherstellen, 64 s; haar.md 29.09.2026) oder von Hand. Netz mit '
+         'Seit 16.11.2026 ausgeblendet (garderobe_pflege.json): ging in „Haar – Generisch“ auf, Mesh to 3D nimmt Kin mit '
+         'Formachsen; der Generator „Eigen Haar“ ist dort eine Sorte. Bis dahin gebaut beim ersten Lauf von „Mesh to 3D“ '
+         '(G9haareigen.sicherstellen, 64 s; haar.md 29.09.2026) oder von Hand. Netz mit '
          'den Vorgaben eingerechnet, Materialien/UV/Bilder/Hautbindung der Vorlage, 10 Farbpresets; Ablage '
          '3DObjects/models/Genesis9/eigene_stuecke/Haar_Eigen/bilanz.json und People/Genesis 9/Hair/EIGEN/Haar Eigen/ in der '
          'eigenen Bibliothek. Grenzen der Klon-Bauart: genau ein Netz, kein Klon, keine eigenen Knochen (daher die '

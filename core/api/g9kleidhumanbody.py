@@ -24,6 +24,7 @@ from Genesis9.formung import G9formung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.haarachsen import G9haarachsen
 from Genesis9.koerpernetz import G9koerpernetz
+from Genesis9.materialteile import G9materialteile
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.oberflaechenbindung import G9oberflaechenbindung
 from Genesis9.passformvorgabe import G9passformvorgabe
@@ -152,7 +153,7 @@ class G9kleidhumanbody:
             uhr = time.perf_counter()
             if absatz:
                 kaefig = G9hbfusspose.ruhelage(kaefig, traeger.haut(kaefig), absatz, traeger.geschlecht)
-            netz = G9koerpernetz.folgernetz(folger, kaefig, bilder, stufen, koerper=koerper)
+            netz = G9koerpernetz.folgernetz(folger, kaefig, G9materialteile.teil(bilder, folger), stufen, koerper=koerper)
             if getattr(folger, 'koerperhaut', False):
                 # Auch die UNTERTEILTEN Punkte: Wo der Kaefig eine vorstehende Brust
                 # umspannt, schneidet die Flaeche dazwischen bis 16 mm tief hinein.

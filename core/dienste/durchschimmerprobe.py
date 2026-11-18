@@ -129,6 +129,7 @@ class Durchschimmerprobe:
         u"""Je Teil: Browserpunkte (nach Kollision), Haut, Dreiecke, Bindung — Figurraum."""
         from Genesis9.garderobe import G9garderobe
         from Genesis9.koerpernetz import G9koerpernetz
+        from Genesis9.materialteile import G9materialteile
         eintrag = G9garderobe.eintrag(kennung) or {}
         zusatz = dict(eintrag.get('vorgaben') or {})
         bilder = G9garderobe.bilder(kennung, None)
@@ -141,7 +142,7 @@ class Durchschimmerprobe:
                 aus.append(None)
                 continue
             kaefig = folger.punkte_zu(formung_r, zusatz)
-            netz = G9koerpernetz.folgernetz(folger, kaefig, bilder, self.stufen, koerper=koerper,
+            netz = G9koerpernetz.folgernetz(folger, kaefig, G9materialteile.teil(bilder, folger), self.stufen, koerper=koerper,
                                             werte=dict(formung_r.morphwerte()),
                                             bindung=koerper_r.bindung)
             haut = netz['haut']

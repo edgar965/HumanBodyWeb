@@ -20,6 +20,7 @@ import { Meshgenesisbewegungsfigur } from './meshgenesisbewegungsfigur.js';
 import { Meshgenesisbodenstand } from './meshgenesisbodenstand.js';
 import { Meshgenesisbewegungskleid } from './meshgenesisbewegungskleid.js';
 import { Meshgenesisgenesisfigur } from './meshgenesisgenesisfigur.js';
+import { Meshgenesishaarschwung } from './meshgenesishaarschwung.js';
 import { Meshgenesiskikleiderfeld } from './meshgenesiskikleiderfeld.js';
 import { Meshgenesiskollision } from './meshgenesiskollision.js';
 import { Meshgenesisohneglieder } from './meshgenesisohneglieder.js';
@@ -40,17 +41,14 @@ export class Meshgenesisfigurbewegung {
         this.wahl = null;               // 'Kategorie/Name' (Standardanimation, von der Leiste gesetzt)
         this.modell = null;
         this.kleider = [];              // {mesh, art, netz}
-        this.clip = null; this.mixer = null; this.action = null;
-        this.dauer = 0; this.bilder = 0;
+        this.clip = null; this.mixer = null; this.action = null; this.dauer = 0; this.bilder = 0; this._dt = 0;
         this.fps = 30;
         this.rahmenMm = null;           // Abstand Ruhegelenke der Kinematik ↔ Knochen der gebauten Figur nach starrer Ausrichtung
         this.text = '';
         this.beiAenderung = null;       // die Leiste zieht ihre Anzeige nach
         this._schluessel = null; this._q = null;
         this._clipWahl = null;
-        this._wurzel = null;
-        this._kleiderWurzel = null;
-        this._abbildung = null;
+        this._wurzel = this._kleiderWurzel = this._abbildung = null;
         this._kleiderAn = true;
         this._lauf = 0;
         this._uhr = new THREE.Clock();
@@ -132,6 +130,7 @@ export class Meshgenesisfigurbewegung {
             mesh.visible = this._kleiderAn;
             Eigenhaut.einhaengen(this.modell.group, mesh, this.modell.skelett);
             Meshgenesiskollision.anbringen(mesh, q.kapseln, this.modell.skelett, this._abbildung, q.knochen);    // Stücke aus fremden Gliedern geschoben (31.10.2026 nachts)
+            Meshgenesishaarschwung.anbringen(mesh, st.netz, this._abbildung);    // Einzelsträhnen: eigene Bewegung je Locke (16.11.2026)
             this.kleider.push({ mesh, art: st.art });
         }
         this._kleiderWurzel = this.modell.skelett?.rootBone || null;
@@ -210,6 +209,7 @@ export class Meshgenesisfigurbewegung {
     _bild() {
         if (this.action) Meshgenesisbodenstand.richten(this.modell, this.kleider);     // wie die Charakter-Seite: tiefster Punkt auf den Boden (31.10.2026)
         Genesis9gelenke.takt(this.modell);
+        Meshgenesishaarschwung.stellen(this.kleider, this.spielt ? (this._dt || 0) : 0, this.modell.group);     // Bewegung je Locke (pausiert: 0, die Locken liegen an)
         Meshgenesiskollision.stellen(this.kleider, this.modell.group);
         this.ansicht.zeichnen();
         this.beiAenderung?.();
@@ -233,7 +233,7 @@ export class Meshgenesisfigurbewegung {
         if (!this.spielt || !this.action) return;
         requestAnimationFrame(() => this._takt());
         this._pruefen();
-        this.mixer.update(this._uhr.getDelta());
+        this.mixer.update(this._dt = this._uhr.getDelta());
         this._bild();
     }
 

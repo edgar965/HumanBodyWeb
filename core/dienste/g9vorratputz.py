@@ -98,7 +98,7 @@ class G9vorratputz:
         for datei in ordner.glob('*' + verweis):
             st = cls._stat(datei)
             try:
-                kennung = datei.read_text(encoding='ascii').strip()
+                kennung = (datei.read_text(encoding='ascii').split() or [''])[0]     # dahinter ggf. ein Zusatz (`G9antwortvorrat._von_platte`)
             except OSError:
                 continue
             if not st:

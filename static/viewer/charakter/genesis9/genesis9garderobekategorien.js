@@ -1,7 +1,5 @@
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { Kontextmenue } from '../../gemeinsam/kontextmenue.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
-import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
 import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
 
 /**
@@ -17,7 +15,7 @@ import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
  * liegt beim Server (`G9garderobekategorien`, `3DObjects/models/Genesis9/
  * garderobe_kategorien.json`) und wird hier darübergelegt.
  *
- * Das Kontextmenü (`Kontextmenue`, dasselbe wie bei Animationen und Modell)
+ * Das Kontextmenü (`Genesis9stueckmenue` über `Kontextmenue`, dasselbe wie bei Animationen und Modell)
  * bietet „Verschieben nach" als Combo-Box mit allen Kategorien und am Ende
  * „Neue Kategorie …" (Name per Abfrage; bis 18.10.2026 eine Zeile je Kategorie). Beim Verschieben wandert nur die Zeile
  * (seit 18.10.2026, `verschieben`) — der Stand kommt mit der Antwort zurück.
@@ -81,20 +79,11 @@ export class Genesis9garderobekategorien {
 
     // ------------------------------------------------------------ Kontextmenü
 
-    /** Rechtsklick auf die Zeile: verschieben, umbenennen, löschen; `neuzeichnen` danach. */
-    static menue(zeile, stueck, neuzeichnen) {
-        Kontextmenue.binden(zeile, () => {
-            const verschieben = Genesis9garderobekategorien.verschiebenEintrag(stueck, neuzeichnen, zeile);
-            if (!verschieben) return [];
-            // Umbenennen und Löschen bei jedem Stück (Edgar, 05.10.2026) — `Genesis9garderobepflege`.
-            return [verschieben, null, ...Genesis9garderobepflege.eintraege(stueck, neuzeichnen, zeile)];
-        });
-    }
-
     /**
      * Der Menüeintrag „Verschieben nach" mit allen Kategorien — null, solange der Stand fehlt oder das Stück oben steht (der Eintrag
-     * oben gehört zu keiner Kategorie). Auch der Bereich „Genitalien" (`Genesis9genitalmenue`) nimmt ihn: dort gibt es keine eigene
-     * Einteilung, ein Stück bleibt in DERSELBEN Kategorie der Garderobe.
+     * oben gehört zu keiner Kategorie). Das Menü setzt `Genesis9stueckmenue` zusammen (16.11.2026; bis dahin `menue` hier) — für die
+     * Zeile der Garderobe und für den Bereich „Genitalien": dort gibt es keine eigene Einteilung, ein Stück bleibt in DERSELBEN
+     * Kategorie der Garderobe.
      *
      * EINE Combo-Box statt einer Zeile je Kategorie (Edgar, 18.10.2026: „verschieben Funktion vereinfachen, mach eine Combo Box mit
      * allen ordnern (anstelle der Auflistung)"); die eigene steht gewählt, „Neue Kategorie …" am Ende.

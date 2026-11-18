@@ -160,10 +160,11 @@ class DazkategorienTest(SimpleTestCase):
 
     def test_4_neues_produkt_faellt_auf(self):
         k = 'People/Genesis 9/Clothing'
-        eintrag = _eintrag(k, 'Neu/Bardot Skirt')
+        # Ein Name ohne Treffer in `NACH_NAME` — „Bardot Skirt“ wäre seit 16.11.2026 schon über den Namen ein Rock.
+        eintrag = _eintrag(k, 'Neu/Bardot Wickel')
         self.assertEqual(G9dazkategorien.vorgabe(eintrag), u'Oberteile', 'noch unbekannt')
         (self.support / 'DAZ_3D_2_Neu.dsx').write_text(u"""<Assets>
-  <Asset VALUE="People/Genesis 9/Clothing/Neu/Bardot Skirt.duf">
+  <Asset VALUE="People/Genesis 9/Clothing/Neu/Bardot Wickel.duf">
    <ContentType VALUE="Follower/Wardrobe/Skirt"/>
    <Categories><Category VALUE="/Default/Wardrobe/Skirts"/></Categories>
   </Asset></Assets>""", encoding='utf-8')
@@ -236,6 +237,39 @@ class DazkategorienTest(SimpleTestCase):
         self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN/Eigen Foto 9 socken f25')), u'Socken', 'ohne Eintrag in der .dsx (Art kleidung → Oberteile) zählt der Name')
         self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'GC/GC Strümpfe lang')), u'Socken')
         self.assertIn(u'Socken', G9dazkategorien.REIHENFOLGE)
+
+    def test_8_baerte_haben_einen_eigenen_bereich(self):
+        u"""Edgar, 16.11.2026: „mach extra Kategorie Bart“. Daz' `Hair/Face` (Mavick Beard) und der Name bei Stücken ohne `.dsx` (Freebies);
+        Haupthaar, „Eigen Haar“ und „Barbossa“ (Bart im Wort, nicht am Ende) bleiben, wo sie sind. Sabotage: `BART` weg -> die Namensfälle rot."""
+        (self.support / 'DAZ_3D_3_Bart.dsx').write_text(u"""<Assets>
+  <Asset VALUE="People/Genesis 9/Hair/Daz Originals/Mavick Hair and Beard/Mavick Kinn.duf">
+   <ContentType VALUE="Follower/Hair"/>
+   <Categories><Category VALUE="/Default/Hair/Face"/></Categories>
+  </Asset></Assets>""", encoding='utf-8')
+        G9dazkategorien.vergessen()
+        h = 'People/Genesis 9/Hair'
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(h, 'Daz Originals/Mavick Hair and Beard/Mavick Kinn', 'haar')), u'Bart', 'über Dazʼ Kategorie, ohne Bartwort im Namen')
+        faelle = [('zoro_d/Everyday Style Hair/EDSH Beard', 'haar', u'Bart'), ('KomyFly/Barbossa beard', 'kleidung', u'Bart'),
+                  ('Fremd/Schnurrbart', 'haar', u'Bart'), ('Fremd/Moustache Long', 'haar', u'Bart'),
+                  ('Toulouse Hair', 'haar', u'Haare'), ('EIGEN/Eigen Haar', 'haar', u'Haare'), ('KomyFly/Barbossa Hat', 'kleidung', u'Kopfbedeckung')]
+        for datei, art, soll in faelle:
+            self.assertEqual(G9dazkategorien.vorgabe(_eintrag(h, datei, art)), soll, datei)
+        self.assertEqual(G9dazkategorien.REIHENFOLGE.index(u'Bart'), G9dazkategorien.REIHENFOLGE.index(u'Haare') + 1)
+
+    def test_9_kleidung_ohne_kuratierte_kategorie_nach_dem_namen(self):
+        u"""Freebies ohne `.dsx` fielen alle auf Oberteile (16.11.2026: 41 von 65). Der Name entscheidet — aber nie gegen Dazʼ kuratierte
+        Kategorie (Boxers bleiben Unterwäsche, der Sash Zubehör). Sabotage: `NACH_NAME` leer -> die Namensfälle rot; die Prüfung auf
+        `aus_kategorie` weg -> „Angie Sneakers“ unter dem Namen „Angie Sneakers Dress“ würde Kleid statt Schuh."""
+        k = 'People/Genesis 9/Clothing'
+        faelle = [('kaos/Dress C/Dress C', u'Kleider'), ('felis/Suit_09/Skirt', u'Röcke'), ('Chuntuk/GeoBra G8', u'Unterwäsche'),
+                  ('KomyFly/Barbossa Boots', u'Schuhe'), ('AlienRenders/StrapShoes 45', u'Schuhe'), ('KomyFly/Barbossa Hat', u'Kopfbedeckung'),
+                  ('KomyFly/Barbossa Pant', u'Hosen'), ('kaos/Cami&Trunks WetDry/Trunks', u'Shorts'), ('kaos/Ensemble Dress/!Ensemble Dress Set', u'Outfits'),
+                  ('KomyFly/Barbossa Ring', u'Zubehör'), ('KomyFly/Barbossa Sword', u'Requisiten'), ('kaos/Ensemble Dress/Ensemble Jacket', u'Oberteile')]
+        for datei, soll in faelle:
+            self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, datei)), soll, datei)
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'Angie/Angie Sneakers', name='Angie Sneakers Dress')), u'Schuhe')
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'Nur Typ/Kleid', name='Summer Skirt')), u'Röcke', 'nur ContentType: der Name gewinnt')
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'Nur Typ/Kleid')), u'Kleider', 'ohne Treffer im Namen bleibt der ContentType')
 
     def test_5_reihenfolge_traegt_alle_namen(self):
         namen = set(G9dazkategorien.REIHENFOLGE)
