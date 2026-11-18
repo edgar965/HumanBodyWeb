@@ -2,7 +2,7 @@
 """Architekturfotogenesiskopfnetz — Abschnitt „Kopf-KI“ von Hilfe → Architektur → Foto-Genesis (26.10.2026, Edgar: „aktualisiere … damit wir das nicht wieder vergessen“).
 
 Was es für den Kopf schon gibt (nicht neu bauen), woraus die Kopf-KI besteht, und wie ihre Läufe stehen. Die Läufe liest die Seite beim Aufruf von der Platte
-(`3DObjects/fotogenesis/_kopfnetz/<lauf>/lauf.json`, Vergleich `ProjektTemp/_wegwerf/fotogenesis/kopf/kopfnetz_vergleich.json`); festgehaltene Messungen nennen Datum und Quelle.
+(`3DObjects/_Foto_3D/_kopfnetz/<lauf>/lauf.json`, Vergleich `ProjektTemp/_wegwerf/fotogenesis/kopf/kopfnetz_vergleich.json`); festgehaltene Messungen nennen Datum und Quelle.
 """
 import json
 import logging
@@ -166,7 +166,7 @@ class Architekturfotogenesiskopfnetz:
 
     @classmethod
     def laeufe(cls):
-        ordner = Path(settings.TOOLS_ROOT) / '3DObjects' / 'fotogenesis' / '_kopfnetz'
+        ordner = Path(settings.TOOLS_ROOT) / '3DObjects' / '_Foto_3D' / '_kopfnetz'
         aus = []
         for datei in sorted(ordner.glob('*/lauf.json'), reverse=True):
             try:

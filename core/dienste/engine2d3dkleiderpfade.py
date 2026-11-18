@@ -5,7 +5,7 @@ Wie `Meshpfade`: Ordner zuerst, dann die Ablage. Jeder Eintrag wird gegen die Pl
 damit die Seite keinen Pfad anbietet, der nicht existiert. Reine Leseoperation.
 
     Auftragsordner   `<OBJECTS_ROOT>/engine2d3dkleiderauftraege/<kennung>/` — die Quelle der Wahrheit
-    Ablage           `output/Export/Engine2d3dKleider/<Name>_<Anlagezeit>/` — Modell, Kacheln, Bilder, Bericht
+    Ablage           `3DObjects/_Output/Engine2d3dKleider/<Name>_<Anlagezeit>/` — Modell, Kacheln, Bilder, Bericht
 """
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Meshgenesisformvarianten — die synthetischen Figuren des Formtrainings (`3DObjects/meshgenesis/Form001` …) mit ihrem Datenstand, für den Reiter „Formtraining“ auf /mesh-genesis/ (18.10.2026).
+"""Meshgenesisformvarianten — die synthetischen Figuren des Formtrainings (`3DObjects/_Output/MeshGenesisJobs/Form001` …) mit ihrem Datenstand, für den Reiter „Formtraining“ auf /mesh-genesis/ (18.10.2026).
 
 Edgar: „Wo sehe ich deine Training-Jobs mit den synthetischen Daten?“ → „mach einen neuen Tab ‚Formtraining‘ und füge die Jobs in der gleichen Art und Weise ein“. Eine Formvariante ist ein Ordner
 `FormNNN/` mit `modell.json` (Grundlage, Geschlecht, Gruppe training|pruefung, Regler — Kinder tragen Regler `g1:…`), `proben.json` (die geplanten Posen) und `proben/NNNN/`.
@@ -44,7 +44,7 @@ class Meshgenesisformvarianten:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
 
     @classmethod
     def leeren(cls):

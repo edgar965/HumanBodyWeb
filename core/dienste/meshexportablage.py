@@ -2,7 +2,7 @@
 """Meshexportablage — jedes fertige Mesh zusätzlich als GLB in einen festen Ordner.
 
 Edgar (26.09.2026): „exportiere das 3D Mesh standardmässig in
-A:\\3DTools\\HumanBodyWeb\\output\\Export\\Foto3D, als glb". Gebaut wie
+A:\\3DTools\\3DObjects\\_Output\\Foto3D, als glb". Gebaut wie
 `Ergebnisablage` (dieselbe Rolle für BVH-Läufe): Der Auftragsordner bleibt die
 Quelle der Wahrheit, hier liegt nur eine Kopie zum Weiterverwenden.
 

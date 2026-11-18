@@ -103,10 +103,34 @@ export class Serverabruf extends ServerabrufBasis {
         }
     }
 
+    /**
+     * Listen, die beim Laden langsam sind — höchstens `NEBEN_GLEICHZEITIG` zugleich (18.11.2026). Chrome hält je Host sechs Verbindungen; gemessen nach einem
+     * Neustart des Servers: Garderobe 10 s, Regler 10 s, Posen 5 s, Kleiderbibliothek 4,9 s, GarmentCode-Zustand 5,4 s, Kategorien 2,6 s gleichzeitig — die
+     * Anatomie (Server 0,11 s) kam erst nach 4,9 s beim Browser an, das volle Körpernetz erst nach 15,9 s: Die Netze standen in Chromes Schlange.
+     */
+    static NEBENLISTEN = /\/genesis9-figur\/garderobe\/(kategorien\/)?$|\/genesis9-figur\/(regler|posen)\/$|\/garment\/library\/$|\/garmentcode\/zustand\/$|\/charmorph-assets\/$|\/cloth\/regions\/$/;
+    static NEBEN_GLEICHZEITIG = 2;
+    static _neben = 0;
+    static _nebenSchlange = [];
+
+    static async _nebenbei(adresse, arbeit) {
+        if (!Serverabruf.NEBENLISTEN.test(String(adresse).split('?')[0])) return arbeit();
+        if (Serverabruf._neben >= Serverabruf.NEBEN_GLEICHZEITIG) await new Promise((weiter) => Serverabruf._nebenSchlange.push(weiter));
+        else Serverabruf._neben += 1;
+        try {
+            return await arbeit();
+        } finally {
+            const naechster = Serverabruf._nebenSchlange.shift();
+            if (naechster) naechster();                     // der Platz geht direkt an den nächsten
+            else Serverabruf._neben -= 1;
+        }
+    }
+
     /** Ein GET endet beim Verlassen der Seite (`Seitenabbruch`); was schreibt, läuft durch — es ginge sonst in Chromes Schlange verloren. */
     static async json(adresse, wahl = undefined) {
         if (!Serverabruf._lesend(wahl)) return Serverabruf._geloggt('GET', adresse, () => super.json(adresse, wahl));
-        return Serverabruf._geloggt('GET', adresse, () => Seitenabbruch.mit(signal => super.json(adresse, { ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal) })));
+        return Serverabruf._geloggt('GET', adresse, () => Serverabruf._nebenbei(adresse,
+            () => Seitenabbruch.mit(signal => super.json(adresse, { ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal) }))));
     }
 
     static async text(adresse, wahl = undefined) {

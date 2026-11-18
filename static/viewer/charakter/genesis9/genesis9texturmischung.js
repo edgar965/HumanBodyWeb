@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
+import { Genesis9hautmischung } from '../../gemeinsam/genesis9hautmischung.js';
 
 /**
  * Genesis9texturmischung — der Bereich „Textur" ganz unten in den Eigenschaften
@@ -24,7 +25,8 @@ export class Genesis9texturmischung {
         if (!behaelter) return;
         behaelter.innerHTML = '';
         // Ohne die eigenen Häute (`eigen:…`, 18.10.2026): sie tragen die Bilder ihres Grundsatzes, ihre Regler wirken im Shader und kämen in der Mischung nicht mit.
-        const saetze = (plan.haut || []).filter(h => !String(h.id).startsWith('eigen:'));
+        const saetze = (plan.haut || []).filter(h => !String(h.id).startsWith('eigen:'))
+            .sort((a, b) => String(a.name).localeCompare(String(b.name), 'de', { sensitivity: 'base', numeric: true }));   // alphabetisch wie die Auswahl „Haut" (18.11.2026)
         if (!saetze.length) {
             behaelter.innerHTML = '<div class="gedaempft">Keine Hautsätze gefunden.</div>';
             return;
@@ -51,7 +53,7 @@ export class Genesis9texturmischung {
         schieber.addEventListener('input', () => {
             const neu = parseInt(schieber.value, 10) || 0;
             anzeige.textContent = `${neu} %`;
-            inst.hautmischungSetzen(satz.id, neu);
+            Genesis9hautmischung.setzen(inst, satz.id, neu);
         });
         schieber.addEventListener('change', () => markDirty());
         return zeile;

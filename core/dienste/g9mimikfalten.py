@@ -81,7 +81,7 @@ class G9mimikfalten(G9hautfalten):
 
         t0 = time.perf_counter()
         formung = G9formung({})
-        punkte0 = Torchfeld.feld(formung.punkte(), dtype=torch.float64) - Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
+        punkte0 = Torchfeld.feld(formung.punkte(), dtype=torch.float64) - formung.hoch()
         basis = G9basisnetz.holen()
         s1, s2 = basis.netzstufe(1), basis.netzstufe(2)
         if s2.stufen < 2:

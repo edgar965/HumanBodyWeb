@@ -27,7 +27,7 @@ __all__ = ['Meshgenesisrig']
 
 class Meshgenesisrig:
     MODELL = 'Ursula1'
-    #: Modelldatei statt `HUMANBODY_MODELS_DIR/<MODELL>.json` (16.10.2026: Formvarianten des Mesh-Genesis-Trainings liegen als `3DObjects/meshgenesis/<Form…>/modell.json`, nie in HumanBody/data).
+    #: Modelldatei statt `HUMANBODY_MODELS_DIR/<MODELL>.json` (16.10.2026: Formvarianten des Mesh-Genesis-Trainings liegen als `3DObjects/_Output/MeshGenesisJobs/<Form…>/modell.json`, nie in HumanBody/data).
     #: Nur die Datenskripte setzen sie; der Server rechnet weiter mit `MODELL`.
     MODELL_DATEI = None
     #: Körperhöhe für den Retarget (m): Kopfknochen der Ruhelage 1,52 m + Kopf; nicht gemessen an einer Figur, nur gesetzt.

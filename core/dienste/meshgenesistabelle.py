@@ -44,7 +44,7 @@ class Meshgenesistabelle:
         {'label': 'Training', 'key': 'training', 'num': True, 'titel': 'Davon zum Training'},
         {'label': 'Prüfposen', 'key': 'pruefung', 'num': True, 'titel': 'Davon nie trainiert — daran wird gemessen'},
         {'label': 'Datensatz', 'key': 'datensatz', 'num': True,
-         'titel': 'Proben des echten Datensatzes auf der Platte (3DObjects/meshgenesis/<Modell>/proben): fertig gerechnet von geplant. Fertig heißt: eingabe.npz liegt da, das Datenskript schreibt sie zuletzt'},
+         'titel': 'Proben des echten Datensatzes auf der Platte (3DObjects/_Output/MeshGenesisJobs/<Modell>/proben): fertig gerechnet von geplant. Fertig heißt: eingabe.npz liegt da, das Datenskript schreibt sie zuletzt'},
         {'label': 'Status', 'key': 'status', 'titel': '„Echt (Lauf …)“: Datensatz und Vorhersagen des jüngsten fertigen Trainingslaufs; „Attrappe“: Flächen, Kleider und Ausgabe des Netzes sind erfunden, Posen und Rig echt'},
     )
 

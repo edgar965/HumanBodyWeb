@@ -28,7 +28,7 @@ class Meshfigurfrisurstueck:
         self.kennung = kennung
         self.eintrag = G9garderobe.eintrag(kennung) or {}
         self.formung = formung
-        self.hoch = Torchfeld.feld([0.0, float(formung.boden()), 0.0], copy=True)
+        self.hoch = formung.hoch()
         self.teile = G9garderobe.teile(kennung)
 
     @property

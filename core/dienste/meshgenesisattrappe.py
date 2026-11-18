@@ -89,7 +89,7 @@ class Meshgenesisattrappe:
 
     # ------------------------------------------------------------------ Schnittstelle
 
-    #: Die Jobs: `modell` = das Genesis-Modell (Rig, Häutung), `ordner` = der Datensatz unter `3DObjects/meshgenesis/` (Proben, Läufe, Anzeigenetz). Ursula_Pose1 (15.10.2026, Edgar: „mache einen neuen Job
+    #: Die Jobs: `modell` = das Genesis-Modell (Rig, Häutung), `ordner` = der Datensatz unter `3DObjects/_Output/MeshGenesisJobs/` (Proben, Läufe, Anzeigenetz). Ursula_Pose1 (15.10.2026, Edgar: „mache einen neuen Job
     #: Ursula_Pose1 … obj file für Ursula einer komplizierten Spagat Pose, und trainiere damit") ist dasselbe Modell mit eigenem Datensatz: Probe 1 = Spagat Bild 47 als OBJ-Datei
     #: (`ProjektTemp/_wegwerf/meshgenesis_pose1_bauen.py`), die übrigen Proben die von Ursula1.
     #: `geschlecht` (16.10.2026 abends, Edgar: „ganz oben im Testjob soll die Einstellung änderbar sein, ob es weiblich oder männlich ist“): welche Figuren ein Test als Ausgabe nehmen darf (`Meshgenesistest`).
@@ -99,7 +99,7 @@ class Meshgenesisattrappe:
                   {'id': 'mann1', 'name': 'Mann1', 'modell': 'Mann1', 'ordner': 'Mann1', 'geschlecht': 'maennlich'},
                   {'id': 'matt0', 'name': 'Matt0', 'modell': 'Matt0', 'ordner': 'Matt0', 'geschlecht': 'maennlich'})
     #: Beiseitegelegt am 20.10.2026 abends (Edgar: „überprüfe die Jobliste, vieles davon ist doch unnütz, weil wir ja sowieso den Code neu schreiben? Lösche die Jobs die nicht mehr aktuell sind“):
-    #: die Versuchs-Jobs vom 15.–17.10.2026 mit ihren alten Einzeltrainings (Stimmnetz je Job). Die Ordner liegen unter `3DObjects/meshgenesis/_beiseite/2026.10.20/` — nicht gelöscht;
+    #: die Versuchs-Jobs vom 15.–17.10.2026 mit ihren alten Einzeltrainings (Stimmnetz je Job). Die Ordner liegen unter `3DObjects/_Output/MeshGenesisJobs/_beiseite/2026.10.20/` — nicht gelöscht;
     #: zurückholen = Ordner zurückschieben und die Zeile wieder in STAMMDATEN. Ursula_Pose1 (15.10.: Ursula1 + eine OBJ-Pose), UrsulaSpagat (16.10.: Standspagat), DamiraSitzen/MattLiegen/MannLaufen
     #: (16.10. nachts: je eine Prüfpose als OBJ, 2–66 = der Grundjob; `meshgenesis_neupose_bauen.py`) — die vier letzten waren die Prüfposen der Vorstufe (Hilfe, Abschnitt Kette) und bis heute die „Grundjobs“ der Kleider.
     BEISEITE = ({'id': 'ursula_pose1', 'name': 'Ursula_Pose1', 'modell': 'Ursula1', 'ordner': 'Ursula_Pose1', 'geschlecht': 'weiblich'},

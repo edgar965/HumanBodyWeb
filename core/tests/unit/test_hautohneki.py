@@ -46,10 +46,10 @@ class HautohnekiTest(unittest.TestCase):
     def _job(self, info, einstellung=None, anlage=None):
         """Ablage wie `3DObjects`: Test `t` unter `meshgenesis/_test/`, Job `J` unter `fotogenesis/`."""
         wurzel = Path(tempfile.mkdtemp(dir=r'A:\3DTools\ProjektTemp\_wegwerf'))
-        test = wurzel / 'meshgenesis' / '_test' / 't'
+        test = wurzel / '_Output' / 'MeshGenesisJobs' / '_test' / 't'
         test.mkdir(parents=True)
-        (wurzel / 'fotogenesis' / 'J').mkdir(parents=True)
-        (wurzel / 'fotogenesis' / 'J' / 'job.json').write_text(json.dumps(info), encoding='utf-8')
+        (wurzel / '_Foto_3D' / 'J').mkdir(parents=True)
+        (wurzel / '_Foto_3D' / 'J' / 'job.json').write_text(json.dumps(info), encoding='utf-8')
         if einstellung is not None:
             (test / 'einstellung.json').write_text(json.dumps(einstellung), encoding='utf-8')
         if anlage is not None:

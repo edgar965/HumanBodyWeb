@@ -92,7 +92,7 @@ class TeileablageTest(unittest.TestCase):
         self.klasse._ordner = self._ordner_alt          # `_holen` biegt den Ablageordner auf die Prüfablage um
         self.klasse.vergessen()
 
-    def _holen(self, ordner, quelle, art='haar', fassung='1', kennung='k', bauen=None):
+    def _holen(self, ordner, quelle, art='haar', fassung='1', kennung='k', bauen=None, merkmal=''):
         from pathlib import Path
 
         self.klasse._ordner = classmethod(lambda cls: Path(ordner))
@@ -100,7 +100,7 @@ class TeileablageTest(unittest.TestCase):
         bauen = bauen or (lambda: zaehler.append(1) or [(_Teil(len(zaehler)), None)])
         # Der Bestandsschlüssel (`G9listenablage.schluessel`) rechnet die Quelle relativ zu ihrer Wurzel (Daz-Bibliothek oder eigene Bibliothek); die Prüfablage ist die eigene Wurzel.
         with mock.patch('Genesis9.pfade.G9pfade.eigene', return_value=Path(ordner)):
-            return self.klasse.holen(kennung, art, lambda: [Path(quelle)], fassung, bauen)
+            return self.klasse.holen(kennung, art, lambda: [Path(quelle)], fassung, bauen, merkmal=merkmal)
 
     def test_haar_wird_einmal_gebaut_und_dann_von_der_platte_geladen_wenn_der_bestand_gleich_ist(self):
         with Pruefablage.ordner() as ordner:
@@ -137,21 +137,35 @@ class TeileablageTest(unittest.TestCase):
             self._holen(ordner, quelle, fassung='2')
             self.assertEqual(len(self.zaehler), 4)
 
-    def test_kleidung_wird_nie_abgelegt_und_eine_beschaedigte_datei_baut_neu(self):
+    def test_kleidung_einmal_gebaut_abgelegt_und_ein_anderes_merkmal_baut_neu(self):
         with Pruefablage.ordner() as ordner:
             quelle = os.path.join(ordner, 'quelle.duf')
             with open(quelle, 'w', encoding='utf-8') as f:
                 f.write('eins')
-            self._holen(ordner, quelle, art='kleidung')
-            self._holen(ordner, quelle, art='kleidung')
-            self.assertEqual(len(self.zaehler), 2)                      # jedes Mal gebaut, kein Speicher
-            self.assertEqual(os.listdir(ordner), ['quelle.duf'])         # nichts abgelegt
+            self._holen(ordner, quelle, art='kleidung', kennung='kl')
+            self._holen(ordner, quelle, art='kleidung', kennung='kl')
+            self.assertEqual(len(self.zaehler), 1)                      # einmal gebaut, dann aus dem Speicher (18.11.2026)
+            self.assertIn('kl.pkl', os.listdir(ordner))                 # abgelegt — seit 18.11.2026 auch Kleidung
+            self.klasse.vergessen()                                     # „neuer Prozess"
+            self._holen(ordner, quelle, art='kleidung', kennung='kl')
+            self.assertEqual(len(self.zaehler), 1)                      # von der Platte
+            self._holen(ordner, quelle, art='kleidung', kennung='kl', merkmal='anders')
+            self.assertEqual(len(self.zaehler), 2)                      # anderes Merkmal (Eintrag, Kategorie) → neu gebaut
+            self.klasse.vergessen()
+            self._holen(ordner, quelle, art='kleidung', kennung='kl')
+            self.assertEqual(len(self.zaehler), 3)                      # die Platte trägt jetzt das andere Merkmal
+
+    def test_eine_beschaedigte_datei_baut_neu(self):
+        with Pruefablage.ordner() as ordner:
+            quelle = os.path.join(ordner, 'quelle.duf')
+            with open(quelle, 'w', encoding='utf-8') as f:
+                f.write('eins')
             self._holen(ordner, quelle)
             self.klasse.vergessen()
             with open(os.path.join(ordner, 'k.pkl'), 'wb') as f:
                 f.write(b'kaputt')
             self._holen(ordner, quelle)
-            self.assertEqual(len(self.zaehler), 4)                      # unlesbar → neu gebaut (und neu abgelegt)
+            self.assertEqual(len(self.zaehler), 2)                      # unlesbar → neu gebaut (und neu abgelegt)
 
     def test_der_aufrufer_bekommt_eine_eigene_liste(self):
         with Pruefablage.ordner() as ordner:

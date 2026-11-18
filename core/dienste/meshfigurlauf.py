@@ -17,7 +17,7 @@ skalierung, Gelenkkorrekturen), bevor die nächste Runde auf ihr aufsetzt.
     textur        Farbe des Netzes auf die Genesis-Kacheln (`Meshfigurende`)
     vorschau      Bilder, Abstände, Vergleich, Testfall (`Meshfigurvorschau`)
     frisur        Daz-Frisur / „Haar Eigen" gegen das Netzhaar, Haarkarten (`Meshfigurfrisur`)
-    speichern     Modell und Ablage in `output/Export/MeshTo3D` (`Meshfigurspeichern`)
+    speichern     Modell und Ablage in `3DObjects/_Output/MeshTo3D` (`Meshfigurspeichern`)
 
 Runner-Zeilen: `[fortschritt] <0..100> <Text>` (je Schritt auf sein Band umgerechnet),
 `[ergebnis] {…}`, `[fehler] {…}`. Alles, was die Seite zeigt, steht in `job.ergebnis`.

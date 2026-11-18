@@ -58,3 +58,12 @@
 .hb-eigenehaeute[hidden] { display: none; }
 .hb-eigenehaut-zeile { margin-top: 4px; padding: 4px 8px; font-size: 0.8rem; color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; cursor: context-menu; overflow-wrap: anywhere; }
 .hb-eigenehaut-zeile:hover { border-color: var(--accent); }
+/* „Korrekturen" im Popup der Haut (`genesis9hautausgleichregler.js`, 18.11.2026): das ⓘ am Namen zeigt beim Überfahren sofort, was der Regler tut —
+   der Browser-Titel kam erst nach einer Weile (Edgar: „mach mir ein hover bei den Korrekturen, was die bedeuten"). */
+.hb-korrektur-label { position: relative; cursor: help; }
+.hb-korrektur-info { margin-left: 5px; color: var(--accent); font-size: 0.85em; }
+.hb-korrektur-label:hover .hb-korrektur-info::after {
+    content: attr(data-erklaerung); position: absolute; left: 0; top: calc(100% + 4px); z-index: 60; width: 300px; white-space: normal;
+    background: var(--bg-card, #1b1d2a); color: var(--text); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 10px;
+    font-size: 0.76rem; line-height: 1.4; text-transform: none; letter-spacing: normal; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}

@@ -48,7 +48,7 @@ export class Hautmaskenvorrat {
         const einstellungen = [];
         for (const s of stoffe) {
             felder.push(s.punkte, s.dreiecke);
-            einstellungen.push([s.schluessel, s.tiefe ?? null, !!s.starr, s.nahe ?? null, !!s.ersatz, s.nachgeben ?? null]);
+            einstellungen.push([s.schluessel, s.tiefe ?? null, !!s.starr, s.nahe ?? null, !!s.ersatz, s.nachgeben ?? null, !!s.durchsicht, s.abstand ?? null]);
         }
         const text = JSON.stringify(einstellungen);
         felder.push(Uint32Array.from(text, (c) => c.codePointAt(0)));
@@ -62,14 +62,39 @@ export class Hautmaskenvorrat {
      */
     static async rechnen(inst, pos, index, stoffe) {
         const fassung = Hautmaskenvorrat.fassung(), stufe = Netzstufenstand.stufeVon(inst);
-        const schluessel = fassung && Hautmaskenvorrat.an(stufe) ? Hautmaskenvorrat.schluessel(pos, index, stoffe) : null;
-        if (schluessel) {
+        const schluessel = fassung ? Hautmaskenvorrat.schluessel(pos, index, stoffe) : null;
+        if (schluessel && Hautmaskenvorrat.an(stufe)) {
             const abgelegt = await Hautmaskenvorrat.holen(fassung, schluessel, pos.length / 3, stoffe.length);
             if (abgelegt) return abgelegt;
         }
+        // Auf der Grafikkarte des Servers (18.11.2026, Edgar: „Hautverdeckung auf GPU, alles auf GPU!“, `core/dienste/hautkarterechnung.py`) — er legt selbst ab.
+        if (schluessel) {
+            const karte = await Hautmaskenvorrat.karte(fassung, schluessel, stufe, pos, index, stoffe);
+            if (karte) return karte;
+        }
         const ergebnis = await Hautarbeit.rechnen(pos, index, stoffe, inst?.id ?? '');
-        if (schluessel && ergebnis && ergebnis !== Hautarbeit.VERALTET) Hautmaskenvorrat.ablegen(fassung, schluessel, stufe, ergebnis, stoffe);
+        if (schluessel && Hautmaskenvorrat.an(stufe) && ergebnis && ergebnis !== Hautarbeit.VERALTET) Hautmaskenvorrat.ablegen(fassung, schluessel, stufe, ergebnis, stoffe);
         return ergebnis;
+    }
+
+    /** Die Maske von der Grafikkarte des Servers — oder null (Fehler, keine Karte: dann der Worker wie bisher, mit Warnung im Protokoll). */
+    static async karte(fassung, schluessel, stufe, pos, index, stoffe) {
+        try {
+            const eingabe = { pos, index, stoffe: stoffe.map((s) => ({ schluessel: s.schluessel, punkte: s.punkte, dreiecke: s.dreiecke, tiefe: s.tiefe ?? null,
+                starr: !!s.starr, nahe: s.nahe ?? null, ersatz: !!s.ersatz, nachgeben: s.nachgeben ?? null, durchsicht: !!s.durchsicht, abstand: s.abstand ?? null })) };
+            const antwort = await fetch(`${Hautmaskenvorrat.ADRESSE}${fassung}/${schluessel}/rechnen/?stufe=${encodeURIComponent(stufe)}`, {
+                method: 'POST', body: await Feldpaket.gzip(eingabe), headers: { 'Content-Type': 'application/octet-stream', ...Serverabruf._csrfKopf() } });
+            if (!antwort.ok || !antwort.body) {
+                Protokoll.warnung('Hautmaskenvorrat', `Maske auf der Karte: HTTP ${antwort.status} — der Worker rechnet`);
+                return null;
+            }
+            const ergebnis = await Feldpaket.ungzip(antwort.body);
+            if (ergebnis?.maske?.length !== pos.length / 3 || ergebnis.randabstaende?.length !== stoffe.length) return null;
+            return ergebnis;
+        } catch (fehler) {
+            Protokoll.warnung('Hautmaskenvorrat', `Maske auf der Karte nicht gerechnet: ${fehler.message} — der Worker rechnet`);
+            return null;
+        }
     }
 
     /** Die abgelegte Maske — oder null (nicht da, passt nicht, Fehler). `punkte`/`stuecke`: zur Probe, ob sie zu dieser Eingabe gehört. */

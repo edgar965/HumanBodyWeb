@@ -17,7 +17,7 @@ Fotos sind jetzt VORLAGE, gegen die der Kostüm-Kreislauf seine Renders benotet 
     kostuem      Kostüm-Kreislauf: Runden aus Optimierer + lokaler Prüf-KI gegen die Vorlagenbilder
     export       die Figur als GLB mit Rig (`Blendermodellexport`)
     blender      BVH retargeten und rendern (`Blendermodellblender`; ohne BVH übersprungen)
-    speichern    Ablage in `output/Export/BlenderModel` (`Blendermodellspeichern`)
+    speichern    Ablage in `3DObjects/_Output/BlenderModel` (`Blendermodellspeichern`)
 
 `ausfuehren(ab, bis)`: „Neu berechnen" beginnt beim gewählten Schritt; „Weiter iterieren" rechnet NUR
 „kostuem" (`ab = bis = 'kostuem'`) — der Blender-Film dauert Minuten und zeigt das Kostüm noch nicht.

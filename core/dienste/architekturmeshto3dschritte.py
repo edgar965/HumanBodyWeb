@@ -21,7 +21,7 @@ class Architekturmeshto3dschritte:
          'so, dass der Abstand Figur ↔ Netz klein wird (Adam auf der Grafikkarte, Abstände per Nächste-Nachbar-Suche). Was die Regler nicht erreichen, legt es als eigenen Morph '
          'dazu (Eigenmorph); die Farbe des Netzes backt es auf die fünf Hautkacheln.'),
         ('Was herauskommt',
-         'Das Modell „<Name> Mesh" in data/models (Regler, Eigenmorph, Kacheln, Augenbild) und die Ablage output/Export/MeshTo3D/<Name>_<Zeit>/ mit Bildern und bericht.json '
+         'Das Modell „<Name> Mesh" in data/models (Regler, Eigenmorph, Kacheln, Augenbild) und die Ablage 3DObjects/_Output/MeshTo3D/<Name>_<Zeit>/ mit Bildern und bericht.json '
          '(`Meshfigurspeichern`). Die GLB mit Rig schreibt der Browser (Knopf „Exportieren"). Nichts davon wird über eine fremde Datei geschrieben.'),
         ('Wer es benutzt',
          'Drei Verwender: der Reiter „Mesh to 3D" (Modell aus Dateien) mit einem Netz aus Datei oder Pfad; „2D3D Kleider" im Schritt koerper (Figur übernehmen oder die Kette '
@@ -99,7 +99,7 @@ class Architekturmeshto3dschritte:
         ('speichern', 'python14',
          ['Meshfigurspeichern'], [],
          'Modell „<Name> Mesh" in data/models (Format der Szene, quelle genesis9; nie über ein fremdes Modell — gehört eine gleichnamige Datei nicht zu diesem Auftrag, kommt eine '
-         'Nummer dazu) und Ablage output/Export/MeshTo3D/<Name>_<Zeit>/ mit Kacheln, Eigenmorph, Bildern und bericht.json.',
+         'Nummer dazu) und Ablage 3DObjects/_Output/MeshTo3D/<Name>_<Zeit>/ mit Kacheln, Eigenmorph, Bildern und bericht.json.',
          'data/models/<Name> Mesh.json, Ablage, Kacheln in data/models/Texturen/<Modell>/.'),
     ]
 

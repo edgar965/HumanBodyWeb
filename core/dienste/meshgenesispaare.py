@@ -2,7 +2,7 @@
 """Meshgenesispaare — Trainingspaare als Jobs von Mesh-Genesis (18.10.2026 abends).
 
 Edgar: „die neuen Personen-Trainingsjobs sind alle hier: A:\\3DTools\\3DObjects\\modelsExport, lege die schon mal an als neue Training-Jobs“. Ein Paar ist ein Tripo-Netz (Start) MIT Wahrheit
-(Genesis-Export der Charakter-Seite: Ziel). Den Job baut `ProjektTemp/_wegwerf/meshgenesis_paar_job.py` im Format der übrigen Jobs unter `3DObjects/meshgenesis/<Ordnername>/`; die Marke ist
+(Genesis-Export der Charakter-Seite: Ziel). Den Job baut `ProjektTemp/_wegwerf/meshgenesis_paar_job.py` im Format der übrigen Jobs unter `3DObjects/_Output/MeshGenesisJobs/<Ordnername>/`; die Marke ist
 `paar.json` dort. Diese Klasse findet die gebauten Paare — ein neues Paar erscheint in Tabelle, Menü und unter `/mesh-genesis/<job>/`, sobald es gebaut ist, ohne Eintrag im Code.
 
     Meshgenesispaare.stammdaten() -> [{id, name, modell, ordner, geschlecht, paar: True}]
@@ -29,7 +29,7 @@ class Meshgenesispaare:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
 
     @classmethod
     def stammdaten(cls):

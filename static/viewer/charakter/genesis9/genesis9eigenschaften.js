@@ -91,8 +91,11 @@ export class Genesis9eigenschaften {
 
     static async plan() {
         if (!Genesis9eigenschaften._plan) {
-            Genesis9eigenschaften._plan = await Serverabruf.json(
-                Genesis9eigenschaften.ADRESSE);
+            // Ein laufender Abruf wird geteilt (18.11.2026): `fuellen` läuft beim Laden zweimal zugleich an, und beide fragten — zwei GET `regler/` im selben
+            // Augenblick (Resource Timing: beide bei 3,24 s, fertig nach 5,2 und 7,0 s; der Server rechnet die synchrone Ansicht nacheinander).
+            Genesis9eigenschaften._planAbruf ??= Serverabruf.json(Genesis9eigenschaften.ADRESSE)
+                .finally(() => { Genesis9eigenschaften._planAbruf = null; });
+            Genesis9eigenschaften._plan = await Genesis9eigenschaften._planAbruf;
         }
         return Genesis9eigenschaften._plan;
     }
@@ -123,7 +126,9 @@ export class Genesis9eigenschaften {
         // Eigene Häute (`eigen:…`, `Genesis9eigenehaut`) legen beim Wählen ihre Regler auf; danach Schieber und offenes Popup nachziehen. Ohne Geschlecht keine leeren Klammern.
         behaelter.appendChild(Genesis9materialdialog.knopf(inst, 'haut', Genesis9eigenschaften._wahl('Haut',
             [{ id: '', name: 'Wie im Katalog' },
-             ...(plan.haut || []).map(h => ({ id: h.id, name: h.geschlecht && h.geschlecht !== 'eigen' ? `${h.name} (${h.geschlecht})` : h.name }))],
+             // Alphabetisch nach dem angezeigten Namen (18.11.2026, Edgar: „alle häute alphabetisch geordnet (z.B. n1)" — „n1 · Foto" unter N).
+             ...(plan.haut || []).map(h => ({ id: h.id, name: h.geschlecht && h.geschlecht !== 'eigen' ? `${h.name} (${h.geschlecht})` : h.name }))
+                 .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base', numeric: true }))],
             inst.haut || '',
             wert => Genesis9lauf.planen(inst, () => Genesis9eigenehaut.waehlen(inst, plan, wert),
                                         () => Genesis9eigenschaften._nachHaut(inst, plan), 'haut'))));

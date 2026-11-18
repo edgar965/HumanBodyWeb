@@ -12,7 +12,7 @@ Rechtsklick auf das Modell (Zeile der Charakterliste über den Reitern) → neue
 Eintrag **„Exportieren …"**. Exportiert wird die gewählte Figur mit wählbarem
 Inhalt — **Rig**, **Textur**, **Assets (Kleider inkl. Haare)**, **aktive
 Animation**, per Vorgabe **alles angehakt** — in wählbare Formate. Zielordner
-wählbar, Vorgabe `A:\3DTools\HumanBodyWeb\output\Export` (existiert).
+wählbar, Vorgabe `A:\3DTools\3DObjects\_Output` (existiert).
 Die Formate werden **im Browser** geschrieben, ohne Blender.
 
 ## Ist-Zustand (gelesen bzw. gemessen)

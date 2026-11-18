@@ -2,7 +2,7 @@
 """Meshgenesispapierkorb — gewählte Jobs und Tests von `/mesh-genesis/` beiseitelegen (23.10.2026).
 
 Edgar: „mach bei den Jobs die Auswahl-Checkboxen und dann die Buttons zum Löschen“ (Reiter „Jobs“ und „Test“). „Löschen“ heißt hier wie am 20.10.2026 (`Meshgenesisattrappe.BEISEITE`):
-der Ordner wird VERSCHOBEN, nicht gelöscht — nach `3DObjects/meshgenesis/_beiseite/<JJJJ.MM.TT.HH.MM.SS>_geloescht/jobs|tests/<Ordner>`. Zurückholen = Ordner zurückschieben.
+der Ordner wird VERSCHOBEN, nicht gelöscht — nach `3DObjects/_Output/MeshGenesisJobs/_beiseite/<JJJJ.MM.TT.HH.MM.SS>_geloescht/jobs|tests/<Ordner>`. Zurückholen = Ordner zurückschieben.
 Danach fehlt der Job in Tabelle und Menü (`Meshgenesisattrappe.stammdaten` nimmt einen festen Job nur, wenn sein Ordner da ist; ein Tripo-Job ist nur sein Ordner mit `paar.json`),
 der Test in der Liste (`Meshgenesistest.alle` liest die Ordner unter `_test/`).
 
@@ -27,7 +27,7 @@ class Meshgenesispapierkorb:
 
     @staticmethod
     def wurzel():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
 
     @classmethod
     def ziel(cls, stempel, art):

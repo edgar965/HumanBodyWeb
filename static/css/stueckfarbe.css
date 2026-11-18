@@ -33,7 +33,11 @@
     background: none; backdrop-filter: none; pointer-events: none;
     justify-content: flex-end; align-items: flex-start; padding: 70px 24px 0 0;
 }
-.stueckfarb-huelle .stueckfarb-dialog { pointer-events: auto; width: min(360px, 94vw); max-height: 80vh; }
+.stueckfarb-huelle .stueckfarb-dialog { pointer-events: auto; width: min(420px, 94vw); max-height: 80vh; display: flex; flex-direction: column; }
+/* Seit 18.11.2026 steht unter der Farbe das Material (`Stueckstoff.felder`): der Inhalt rollt, Kopf und „Fertig" bleiben stehen. */
+.stueckfarb-huelle .stueckfarb-dialog .scene-modal-body { overflow-y: auto; min-height: 0; }
+.stueckfarb-material .slider-row { display: grid; grid-template-columns: 110px 1fr 44px; gap: 8px; align-items: center; margin: 4px 0; }
+.stueckfarb-material .slider-row select { grid-column: 2 / 4; }
 .stueckfarb-titel {
     font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
     color: var(--text-muted); margin: 10px 0 6px;
@@ -48,7 +52,7 @@
 .stueckfarb-ziel.gewaehlt { border-color: var(--accent, #e94560); box-shadow: 0 0 0 1px var(--accent, #e94560); }
 .stueckfarb-punkt { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.5); }
 .stueckfarb-punkt.leer { background: conic-gradient(#e33, #ec3, #3c5, #3ae, #93e, #e33); }
-.stueckfarb-palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.stueckfarb-palette { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }   /* 10 statt 6 Spalten seit dem Material darunter (18.11.2026) */
 .stueckfarb-kachel {
     aspect-ratio: 1; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 5px;
     cursor: pointer; padding: 0;

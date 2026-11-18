@@ -25,7 +25,7 @@ __all__ = ['Fotogenesiszeile2']
 
 class Fotogenesiszeile2:
     def __init__(self, objects_root, job):
-        self.ordner = Path(objects_root) / 'fotogenesis' / job
+        self.ordner = Path(objects_root) / '_Foto_3D' / job
         datei = self.ordner / 'abnahme' / 'kameras.json'
         self.kameras = json.loads(datei.read_text(encoding='utf-8'))['kameras'] if datei.is_file() else {}
         self.kleider = next(iter(sorted((self.ordner / 'figur').glob('kleider_*'))), None)

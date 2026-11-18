@@ -36,7 +36,9 @@ class Garmentbauart:
 
     #: Katalogstuecke, die das Hochziehen IMMER brauchen — unabhaengig von
     #: der Einstellung (Katalognamen aus `Assets/GarmentCode/katalog.py`).
-    IMMER_NACHARBEIT = ('hose', 'shorts')
+    #: `anzug` seit 18.11.2026 (Edgar: „Viele Kleider zu lang, z.B. GC Jacket Bowtie pants - checke alle"): ohne das Hochziehen hing der Saum
+    #: jedes GC-Anzugs mit langer Hose 3–8,6 cm unter der Fußsohle (23 Stücke, `_wegwerf/gc_laenge_probe.py`), die Hosen endeten am Knöchel (9,3 cm).
+    IMMER_NACHARBEIT = ('hose', 'shorts', 'anzug')
 
     @classmethod
     def aus(cls, prefs):

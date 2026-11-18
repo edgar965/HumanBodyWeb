@@ -4,7 +4,7 @@
 Echte Fotos tragen keinen Maßstab. Die Fotoeinpassung (`KoerperKI_Fotos.Fotoeinpassung`, orthografisch, ein Maßstab je Foto aus dem Kopf) kann die Größe der Figur deshalb frei wählen — im
 dritten Lauf am 24.10.2026 (15:14) schrumpfte sie von 1,710 auf 1,435 m, und die Umriss-Deckung stieg dabei. Die Angabe der Person ist ein Wert von außen, kein Wert aus dem Netz.
 
-Sie steht in `3DObjects/fotogenesis/<Name>/job.json` als `koerpergroesse_m` (Meter, Scheitel bis Sohle; fehlt oder `null` = unbekannt). Exporte (mit Wahrheit) haben keine: Ihre Figur ist bekannt.
+Sie steht in `3DObjects/_Foto_3D/<Name>/job.json` als `koerpergroesse_m` (Meter, Scheitel bis Sohle; fehlt oder `null` = unbekannt). Exporte (mit Wahrheit) haben keine: Ihre Figur ist bekannt.
 
     POST /api/fotogenesis/<job>/koerpergroesse/   {koerpergroesse_m: 1.85 | null}   → {ok, koerpergroesse_m}
 """

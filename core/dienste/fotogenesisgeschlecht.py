@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Fotogenesisgeschlecht — mit welcher Genesis-Grundfigur ein Foto-Genesis-Test rechnet (04.11.2026, Edgar: „Auswahl ob Genesis Männlich, weiblich oder Kind“).
 
-Der Job erkennt das Geschlecht nicht selbst: Es steht von Hand in `3DObjects/fotogenesis/<Name>/job.json` als `geschlecht`. Gelesen wird es von der Foto-Kette (`KoerperKI_Fotos.Fotojob`) und von PSHuman
+Der Job erkennt das Geschlecht nicht selbst: Es steht von Hand in `3DObjects/_Foto_3D/<Name>/job.json` als `geschlecht`. Gelesen wird es von der Foto-Kette (`KoerperKI_Fotos.Fotojob`) und von PSHuman
 (`pshuman_job_rechnen.py`); die Mesh-Genesis-Kette liest `einstellung.json` ihres Tests (`Meshgenesistest.geschlecht_setzen`). Darum schreibt `setzen` beide Stellen, sonst bliebe die Wahl dort ohne Wirkung.
 
 „Kind“ steht nicht in der Wahl: Die Kette hat nur diese zwei Grundfiguren (`meshgenesis_formfigur.GRUND`), und eine Körper-Einpassung nach dem Foto eines echten Kindes baut Claude nicht (Edgar bekannt).

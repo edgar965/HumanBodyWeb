@@ -227,7 +227,7 @@ class Blendermodellendpunkte:
     @staticmethod
     def _entfernen(job):
         """Auftragsordner und Eintrag — das gespeicherte Modell und die Ablage unter
-        `output/Export/BlenderModel` bleiben: sie gehören dem Nutzer, nicht dem Auftrag."""
+        `3DObjects/_Output/BlenderModel` bleiben: sie gehören dem Nutzer, nicht dem Auftrag."""
         if job.laeuft:
             Blendermodellarbeiter.anhalten(job)
         Blendermodellablage(job.kennung).loeschen()

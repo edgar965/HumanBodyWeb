@@ -28,7 +28,7 @@ class Fotogenesistabellen:
         tests = [j for j in jobs if j['art'] == 'foto']
         return {
             'tabelle': cls._tabelle(Fotogenesisjobtabelle.SCHLUESSEL, Fotogenesisjobtabelle.spalten(), [Fotogenesisjobtabelle.zeile(j) for j in exporte],
-                                    'Noch kein Job: ein Ordner unter 3DObjects/modelsExport mit <Name>.json und vier Fotos wird einer.'),
+                                    'Noch kein Job: ein Ordner unter 3DObjects/_Output/modelsExport mit <Name>.json und vier Fotos wird einer.'),
             'testtabelle': cls._tabelle(Fotogenesistesttabelle.SCHLUESSEL, Fotogenesistesttabelle.spalten(), Fotogenesistesttabelle.zeilen(tests), 'Noch kein Test.'),
             'formtraining': cls._tabelle('fotogenesis-formtraining', Meshgenesisformtrainingtabelle.SPALTEN, [], 'Noch kein Trainingslauf für Foto-Genesis.'),
             'formvarianten': cls._tabelle('fotogenesis-formvarianten', Meshgenesisformvariantentabelle.SPALTEN, [], 'Noch keine Formvariante für Foto-Genesis.'),

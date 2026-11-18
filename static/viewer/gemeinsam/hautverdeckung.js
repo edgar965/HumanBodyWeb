@@ -49,6 +49,7 @@ import { Figuraufbaustand } from './figuraufbaustand.js';
 import { Protokoll } from './protokoll.js';
 import { Hauteinzug } from './hauteinzug.js';
 import { Bauart } from './bauart.js';
+import { Stueckschweissung } from './stueckschweissung.js';
 
 export class Hautverdeckung extends Figurhaut {
 
@@ -227,11 +228,11 @@ export class Hautverdeckung extends Figurhaut {
             // (gemessen 09.10.2026, „cute girl Scham": Strahl allein 111 Punkte, mit Abstandstest 6 mm 353 — die Haut stand
             // sonst neben und unter dem Stück und flimmerte an den Rändern).
             const ersatz = !!netz.userData?.hautTiefe;
-            // `stoffTiefe` (23.10.2026, Kostümstücke von Mesh-Genesis, `Meshgenesiskikleiderfeld`): so tief darf der Stoff hinter der Haut liegen — ohne die Sonderregeln eines Ersatzstücks
-            aus.push({ schluessel, punkte: ruhe ? Hautverdeckung.lage(g) : g.attributes.position.array, tiefe: netz.userData?.hautTiefe || netz.userData?.stoffTiefe || undefined,
-                       dreiecke: Hautverdeckung.vollerIndex(g), starr: ersatz || Hautverdeckung.starr(schluessel),
-                       nahe: ersatz ? Hautverdeckung.NAHE_ERSATZ_M : undefined, ersatz, netz,
-                       nachgeben: Bauart.nachgebenM(netz) });                 // so tief gibt die Haut darunter nach (Edgar, 12.11.2026)
+            // `stoffTiefe` (23.10.2026, Mesh-Genesis): so tief darf der Stoff hinter der Haut liegen. Sonst ein deckendes Stück bis `Bauart.DURCHSTICH_M` (18.11.2026, MH Cyborg Suit)
+            aus.push({ schluessel, ...Stueckschweissung.netz(ruhe ? Hautverdeckung.lage(g) : g.attributes.position.array, Hautverdeckung.vollerIndex(g), ersatz),   // Platten ohne geteilte Punkte
+                       tiefe: netz.userData?.hautTiefe || netz.userData?.stoffTiefe || Bauart.deckTiefeM(netz), abstand: ersatz ? undefined : Bauart.deckAbstandM(netz), starr: ersatz || Hautverdeckung.starr(schluessel),
+                       nahe: ersatz ? Hautverdeckung.NAHE_ERSATZ_M : undefined, ersatz, netz,   // `nachgeben`: so tief gibt die Haut darunter nach (12.11.2026)
+                       nachgeben: Bauart.nachgebenM(netz), durchsicht: Bauart.durchsichtig(netz) });   // durchsichtig: verdeckt nichts (18.11.2026)
         }
         return ruhe ? aus.sort((a, b) => (a.schluessel < b.schluessel ? -1 : +(a.schluessel > b.schluessel))) : aus;   // fest: die Ankunft der Stücke wechselt
     }
@@ -336,5 +337,4 @@ export class Hautverdeckung extends Figurhaut {
 }
 
 Hautverdeckung.einhaengen();
-// Für Messungen aus der Konsole — die Szene lädt als ein Bündel.
-window.__hautverdeckung = Hautverdeckung; window.__hautmaske = Hautmaske;
+window.__hautverdeckung = Hautverdeckung; window.__hautmaske = Hautmaske;     // für Messungen aus der Konsole — die Szene lädt als ein Bündel

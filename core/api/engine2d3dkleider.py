@@ -243,7 +243,7 @@ class Engine2d3dKleiderendpunkte:
     @staticmethod
     def _entfernen(job):
         """Auftragsordner und Eintrag — das gespeicherte Modell und die Ablage unter
-        `output/Export/Engine2d3dKleider` bleiben: sie gehören dem Nutzer, nicht dem Auftrag."""
+        `3DObjects/_Output/Engine2d3dKleider` bleiben: sie gehören dem Nutzer, nicht dem Auftrag."""
         if job.laeuft:
             Engine2d3dKleiderarbeiter.anhalten(job)
         Engine2d3dKleiderablage(job.kennung).loeschen()

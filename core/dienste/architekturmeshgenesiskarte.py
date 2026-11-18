@@ -45,7 +45,9 @@ class Architekturmeshgenesiskarte:
     OFFEN = (
         'Welche Rechnung zwei Läufe ohne `Determinismus` trennt, ist nicht zerlegt (torch ersetzt `index_add_` u. a. im deterministischen Modus still).',
         'Was `Determinismus` an Zeit kostet, ist nicht belastbar gemessen (je ein Lauf).',
-        '`Genesis9/rasternachbarn._roh` wartet je Nachbarsuche noch tausendfach (4.344 im Kopf, 7.826 in der Kostüm-Prüfung) — geteilter Code mit Foto-Genesis, nur nach Absprache.',
+        '`Genesis9/rasternachbarn` wartete je Nachbarsuche tausendfach (4.344 im Kopf, 7.826 in der '
+        'Kostüm-Prüfung); seit 18.11.2026 ein Kern ohne Wartepunkte (`Genesis9/rasterkern.py`, '
+        'Reglerzug 418 → 58 Wartepunkte) — in der Mesh-Genesis-Kette noch nicht nachgemessen.',
         'Der Rasterer wartet je Bild auf die Zahl seiner Bildpunkte (wechselt je Dreieck) — weg nur mit festen Größen; ein Bild dauert 0,02–0,03 s.',
         'Noch je Lauf von der Platte: MIA-Gewichte 3,3 GB, Stufe-2-Netze 0,9 GB, Kopfnetz, Haut-KI; Zwischenstände zwischen den Schritten (über 800 Öffnungen, 215 Dateien geschrieben) — '
         'Weitergabe im Speicher nicht gebaut.',

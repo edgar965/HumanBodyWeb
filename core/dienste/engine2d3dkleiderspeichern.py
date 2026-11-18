@@ -5,7 +5,7 @@ Alles wie `Meshfigurspeichern` (Modell `<Name> 2D3D Kleider` in der Modellbiblio
 `modell` an ist — Vorgabe hier aus, siehe `Engine2d3dKleideroptionen`; Ablage mit Kacheln, Eigenmorph, Bildern
 und `bericht.json`), mit drei Unterschieden:
 
-    Ordner    `output/Export/Engine2d3dKleider/<Name>_<Anlagezeit>/` statt MeshTo3D
+    Ordner    `3DObjects/_Output/Engine2d3dKleider/<Name>_<Anlagezeit>/` statt MeshTo3D
     Adressen  die Kacheln stehen im Modell als `/api/engine2d3dkleider/<id>/datei/ergebnis/<name>` — `Texturquelle` löst sie zu Dateien
               auf, wenn `Modelltexturen.sichern` sie neben das Modell kopiert
     Herkunft  `art: engine2d3dkleider`; dazu legt die Ablage das beste Modell der Iterationen (`haar.glb`) mit ab

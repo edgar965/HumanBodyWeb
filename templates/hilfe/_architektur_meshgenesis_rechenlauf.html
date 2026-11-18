@@ -20,7 +20,7 @@ Daten: `Architekturmeshgenesisrechenlauf` (Schritte aus `Meshgenesisrechenlauf.S
 {% if r.lauf %}<p class="m3a-klein">Dauer: jüngster fertiger Lauf (<code>{{ r.lauf.kennung }}</code>, {{ r.lauf.ende }}{% if r.lauf.ab %}, ab „{{ r.lauf.ab }}“ — „übernommen“ = vom Lauf davor{% endif %}), aus <code>rechnen/stand.json</code>.</p>{% endif %}
 
 <h3>Welche Netze (KI-Fassungen)</h3>
-<p>Eine Datei legt fest, welches Netz jeder Schritt nimmt: <code>3DObjects/meshgenesis/ki_fassungen.json</code> (<code>Meshgenesiskifassungen</code>); ein neuer Schlüssel kommt mit seiner Vorgabe hinein, ein getauschter Wert bleibt.</p>
+<p>Eine Datei legt fest, welches Netz jeder Schritt nimmt: <code>3DObjects/_Output/MeshGenesisJobs/ki_fassungen.json</code> (<code>Meshgenesiskifassungen</code>); ein neuer Schlüssel kommt mit seiner Vorgabe hinein, ein getauschter Wert bleibt.</p>
 <table class="doku m3a-schmal">
   <thead><tr><th>Schlüssel</th><th>Wert</th><th>wofür</th></tr></thead>
   <tbody>{% for x in r.fassungen %}<tr><td><code>{{ x.schluessel }}</code></td><td><code>{{ x.wert }}</code></td><td>{{ x.text }}</td></tr>{% endfor %}</tbody>

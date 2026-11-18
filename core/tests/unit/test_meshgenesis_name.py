@@ -42,14 +42,14 @@ class MeshgenesisnameTest(SimpleTestCase):
 
     def test_1_eigener_name_ueber_den_stammdaten(self):
         with Pruefablage.ordner('m3dainame_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            self._name(Path(o) / 'meshgenesis' / 'Damira0Tripo', {'name': 'Damira Tripo-Paar'})
+            self._name(Path(o) / '_Output' / 'MeshGenesisJobs' / 'Damira0Tripo', {'name': 'Damira Tripo-Paar'})
             jobs = Meshgenesisname.jobs(self._stamm())
         self.assertEqual([(j['id'], j['name'], j['name_vorgabe'], j['ordner'], j['modell']) for j in jobs],
                          [('damira0tripo', 'Damira Tripo-Paar', 'Damira0Tripo', 'Damira0Tripo', 'Damira0Tripo'), ('ursula1', 'Ursula1', 'Ursula1', 'Ursula1', 'Ursula1')])
 
     def test_1b_kaputte_datei_warnt_und_laesst_den_namen(self):
         with Pruefablage.ordner('m3dainame_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            self._name(Path(o) / 'meshgenesis' / 'Ursula1', '{kaputt')
+            self._name(Path(o) / '_Output' / 'MeshGenesisJobs' / 'Ursula1', '{kaputt')
             with self.assertLogs('core', level='WARNING') as log:
                 jobs = Meshgenesisname.jobs(self._stamm())
         self.assertEqual(jobs[1]['name'], 'Ursula1')
@@ -69,7 +69,7 @@ class MeshgenesisnameTest(SimpleTestCase):
 
     def test_3_neuer_name_gilt_sofort(self):
         with Pruefablage.ordner('m3dainame_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            ordner = Path(o) / 'meshgenesis' / 'Ursula1'
+            ordner = Path(o) / '_Output' / 'MeshGenesisJobs' / 'Ursula1'
             ordner.mkdir(parents=True)
             self.assertEqual(Meshgenesisname.jobs(self._stamm())[1]['name'], 'Ursula1')
             Meshgenesisname.setzen(ordner, 'Ursula Grundjob', 'Ursula1')
@@ -87,7 +87,7 @@ class MeshgenesisnameTest(SimpleTestCase):
     def test_5_endpunkt_der_tests(self):
         fabrik = RequestFactory()
         with Pruefablage.ordner('m3dainame_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            p = Path(o) / 'meshgenesis' / '_test' / 'edgar'
+            p = Path(o) / '_Output' / 'MeshGenesisJobs' / '_test' / 'edgar'
             p.mkdir(parents=True)
             (p / 'test.json').write_text(json.dumps({'kennung': 'edgar', 'name': 'Edgar'}), encoding='utf-8')
             post = lambda kennung, name: Meshgenesisnameendpunkte.test(fabrik.post('/', json.dumps({'name': name}), content_type='application/json'), kennung)  # noqa: E731

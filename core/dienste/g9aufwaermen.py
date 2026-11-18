@@ -15,6 +15,10 @@ wartet auf denselben Merker statt ihn ein zweites Mal zu bauen
 
 Laeuft nur im Serverprozess des Autoreloaders (`RUN_MAIN`), nicht im
 Beobachter, nicht bei `manage.py test`/`migrate`.
+
+Seit 18.11.2026 rechnet der zweite Schritt die Netze der zuletzt offenen
+Seite nach (`G9neustartnachlauf`): Nach einer Code-Aenderung lag keine
+ihrer Antworten mehr im Vorrat der neuen Fassung.
 """
 import logging
 import os
@@ -65,7 +69,13 @@ class G9aufwaermen:
         from Genesis9.garderobe import G9garderobe
         from Genesis9.gelenkkorrekturen import G9gelenkkorrekturen
         from Genesis9.reglerplan import G9reglerplan
+
+        from .g9neustartnachlauf import G9neustartnachlauf
+        # Die Netze der zuletzt offenen Seite gleich nach dem Basisnetz (18.11.2026, `G9neustartnachlauf`):
+        # nach einer Code-Änderung rechnete die Seite sie sonst selbst — Anatomie fein 7,3–7,6 s statt
+        # 0,17 s aus dem Vorrat (`django.log`, siehe dort).
         aus = [('basisnetz', G9basisnetz.holen),
+               ('zuletzt angezeigt', G9neustartnachlauf.nachrechnen),
                ('charaktere', G9charaktere.liste),
                ('reglerplan', G9reglerplan.holen),
                ('skelett', lambda: G9formung({}).skelett())]
@@ -84,6 +94,16 @@ class G9aufwaermen:
         from Genesis9.stufeneltern import G9stufeneltern
         aus += [('stufeneltern', G9stufeneltern.fuer),
                 ('grundhaut s1', lambda: G9stueckfolge.grundhaut(False))]
+        # Regler-Plan und Garderobe-Liste der Seite (18.11.2026, Edgar: „laden vom modell … dauert viel
+        # zu lange“): im frischen Prozess `bereiche` 7,5 s, danach 0,73 s; der Katalog 2,9 s, danach 1,2 s
+        # (`_wegwerf/regler_zeit_probe.py`, `_wegwerf/garderobe_teile.py`). `_katalog` liest keine Anfrage.
+        from Genesis9.reglergliederung import G9reglergliederung
+
+        from ..api.g9garderobe import G9garderobeapi
+        aus += [('reglergliederung', G9reglergliederung.bereiche),
+                ('garderobe-katalog', lambda: G9garderobeapi._katalog(None)),
+                # Die Kerne der Haut-Maske auf der Karte laden (18.11.2026, `hautkarterechnung.py`): sonst die erste Maske nach dem Start mit dem Laden der Warp-Module
+                ('hautkarte', lambda: __import__('core.dienste.hautkarterechnung', fromlist=['Hautkarterechnung']))]
         return aus
 
     @classmethod

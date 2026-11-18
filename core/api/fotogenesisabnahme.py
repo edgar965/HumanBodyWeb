@@ -145,7 +145,7 @@ class Fotogenesisabnahmeendpunkte:
         from ..dienste.fotogenesisfigur import Fotogenesisfigur
         eigen = Fotogenesisfigur.ordner_von(gefunden)
         test = json.loads((Path(gefunden['ordner']) / 'job.json').read_text(encoding='utf-8')).get('meshgenesis_test')
-        ablage = eigen or ((Path(settings.TOOLS_ROOT) / '3DObjects' / 'meshgenesis' / '_test' / str(test)) if test else None)
+        ablage = eigen or ((Path(settings.TOOLS_ROOT) / '3DObjects' / '_Output' / 'MeshGenesisJobs' / '_test' / str(test)) if test else None)
         dateien = sorted(Npztorch.glob(ablage, 'ergebnis_Form_*.npz')) if ablage else []
         if not dateien:
             return JsonResponse({'error': 'Für %s gibt es keine Ergebnisablage des Mesh-Genesis-Tests (%s)' % (job, test)}, status=404)

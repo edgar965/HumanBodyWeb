@@ -50,6 +50,7 @@ nächsten Nachbarn. Der Antwortvorrat merkt die GANZE Mischung unter ihrem Rumpf
 import logging
 
 import torch
+from KoerperKI_alle.kartenwerte import Kartenwerte
 from KoerperKI_alle.torchfeld import Torchfeld
 from django.http import HttpResponse
 from Genesis9.garderobe import G9garderobe
@@ -209,6 +210,7 @@ class G9kleidmischbau:
                     # der des Sammeleintrags.
                     teil['stoff'] = dict(teil['stoff'], stueck=stueck, nummer=nummer)
                 teile.append(teil)
+            aus['boden'] = Kartenwerte.aufloesen(aus.get('boden'))        # der Boden kommt als Platzhalter auf der Karte (`G9garderobeapi._kleid`, 18.11.2026)
             boden = aus.get('boden') if boden is None else max(boden, aus.get('boden') or boden)
             stufen = aus.get('stufen') if stufen is None else stufen
             figurart = figurart or aus.get('figurart')

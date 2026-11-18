@@ -21,6 +21,7 @@ import torch
 from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
+from Genesis9.lagen import G9lagen
 from Genesis9.materialteile import G9materialteile
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.passformvorgabe import G9passformvorgabe
@@ -68,7 +69,7 @@ class G9stueckteile:
         zusatz, knochen = cls.zusatz(kennung, eintrag,
                                      G9lagenanfrage._namen(rumpf.get('stil')),
                                      rumpf.get('regler_stueck'))
-        hoch = Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
+        hoch = formung.hoch()
         # Ein Stück mit Hauttiefe (Scham aus einer .blend, `Blendimportscham`) liegt bis 25 mm HINTER der Figurfläche und hängt
         # starr am Becken: Folgen (drei nächste Hautpunkte) und Heben über die Haut schöben einzelne Punkte im Schritt bis 46 mm
         # weg (gemessen 08.10.2026, Kantenmaximum im Browser) — seine Lage ist die gespeicherte Ruhelage der Figur des Imports.
@@ -79,6 +80,7 @@ class G9stueckteile:
         else:
             kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
                        for folger, lage in teile]
+        roh_kaefige = kaefige
         # Die fuenf gemeinsamen Formachsen einer Frisur (`G9haarachsen`) — sie sind keine
         # Daz-Kanaele und laufen deshalb an `G9garderobe.reglerwerte` vorbei. Linear wie
         # jeder Morph, also einfach dazu.
@@ -107,8 +109,12 @@ class G9stueckteile:
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
         # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)
+        # Herkunft der Käfige für den Hebevorrat (18.11.2026, ohne Abholen): nur, wenn hier GENAU die Rechnung von `G9lagen.kaefig` lief — keine eigenen Morphe,
+        # Achsen oder Zusatzsträhnen (sie geben die Liste unverändert zurück, wenn nichts gestellt ist), kein starres Stück, die Formung der Figur.
+        rein = kaefige is roh_kaefige and not starr and stueckformung is formung
+        herkunft = [G9lagen.herkunft(kennung, formung, zusatz, knochen, f, lage) for f, lage in teile] if rein else None
         flaeche, innen, aussen = anfrage.vorbereiten(
-            kennung, [(f, p) for (f, _lage), p in zip(teile, kaefige, strict=True)])
+            kennung, [(f, p) for (f, _lage), p in zip(teile, kaefige, strict=True)], herkunft)
         # Ein Ersatz-Stück (Originalaugen, `G9stueckersatz`) sitzt IN der Figur: nicht aus der Haut heben (die Augäpfel
         # lägen sonst vor dem Gesicht), keine Kollisionsfläche.
         if G9stueckersatz.fuer(eintrag) or starr:

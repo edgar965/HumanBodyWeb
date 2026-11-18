@@ -61,7 +61,9 @@ class Unterteilungsablage:
 
     @staticmethod
     def _laden(pfad):
-        if not pfad.is_file():  # npz geprüft: bleibt NPZ, humanbody_core liest numpy (Npzumstellung.NUR_NUMPY)
+        # `.pt` daneben oder die alte `.npz` (`Npztorch.datei`): `Unterteilungsbau.speichern` schreibt seit der torch-Umstellung `.pt`, `laden` liest beide — bis 18.11.2026
+        # prüfte diese Stelle nur die `.npz`, und jeder neue Prozess baute die Unterteiler neu.
+        if Npztorch.datei(pfad) is None:  # npz geprüft: echte Datei über Npztorch.datei
             return None
         try:
             return Unterteilungsbau.laden(pfad)  # npz geprüft: ohne torch

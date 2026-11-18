@@ -58,6 +58,7 @@ class Meshgenesislaufbeschreibung:
         ('haarmuster', 'Daten', 'Strähnenmuster und Kennwerte aus den Genesis-Haaren sammeln', None),            # 15.11.2026, `haar_Bart/haarmuster.py`
         ('meshgenesis_probenzerlegung', 'Kleider', 'Kleider und Haar erkennen', None),
         ('meshgenesis_kostuem_lauf', 'Kostüme', 'Kostüm erkennen, ausschneiden, auf die Figur legen und prüfen', None),
+        ('meshgenesis_kostuem_bausteine', 'Kostüme', 'Stücke veredeln: Materialklassen aus dem Foto, Gewebe, Glanz, Glättung', None),          # 18.11.2026, `bausteine/stueckveredelung.py`
         ('meshgenesis_kopfangleich_lauf', 'Form', 'Kopf an das Mesh angleichen: Gesichtsmaße und Haut, in Runden', None),          # 24.10.2026, `Kopfangleich`
         ('meshgenesis_koerperangleich_lauf', 'Form', 'Körper in die Außenmaße des Mesh: Form, Proportionen, Haltung, in Runden', None),  # 25.10.2026, `Koerperangleich`
         ('meshgenesis_kostuem_segmentierung', 'Kostüme', 'Bildmodelle zerlegen das Netz (Sapiens2, SAM 3)', None),

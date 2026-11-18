@@ -54,7 +54,7 @@ class FotogenesisGeometrieEllbogen(SimpleTestCase):
         return float(np.median(d)), float(d.max()), int(len(d))
 
     def _daten(self):
-        datei = Path(settings.OBJECTS_ROOT) / 'fotogenesis' / self.JOB / 'abnahme' / 'training.json'
+        datei = Path(settings.OBJECTS_ROOT) / '_Foto_3D' / self.JOB / 'abnahme' / 'training.json'
         if not datei.is_file():
             self.skipTest('kein Lauf: %s fehlt' % datei)
         daten = json.loads(datei.read_text(encoding='utf-8'))

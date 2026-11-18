@@ -44,7 +44,7 @@ class Architekturfotogenesismessung:
     @classmethod
     def netzvergleich(cls):
         """Tripo3D und Hunyuan3D-2mv aus Edgars vier Fotos von OlesiaWalk gegen die Wahrheit (`_bild3d/OlesiaWalk_tripovergleich/vergleich.json`, gerechnet 23.10.2026)."""
-        d = cls._json(Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_bild3d' / 'OlesiaWalk_tripovergleich' / 'vergleich.json')
+        d = cls._json(Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_bild3d' / 'OlesiaWalk_tripovergleich' / 'vergleich.json')
         if not d:
             return None
         zeilen = []
@@ -58,7 +58,7 @@ class Architekturfotogenesismessung:
     @classmethod
     def zeiten(cls):
         """Ein Bildersatz und ein Hunyuan-Netz der künstlichen Tripo-Netze (`_bild3d/Damira0_0001`), so wie die Kette sie ablegt."""
-        probe = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_bild3d' / 'Damira0_0001'
+        probe = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_bild3d' / 'Damira0_0001'
         bilder, netz = cls._json(probe / 'bilder' / 'bilder.json') or {}, cls._json(probe / 'netz.json') or {}
         return {'bilder_s': bilder.get('dauer_s'), 'groesse': bilder.get('groesse'), 'yfov': bilder.get('yfov_grad'), 'netz_s': netz.get('dauer_s'),
                 'flaechen': netz.get('flaechen'), 'modell': netz.get('formmodell')}

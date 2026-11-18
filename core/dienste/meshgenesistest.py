@@ -3,7 +3,7 @@
 
 Edgar: „mach auf /mesh-3D-AI/ einen zweiten Tab: Test, darin auch eine Jobliste, aber nur Mesh und Ausgabe. Darin möchte ich testen, wie das bei Meshes ausschaut, wo wir keine Trainingsdaten haben …
 diese gleichen alten Jobs [Edgar, Zauberer, …] brauche ich im neuen Tab, aber mit dem neuen KI-Modell“.
-Ein Test ist ein Ordner `3DObjects/meshgenesis/_test/<kennung>/` (gerechnet von `ProjektTemp/_wegwerf/meshgenesis_test_rechnen.py`, python10): `test.json` (Name, Quelle, Lauf, Maßstab, Rest je Figur),
+Ein Test ist ein Ordner `3DObjects/_Output/MeshGenesisJobs/_test/<kennung>/` (gerechnet von `ProjektTemp/_wegwerf/meshgenesis_test_rechnen.py`, python10): `test.json` (Name, Quelle, Lauf, Maßstab, Rest je Figur),
 `ergebnis_<Figur>.npz` je trainierter Figur (138 Gelenke, Drehung je Knochen gegen die Ruhelage, Daz-Winkel), `vorschau.glb` (das Netz im Rahmen des Datensatzes, auf `vorschau_hoehe_m`).
 Ein Ziel gibt es nicht — darum nur Mesh und Ausgabe, und keine Fehlerzahl.
 
@@ -49,7 +49,7 @@ class Meshgenesistest:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_test'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_test'
 
     @classmethod
     def pfad(cls, kennung):
@@ -235,7 +235,7 @@ class Meshgenesistest:
             if job is None:
                 logger.warning('Meshgenesistest: Test %s nennt die Figur %s, es gibt keinen Job mit diesem Datensatz', kennung, figur)
                 return None
-            kin_datei = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / figur / 'kinematik.json'
+            kin_datei = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / figur / 'kinematik.json'
         e = Npztorch.lesen(datei)
         kin = json.loads(kin_datei.read_text(encoding='utf-8'))['knochen']
         beschr = Meshgenesisrig.beschreibung()

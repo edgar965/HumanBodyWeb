@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Fotogenesisfotoneu — „Neuer Test aus Fotos“ im Reiter „Test“ von `/foto-genesis/` (24.10.2026; Gegenstück zu „Neuer Test aus einem Mesh“ auf `/mesh-genesis/`, `Meshgenesisrechenschlange.anlegen`).
 
-Legt `3DObjects/fotogenesis/<Name>/` an: die hochgeladenen Fotos unter `fotos/` und eine `job.json` für `Fotogenesisfotojobs` (Winkel unbekannt — `null`, bis jemand sie einträgt). Gerechnet wird noch nichts:
+Legt `3DObjects/_Foto_3D/<Name>/` an: die hochgeladenen Fotos unter `fotos/` und eine `job.json` für `Fotogenesisfotojobs` (Winkel unbekannt — `null`, bis jemand sie einträgt). Gerechnet wird noch nichts:
 Foto-Genesis hat noch keine eigene KI (Weg B des Konzepts). Ein vorhandener Ordner wird nie überschrieben.
 """
 

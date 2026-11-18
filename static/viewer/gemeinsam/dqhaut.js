@@ -137,8 +137,18 @@ vec3 dqPunkt( vec4 sq, vec4 sd, vec3 r ) {
         }
         netz.userData.dqMisch = misch;
         netz.applyBoneTransform = function (index, vector) { return Dqhaut.knochenlage(this, index, vector); };
+        // Hüllkugel aus der Ruhelage, Radius × HUELLE (18.11.2026): three.js 0.170 rechnet sie sonst beim ersten Frustum-Test über `applyBoneTransform` je Ecke — hier
+        // `knochenlage` in JS, beim Laden gemessen 205.862–445.252 Aufrufe, 0,56–1,5 s (`_wegwerf/lademessung.js`). Sie dient nur dem Aussieben (Bild, Strahl).
+        if (!netz.boundingSphere && netz.geometry?.attributes?.position) {
+            if (!netz.geometry.boundingSphere) netz.geometry.computeBoundingSphere();
+            netz.boundingSphere = netz.geometry.boundingSphere.clone();
+            netz.boundingSphere.radius *= Dqhaut.HUELLE;
+        }
         return true;
     }
+
+    /** Hüllkugel eines Netzes: Radius der Ruhelage mal so viel — deckt jede Pose (ausgestreckte Arme: ~1,2 × der Ruhelage um die Hüfte). */
+    static HUELLE = 1.5;
 
     /**
      * Alle gehäuteten Netze einer Genesis-Figur am Skelett des Körpers (Körper, Anhänge, Stücke, später gebundene GarmentCode-Stücke): sonst

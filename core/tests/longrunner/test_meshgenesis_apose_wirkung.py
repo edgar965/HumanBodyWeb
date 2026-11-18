@@ -24,7 +24,7 @@ class MeshgenesisAposeWirkungTest(SimpleTestCase):
 
     @classmethod
     def daten(cls):
-        return Architekturmeshgenesismia.kontext(Path(settings.OBJECTS_ROOT) / 'meshgenesis')
+        return Architekturmeshgenesismia.kontext(Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs')
 
     def setUp(self):
         self.d = self.daten()

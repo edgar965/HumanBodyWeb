@@ -9,7 +9,7 @@ GET /api/meshgenesis/formvariante/<figur>/linien/<nr>/[?lauf=]        Messlinien
 GET /api/meshgenesis/formvariante/<figur>/koerper/                     Dreiecke, UV, Material des Körpers (Haut der Grundlage, einmal je Seite)
 GET /api/meshgenesis/formvariante/<figur>/bild/<name>                  ein Bild der Haut (`m<Zahl>.jpg` aus dem Anzeigenetz der Grundlage, ETag/304)
 
-Figur und Lauf kommen nie als Pfad aus der Adresse: die Figur ist ein direkter Unterordner von `3DObjects/meshgenesis`, der Lauf einer aus der Liste der Läufe, die sie tragen.
+Figur und Lauf kommen nie als Pfad aus der Adresse: die Figur ist ein direkter Unterordner von `3DObjects/_Output/MeshGenesisJobs`, der Lauf einer aus der Liste der Läufe, die sie tragen.
 `staticmethod`, nicht `classmethod`: `require_GET` liest `request.method` am ERSTEN Argument (`meshgenesis-kleider.md`).
 """
 

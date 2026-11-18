@@ -15,6 +15,7 @@ import { Stoffshader } from './stoffshader.js';
  *   rauheit, metall      am Material (`roughness`, `metalness`)
  *   relief               Stärke der EIGENEN Normalkarte des Stücks (Daz' Normalen, gebackene Falten) — `normalScale`, wie „Relief“ der
  *                        Körperteile (`Genesis9teilmaterial`); 1 = wie geliefert
+ *   transparenz          0 … 1 (`opacity` = 1 − Wert), ersetzt die Deckung des Herstellers (18.11.2026)
  *   glanz, saum, saumstreuung, saumfarbe, gewebe {art, faeden, staerke}
  *                        im Shader (`Stoffshader`, seit 25.10.2026) — ohne Neubau, ohne neue Normalkarte
  *   stoffart             nur die Vorwahl, von der man ausging (`Stoffarten`)
@@ -55,6 +56,7 @@ export class Stoffwerte {
             material.metalness = stoff.metall;
         }
         if (typeof stoff.relief === 'number') Stoffwerte.relief(material, stoff.relief);
+        if (typeof stoff.transparenz === 'number') Stoffwerte.transparenz(material, stoff.transparenz);
         if (!(daten.uvMeter > 0) && geometrie?.attributes?.uv) daten.uvMeter = Stoffwerte.uvMeter(geometrie);
         Stoffshader.setzen(material, stoff, daten.uvMeter);
         daten.stoffnach = () => Stoffwerte.nach(material, stoff);
@@ -66,6 +68,21 @@ export class Stoffwerte {
     static nach(material, stoff) {
         if (typeof stoff.rauheit === 'number' && 'roughness' in material) material.roughness = stoff.rauheit;
         if (typeof stoff.relief === 'number') Stoffwerte.relief(material, stoff.relief);
+        if (typeof stoff.transparenz === 'number') Stoffwerte.transparenz(material, stoff.transparenz);
+    }
+
+    /**
+     * Durchsicht des Stoffs, 0 = undurchsichtig … 1 = fast klar (18.11.2026, Edgar: „Shirt_open g8 ist transparent … mach einen Regler für Transparenz da
+     * wo der Farbregler ist"). Ersetzt die Deckung des Herstellers (Daz `Cutout Opacity`, Shirt_open 0,8; `Genesis9kartenwerte.werte`) — auch nach oben:
+     * 0 macht das Shirt deckend. Eine Ausschnittkarte (Spitze, `alphaMap`) bleibt; die Deckung wirkt dann zusätzlich.
+     */
+    static transparenz(material, wert) {
+        const daten = material.userData;
+        if (daten.durchsichtUrsprung === undefined) daten.durchsichtUrsprung = { transparent: material.transparent, tiefe: material.depthWrite };
+        const t = Math.max(0, Math.min(0.95, Number(wert) || 0));
+        material.opacity = 1 - t;
+        material.transparent = t > 0.001 || (Boolean(material.alphaMap) && daten.durchsichtUrsprung.transparent);
+        material.depthWrite = t > 0.001 ? false : daten.durchsichtUrsprung.tiefe;
     }
 
     /**

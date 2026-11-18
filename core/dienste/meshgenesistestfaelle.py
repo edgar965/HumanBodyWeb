@@ -4,7 +4,7 @@
 Edgar: „schreibe immer rein, wieviel Fehler von wievielen insgesamt, für alle Prioritäten. Das soll auch in das UI kommen für die trainings und Testjobs. Evtl. auch den Namen der Tests die fehler
 liefern, aber verständlich und kurzgefasst, in einer Tabelle“.
 Der Rechenlauf (`ProjektTemp/_wegwerf/meshgenesis_stufe2_testfaelle.py`, `Stufe2testfaelle.ablegen`) legt nach jedem Einsatz `testfaelle.json` neben die Stücke, die er gemessen hat:
-`3DObjects/meshgenesis/_test/<test>/kleider_<geschlecht>/g/testfaelle.json` — Lauf, Rolle (Training oder Test), je Priorität FEHLER von Prüfungen, je Testfall Name, Kurztext, FEHLER, Prüfungen, vorher,
+`3DObjects/_Output/MeshGenesisJobs/_test/<test>/kleider_<geschlecht>/g/testfaelle.json` — Lauf, Rolle (Training oder Test), je Priorität FEHLER von Prüfungen, je Testfall Name, Kurztext, FEHLER, Prüfungen, vorher,
 Urteil, die ersten FEHLER-Texte, beim Training der Verlauf der Prio-1-Wache. Wird ein schlechterer Stand zurückgelegt, wandert die Datei mit dem Ordner `g` (`Stufe2sicherung`) — sie gehört also
 immer zu den Stücken, die die Seite zeigt. Hier wird nur gelesen.
 

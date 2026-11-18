@@ -2,7 +2,7 @@
 """G9fotohaut — die Haut eines Foto-Genesis-Jobs als Hautsatz von Genesis 9 (18.11.2026).
 
 Edgar, 18.11.2026: „dann möchte ich die n1 Haut in der Bibliothek haben und mit den Reglern ausprobieren“ (Regler: `G9hautausgleich`). Je Foto-Job
-(`3DObjects/fotogenesis/<Job>/job.json`) die Hautkacheln seines Mesh-Genesis-Tests (`meshgenesis_test` → `_test/<Test>/haut_<geschlecht>/1001…1004.jpg`,
+(`3DObjects/_Foto_3D/<Job>/job.json`) die Hautkacheln seines Mesh-Genesis-Tests (`meshgenesis_test` → `_test/<Test>/haut_<geschlecht>/1001…1004.jpg`,
 geschrieben vom Schritt „Haut“, mit oder ohne Haut-KI). Der Hautsatz ist der der Grundfigur (`G9 Feminine/Masculine Skin 01 MAT`: Normalen, Rauheit,
 Durchlicht) mit den Kacheln des Jobs als Albedo — wie `G9bedlamhaut`; die Diffusfarbe fällt weg, der Ton steckt in der Kachel (wie `Genesis9fototextur`).
 
@@ -35,11 +35,11 @@ class G9fotohaut:
 
     @staticmethod
     def _jobs():
-        return Path(settings.OBJECTS_ROOT) / 'fotogenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Foto_3D'
 
     @staticmethod
     def _tests():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_test'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_test'
 
     @classmethod
     def gehoert(cls, preset):
@@ -69,7 +69,8 @@ class G9fotohaut:
         for job in sorted(p.name for p in cls._jobs().iterdir() if p.is_dir()):
             ordner, anzeige = cls._haut(job)
             if ordner is not None:
-                aus.append({'id': cls.PRAEFIX + job, 'name': 'Foto · %s (%s)' % (job, anzeige), 'geschlecht': anzeige, 'vorschau': False})
+                # Jobname vorn (Edgar: „alle häute alphabetisch geordnet (z.B. n1)“ — „n1“ steht so unter N); das Geschlecht hängt die Auswahl selbst an
+                aus.append({'id': cls.PRAEFIX + job, 'name': '%s · Foto' % job, 'geschlecht': anzeige, 'vorschau': False})
         return aus
 
     @classmethod

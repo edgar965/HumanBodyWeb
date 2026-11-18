@@ -2,7 +2,7 @@ import { Modellexport } from '../charakter/modellexport.js';
 
 /**
  * Meshfigurexport — die angepasste Figur als GLB (Rig, Textur, Augen, Wimpern) in die Ablage des
- * Auftrags unter `output/Export/MeshTo3D/<Name>_<Zeit>/` (Edgar: „Das Ergebnis dann hier").
+ * Auftrags unter `3DObjects/_Output/MeshTo3D/<Name>_<Zeit>/` (Edgar: „Das Ergebnis dann hier").
  *
  * Derselbe Weg wie im Kontextmenü der Szene (`Modellexport`: der Browser schreibt die GLB, der
  * Server legt sie ab und macht daraus einen eigenen Unterordner, bei gleichem Namen `_2`) — mit der

@@ -4,7 +4,7 @@
 Edgar (27.10.2026): „mach bei http://127.0.0.1:8081/settings/genesis/ die liste der Regler in einer djangoBase Tabelle. Spalten: Wirksamkeit, 3dmesh-ai , 2d-3d-ai . Die letzten
 2 Spalten : Empfehlung ob man die in den Pipelines nutzen sollte“.
 
-Liest nur die Ablage `3DObjects/meshgenesis/regler_wirksamkeit_v<Fassung>_<Fingerabdruck des Reglerraums>.json`; gemessen wird sie auf der Karte von
+Liest nur die Ablage `3DObjects/_Output/MeshGenesisJobs/regler_wirksamkeit_v<Fassung>_<Fingerabdruck des Reglerraums>.json`; gemessen wird sie auf der Karte von
 `meshgenesis/meshgenesis_reglerwirksamkeit.py` (nie aus der Seite). Liegen mehrere (anderer Reglerraum), nimmt die Seite die jüngste und sagt es; fehlt jede, bleibt die Tabelle
 leer und der Hinweis nennt den Befehl.
 """
@@ -31,7 +31,7 @@ class Reglerwirksamkeitstabelle:
     )
 
     def __init__(self, ordner=None):
-        self.ordner = Path(ordner) if ordner else Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        self.ordner = Path(ordner) if ordner else Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
         self.dateien = sorted(self.ordner.glob(self.MUSTER), key=lambda p: p.stat().st_mtime, reverse=True)
         self.daten = self._lesen(self.dateien[0]) if self.dateien else None
 

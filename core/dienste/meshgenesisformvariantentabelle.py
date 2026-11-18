@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Meshgenesisformvariantentabelle — die Formvarianten (synthetische Figuren des Formtrainings) im Reiter „Formtraining“ auf /mesh-genesis/ als djangoBase-Tabelle (18.10.2026).
 
-Eine Zeile je `3DObjects/meshgenesis/FormNNN/` (`Meshgenesisformvarianten`): Figur, Datenstand (MIA und Wolken Fassung 9 je Probe), der jüngste fertige Formlauf mit ihrem Formfehler.
+Eine Zeile je `3DObjects/_Output/MeshGenesisJobs/FormNNN/` (`Meshgenesisformvarianten`): Figur, Datenstand (MIA und Wolken Fassung 9 je Probe), der jüngste fertige Formlauf mit ihrem Formfehler.
 Gleiche Bauart wie `Meshgenesistabelle`; eine Zeile öffnet die Seite der Variante (`/mesh-genesis/formvariante/<Name>/`, seit 18.10.2026 abends — Klasse `meshgenesistabelle`, Link in der ersten Zelle).
 """
 
@@ -17,7 +17,7 @@ class Meshgenesisformvariantentabelle:
     SCHLUESSEL = 'meshgenesis-formvarianten'
     ZUSTAND = {'fertig': 'Daten Fassung 9 fertig', 'wird gerechnet': 'wird gerechnet', 'mia': 'MIA fertig, Wolken fehlen', 'unvollständig': 'unvollständig', 'offen': 'offen'}
     SPALTEN = (
-        {'label': 'Formvariante', 'key': 'name', 'titel': 'Ordner unter 3DObjects/meshgenesis'},
+        {'label': 'Formvariante', 'key': 'name', 'titel': 'Ordner unter 3DObjects/_Output/MeshGenesisJobs'},
         {'label': 'Grundlage', 'key': 'grundlage', 'titel': 'Der Job, dessen Figur und Kleidung die Variante abwandelt (modell.json → grundlage)'},
         {'label': 'Letzter Lauf', 'key': 'lauf',
          'titel': 'Ende des jüngsten fertigen Formlaufs, der diese Variante trainiert oder gemessen hat (formen_ergebnis.json → varianten; Probeläufe zählen nicht). Lauf und Rolle im Tooltip'},
@@ -35,7 +35,7 @@ class Meshgenesisformvariantentabelle:
 
     def tabelle(self, varianten):
         return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(v) for v in varianten],
-                'klasse': 'auftragstabelle meshgenesistabelle meshgenesisformtabelle', 'leer': 'Keine Formvariante unter 3DObjects/meshgenesis (Ordner FormNNN mit modell.json).'}
+                'klasse': 'auftragstabelle meshgenesistabelle meshgenesisformtabelle', 'leer': 'Keine Formvariante unter 3DObjects/_Output/MeshGenesisJobs (Ordner FormNNN mit modell.json).'}
 
     def zeile(self, v):
         lauf = v['lauf'] or {}

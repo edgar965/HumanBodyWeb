@@ -24,7 +24,7 @@ class FotogenesisNormalenWahl(FotogenesisAblageMixin, SimpleTestCase):
         return self.client.post(adresse or self.ADRESSE, json.dumps(rumpf), content_type='application/json')
 
     def _info(self):
-        return json.loads((self.objekte / 'fotogenesis' / 'Fototest' / 'job.json').read_text(encoding='utf-8'))
+        return json.loads((self.objekte / '_Foto_3D' / 'Fototest' / 'job.json').read_text(encoding='utf-8'))
 
     def test_vorgabe_econ_alle_fotos_chamfer_auf_der_seite(self):
         self.assertEqual(Fotogenesisnormalen.lesen({}), {'engine': 'econ', 'foto': None, 'zusammen': 'chamfer'})

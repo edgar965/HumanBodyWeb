@@ -51,6 +51,8 @@ import struct
 
 from django.core.serializers.json import DjangoJSONEncoder
 
+from KoerperKI_alle.kartenwerte import Kartenwerte
+
 from .netzfeld import Netzfeld
 from .netzkurz import Netzkurz
 
@@ -111,6 +113,8 @@ class Netzpaket:
             versatz[0] += len(wert.rohdaten) + cls._polster(len(wert.rohdaten))
             felder.append(wert)
             return {cls.MARKE: marke}
+        if isinstance(wert, Kartenwerte):
+            return cls._ersetzen(wert.wert(), felder, versatz, kurz)      # Rückfall wie in `Netzjson.default` (18.11.2026)
         if isinstance(wert, dict):
             return {k: cls._ersetzen(v, felder, versatz, kurz) for k, v in wert.items()}
         if isinstance(wert, (list, tuple)):

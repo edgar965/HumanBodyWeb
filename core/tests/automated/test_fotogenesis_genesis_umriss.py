@@ -72,7 +72,7 @@ class FotogenesisGenesisUmriss(SimpleTestCase):
             'bei (%d, %d) px Median %.1f / 90 %% %.1f mm' % (m[0], m[1], med, p90) for m, med, p90, _n in schlimm)) if schlimm else '')
 
     def _daten(self):
-        datei = Path(settings.OBJECTS_ROOT) / 'fotogenesis' / self.JOB / 'abnahme' / 'training.json'
+        datei = Path(settings.OBJECTS_ROOT) / '_Foto_3D' / self.JOB / 'abnahme' / 'training.json'
         if not datei.is_file():
             self.skipTest('kein Lauf: %s fehlt' % datei)
         daten = json.loads(datei.read_text(encoding='utf-8'))

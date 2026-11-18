@@ -3,7 +3,7 @@
 
 Edgar: „das netz soll auch: die Form vorhersagt: die Genesis-Formregler (815) usw.“ — gebaut in `ProjektTemp/_wegwerf/` (`meshgenesis_formregler.py`, `meshgenesis_formvarianten.py`,
 `meshgenesis_formnetz.py`, `meshgenesis_form_alle.py`, `meshgenesis_form_pruefen.py`; Lehren `.claude/rules/meshgenesis-form.md`).
-GELESEN beim Aufruf aus `3DObjects/meshgenesis/`:
+GELESEN beim Aufruf aus `3DObjects/_Output/MeshGenesisJobs/`:
     formregler.json / formregler_v2.json   je Regler Bereich, Grenzen, Wirkung (mm je Einheit an 4.000 Körperpunkten) — die Liste, die der Lauf nennt (`regler_datei`)
     _formen/varianten.json          die Formvarianten: Grundlage, Geschlecht, Gruppe, Zahl der gestellten Regler
     <Job>/proben.json               Proben je Gruppe (alle Jobs und Varianten)
@@ -34,7 +34,7 @@ class Architekturmeshgenesisform:
     @staticmethod
     def wurzel():
         from django.conf import settings
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
 
     @staticmethod
     def _json(datei):

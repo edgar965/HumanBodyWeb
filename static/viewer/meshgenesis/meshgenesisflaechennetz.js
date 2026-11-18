@@ -7,6 +7,7 @@
  */
 import * as THREE from 'three';
 import { Meshgenesisanatomie } from './meshgenesisanatomie.js';
+import { Meshgenesisumgebung } from './meshgenesisumgebung.js';
 
 export class Meshgenesisflaechennetz {
     static _abrufe = new Map();
@@ -159,6 +160,16 @@ export class Meshgenesisflaechennetz {
             const material = new Art({ color: new THREE.Color(...(m.farbe ?? [1, 1, 1])), roughness: Number.isFinite(m.rauheit) ? m.rauheit : 0.75,
                 metalness: Number.isFinite(m.metall) ? m.metall : 0, side: THREE.DoubleSide });
             if (Number.isFinite(m.glanz)) material.specularIntensity = m.glanz;
+            // Lackschicht (18.11.2026, Goldprinzessin: das Weiß stand matt da, Foto und Franks Modell zeigen glänzenden Lack) — wie `Genesis9glanz`: clearcoat über der Grundschicht
+            if (Number.isFinite(m.klarlack) && material.isMeshPhysicalMaterial) {
+                material.clearcoat = m.klarlack;
+                material.clearcoatRoughness = Number.isFinite(m.klarlackrauheit) ? m.klarlackrauheit : 0.05;
+            }
+            // Spiegelnde Kostümteile (18.11.2026, `bausteine/kostuemzeilen.py`): Studio-Umgebung, Stärke = `umgebung`
+            if (Number.isFinite(m.umgebung)) {
+                material.envMap = Meshgenesisumgebung.karte();
+                material.envMapIntensity = m.umgebung;
+            }
             // Materialkarte je Texel (G Rauheit, B Metall, A Glanz) — dann gelten die Werte der Karte, die Zahlen oben sind nur ihr Mittel
             if (m.bild_material) {
                 const karte = lader.load(`${this.basis}/bild/${m.bild_material}`, () => Meshgenesisflaechennetz.nachLaden?.());

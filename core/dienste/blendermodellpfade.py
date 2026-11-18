@@ -8,7 +8,7 @@ Reine Leseoperation.
 
     Auftragsordner   `<OBJECTS_ROOT>/blendermodellauftraege/<kennung>/` — die Quelle der Wahrheit
     Netz (GLB)       das Netz aus den Fotos, `netz/mesh.glb`
-    Ablage           `output/Export/BlenderModel/<Name>_<Anlagezeit>/` — Modell, Kacheln, Bilder, Netz
+    Ablage           `3DObjects/_Output/BlenderModel/<Name>_<Anlagezeit>/` — Modell, Kacheln, Bilder, Netz
 """
 
 from ..daten.blendermodellablage import Blendermodellablage

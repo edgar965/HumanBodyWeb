@@ -57,6 +57,25 @@ export class Genesis9materialabruf {
      * @returns {Promise<{daten: object, stellung: string, stufe: string, material: string, neu: boolean}>}  `neu`: noch abzulegen (`merken`)
      */
     static async holen(inst, adresse, nutzlast) {
+        const vorab = inst._vorabKoerper;
+        inst._vorabKoerper = null;
+        if (vorab && vorab.schluessel === JSON.stringify([adresse, nutzlast])) return vorab.versprechen;
+        return Genesis9materialabruf._holen(inst, adresse, nutzlast);
+    }
+
+    /**
+     * Den Körper schon anfragen, während die Stücke der Stufe noch bauen (18.11.2026, Edgar: „laden eines Charakters dauert immer noch um die 8 s"): `Genesis9haeppchen`
+     * fragte ihn erst nach dem letzten Stück an — gemessen an Luna (/Charakter/, Server warm) nach 2,28 s, das Stück war nach 1,18 s da. Gebaut wird weiter zuletzt und auf
+     * Ruhe; `holen` nimmt die Anfrage nur, solange Adresse und Rumpf dieselben sind (sonst kam ein Reglerzug dazwischen, die Antwort gehörte zur alten Stellung).
+     */
+    static vorab(inst, adresse) {
+        const nutzlast = Genesis9materialabruf.nutzlast(inst);
+        const versprechen = Genesis9materialabruf._holen(inst, adresse, nutzlast);
+        versprechen.catch(() => {});        // stumm gewollt: den Fehler bekommt, wer die Antwort nimmt (`holen`); ohne Abnehmer zählt er nicht
+        inst._vorabKoerper = { schluessel: JSON.stringify([adresse, nutzlast]), versprechen };
+    }
+
+    static async _holen(inst, adresse, nutzlast) {
         const stellung = Genesis9materialabruf.stellung(adresse, nutzlast);
         const stufe = Genesis9antwortspeicher.stufe(adresse);
         const material = Genesis9materialabruf.material(nutzlast);

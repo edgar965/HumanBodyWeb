@@ -3,7 +3,7 @@
 
 Edgar: „mach mir die Buttons zum speichern des Modells in dem Bereich ‚Ganzer Körper‘, rechts unten … export als glb, obj, blend mit Checkbox mit oder ohne Animation“, „bitte auch pfad
 für den Export vorbelegen“. Das Modell ist die Ausgabe der Seite als Genesis-Figur mit den Stücken der KI (`Meshgenesisfigurbewegung`), gebaut im Browser.
-Exportordner `output/Export/Mesh-Genesis/<Name des Tests>` (wie MeshTo3D, BlenderModel, 2D3D Kleider — NICHT `3DObjects/modelsExport`: das ist die Jobliste von Foto-Genesis);
+Exportordner `3DObjects/_Output/Mesh-Genesis/<Name des Tests>` (wie MeshTo3D, BlenderModel, 2D3D Kleider — NICHT `3DObjects/_Output/modelsExport`: das ist die Jobliste von Foto-Genesis);
 Arbeitsordner `exportleiste/` im Ordner des Tests.
 """
 

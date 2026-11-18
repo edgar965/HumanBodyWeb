@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Meshgenesislaeufe — der jüngste Trainingslauf eines Jobs, wie er auf der Platte steht (14.10.2026).
 
-Das Trainingsskript (`ProjektTemp/_wegwerf/meshgenesis_ursula_netz.py`) legt je Lauf einen Ordner `3DObjects/meshgenesis/<Modell>/_laeufe/<JJJJ.MM.TT.HH.MM>_<Name>/` an:
+Das Trainingsskript (`ProjektTemp/_wegwerf/meshgenesis_ursula_netz.py`) legt je Lauf einen Ordner `3DObjects/_Output/MeshGenesisJobs/<Modell>/_laeufe/<JJJJ.MM.TT.HH.MM>_<Name>/` an:
 `lauf.log` (laufend, Zeile für Zeile geschrieben) und — erst am Ende — `lauf_ergebnis.json` (Verlauf und Maße je Gruppe). Hier wird nur gelesen:
 
     Meshgenesislaeufe.letzter('Ursula1') -> None | {name, status, vor_s, epochen, epoche, verlauf, dauer_s, proben, masse, zeilen}

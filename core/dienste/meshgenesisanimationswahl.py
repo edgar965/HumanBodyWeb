@@ -3,7 +3,7 @@
 
 Edgar: „Mach die Standard Animation auf allen Jobs wieder rein, Testjob und trainings jobs, nur bei der Figur. So wie die Mesh-3D Jobs, mit der Standardanimation, playleiste, stop und pause usw.“
 Dieselbe Wahl wie bei Mesh-3D (`Mesh3danimationswahl`: `animation.json` mit `{"bvh": "Kategorie/Name"}`, Vorgabe A_Results/DanceKurz, Prüfung gegen die BVH-Bibliothek, `fehlt` wenn die Datei
-verschwunden ist) — nur liegt die Datei im Ordner des Jobs (`3DObjects/meshgenesis/<ordner>/`) bzw. des Tests (`_test/<kennung>/`), nicht im Importordner von Mesh-3D. Den Retarget rechnet der Browser über
+verschwunden ist) — nur liegt die Datei im Ordner des Jobs (`3DObjects/_Output/MeshGenesisJobs/<ordner>/`) bzw. des Tests (`_test/<kennung>/`), nicht im Importordner von Mesh-3D. Den Retarget rechnet der Browser über
 denselben Endpunkt wie die Charakter-Seite (`/api/retarget/`, Ziel `genesis9`, Regler der Figur).
 
     Meshgenesisanimationswahl.fuer_job(job_id) / .fuer_test(kennung) -> Meshgenesisanimationswahl oder None

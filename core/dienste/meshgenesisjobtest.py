@@ -37,9 +37,9 @@ class Meshgenesisjobtest:
 
     @classmethod
     def kennungen(cls):
-        """Die Kennungen aller Tests, die zu einem Job unter `3DObjects/fotogenesis/` gehören."""
+        """Die Kennungen aller Tests, die zu einem Job unter `3DObjects/_Foto_3D/` gehören."""
         genannt, namen = set(), set()
-        for datei in (Path(settings.OBJECTS_ROOT) / 'fotogenesis').glob('*/job.json'):
+        for datei in (Path(settings.OBJECTS_ROOT) / '_Foto_3D').glob('*/job.json'):
             test = cls._json(datei).get('meshgenesis_test')
             if test:
                 genannt.add(str(test))

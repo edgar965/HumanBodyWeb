@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Fotogenesisadresse — die Adresse eines Tests von Foto-Genesis folgt seinem Namen (07.11.2026, Edgar: „nach einer Umbenennung des Jobs soll sich auch die Adresse ändern“).
 
-Nur die Seite heißt anders. Der Schlüssel bleibt die Kennung (`job['id']`, der Ordner unter `3DObjects/fotogenesis/`): `job.json` trägt absolute Pfade, Läufe und `/api/fotogenesis/<id>/…` hängen an ihr, darum
+Nur die Seite heißt anders. Der Schlüssel bleibt die Kennung (`job['id']`, der Ordner unter `3DObjects/_Foto_3D/`): `job.json` trägt absolute Pfade, Läufe und `/api/fotogenesis/<id>/…` hängen an ihr, darum
 wird nichts umbenannt und nichts verschoben. Die alte Adresse leitet um (`Fotogenesisendpunkte.test`), Lesezeichen und Links anderer Seiten bleiben gültig.
 
 Es zählt der angezeigte Name, ob er aus `name.json` (Stift auf der Seite) oder aus der `job.json` kommt: Session3dTools steht in der `job.json`, der Ordner heißt anders. Exporte (ohne `name_vorgabe`)

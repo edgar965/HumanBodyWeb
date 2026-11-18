@@ -31,6 +31,7 @@ from .api.gcgenesis import Gcgenesisapi
 from .api.g9eigenehautapi import G9eigenehautapi
 from .api.g9eigenehautpflegeapi import G9eigenehautpflegeapi
 from .api.g9figur import G9figur
+from .api.g9reglerapi import G9reglerapi
 from .api.g9fototextur import G9fototextur
 from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
 from .api.g9anatomiekartenapi import G9anatomiekartenapi
@@ -191,7 +192,7 @@ CHARAKTER = [
     # Genesis 9 (Daz, 17.09.2026, core/api/g9figur.py) — dieselbe Ordnung:
     # Regler, Garderobe und Texturen VOR `<str:name>/netz/`.
     path('api/character/genesis9-figur/', G9figur.liste, name='g9_figur_liste'),
-    path('api/character/genesis9-figur/regler/', G9figur.regler,
+    path('api/character/genesis9-figur/regler/', G9reglerapi.regler,
          name='g9_figur_regler'),
     path('api/character/genesis9-figur/posen/', G9posenapi.posen,
          name='g9_figur_posen'),

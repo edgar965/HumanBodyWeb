@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Meshgenesisrechenschlange — Warteschlange, Start und Anlage der Rechenläufe von Mesh-Genesis (23.10.2026, zu `Meshgenesisrechenlauf`).
 
-Ein Lauf zur Zeit: `3DObjects/meshgenesis/_rechnen/laeuft.json` (PID, Kennung) hält ihn, `schlange.json` die wartenden Kennungen. „Rechnen“ reiht ein und startet einen abgelösten Arbeitsprozess
+Ein Lauf zur Zeit: `3DObjects/_Output/MeshGenesisJobs/_rechnen/laeuft.json` (PID, Kennung) hält ihn, `schlange.json` die wartenden Kennungen. „Rechnen“ reiht ein und startet einen abgelösten Arbeitsprozess
 (`manage.py meshgenesis_rechnen`), wenn keiner lebt; der arbeitet die Schlange ab. Ein Test aus einer hochgeladenen Datei bekommt `_test/<kennung>/eingang/<datei>` und `anlage.json`
 ({name, quelle, geschlecht}) — die Schrittskripte finden ihn darüber (`meshgenesis_test_rechnen.TESTS`, `Vorstufentest`).
 """
@@ -33,7 +33,7 @@ class Meshgenesisrechenschlange:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_rechnen'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_rechnen'
 
     @classmethod
     def _lesen(cls, name, vorgabe):

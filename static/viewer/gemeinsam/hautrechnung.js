@@ -2,6 +2,7 @@ import { Hautmaske } from './hautmaske.js';
 import { Hautmaskegeometrie } from './hautmaskegeometrie.js';
 import { Hauteinzugrechnung } from './hauteinzugrechnung.js';
 import { Saumschnitt } from './saumschnitt.js';
+import { Hautdurchsicht } from './hautdurchsicht.js';
 
 /**
  * Hautrechnung — der Zahlenteil von `Hautverdeckung.anwenden`: welche Körperpunkte unter der Kleidung liegen und wohin die
@@ -36,10 +37,17 @@ export class Hautrechnung {
         const normalen = Hautmaskegeometrie.normalen(pos, index);
         // Je Punkt die Tiefe, bis zu der die Haut unter dem deckenden Stück nachgibt (`Bauart`, 12.11.2026) — das tiefste Stück gewinnt.
         const nachgeben = new Float32Array(n);
-        const maske = Hautmaske.verdeckt(pos, index, stoffe, { ersatz, hoehe, rand, normalen, nachgeben });
+        // Durchsichtige Stücke verdecken nichts — unter ihnen gibt die Haut nur nach, wo sie durchstößt (`Hautdurchsicht`, 18.11.2026).
+        const deckend = stoffe.filter((s) => !s.durchsicht);
+        const maske = Hautmaske.verdeckt(pos, index, deckend, { ersatz, hoehe, rand, normalen, nachgeben });
+        // Deckende Stücke ohne Ersatzstücke (die senkt `Hautanschmiegung`): verdeckte Haut vor dem Stoff darf bis hinter ihn nachgeben (`Hautdurchsicht.anheben`, 18.11.2026).
+        const tief = Hautdurchsicht.alle(pos, normalen, deckend.filter((s) => !s.ersatz), true);
+        if (tief) Hautdurchsicht.anheben(nachgeben, maske, tief);
         // Die eigenen Ruhenormalen des Körpers gelten auch für den Einzug — nicht ein zweites Mal gerechnet (270 ms).
         const einzug = Hauteinzugrechnung.rechnen(pos, maske, index,
-                                                  { kanten: Saumschnitt.kanten(stoffe), hautnormalen: normalen, nachgeben });
+                                                  { kanten: Saumschnitt.kanten(deckend), hautnormalen: normalen, nachgeben });
+        const durch = Hautdurchsicht.alle(pos, normalen, stoffe.filter((s) => s.durchsicht));
+        if (durch) einzug.gesetzt += Hautdurchsicht.eintragen(einzug.werte, maske, durch, normalen);
         return { maske, ersatz, hoehe, rand, normalen, einzug, randabstaende: stoffe.map((s) => s.randabstand || null),
                  ms: Math.round(performance.now() - t0) };
     }

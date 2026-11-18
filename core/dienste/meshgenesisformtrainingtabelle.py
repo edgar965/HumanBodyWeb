@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Meshgenesisformtrainingtabelle — die Trainingsläufe der gemeinsamen Netze im Reiter „Formtraining“ auf /mesh-genesis/ als djangoBase-Tabelle (18.10.2026).
 
-Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw.“ Eine Zeile je Ordner unter `3DObjects/meshgenesis/_vorstufe/laeufe/` (`Meshgenesisformtraining`),
+Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw.“ Eine Zeile je Ordner unter `3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/` (`Meshgenesisformtraining`),
 der jüngste zuerst; laufende Zeilen tragen die Klasse `meshgenesis-laeuft`. Gleiche Bauart wie `Meshgenesistabelle`. Seit dem Abend öffnet eine Zeile die Seite des Laufs
 (`/mesh-genesis/formtraining/<lauf>/`, `Meshgenesisformlaufendpunkte`): Klasse `meshgenesistabelle` (Klick über `Meshgenesisliste`), die Adresse trägt der Link in der Zelle „Lauf“.
 """
@@ -20,7 +20,7 @@ __all__ = ['Meshgenesisformtrainingtabelle']
 class Meshgenesisformtrainingtabelle:
     SCHLUESSEL = 'meshgenesis-formtraining'
     SPALTEN = (
-        {'label': 'Lauf', 'key': 'lauf', 'titel': 'Ordner unter 3DObjects/meshgenesis/_vorstufe/laeufe ohne die Startzeit; der volle Name steht im Tooltip'},
+        {'label': 'Lauf', 'key': 'lauf', 'titel': 'Ordner unter 3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe ohne die Startzeit; der volle Name steht im Tooltip'},
         {'label': 'Art', 'key': 'art', 'titel': 'Formkopf: sagt das Rig UND die Genesis-Formregler voraus (Formtraining). Vorstufe: nur das Rig der Figur in der A-Pose'},
         {'label': 'Zuletzt', 'key': 'zuletzt',
          'titel': 'Fertig: Ende des Trainings (Änderungszeit von lauf_ergebnis.json). Läuft oder steht: Zeit der letzten Zeile im lauf.log'},
@@ -42,7 +42,7 @@ class Meshgenesisformtrainingtabelle:
 
     def tabelle(self, laeufe):
         return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(lauf) for lauf in laeufe],
-                'klasse': 'auftragstabelle meshgenesistabelle meshgenesisformtabelle', 'leer': 'Noch kein Trainingslauf unter 3DObjects/meshgenesis/_vorstufe/laeufe.'}
+                'klasse': 'auftragstabelle meshgenesistabelle meshgenesisformtabelle', 'leer': 'Noch kein Trainingslauf unter 3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe.'}
 
     def zeile(self, lf):
         epochen = '%d von %d' % (lf['epoche'], lf['epochen']) if lf['zustand'] != 'fertig' and lf['epochen'] else str(lf['epoche'] or lf['epochen'] or '—')

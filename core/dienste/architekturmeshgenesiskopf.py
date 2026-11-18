@@ -54,7 +54,7 @@ class Architekturmeshgenesiskopf:
     @classmethod
     def kontext(cls):
         from .meshgenesiskifassungen import Meshgenesiskifassungen
-        wurzel = Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        wurzel = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
         lauf = Meshgenesiskifassungen.lesen().get('kopfnetz')
         ordner = wurzel / '_kopfnetz' / 'laeufe' / str(lauf)
         ergebnis = cls._json(ordner / 'lauf_ergebnis.json') or {}

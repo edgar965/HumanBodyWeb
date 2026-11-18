@@ -233,7 +233,7 @@ class Meshfigurendpunkte:
     @staticmethod
     def _entfernen(job):
         """Auftragsordner und Eintrag — das gespeicherte Modell und die Ablage unter
-        `output/Export/MeshTo3D` bleiben: sie gehören dem Nutzer, nicht dem Auftrag."""
+        `3DObjects/_Output/MeshTo3D` bleiben: sie gehören dem Nutzer, nicht dem Auftrag."""
         if job.laeuft:
             Meshfigurarbeiter.anhalten(job)
         Meshfigurablage(job.kennung).loeschen()

@@ -238,7 +238,7 @@ class Workflowlauf:
             teile=[
                 ('export — Figur als GLB mit Rig', W.EXPORT),
                 ('film — nur mit BVH-Datei', W.FILM),
-                ('speichern — Ablage output/Export/Engine2d3dKleider', W.SPEICHERN),
+                ('speichern — Ablage 3DObjects/_Output/Engine2d3dKleider', W.SPEICHERN),
             ],
         ).mit(film)
         return Workflowbaum(

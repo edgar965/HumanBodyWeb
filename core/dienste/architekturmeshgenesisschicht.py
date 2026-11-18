@@ -3,7 +3,7 @@
 
 Edgar, 21.10.2026: „das ist doch gaga, wie sieht die KI nicht, welches Zielstück sie bauen soll?? wie trainierst du denn??“ → „mach, und update auch die Hilfe dateien“.
 Konzept `Docu/konzepte/2026-10-21_meshgenesis-kleider-wie-das-ziel-konzept.md`, Code `ProjektTemp/_wegwerf/meshgenesis_schicht_*.py`.
-Gelesen beim Aufruf (alles unter `3DObjects/meshgenesis/_schicht/`): `darstellbar_v1.json` (Rückbau ohne Netz, `meshgenesis_schicht_darstellbar.py`), der gewählte Lauf (`gewaehlt.json` → `laeufe/<Lauf>/
+Gelesen beim Aufruf (alles unter `3DObjects/_Output/MeshGenesisJobs/_schicht/`): `darstellbar_v1.json` (Rückbau ohne Netz, `meshgenesis_schicht_darstellbar.py`), der gewählte Lauf (`gewaehlt.json` → `laeufe/<Lauf>/
 lauf_ergebnis.json`, `meshgenesis_schicht_training.py` bzw. `…_training3.py`), `gegen_ziel.json` (Wege gegen die Zielstücke, `flaeche_gegen_ziel.py --ablegen`) und `pruefung.json`
 (Prüfung nach Fehlerklassen, `schicht_pruefung_lauf.py --ablegen`, Konzept Abschnitt 8). Fehlt eine Datei, steht der Teil leer und sagt es.
 """
@@ -41,7 +41,7 @@ class Architekturmeshgenesisschicht:
 
     @staticmethod
     def wurzel():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_schicht'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_schicht'
 
     @classmethod
     def _json(cls, name):

@@ -11,7 +11,7 @@ Edgar: „mach das: Formvariante als Jobseite“. Alles von der Platte, nichts g
 Zeilen ↔ Proben: die Trainingsskripte legen je Gruppe eine Zeile je Probe in der Reihenfolge von `proben.json` ab (`meshgenesis_vorstufe_form.py`, `meshgenesis_formdaten2.py`) und lassen eine Probe nur aus,
 wenn keine ihrer Wolken taugt (`ausgelassen` → „<Figur>/<nr>/k<k>“). Stimmt die nachgebaute Zuordnung nicht mit der Zahl der Zeilen überein, gibt es KEINE Zuordnung (nur das Mittel) — nie eine verschobene.
 
-    Meshgenesisformvariante.finden(name)        -> Ordner unter 3DObjects/meshgenesis oder None (nur ein direkter Unterordner)
+    Meshgenesisformvariante.finden(name)        -> Ordner unter 3DObjects/_Output/MeshGenesisJobs oder None (nur ein direkter Unterordner)
     Meshgenesisformvariante.laeufe(name)        -> [{name, kurz, zeit}] der Läufe, die die Figur tragen, der jüngste zuerst
     Meshgenesisformvariante.lesen(name, lauf)   -> {figur, modell, lauf, laeufe, proben, werte, echt, regler, fremde, hinweis} | None
 """

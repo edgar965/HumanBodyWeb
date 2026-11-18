@@ -28,7 +28,7 @@ Daten: `core/api/meshgenesisformlauf.py` (`Meshgenesisformlauf`, `…gruppen`, `
     </div>
     {% endif %}
     <dl class="meshgenesis-fakten">
-        <dt>Ordner</dt><dd><code>3DObjects/meshgenesis/_vorstufe/laeufe/{{ lf.name }}</code></dd>
+        <dt>Ordner</dt><dd><code>3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/{{ lf.name }}</code></dd>
         <dt>Art</dt><dd>{{ lf.art }}{% if lf.probe %} · Probelauf{% endif %}</dd>
         <dt>Gestartet</dt><dd>{{ zeiten.start }}</dd>
         {% if lf.zustand == 'fertig' %}<dt>Fertig</dt><dd>{{ zeiten.ende }}</dd>{% else %}<dt>Letzte Zeile im Log</dt><dd>{{ zeiten.letzte }}{% if zeiten.still %} (vor {{ zeiten.still }}){% endif %}</dd>{% endif %}

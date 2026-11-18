@@ -3,7 +3,7 @@ import { Modellansichten } from './modellansichten.js';
 
 /**
  * Modellexportordner — Ordner und Dateiname des Exportdialogs (Edgar, 18.10.2026): „Der Exportordner soll
- * A:\3DTools\3DObjects\modelsExport + <Modellname> sein als Default, aber änderbar, mit Folder Suchen Dialog, und
+ * A:\3DTools\3DObjects\_Output\modelsExport + <Modellname> sein als Default, aber änderbar, mit Folder Suchen Dialog, und
  * Datei ändern. Die Dateinamen so wie das Modell, die jpg zzgl. _vorne, _links, _rechts, _hinten."
  *
  * Der Dialog schreibt GENAU in den angezeigten Ordner (`direkt`), gleichnamige Dateien werden überschrieben —

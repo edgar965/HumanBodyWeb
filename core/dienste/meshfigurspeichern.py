@@ -8,7 +8,7 @@ Zusatz „Mesh" und wird nie über ein fremdes Modell geschrieben (Projektregel:
 die Oberfläche schreiben in Edgars Daten — am 10.09. wurde so `FemaleGarmentCode` überschrieben):
 gehört eine gleichnamige Datei nicht zu DIESEM Auftrag, kommt eine Nummer dazu.
 
-ABLAGE (`output/Export/MeshTo3D/<Name>_<JJJJ.MM.TT.HH.MM>/`, Edgar: „Das Ergebnis dann hier:
+ABLAGE (`3DObjects/_Output/MeshTo3D/<Name>_<JJJJ.MM.TT.HH.MM>/`, Edgar: „Das Ergebnis dann hier:
 …\\output\\Export\\MeshTo3D"): das Modell als JSON mit relativen Texturnamen, die Kacheln, der
 Eigenmorph (npz + Steckbrief), Vorschau- und Vergleichsbilder, `bericht.json` mit allen Zahlen.
 Ordnername aus der ANLAGEZEIT (wie `Meshexportablage`): ein zweiter Lauf ersetzt seine eigene

@@ -3,7 +3,7 @@
 
 Edgar: „Was fehlt dir noch, um diese Trainingsjobs perfekt per Knopfklick zu erzeugen??? ohne Wegwerf-Skripte!!“ — bis heute wählte jedes Skript der Ketten sein Netz selbst (`ls … | tail -1`,
 „jüngster Lauf“, `gewaehlt.json`), ein Neulauf konnte darum ein anderes Ergebnis geben. Der Rechenlauf (`Meshgenesisrechenlauf`) liest die Fassungen nur hier und reicht sie den Schritten
-ausdrücklich weiter. Die Datei `3DObjects/meshgenesis/ki_fassungen.json` wird beim ersten Lesen mit den Netzen geschrieben, die die Testseiten am 23.10.2026 zeigen (Edgar: `test.json` → `lauf`,
+ausdrücklich weiter. Die Datei `3DObjects/_Output/MeshGenesisJobs/ki_fassungen.json` wird beim ersten Lesen mit den Netzen geschrieben, die die Testseiten am 23.10.2026 zeigen (Edgar: `test.json` → `lauf`,
 `form.apose_lauf`); wer ein Netz tauscht, ändert die Datei — jeder Lauf schreibt die Fassungen, mit denen er rechnete, in seinen Stand.
 """
 import json
@@ -60,7 +60,7 @@ class Meshgenesiskifassungen:
 
     @staticmethod
     def datei():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / 'ki_fassungen.json'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / 'ki_fassungen.json'
 
     @classmethod
     def lesen(cls):
@@ -79,4 +79,4 @@ class Meshgenesiskifassungen:
 
     @staticmethod
     def vorstufe_pfad(name):
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_vorstufe' / 'laeufe' / name
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_vorstufe' / 'laeufe' / name

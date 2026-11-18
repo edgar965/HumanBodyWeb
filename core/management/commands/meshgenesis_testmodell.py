@@ -14,7 +14,7 @@ class Command(BaseCommand):
     help = 'Speichert die vorhergesagte Figur eines Mesh-Genesis-Tests mit den gewählten Kleidern (Katalog oder aus dem Netz) als Genesis-Modell.'
 
     def add_arguments(self, parser):
-        parser.add_argument('kennung', help='Kennung des Tests (Ordner unter 3DObjects/meshgenesis/_test)')
+        parser.add_argument('kennung', help='Kennung des Tests (Ordner unter 3DObjects/_Output/MeshGenesisJobs/_test)')
         parser.add_argument('geschlecht', choices=('weiblich', 'maennlich'))
         parser.add_argument('name', help='Name des Modells')
         parser.add_argument('--ziel', default=None, help='Ordner für das Modell (Vorgabe: die Modelle der Szene)')

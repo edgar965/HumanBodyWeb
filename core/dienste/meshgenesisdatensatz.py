@@ -2,7 +2,7 @@
 """Meshgenesisdatensatz — was vom Datensatz eines Jobs wirklich auf der Platte liegt (14.10.2026).
 
 Edgar: „eine Spalte ‚Datensatz‘ mit den echten Proben auf der Platte". Die Spalten „Proben / Training / Prüfposen" der Jobtabelle sind die Zahlen der Attrappe (die Posen, die die Seite zeigt);
-hier steht, wie viele Proben des echten Datensatzes (`3DObjects/meshgenesis/<Modell>/`, nicht im Git) bereits gerechnet sind.
+hier steht, wie viele Proben des echten Datensatzes (`3DObjects/_Output/MeshGenesisJobs/<Modell>/`, nicht im Git) bereits gerechnet sind.
 
     Meshgenesisdatensatz.zaehlen('Ursula1') -> {'vorhanden': 216, 'geplant': 425}     geplant = Einträge in `proben.json`, `None` ohne die Datei
 
@@ -30,7 +30,7 @@ class Meshgenesisdatensatz:
 
     @staticmethod
     def ordner(modell):
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / str(modell)
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / str(modell)
 
     @classmethod
     def zaehlen(cls, modell):

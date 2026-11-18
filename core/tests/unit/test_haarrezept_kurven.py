@@ -13,7 +13,7 @@
   test_27 `Haarrezeptleit.ordnen`: Leitwurzeln je Stützstelle, der übrige Anteil wie bisher, Wurzeln an Stützstellen außerhalb des Ansatzes
   test_28 `Haarwurzeldichte.haengend`: hängende Punkte unter nur einer Strähne dünn, übrige unverändert, Schalter aus → unverändert
   test_29 `Haarrezeptlagen.zweite`: zweite Lage nur unter Kandidaten mit anderer Spitze und genug Gewicht
-  test_30 `Haarrezeptlagen.zusatz`: Zusatzkurve für eine offene Spitze; `Haarrezeptleit` setzt Wurzeln an feste Stützstellen
+  test_30 `Haarrezeptlagen.zusatz`: Zusatzkurve für eine offene Spitze; `Haarrezeptleit` setzt Wurzeln an feste Stützstellen (weiter: `test_haarrezept_vielfach.py`)
 Sabotage: test_18 `- 1` hinter `searchsorted` weg → Abstände ungleich; test_19 `baender` immer 1 → eine Linie; test_20 `leit % spalten` durch die alte Stelle aus UV v
 ersetzen → Linie läuft zurück; test_21 `schub` mit Vorzeichen − → Punkte sinken.
 """

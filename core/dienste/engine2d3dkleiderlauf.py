@@ -24,7 +24,7 @@ Kopie von `Blendermodelllauf`, mit der Genesis-Engine (`Genesisengine2d3dkleider
     iterationen die Iterationen: Runden aus Optimierer + lokaler Prüf-KI gegen die Vorlagenbilder (`Iterationskreislauf`)
     export       die Figur als GLB mit Rig (`Engine2d3dKleiderexport`)
     film         BVH retargeten, die Engine rendert den Film (`Engine2d3dKleiderfilm`; ohne BVH übersprungen)
-    speichern    Ablage in `output/Export/Engine2d3dKleider` (`Engine2d3dKleiderspeichern`)
+    speichern    Ablage in `3DObjects/_Output/Engine2d3dKleider` (`Engine2d3dKleiderspeichern`)
 
 `ausfuehren(ab, bis)`: „Neu berechnen" beginnt beim gewählten Schritt; „Weiter iterieren" rechnet NUR
 „iterationen" (`ab = bis = 'iterationen'`) — der Film dauert Minuten und zeigt das Haar erst nach den

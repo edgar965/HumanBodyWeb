@@ -31,8 +31,8 @@ class G9eigenhaarbau:
     FREI_GB = 3.0
     #: Quellen, deren Inhalt in den Schlüssel des Antwortvorrats geht (die Engine liegt außerhalb von `G9antworten.QUELLEN`)
     QUELLEN = ('meshgenesis/haar_Bart', 'HumanBodyWeb/core/dienste/g9eigenhaarbau.py', 'HumanBodyWeb/core/dienste/g9eigenhaarstrang.py',
-               '3DObjects/meshgenesis/_katalog/haarkopfhaut_f1.pt',                # Kopfhaut der Genesis-Frisuren (`Haarkopfhaut`)
-               '3DObjects/meshgenesis/_katalog/bartwuchs_f1.pt')                   # Bartwuchs der Genesis-Bärte (`Bartwuchs`)
+               '3DObjects/_Output/MeshGenesisJobs/_katalog/haarkopfhaut_f1.pt',                # Kopfhaut der Genesis-Frisuren (`Haarkopfhaut`)
+               '3DObjects/_Output/MeshGenesisJobs/_katalog/bartwuchs_f1.pt')                   # Bartwuchs der Genesis-Bärte (`Bartwuchs`)
     _quellen = None
 
     @staticmethod

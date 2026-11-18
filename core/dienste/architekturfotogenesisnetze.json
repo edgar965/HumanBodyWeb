@@ -575,7 +575,7 @@
   },
   {
    "name": "Haut-KI (Mesh-Genesis Stufe 2)",
-   "datei": "A:\\3DTools\\3DObjects\\meshgenesis\\_stufe2\\laeufe\\2026.10.24.04.19_hautwechsel\\netz.pt",
+   "datei": "A:\\3DTools\\3DObjects\\_Output\\MeshGenesisJobs\\_stufe2\\laeufe\\2026.10.24.04.19_hautwechsel\\netz.pt",
    "gewichte": 117575374,
    "gruppen": {
     "form.punkt.#": {

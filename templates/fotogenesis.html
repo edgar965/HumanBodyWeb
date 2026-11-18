@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}{% load jsfassung %}{% load l10n %}{% load szenenskript %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load hautmaskenfassung %}{% load l10n %}{% load szenenskript %}
 {% block title %}{{ job.name }} · Foto-Genesis{% endblock %}
 
 {% comment %}
@@ -17,7 +17,7 @@ Die Genesis-Figur baut derselbe Code wie auf der Mesh-Genesis-Jobseite — darum
 <link rel="stylesheet" href="{% fassungspfad 'css/figurbewegung.css' %}">
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
-<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="hautmaskenfassung" content="{% hautmaskenfassung %}">
 {% comment %}keine Schnellanzeige (Pixeldichte 1, grobes Netz) — die kam am 24.10.2026 mit der Kopie von meshgenesis.html; Edgar wollte sie nur für Mesh-Genesis (19.10.2026), und hier
    war das Gesicht oben deshalb schlechter als in den Bildern unten (25.10.2026: Leinwand 668 × 735 bei devicePixelRatio 1,575){% endcomment %}
 <meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">

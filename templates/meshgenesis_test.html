@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}{% load jsfassung %}{% load szenenskript %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load hautmaskenfassung %}{% load szenenskript %}
 {% block title %}{{ test.name }} · Test · Mesh-Genesis{% endblock %}
 
 {% comment %}
@@ -22,7 +22,7 @@ Endpunkte `core/api/meshgenesistest.py`, Seite `static/viewer/meshgenesis/meshge
 {% comment %}Die Animation der Ausgabe ist eine Genesis-Figur aus dem Code der Charakter-Seite (22.10.2026, `Meshgenesisfigurbewegung`) — dieselben Angaben wie auf der Jobseite (`meshgenesis.html`):
 Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schaltet), Weg der Bilder.{% endcomment %}
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
-<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="hautmaskenfassung" content="{% hautmaskenfassung %}">
 <meta name="schnellanzeige" content="an">
 <meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
 {# subdivide und mesh_bvh: Die Exportleiste schreibt GLB und OBJ mit `Modellexport` der Charakter-Seite, dessen Module beide erwarten (wie `meshfigur_auftrag.html`). #}

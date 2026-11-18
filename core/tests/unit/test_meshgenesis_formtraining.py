@@ -29,12 +29,12 @@ def _schreiben(datei, inhalt):
 
 
 class _Ablage:
-    """Eine Wurzel mit `3DObjects/meshgenesis/_vorstufe/laeufe` und `ProjektTemp/…/gpu.lock` wie auf der Platte."""
+    """Eine Wurzel mit `3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe` und `ProjektTemp/…/gpu.lock` wie auf der Platte."""
 
     def __init__(self, wurzel):
         self.wurzel = Path(wurzel)
         self.objekte = self.wurzel / '3DObjects'
-        self.laeufe = self.objekte / 'meshgenesis' / '_vorstufe' / 'laeufe'
+        self.laeufe = self.objekte / '_Output' / 'MeshGenesisJobs' / '_vorstufe' / 'laeufe'
 
     def einstellungen(self):
         return override_settings(OBJECTS_ROOT=self.objekte, TOOLS_ROOT=self.wurzel)
@@ -124,7 +124,7 @@ class FormvariantenTest(SimpleTestCase):
         Meshgenesisformvarianten.leeren()
 
     def _variante(self, a, name, dateien, kind=False):
-        ordner = a.objekte / 'meshgenesis' / name
+        ordner = a.objekte / '_Output' / 'MeshGenesisJobs' / name
         regler = {'g1:Kids4': 0.9} if kind else {'body_bs_MassAnkles': 0.1}
         _schreiben(ordner / 'modell.json', {'name': name, 'grundlage': 'Mann1', 'geschlecht': 'maennlich', 'gruppe': 'pruefung', 'figur': {'regler': regler}})
         _schreiben(ordner / 'proben.json', [{'nr': i + 1} for i in range(len(dateien))])
@@ -139,7 +139,7 @@ class FormvariantenTest(SimpleTestCase):
             a = _Ablage(o)
             self._variante(a, 'Form001', [['mia_v1_0.npz', 'apose_v9_0.npz', 'eingabe.npz'], ['mia_v2_0.npz'], ['eingabe.npz']], kind=True)
             self._variante(a, 'Form002', [['mia_v1_0.npz', 'apose_v9_0.npz']])
-            (a.objekte / 'meshgenesis' / 'Ursula1').mkdir(parents=True)         # kein FormNNN: kommt nicht in die Liste
+            (a.objekte / '_Output' / 'MeshGenesisJobs' / 'Ursula1').mkdir(parents=True)         # kein FormNNN: kommt nicht in die Liste
             with a.einstellungen():
                 jetzt = Meshgenesisformvarianten.alle()
                 Meshgenesisformvarianten.leeren()

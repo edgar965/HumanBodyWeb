@@ -15,7 +15,7 @@ einem Bild, sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden kön
     kleinsten ist: erst Größe und Proportionen, dann Körpertyp und Charaktere, dann die Körperbereiche, zuletzt in
     einer eigenen Kette das Gesicht. Was die Regler nicht erreichen, wird zum Eigenmorph; die Farbe des Netzes
     kommt auf die Genesis-Haut. Ergebnis: ein Genesis-Modell (Szene, Studio) und eine Ablage in
-    <code>output/Export/MeshTo3D</code>.</p>
+    <code>3DObjects/_Output/MeshTo3D</code>.</p>
     <form id="meshfigur-form" class="bildmodell-form" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bildmodell-felder">
@@ -33,11 +33,11 @@ einem Bild, sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden kön
         <div class="meshfigur-pfade">
             <label>Körpernetz – Pfad (statt Hochladen)
                 <input type="text" id="meshfigur-pfad-koerper" autocomplete="off" spellcheck="false"
-                       placeholder="z. B. A:\3DTools\HumanBodyWeb\output\Export\Foto3D\Damira_hunyuan2.glb">
+                       placeholder="z. B. A:\3DTools\3DObjects\_Output\Foto3D\Damira_hunyuan2.glb">
             </label>
             <label>Kopfnetz – Pfad (optional, wird an den Körper angepasst)
                 <input type="text" id="meshfigur-pfad-kopf" autocomplete="off" spellcheck="false"
-                       placeholder="z. B. A:\3DTools\HumanBodyWeb\output\Export\Foto3D\Damira_kopf.glb">
+                       placeholder="z. B. A:\3DTools\3DObjects\_Output\Foto3D\Damira_kopf.glb">
             </label>
         </div>
         <div class="mesh-optionen" id="meshfigur-optionen"></div>

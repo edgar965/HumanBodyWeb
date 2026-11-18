@@ -49,7 +49,7 @@ class Architektur2d3d:
         ('export', 'Engine2d3dKleiderexport', 'Die beste Runde als GLB mit Rig.'),
         ('film', 'Engine2d3dKleiderfilm', 'Die BVH-Bewegung (Vorgabe: der Tanz der Bibliothek, wenn die Datei da ist) auf Genesis 9 retargeten und mit dem allgemeinen Render-Rezept '
          '(Vorlage Figurfilm/standfilm, Mitsuba) rendern; ohne BVH übersprungen.'),
-        ('speichern', 'Engine2d3dKleiderspeichern', 'Ablage in output/Export/Engine2d3dKleider.'),
+        ('speichern', 'Engine2d3dKleiderspeichern', 'Ablage in 3DObjects/_Output/Engine2d3dKleider.'),
     ]
     #: Edgars Vorgabe für die Runden (30.09.2026, nachgeschärft 02.10.2026).
     VORGABE = ('Nach JEDER Runde prüft Fable das Ergebnis und optimiert den Code. „jede iteration wird von dir '

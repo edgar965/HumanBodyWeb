@@ -44,7 +44,7 @@ class FormvarianteTest(SimpleTestCase):
 
     def _ablage(self, o):
         """Form001 mit drei Trainingsproben; Lauf FERTIG (apose_v4, eine Wolke) und der jüngere Probelauf PROBE (apose_v9, Wolken 0,1,2, k1 von Probe 2 durchgefallen)."""
-        wurzel = Path(o) / '3DObjects' / 'meshgenesis'
+        wurzel = Path(o) / '3DObjects' / '_Output' / 'MeshGenesisJobs'
         figur = wurzel / 'Form001'
         self._schreiben(figur / 'modell.json', {'name': 'Form001', 'grundlage': 'Ursula1', 'geschlecht': 'weiblich', 'gruppe': 'training'})
         self._schreiben(figur / 'proben.json', [{'nr': n, 'name': 'Pose %d' % n, 'gruppe': 'training'} for n in (1, 2, 3)] + [{'nr': 4, 'name': 'Spagat', 'gruppe': 'spagat'}])
@@ -92,7 +92,7 @@ class FormvarianteTest(SimpleTestCase):
             self.assertTrue(any(w['schluessel'] == 'form_mm' and w['fehler'] for w in d['werte']))
             self.assertEqual(Meshgenesisformvariante.lesen('Form001', PROBE)['lauf']['wolken'], [0, 1, 2])
             self.assertEqual(Meshgenesisformvariante.lesen('Form001', 'gibtsnicht')['lauf']['name'], FERTIG)
-            self.assertEqual(Meshgenesisformvariante.mit_seite(Path(o) / '3DObjects' / 'meshgenesis' / '_vorstufe' / 'laeufe' / FERTIG), {'Form001'})
+            self.assertEqual(Meshgenesisformvariante.mit_seite(Path(o) / '3DObjects' / '_Output' / 'MeshGenesisJobs' / '_vorstufe' / 'laeufe' / FERTIG), {'Form001'})
 
     def test_5_regler_nach_abweichung_geklemmt(self):
         with Pruefablage.ordner('formvariante_') as o, self._ablage(o):

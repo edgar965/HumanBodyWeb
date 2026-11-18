@@ -38,7 +38,7 @@ class Werkzeugmeshfigur:
          'während eines Laufs antwortet Einstellungen/Starten mit 409. Zeiten (Damira, 27.09.2026): erster Lauf 571 s mit Körper 199 s, Gesicht 128 s, Textur 151 s; dritter 518 s. '
          'In 2D3D Kleider (Auftrag 2026.10.01.20.10.04, vor dem Frühstopp): koerper 217,9 s, gesicht 152,0 s, textur 210,1 s, frisur 161,1 s, Summe 872,0 s '
          '(architektur2d3dmessung.KOERPER). Ergebnis: Modell <Name> Mesh in data/models (Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle) und Ablage '
-         'output/Export/MeshTo3D/<Name>_<Zeit>/; „Auftrag löschen“ lässt Modell und Ablage stehen.'),
+         '3DObjects/_Output/MeshTo3D/<Name>_<Zeit>/; „Auftrag löschen“ lässt Modell und Ablage stehen.'),
         ('Optionen von „Mesh to 3D“',
          'Alle Einstellungen der Kette mit Vorgabe und Wirkung; jede Eingabe der Seite wird sofort gespeichert.',
          'api',

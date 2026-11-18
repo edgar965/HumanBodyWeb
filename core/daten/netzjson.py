@@ -14,6 +14,8 @@ import json
 
 from django.core.serializers.json import DjangoJSONEncoder
 
+from KoerperKI_alle.kartenwerte import Kartenwerte
+
 from .netzfeld import Netzfeld
 
 __all__ = ['Netzjson']
@@ -25,6 +27,8 @@ class Netzjson(DjangoJSONEncoder):
     def default(self, o):
         if isinstance(o, Netzfeld):
             return o.base64()
+        if isinstance(o, Kartenwerte):
+            return o.wert()             # Rückfall: ein Platzhalter, den `Netzfeld.abholen` nicht ersetzen konnte (in einem Tupel), einzeln abgeholt (18.11.2026)
         return super().default(o)
 
     @classmethod

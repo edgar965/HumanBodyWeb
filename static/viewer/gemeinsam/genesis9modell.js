@@ -4,6 +4,7 @@ import { Netzentsorgung } from './netzentsorgung.js';
 import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Genesis9hautmischung } from './genesis9hautmischung.js';
+import { Genesis9hautausgleich } from './genesis9hautausgleich.js';
 import { Genesis9hautfalten } from './genesis9hautfalten.js';
 import { Genesis9hautebenen } from './genesis9hautebenen.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
@@ -85,6 +86,7 @@ export class Genesis9Modell extends Modell {
         this.praesets = { ...(daten.praesets || {}) };
         /** Texturmischung (21.09.2026): weitere Hautsätze mit Prozent über der Haut (`Genesis9hautmischung`). */
         this.hautmischung = { ...(daten.hautmischung || {}) };
+        this.hautausgleich = { ...(daten.hautausgleich || {}) };   // Gleichmäßigkeit, Symmetrie, Schatten, Retusche in % (`Genesis9hautausgleich`, 18.11.2026)
         /** Hautebenen (17.10.2026): Hautton, Rötung, Sommersprossen, Altersflecken, Muskel-/Fettzeichnung, graue Haare — `{name: Prozent}` (`Genesis9hautebenen`). */
         this.hautebenen = { ...(daten.hautebenen || {}) };
         this.teilmaterial = { ...(daten.teilmaterial || {}) };   // Glanz, Rauheit … je Teil, `{augen: {glanz: 0.1}}` (`Genesis9teilmaterial`)
@@ -219,6 +221,7 @@ export class Genesis9Modell extends Modell {
         if (!neuesSkelett) Genesis9maske.nachMaterialwechsel(this);   // kein Skelettereignis: Loch, Naht und Randfarbe des frischen Körpers sonst nie neu (`genesis9maske.js`)
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
         if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
+        if (Genesis9hautausgleich.aktiv(this)) Genesis9hautausgleich.anwenden(this);
         // Ein neu gebautes Augennetz trägt wieder die Original-Karte — eine gewählte Augentextur (`detailfeldAnwenden`) neu legen.
         if (this.details?.[Augentextur.FELD] && this.details[Augentextur.FELD] !== Augentextur.ORIGINAL) {
             Genesis9augen.anwenden(this, this.details)
@@ -361,15 +364,6 @@ export class Genesis9Modell extends Modell {
             if (kennung) this.praesets[kategorie] = kennung;
             else delete this.praesets[kategorie];
         });
-    }
-
-    /** Ein Hautsatz der Texturmischung auf Prozent (0 = raus) — ohne Neubau des Körpers:
-     *  Gewichte sind Uniforms; nur eine neue oder verschwundene Schicht baut die Programme um. */
-    async hautmischungSetzen(id, prozent) {
-        if (prozent > 0) this.hautmischung[id] = Math.min(100, Math.round(prozent));
-        else delete this.hautmischung[id];
-        if (!Genesis9hautmischung.gewichte(this)) await Genesis9hautmischung.anwenden(this);
-        return this;
     }
 
     /** Eine Hautebene stellen (Prozent; `null` = Standard) — ohne Neubau des Körpers, nur Uniforms (`Genesis9hautebenen`). */

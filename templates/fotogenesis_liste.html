@@ -5,7 +5,7 @@
 {% comment %}
 Dashboard „Foto-Genesis“, Hauptansicht (24.10.2026) — Kopie von `meshgenesis_liste.html` (Edgar: „Ich sagte eine Kopie der Mesh3d-Ai jobs … keine Gerechnet Spalten, keine Jobauswahl zum Löschen usw“).
 Dieselben vier Reiter, dieselben Spalten (aus den Mesh-Genesis-Klassen, `Fotogenesistabellen`), Auswahl und „Gewählte löschen“ in Jobs und Test, „Neuer Test aus Fotos“ statt „aus einem Mesh“.
-Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DObjects/fotogenesis/<Name>/job.json`). Endpunkte: `core/api/fotogenesis.py`, `core/api/fotogenesisaktionen.py`.
+Jobs = Exporte mit Wahrheit (`3DObjects/_Output/modelsExport`), Test = echte Fotos (`3DObjects/_Foto_3D/<Name>/job.json`). Endpunkte: `core/api/fotogenesis.py`, `core/api/fotogenesisaktionen.py`.
 {% endcomment %}
 {% block extra_head %}
 <link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
@@ -33,7 +33,7 @@ Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DO
 <div data-reiterfeld="jobs">
 <div class="card meshgenesis-joblist" data-loeschen="jobs">
     <h2>Jobs</h2>
-    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Exporte in Foto-Genesis ausblenden (der Ordner in 3DObjects/modelsExport bleibt — Quelle von Mesh-Genesis)"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Exporte in Foto-Genesis ausblenden (der Ordner in 3DObjects/_Output/modelsExport bleibt — Quelle von Mesh-Genesis)"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Ein Job ist ein Export der Charakter-Seite: vier Fotos einer bekannten Genesis-Figur (Wahrheit). Ein Klick auf eine Zeile öffnet die Seite des Jobs: Fotos, Netz aus den Fotos,
         Genesis-Modell und Ergebnis (die Figur aus denselben Perspektiven gerendert). Bis Foto-Genesis eine eigene KI hat, kommen Genesis-Modell, Training und Rechenzeiten vom Mesh-Genesis-Job zum selben Export (Messlatte A).</p>
     {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
@@ -43,7 +43,7 @@ Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DO
 <div data-reiterfeld="test" hidden>
 <div class="card meshgenesis-joblist" data-loeschen="tests">
     <h2>Test</h2>
-    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/fotogenesis/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/_Foto_3D/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Echte Fotos <strong>ohne Wahrheit</strong> (Randy, Ed 2026, Zauberer …). Ein Klick öffnet den Test mit denselben vier Feldern wie ein Job; ohne bekannte Kamera gibt es Renderings,
         aber keine Zahl. Gerechnet, Laufzeit, Lauf und Figur zeigen den jüngsten Lauf der Foto-Kette (Formrest, Kopf, Größe; Status = Abnahmetabelle grün/rot; alle Läufe im Tooltip),
         ohne ihn den Mesh-Genesis-Test zum selben Netz (Messlatte A).</p>
@@ -52,7 +52,7 @@ Jobs = Exporte mit Wahrheit (`3DObjects/modelsExport`), Test = echte Fotos (`3DO
 {% comment %}Neuer Test aus Fotos (24.10.2026) — Gegenstück zu „Neuer Test aus einem Mesh“ auf /mesh-genesis/ (`Fotogenesisfotoneu`). Gerechnet wird noch nichts: Foto-Genesis hat noch keine eigene KI.{% endcomment %}
 <form class="card meshgenesis-joblist meshgenesis-testneu" id="fotogenesis-testneu">
     <h2>Neuer Test aus Fotos</h2>
-    <p class="hb-hinweis">Fotos einer Person von mehreren Seiten (JPG, PNG, WebP) hochladen — sie landen unter 3DObjects/fotogenesis/&lt;Name&gt;/. Die Winkel (0 vorne, 90 links, 180 hinten, 270 rechts) stehen danach in der job.json;
+    <p class="hb-hinweis">Fotos einer Person von mehreren Seiten (JPG, PNG, WebP) hochladen — sie landen unter 3DObjects/_Foto_3D/&lt;Name&gt;/. Die Winkel (0 vorne, 90 links, 180 hinten, 270 rechts) stehen danach in der job.json;
         Rechnen kommt mit der eigenen KI (Hilfe → Architektur → Foto-Genesis).</p>
     <label>Fotos <input type="file" name="fotos" accept=".jpg,.jpeg,.png,.webp" multiple required></label>
     <label>Name <input type="text" name="name" placeholder="wie das erste Foto"></label>

@@ -19,7 +19,7 @@ class Architekturfotogenesispshuman(Architekturfotogenesiskette):
     @classmethod
     def heute(cls):
         kaesten = [
-            {'titel': 'Fotos', 'skript': '3DObjects/fotogenesis/<Job>/job.json', 'kis': [],
+            {'titel': 'Fotos', 'skript': '3DObjects/_Foto_3D/<Job>/job.json', 'kis': [],
              'zeilen': ['Foto „vorn“ ist Pflicht,', 'Winkel je Foto,', 'Körpergröße, Geschlecht']},
             {'titel': 'Netz', 'skript': 'pshuman_port14/pshuman_job_rechnen.py', 'kis': [('Stable Diffusion', 'PSHuman: 1 Foto'), ('UP2You', 'oder alle Fotos, A-Pose')],
              'zeilen': ['ein farbiges Netz,', 'seine Rückseite ist erfunden', 'Ablage <Job>/pshuman/']},

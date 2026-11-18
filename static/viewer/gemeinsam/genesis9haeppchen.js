@@ -3,6 +3,7 @@ import { Figuraufbaustand } from './figuraufbaustand.js';
 import { Nutzerruhe } from './nutzerruhe.js';
 import { Netzstufenstand } from './netzstufenstand.js';
 import { Genesis9vorrat } from './genesis9vorrat.js';
+import { Genesis9materialabruf } from './genesis9materialabruf.js';
 
 /**
  * Genesis9haeppchen — die gewählte Stufe (fein oder ultrafein) STÜCK FÜR STÜCK nachholen, auf Wunsch erst nach Ruhe.
@@ -55,6 +56,8 @@ export class Genesis9haeppchen {
             melden();
             // Die Stücke zuerst, der Körper ZULETZT: Solange der grobe Körper steht, passt seine Haut-Maske zu ihm; der feine
             // hat noch keine, sein Skelett wäre neu und das Umbinden aller Stücke käme vor dem Ende (`Hautverdeckung`: 3,25 s).
+            // Angefragt wird der Körper aber schon jetzt, gebaut weiter zuletzt (`Genesis9materialabruf.vorab`, 18.11.2026).
+            if (stuecke.length && inst.constructor.ADRESSE) Genesis9materialabruf.vorab(inst, `${inst.constructor.ADRESSE}${encodeURIComponent(inst.figur)}/netz/`);
             for (const kennung of stuecke) {
                 if (Netzstufenstand.wahl !== ziel) break;     // inzwischen umgeschaltet
                 await Genesis9haeppchen._stueck(inst, kennung, vorBau);

@@ -15,15 +15,15 @@ class MeshgenesistestwahlTest(unittest.TestCase):
     def _ablage(self, einstellung=None, job=None):
         """Ein Test `t`, optional `einstellung.json` und ein Job, der ihn nennt."""
         wurzel = Path(tempfile.mkdtemp(dir=r'A:\3DTools\ProjektTemp\_wegwerf'))
-        test = wurzel / 'meshgenesis' / '_test' / 't'
+        test = wurzel / '_Output' / 'MeshGenesisJobs' / '_test' / 't'
         test.mkdir(parents=True)
         (test / 'anlage.json').write_text(json.dumps({'name': 'Tanz'}), encoding='utf-8')
         if einstellung is not None:
             (test / 'einstellung.json').write_text(json.dumps(einstellung), encoding='utf-8')
         if job:
-            (wurzel / 'fotogenesis' / job).mkdir(parents=True)
+            (wurzel / '_Foto_3D' / job).mkdir(parents=True)
             text = json.dumps({'meshgenesis_test': 't'})
-            (wurzel / 'fotogenesis' / job / 'job.json').write_text(text, encoding='utf-8')
+            (wurzel / '_Foto_3D' / job / 'job.json').write_text(text, encoding='utf-8')
         return wurzel, test
 
     def test_vorgaben_wie_in_der_kette(self):

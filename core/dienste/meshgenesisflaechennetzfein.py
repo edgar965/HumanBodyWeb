@@ -153,7 +153,7 @@ class Meshgenesisflaechennetzfein:
         eintrag, teile = G9garderobe.eintrag(kennung), G9garderobe.teile(kennung)
         loch = G9stueckersatz.loch_fuer(eintrag)
         lage = Torchfeld.astype(d['ruhe'][an], torch.float64)
-        kaefig = formung.punkte() - Torchfeld.feld([0.0, float(formung.boden()), 0.0], copy=True)
+        kaefig = formung.punkte() - formung.hoch()
         # wo der Bau das Stück hinlegte: grob nachgezogen (`Meshgenesismeshanatomie.anzeigenetz`) oder wie ausgeliefert (`G9stueckstarr.gezeigt`, Bau vor dem 08.11.2026)
         for name, rechnung in (('grob', lambda: G9stueckstarr.nachgezogen(eintrag, teile, kaefig, formung, grob=True)), ('gezeigt', lambda: G9stueckstarr.gezeigt(teile, formung))):
             quelle = Torchfeld.vstack(rechnung())

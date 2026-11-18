@@ -3,7 +3,7 @@
 
 Edgar: „passe auch deine Doku an … Mach die KopfKI, Haut KI rein, für alle KIs eine einzelne Grafik wie diese: Neuronale Netz - Figur; eine übergeordnete Grafik mit Kästchen und Ablauf, wie die KIs
 aufgerufen werden“. Aus dem Code und den Dateien gelesen beim Aufruf: die Schritte (`Meshgenesisrechenlauf.SCHRITTE`), welches Netz jeder Schritt nimmt (`ki_fassungen.json`), und je Netz der Steckbrief
-(`3DObjects/meshgenesis/netzsteckbriefe.json`, geschrieben von `meshgenesis/meshgenesis_netzsteckbrief.py` aus den Gewichtsdateien — der Server lädt kein torch). Von Hand: `KIS` (was hinein- und
+(`3DObjects/_Output/MeshGenesisJobs/netzsteckbriefe.json`, geschrieben von `meshgenesis/meshgenesis_netzsteckbrief.py` aus den Gewichtsdateien — der Server lädt kein torch). Von Hand: `KIS` (was hinein- und
 herausgeht, Wörter für die Bausteine — aus den Docstrings der Netze) und `FREMD` (Werkzeuge, die keine eigene KI sind).
 """
 
@@ -63,7 +63,7 @@ class Architekturmeshgenesiskis:
         from .meshgenesiskifassungen import Meshgenesiskifassungen
         from .meshgenesisrechenlauf import Meshgenesisrechenlauf
         f = Meshgenesiskifassungen.lesen()
-        datei = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / 'netzsteckbriefe.json'
+        datei = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / 'netzsteckbriefe.json'
         try:
             steck = json.loads(datei.read_text(encoding='utf-8'))
         except (OSError, ValueError):
@@ -87,7 +87,7 @@ class Architekturmeshgenesiskis:
         """Haut-KI: Messung des eingesetzten Laufs und des jüngsten Laufs daneben (`lauf_ergebnis.json`: echte Haut der Tripo-Jobs, Prüfung „Hautton und Tattoos folgen dem Eingang“) → [(Name, Wert)]."""
         if k != 'hautki':
             return []
-        ordner = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_hautki' / 'laeufe'
+        ordner = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_hautki' / 'laeufe'
         laeufe = sorted(p.name for p in ordner.glob('*') if (p / 'lauf_ergebnis.json').is_file())
         aus = []
         for name in dict.fromkeys([lauf] + laeufe[-1:]):

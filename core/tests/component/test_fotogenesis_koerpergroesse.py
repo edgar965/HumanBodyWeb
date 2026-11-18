@@ -22,7 +22,7 @@ class FotogenesisKoerpergroesseFeld(FotogenesisAblageMixin, SimpleTestCase):
         return self.client.post(adresse or self.ADRESSE, json.dumps(rumpf), content_type='application/json')
 
     def _info(self):
-        return json.loads((self.objekte / 'fotogenesis' / 'Fototest' / 'job.json').read_text(encoding='utf-8'))
+        return json.loads((self.objekte / '_Foto_3D' / 'Fototest' / 'job.json').read_text(encoding='utf-8'))
 
     def test_angabe_landet_in_der_job_json_und_die_anderen_felder_bleiben(self):
         antwort = self._senden({'koerpergroesse_m': 1.85})

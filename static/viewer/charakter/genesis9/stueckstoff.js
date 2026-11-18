@@ -4,6 +4,8 @@ import { Stoffwerte } from '../../gemeinsam/stoffwerte.js';
 import { Stoffarten } from '../../gemeinsam/stoffarten.js';
 import { markDirty } from '../undo.js';
 import { Stueckstoffzeilen } from './stueckstoffzeilen.js';
+import { Bauart } from '../../gemeinsam/bauart.js';
+import { Hautverdeckung } from '../../gemeinsam/hautverdeckung.js';
 
 /**
  * Stueckstoff — der Block „Stoff“ eines getragenen Genesis-Stücks: in Assets → Eigen (`Genesis9eigenstueck`) und in den Eigenschaften des
@@ -34,6 +36,7 @@ export class Stueckstoff {
         relief: 'Stärke der eigenen Normalkarte des Stücks (Nähte, Daz-Struktur, gebackene Falten). 1 = wie geliefert.',
         faeden: 'Fäden (bei Leder: Narben) je Zentimeter an der UV des Stücks. Feiner als ein Bildpunkt blendet die Bindung aus.',
         staerke: 'Wie stark sich die Bindung im Licht abzeichnet.',
+        transparenz: 'Durchsicht des Stoffs: 0 = deckend, 0,95 = fast klar. Ersetzt die Deckung des Herstellers (Daz „Cutout Opacity“, z. B. Shirt_open 0,8).',
     };
 
     /** Die Bedienzeilen des Stücks (ein Kasten, `data-stueckstoff` = Kennung). */
@@ -55,6 +58,7 @@ export class Stueckstoff {
             }, H.stoffart),
             Z.regler('rauheit', 'Rauheit', 0, 1, 0.01, stand.rauheit, (w) => aendern({ rauheit: w })),
             Z.regler('metall', 'Metall', 0, 1, 0.01, stand.metall, (w) => aendern({ metall: w })),
+            Z.regler('transparenz', 'Transparenz', 0, 0.95, 0.01, stand.transparenz, (w) => aendern({ transparenz: w }), H.transparenz),
             Z.regler('glanz', 'Glanz', 0, 2, 0.05, stand.glanz, (w) => aendern({ glanz: w }), H.glanz),
             Z.regler('saum', 'Glanzsaum', 0, 1, 0.05, stand.saum, (w) => aendern({ saum: w }), H.saum),
             Z.regler('saumstreuung', 'Saum weich', 0, 1, 0.05, stand.saumstreuung, (w) => aendern({ saumstreuung: w }), H.saumstreuung),
@@ -79,6 +83,7 @@ export class Stueckstoff {
             stoffart: Stoffarten.ARTEN[stoff.stoffart] ? stoff.stoffart : '',
             rauheit: zahl(stoff.rauheit, material?.roughness ?? 0.8),
             metall: zahl(stoff.metall, material?.metalness ?? 0),
+            transparenz: zahl(stoff.transparenz, Math.round((1 - (material?.opacity ?? 1)) * 100) / 100),   // ohne eigenen Wert: die Deckung des Herstellers
             glanz: zahl(stoff.glanz, v.glanz),
             saum: zahl(stoff.saum, v.saum),
             saumstreuung: zahl(stoff.saumstreuung, v.saumstreuung),
@@ -94,9 +99,17 @@ export class Stueckstoff {
         if (!werte) return false;
         // Neues Objekt: die gespeicherte Figur hält eine flache Kopie der Werte.
         werte.stoff = { ...(werte.stoff || {}), ...teil };
+        const vorher = Stueckstoff.durchsichtig(inst, kennung);
         Stoffwerte.stueck(inst, kennung, werte);
+        // Deckend ↔ durchsichtig: die Haut darunter wird anders behandelt (`Hautdurchsicht`, 18.11.2026) — Maske neu.
+        if (Stueckstoff.durchsichtig(inst, kennung) !== vorher) Hautverdeckung.sichtbarkeit(inst);
         markDirty();
         return true;
+    }
+
+    /** Wird ein Netz des Stücks durchsichtig gezeichnet (`Bauart.durchsichtig`)? */
+    static durchsichtig(inst, kennung) {
+        return Umfaerbung.netze(inst, kennung).some(({ netz }) => Bauart.durchsichtig(netz));
     }
 
     /** Eine Stoffart wählen: alle Stoffwerte außer Relief auf ihre Zeile (`Stoffarten.werte`). */

@@ -29,13 +29,13 @@ class JobtestPapierkorbTest(unittest.TestCase):
         self.addCleanup(einstellung.disable)
 
     def _test(self, kennung):
-        p = self.wurzel / 'meshgenesis' / '_test' / kennung
+        p = self.wurzel / '_Output' / 'MeshGenesisJobs' / '_test' / kennung
         p.mkdir(parents=True)
         (p / 'test.json').write_text('{}', encoding='utf-8')
         return p
 
     def _job(self, name, test):
-        p = self.wurzel / 'fotogenesis' / name
+        p = self.wurzel / '_Foto_3D' / name
         p.mkdir(parents=True)
         (p / 'job.json').write_text(json.dumps({'meshgenesis_test': test}), encoding='utf-8')
         return {'id': name.lower(), 'art': 'foto', 'ordner': p, 'test': test}
@@ -55,7 +55,7 @@ class JobtestPapierkorbTest(unittest.TestCase):
         erg = Fotogenesispapierkorb.loeschen('tests', ['j'], [job])
         self.assertTrue(erg['ergebnis'][0]['ok'])
         self.assertFalse(test.is_dir())
-        self.assertEqual(len(list((self.wurzel / 'meshgenesis' / '_beiseite').glob('*/tests/t_job'))), 1)
+        self.assertEqual(len(list((self.wurzel / '_Output' / 'MeshGenesisJobs' / '_beiseite').glob('*/tests/t_job'))), 1)
 
     def test_geteilter_test_bleibt(self):
         test = self._test('t_beide')

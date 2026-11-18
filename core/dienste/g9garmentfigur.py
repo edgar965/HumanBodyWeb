@@ -126,7 +126,7 @@ class G9garmentfigur:
     def roh(self):
         u"""Die Kaefigpunkte der Stellung, Fuesse auf dem Boden (Y oben)."""
         if self._roh is None:
-            self._roh = self.formung.punkte() - Torchfeld.feld([0.0, self.formung.boden(), 0.0], copy=True)
+            self._roh = self.formung.punkte() - self.formung.hoch()
         return self._roh
 
     def stufe(self, stufen=0):
@@ -191,7 +191,8 @@ class G9garmentfigur:
         gewicht = Torchfeld.feld(haut['gewicht'], dtype=torch.float64)
         staerkster = index[Torchfeld.arange(len(index)), gewicht.argmax(axis=1)]
         nummer = {name: n for n, name in enumerate(self.SEGMENTE)}
-        zuordnung = Torchfeld.feld([nummer[teile[k] or 'body'] for k in staerkster], dtype=torch.int8, copy=True)
+        tabelle = Torchfeld.feld([nummer[t or 'body'] for t in teile], dtype=torch.int8)   # je Knochen das Segment — nicht je Punkt in Python (18.11.2026)
+        zuordnung = tabelle[staerkster].clone()
         zuordnung[Torchfeld.amax(gewicht, dim=1) <= 0] = 0
         stufe = self.stufe(0)
         ecken = Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).ravel()

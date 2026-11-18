@@ -146,6 +146,7 @@ export class Genesis9netz {
             geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, liste.length);
             material.userData.gruppe = gruppe.name;
             material.userData.kachel = gruppe.kachel;
+            material.userData.albedo = (gruppe.bilder || {}).albedo || '';   // Quelle des Hautausgleichs (`Genesis9hautausgleich`, 18.11.2026)
             liste.push(material);
             Genesis9netz.texturen(material, gruppe.bilder || {});
         }

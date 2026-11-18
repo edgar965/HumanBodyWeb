@@ -4,7 +4,7 @@
 Edgar: „baue diese Exportleiste sowohl auf die Mesh3d-ai jobs … als auch für /foto-genesis/test/edgartrip/". Das Modell ist die Figur aus den Fotos (`<Job>/figur/`, `Fotogenesisfigur`)
 als Genesis-Figur mit Rig: Regler der Form, Haut aus den Kacheln der Fotos (`fototextur`), Stücke aus den Fotos — gebaut im Browser mit dem Code der Mesh-Genesis-Testseite
 (`Fotogenesisexportfigur` → `Meshgenesisfigurbewegung`). Nur Tests mit eigener Figur (Fotojob mit `figur/`); Exporte mit Wahrheit haben keine.
-Exportordner `output/Export/Fotogenesis/<Name des Tests>`, Arbeitsordner `exportleiste/` im Ordner des Jobs. BVH-Vorgabe: die Standardanimation von Mesh-Genesis (Vorgabe A_Results/DanceKurz,
+Exportordner `3DObjects/_Output/Fotogenesis/<Name des Tests>`, Arbeitsordner `exportleiste/` im Ordner des Jobs. BVH-Vorgabe: die Standardanimation von Mesh-Genesis (Vorgabe A_Results/DanceKurz,
 `animation.json` im Ordner des Jobs, wenn es eine gibt).
 """
 

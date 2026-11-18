@@ -93,7 +93,7 @@ class Architekturmeshgenesisrechenlauf:
         for nr, (s, text, argumente) in enumerate(Meshgenesisrechenlauf.SCHRITTE, start=1):
             schritte.append({'nr': nr, 'schluessel': s, 'text': text, 'aufruf': 'python14 ' + ' '.join(argumente), 'skript': Architekturmeshgenesisklassen.skript(argumente),
                              'fassungen': sorted(set(re.findall(r'\{(\w+)\}', ' '.join(argumente))) & set(f))})
-        tests = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_test'
+        tests = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_test'
         return {'schritte': schritte, 'fassungen': [{'schluessel': k, 'wert': v, 'text': Meshgenesiskifassungen.TEXTE.get(k, '')} for k, v in f.items()],
                 'lauf': cls.letzter_lauf(tests), 'pruefung': cls.pruefung(), 'neu': cls.NEU, 'haut': Meshgenesisrechenlauf.HAUT,
                 'klassen': Architekturmeshgenesisklassen.kontext(Meshgenesisrechenlauf.SCHRITTE)}

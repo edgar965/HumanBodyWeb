@@ -27,7 +27,7 @@ class Fotogenesisfigurprobe:
     ZELLE_PX, TIEFE_MM = 12, 15.0
 
     def __init__(self, objects_root, job):
-        self.ordner = Path(objects_root) / 'fotogenesis' / job
+        self.ordner = Path(objects_root) / '_Foto_3D' / job
         self.job = json.loads((self.ordner / 'job.json').read_text(encoding='utf-8'))
         datei = self.ordner / 'abnahme' / 'training_figur.json'
         self.figur = json.loads(datei.read_text(encoding='utf-8')) if datei.is_file() else None
@@ -106,7 +106,7 @@ class Fotogenesisfigurprobe:
         if self.job.get('arbeitsordner'):
             return Path(self.job['arbeitsordner'])
         import sys
-        wurzel = str(self.ordner.parents[2])                       # <TOOLS>/3DObjects/fotogenesis/<Job>
+        wurzel = str(self.ordner.parents[2])                       # <TOOLS>/3DObjects/_Foto_3D/<Job>
         if wurzel not in sys.path:
             sys.path.append(wurzel)
         from KoerperKI_Fotos.fotojob import Fotojob

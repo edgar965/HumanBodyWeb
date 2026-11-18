@@ -27,12 +27,12 @@ class FotogenesisAblageMixin:
         wurzel = Path(settings.TOOLS_ROOT) / 'ProjektTemp' / '_wegwerf' / 'tests'
         wurzel.mkdir(parents=True, exist_ok=True)
         self.objekte = Path(tempfile.mkdtemp(prefix='fotogenesis_', dir=wurzel))
-        export = self.objekte / 'modelsExport' / 'Probe'
+        export = self.objekte / '_Output' / 'modelsExport' / 'Probe'
         export.mkdir(parents=True)
         (export / 'Probe.json').write_text(json.dumps({'name': 'Probe', 'figur': {'figur': 'probefigur'}}), encoding='utf-8')
         for a in ('vorne', 'links', 'rechts', 'hinten'):
             (export / ('Probe_%s.jpg' % a)).write_bytes(b'\xff\xd8\xff\xd9')
-        test = self.objekte / 'fotogenesis' / 'Fototest'
+        test = self.objekte / '_Foto_3D' / 'Fototest'
         test.mkdir(parents=True)
         fotos = []
         for i in range(2):
@@ -85,24 +85,24 @@ class FotogenesisLoeschenUndNeu(FotogenesisAblageMixin, SimpleTestCase):
 
     def test_ein_test_wird_verschoben_nicht_geloescht(self):
         self.assertTrue(self._loeschen('tests', ['fototest'])['ok'])
-        self.assertFalse((self.objekte / 'fotogenesis' / 'Fototest').exists())
-        self.assertEqual(len(list((self.objekte / 'fotogenesis' / '_beiseite').glob('*_geloescht/Fototest/job.json'))), 1)
+        self.assertFalse((self.objekte / '_Foto_3D' / 'Fototest').exists())
+        self.assertEqual(len(list((self.objekte / '_Foto_3D' / '_beiseite').glob('*_geloescht/Fototest/job.json'))), 1)
 
     def test_ein_export_wird_nur_ausgeblendet(self):
         self.assertTrue(self._loeschen('jobs', ['probe'])['ok'])
-        self.assertTrue((self.objekte / 'modelsExport' / 'Probe' / 'Probe.json').is_file())
+        self.assertTrue((self.objekte / '_Output' / 'modelsExport' / 'Probe' / 'Probe.json').is_file())
         self.assertEqual(self.client.get('/foto-genesis/probe/').status_code, 404)
 
     def test_unbekanntes_wird_gemeldet_und_nichts_angelegt(self):
         antwort = self._loeschen('tests', ['gibtsnicht'])
         self.assertFalse(antwort['ok'])
-        self.assertFalse((self.objekte / 'fotogenesis' / '_beiseite').exists())
+        self.assertFalse((self.objekte / '_Foto_3D' / '_beiseite').exists())
 
     def test_neuer_test_aus_fotos_legt_job_json_an_und_ueberschreibt_nie(self):
         fotos = [SimpleUploadedFile('a.jpg', b'\xff\xd8\xff\xd9'), SimpleUploadedFile('b.jpg', b'\xff\xd8\xff\xd9')]
         antwort = self.client.post('/api/fotogenesis/test-neu/', {'name': 'Neu Test', 'fotos': fotos})
         self.assertEqual(antwort.status_code, 200)
-        info = json.loads((self.objekte / 'fotogenesis' / 'Neu_Test' / 'job.json').read_text(encoding='utf-8'))
+        info = json.loads((self.objekte / '_Foto_3D' / 'Neu_Test' / 'job.json').read_text(encoding='utf-8'))
         self.assertEqual([f['winkel'] for f in info['fotos']], [None, None])
         noch = self.client.post('/api/fotogenesis/test-neu/', {'name': 'Neu Test', 'fotos': [SimpleUploadedFile('c.jpg', b'\xff\xd8')]})
         self.assertEqual(noch.status_code, 400)
@@ -110,7 +110,7 @@ class FotogenesisLoeschenUndNeu(FotogenesisAblageMixin, SimpleTestCase):
     def test_nur_fotos_werden_angenommen(self):
         antwort = self.client.post('/api/fotogenesis/test-neu/', {'name': 'Falsch', 'fotos': [SimpleUploadedFile('x.exe', b'MZ')]})
         self.assertEqual(antwort.status_code, 400)
-        self.assertFalse((self.objekte / 'fotogenesis' / 'Falsch').exists())
+        self.assertFalse((self.objekte / '_Foto_3D' / 'Falsch').exists())
 
 
 class FotogenesisArchitekturseite(SimpleTestCase):

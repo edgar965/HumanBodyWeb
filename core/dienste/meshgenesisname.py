@@ -39,7 +39,7 @@ class Meshgenesisname:
 
     @staticmethod
     def wurzel():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
 
     @classmethod
     def saeubern(cls, text):

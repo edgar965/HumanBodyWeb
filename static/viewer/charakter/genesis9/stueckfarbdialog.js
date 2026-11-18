@@ -3,6 +3,7 @@ import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Umfaerbung } from '../../gemeinsam/umfaerbung.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Stueckfarbe } from './stueckfarbe.js';
+import { Stueckstoff } from './stueckstoff.js';
 
 /**
  * Stueckfarbdialog — die Farbwahl für ein Daz-Stück als Dialog.
@@ -79,6 +80,8 @@ export class Stueckfarbdialog {
                         <input type="text" class="stueckfarb-hex" maxlength="7" spellcheck="false" placeholder="#rrggbb">
                         <button type="button" class="btn-toggle stueckfarb-daz">Farbe aus Daz</button>
                     </div>
+                    <div class="stueckfarb-titel">Material</div>
+                    <div class="stueckfarb-material"></div>
                 </div>
                 <div class="scene-modal-footer">
                     <button type="button" class="primary stueckfarb-fertig">Fertig</button>
@@ -94,7 +97,20 @@ export class Stueckfarbdialog {
         Stueckfarbdialog._palette(huelle, zustand);
         Stueckfarbdialog._eigen(huelle, zustand);
         Stueckfarbdialog._zeichnen(huelle, zustand);
+        Stueckfarbdialog._material(huelle, zustand);
         return huelle;
+    }
+
+    /** Unter der Farbe der Block „Stoff" des Stücks (`Stueckstoff.felder`: Stoffart, Rauheit, Metall, Transparenz, Glanz, Saum, Relief, Gewebe) —
+     *  18.11.2026, Edgar: „da wo der Farbregler ist, soll das popup kommen für Farbe und zusätzlich dieser Auswahldialog darunter". Er wirkt am Material
+     *  des getragenen Stücks; ein nicht getragenes hat keines. */
+    static _material(huelle, z) {
+        const feld = huelle.querySelector('.stueckfarb-material');
+        if (!Stueckfarbdialog._getragen(z)) {
+            feld.innerHTML = '<div class="gedaempft hb-font-size-0-72rem">Das Material lässt sich am getragenen Stück einstellen — erst anziehen.</div>';
+            return;
+        }
+        feld.appendChild(Stueckstoff.felder(z.inst, z.kennung));
     }
 
     /** Ohne Angabe den gemerkten Dialog, sonst genau `huelle` — das × eines Dialogs gilt immer ihm selbst. */

@@ -68,7 +68,8 @@ class G9bedlamhaut:
         aus = []
         for geschlecht, anzeige in (('female', 'weiblich'), ('male', 'männlich')):
             for e in Smplxbedlamhaut.liste(cls._basis(), geschlecht):
-                aus.append({'id': cls.PRAEFIX + e['schluessel'], 'name': 'BEDLAM · %s (%s)' % (e['name'], anzeige), 'geschlecht': anzeige, 'vorschau': False})
+                # Ohne Geschlecht im Namen: die Auswahl hängt es selbst an (18.11.2026 stand es dort doppelt, „… (männlich) (männlich)“)
+                aus.append({'id': cls.PRAEFIX + e['schluessel'], 'name': 'BEDLAM · %s' % e['name'], 'geschlecht': anzeige, 'vorschau': False})
         return aus
 
     # ---------------------------------------------------------------- Bilder

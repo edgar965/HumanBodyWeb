@@ -23,7 +23,7 @@ class Architekturfotogenesisnetz:
     MLP = 2048
     WINKEL_FREQUENZEN = 16         # Fourier-Einbettung des Kamerawinkels (sin, cos je Frequenz)
     KNOCHEN = 138                  # Genesis-9-Rig von Mesh-Genesis (`Meshgenesisrig`)
-    FORMREGLER = 1323              # `3DObjects/meshgenesis/formregler_v6.json` → `regler` (gelesen 24.10.2026)
+    FORMREGLER = 1323              # `3DObjects/_Output/MeshGenesisJobs/formregler_v6.json` → `regler` (gelesen 24.10.2026)
     KLEIDUNG = 544                 # Garderobe der Charakter-Seite, Art „kleidung“ (API, 24.10.2026)
     HAAR = 32                      # Art „haar“ (API, 24.10.2026)
 

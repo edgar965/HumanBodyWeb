@@ -2,7 +2,7 @@
 """Meshgenesisformtraining — die Trainingsläufe der gemeinsamen Netze (Vorstufe und Formkopf) für den Reiter „Formtraining“ auf /mesh-genesis/ (18.10.2026).
 
 Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw. Falls du einen neuen Job-Typ hast, dann mach einen neuen Tab ‚Formtraining‘“.
-Ein Lauf ist ein Ordner `3DObjects/meshgenesis/_vorstufe/laeufe/<JJJJ.MM.TT.HH.MM>_<name>/`. Die Trainingsskripte (`ProjektTemp/_wegwerf/meshgenesis_vorstufe_form2.py` u. a.) legen ihn NACH dem Laden
+Ein Lauf ist ein Ordner `3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/<JJJJ.MM.TT.HH.MM>_<name>/`. Die Trainingsskripte (`ProjektTemp/_wegwerf/meshgenesis_vorstufe_form2.py` u. a.) legen ihn NACH dem Laden
 der Daten an, schreiben `lauf.log` (Kopfzeile, dann alle 20 Epochen eine Zeile `Epoche  N  {…}  (S s)`) und erst am Ende `lauf_ergebnis.json` (Verlauf, Proben, Dauer); Formläufe dazu
 `formen_ergebnis.json` (Fehler je Formvariante und Summen je Gruppe).
 
@@ -48,7 +48,7 @@ class Meshgenesisformtraining:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_vorstufe' / 'laeufe'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_vorstufe' / 'laeufe'
 
     @classmethod
     def laeufe(cls, jetzt=None):

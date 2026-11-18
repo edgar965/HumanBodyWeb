@@ -7,7 +7,7 @@ Edgar: „bei den jobs möchte ich eine Combo box haben, wo ich die engine ausw�
 exakte portierung“.
 Konzept `Docu/konzepte/2026-11-02_normalen-zwei-quellen-konzept.md`.
 
-In `3DObjects/fotogenesis/<Name>/job.json` als `normalen`: {engine, foto, zusammen}; fehlt es, gelten die Vorgaben.
+In `3DObjects/_Foto_3D/<Name>/job.json` als `normalen`: {engine, foto, zusammen}; fehlt es, gelten die Vorgaben.
 Gelesen von der Kette beim nächsten Lauf (`KoerperKI_Fotos.normalenwahl.Normalenwahl`, Stufe „koerper“ in
 `Fotoauswendig`) — ein gerechneter Lauf bleibt, wie er ist.
 

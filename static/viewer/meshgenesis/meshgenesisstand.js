@@ -79,7 +79,7 @@ export class Meshgenesisstand {
             balken.className = 'meshgenesis-standbalken';
             zeile.append(balken);
         }
-        zeile.title = 'Fertig heißt: eingabe.npz der Probe liegt unter 3DObjects/meshgenesis/<Modell>/proben/ (das Datenskript schreibt sie zuletzt). Geplant: Einträge in proben.json.';
+        zeile.title = 'Fertig heißt: eingabe.npz der Probe liegt unter 3DObjects/_Output/MeshGenesisJobs/<Modell>/proben/ (das Datenskript schreibt sie zuletzt). Geplant: Einträge in proben.json.';
         return zeile;
     }
 

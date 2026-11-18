@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Trainingspaare als Jobs (`Meshgenesispaare`, 18.10.2026 abends): ein gebauter Job unter `3DObjects/meshgenesis/<Ordner>/` mit der Marke `paar.json` erscheint in Tabelle und Menü.
+"""Trainingspaare als Jobs (`Meshgenesispaare`, 18.10.2026 abends): ein gebauter Job unter `3DObjects/_Output/MeshGenesisJobs/<Ordner>/` mit der Marke `paar.json` erscheint in Tabelle und Menü.
 Ohne Datenbank, Ordner in `Pruefablage`.
 
 1. Nur Ordner mit `paar.json` zählen; Kennung aus der Marke, sonst der Ordnername klein; Name aus der Marke, sonst der Ordner; `paar: True`.
@@ -35,7 +35,7 @@ class PaareTest(SimpleTestCase):
 
     def test_1_nur_ordner_mit_marke(self):
         with Pruefablage.ordner('paare_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            wurzel = Path(o) / 'meshgenesis'
+            wurzel = Path(o) / '_Output' / 'MeshGenesisJobs'
             self._marke(wurzel, 'Matt1', {'kennung': 'matt1', 'name': 'Matt1', 'geschlecht': 'maennlich'})
             self._marke(wurzel, 'OlesiaSitzend', {'geschlecht': 'weiblich'})
             (wurzel / 'Ursula1').mkdir()
@@ -45,7 +45,7 @@ class PaareTest(SimpleTestCase):
 
     def test_2_geschlecht_und_kaputte_marke(self):
         with Pruefablage.ordner('paare_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            wurzel = Path(o) / 'meshgenesis'
+            wurzel = Path(o) / '_Output' / 'MeshGenesisJobs'
             self._marke(wurzel, 'A', {'geschlecht': 'divers'})
             self._marke(wurzel, 'B', '{kaputt')
             with self.assertLogs('core', level='WARNING') as log:
@@ -55,7 +55,7 @@ class PaareTest(SimpleTestCase):
 
     def test_3_neuer_ordner_erscheint_sofort_und_kopie(self):
         with Pruefablage.ordner('paare_') as o, override_settings(OBJECTS_ROOT=Path(o)):
-            wurzel = Path(o) / 'meshgenesis'
+            wurzel = Path(o) / '_Output' / 'MeshGenesisJobs'
             self._marke(wurzel, 'A', {})
             erste = Meshgenesispaare.stammdaten()
             erste[0]['name'] = 'verändert'

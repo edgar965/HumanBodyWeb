@@ -1,7 +1,7 @@
 /**
  * Meshgenesisloeschen — Auswahl und „Gewählte löschen“ je Tabelle auf `/mesh-genesis/` (23.10.2026, Edgar: „mach bei den Jobs die Auswahl-Checkboxen und dann die Buttons zum Löschen“, Reiter Jobs und Test).
  * Eine Instanz je Karte mit `[data-loeschen="jobs|tests"]`: Kästchen `.meshgenesis-wahl` je Zeile, `.meshgenesis-alle` im Kopf, Knopf mit Zähler. Gelöscht wird über `POST /api/meshgenesis/loeschen/`
- * (`Meshgenesispapierkorb`: der Ordner wird nach `3DObjects/meshgenesis/_beiseite/<Zeit>_geloescht/` verschoben, nicht gelöscht). Ein Klick in die Zelle des Kästchens hakt an, statt die Seite zu öffnen.
+ * (`Meshgenesispapierkorb`: der Ordner wird nach `3DObjects/_Output/MeshGenesisJobs/_beiseite/<Zeit>_geloescht/` verschoben, nicht gelöscht). Ein Klick in die Zelle des Kästchens hakt an, statt die Seite zu öffnen.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
@@ -56,7 +56,7 @@ export class Meshgenesisloeschen {
         const ids = this.gewaehlt();
         if (!ids.length) return;
         const was = this.art === 'jobs' ? 'Jobs' : 'Tests';
-        if (!window.confirm(`${ids.length} ${was} löschen?\n\n${ids.join(', ')}\n\nDie Ordner werden nach 3DObjects/meshgenesis/_beiseite/<Zeit>_geloescht/ verschoben (nicht endgültig gelöscht).`)) return;
+        if (!window.confirm(`${ids.length} ${was} löschen?\n\n${ids.join(', ')}\n\nDie Ordner werden nach 3DObjects/_Output/MeshGenesisJobs/_beiseite/<Zeit>_geloescht/ verschoben (nicht endgültig gelöscht).`)) return;
         this.knopf.disabled = true;
         try {
             const antwort = await Serverabruf.senden('/api/meshgenesis/loeschen/', { art: this.art, ids });

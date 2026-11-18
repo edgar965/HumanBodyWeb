@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""`G9rasternachbarn.naechste` seit 12.11.2026: offene Zeilen erst mit größerem Block (`RINGE`), k = 1 ohne Sortieren (kleinster Wert, bei Gleichstand kleinster Index). Anlass: Abstimm-Netz
-→ volles Netz des Zauberers 16,3 s, der Baum auf der CPU 0,8 s (`ProjektTemp/_wegwerf/genesis_zuerst/umbau/naechste_zelle.py`); Gegenprobe gegen die alte Fassung
-`rasternachbarn_probe.py` (8 Fälle bitgleich, Sabotage rot).
+"""`G9rasternachbarn.naechste` — seit 18.11.2026 EIN Kern auf der Karte (`G9rasterkern`: je Anfrage Schale um Schale bis bewiesen, nach `RMAX` über alle Punkte; ohne
+Wartepunkt). Davor (12.11.2026) offene Zeilen in torch über Ringe (2, 4, 8) und eine Vollsuche. Gegenprobe des Kerns gegen die volle Matrix und die alte Fassung:
+`_wegwerf/rasterkern_probe.py` (120 Fälle gleich, 18.11.2026).
 
 Bezug hier: die volle Abstandsmatrix in derselben Formel ((dx² + dy²) + dz², float64), kleinste Zeile zuerst. Braucht die Grafikkarte (sonst übersprungen). Nicht gelaufen — läuft nur auf Ansage.
-Sabotage: in `_block` beim k = 1-Weg `'amin'` des Index durch `'amax'` ersetzen → `test_2` rot; `RINGE = ()` → `test_3` rot (Zeilen in der Vollsuche).
+Sabotage: in `rasterkernwarp.einfuegen` `i < oi[t, k - 1]` durch `i > oi[t, k - 1]` ersetzen → `test_2` rot; `RMAX = 0` und im Kern die Vollsuche weglassen → `test_3` rot
+(Anfragen weit außerhalb).
 """
 import unittest
 
@@ -52,15 +53,14 @@ class RingeTest(unittest.TestCase):
         # die Anfragen SIND die ersten 30 Datenpunkte, die je eine Kopie mit Index ≥ 1540 haben → der kleinere Index gewinnt
         self.assertTrue(torch.equal(i[:, 0], torch.arange(30, device=daten.device)))
 
-    def test_3_offene_zeilen_gehen_in_die_ringe_nicht_in_die_vollsuche(self):
+    def test_3_k3_und_anfragen_weit_ausserhalb(self):
         daten, anfrage = self._wolken(3)
-        raster = G9rasternachbarn(self._karte(), daten)
-        w, i = raster.naechste(anfrage, 3)
+        weit = torch.full((3, 3), 40.0, device=daten.device, dtype=torch.float64)         # 40 m vom Netz: der Kern geht über alle Punkte
+        anfrage = torch.cat([anfrage, weit])
+        w, i = G9rasternachbarn(self._karte(), daten).naechste(anfrage, 3)
         w_b, i_b = self._bezug(daten, anfrage, 3)
         self.assertTrue(torch.equal(w, w_b))
         self.assertTrue(torch.equal(i, i_b))
-        self.assertGreater(raster.ringe[0], 0, 'die Wolke soll offene Zeilen erzeugen, sonst prüft der Test die Ringe nicht')
-        self.assertLess(raster.offen, raster.ringe[0], 'die Ringe sollen offene Zeilen beweisen')
 
     def test_4_grenze_wie_distance_upper_bound(self):
         daten, anfrage = self._wolken(4)

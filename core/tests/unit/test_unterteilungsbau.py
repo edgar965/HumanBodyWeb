@@ -73,3 +73,15 @@ class BauUndAblage(TestCase):
             self.assertNotEqual(a, S(quads, mat, None, 2, uv_loops))
         finally:
             Unterteilungsbau.FASSUNG = alt
+
+    def test_schluessel_im_numpy_format(self):
+        u"""Form und Typ wie numpy (`(2, 4)int64`), nicht `torch.Size([2, 4])torch.int64` — sonst trifft kein Schlüssel die Ablagen von vor dem
+        14.11.2026 (18.11.2026). Sabotage: in `schluessel` wieder `str(a.shape)` hashen → rot."""
+        import hashlib
+        import torch
+        from KoerperKI_alle.torchfeld import Torchfeld
+        quads = torch.tensor([[0, 1, 2, 3], [3, 2, 1, 0]], dtype=torch.int64, device='cuda')
+        h = hashlib.sha1(b'fassung=%d;levels=1;' % Unterteilungsbau.FASSUNG)
+        h.update(b'(2, 4)int64' + Torchfeld.als_bytes(quads))
+        h.update(b'---')
+        self.assertEqual(Unterteilungsbau.schluessel(quads), h.hexdigest()[:16])

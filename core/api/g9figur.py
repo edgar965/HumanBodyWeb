@@ -14,9 +14,7 @@ u"""Genesis-9-Figur (Daz) fuer Szene und Studio: Katalog, Netz, Regler, Garderob
           anhaenge: [{schluessel, name, vertices, …}]}
          Die Stufe ist die Daz-Ansichtsstufe 1, mit dem Keks `netzstufen`
          (Strg+Alt+H) die Renderstufe 2 (`G9netzstufe.browser`).
-    GET  /api/character/genesis9-figur/regler/
-         {bereiche: [{schluessel, name, regler}], haut: [...], augen: [...],
-          praesets: [...], brauen, brauenstile, brauenfarben}
+    Regler-Plan (`GET …/regler/`): `g9reglerapi.py` (seit 18.11.2026).
     Garderobe, Texturen und Posenliste: `g9garderobe.py` (seit 18.09.2026).
 
 POSE UND AUSDRUCK (18.09.2026, `G9posen`): `pose` ist die Kennung eines
@@ -48,17 +46,13 @@ from ..dienste.g9hbpose import G9hbpose
 from .g9materialwahl import G9materialwahl
 from .g9netzantwort import G9netzantwort
 from ..dienste.modellkatalog import Modellkatalog
-from Genesis9.brauen import G9brauen
 from Genesis9.charaktere import G9charaktere
 from Genesis9.formung import G9formung
 from Genesis9.griffkette import G9griffkette
-from Genesis9.hautpresets import G9hautpresets
-from Genesis9.hautwahl import G9hautwahl
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.posen import G9posen
-from Genesis9.schminke import G9schminke
 from Genesis9.pfade import G9pfade
-from Genesis9.reglergliederung import G9reglergliederung
+from KoerperKI_alle.kartenwerte import Kartenwerte
 
 logger = logging.getLogger('core')
 
@@ -198,7 +192,7 @@ class G9figur:
                 G9figur.formung(rumpf, eintrag), eintrag,
                 anhaenge=rumpf.get('anhaenge', True) is not False,
                 kleidung=G9figur._kleidung(rumpf.get('kleidung')),
-                **G9materialwahl.aus(rumpf, eintrag)).bauen()
+                **G9materialwahl.aus(rumpf, eintrag)).bauen(aufschub=True)     # Skelett, Höhe, Boden auf der Karte bis zum Ausliefern (18.11.2026)
         except (OSError, ValueError, KeyError) as fehler:
             logger.warning('Genesis 9: Netz nicht baubar: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
@@ -232,7 +226,7 @@ class G9figur:
             return {}
         try:
             ohne = G9figur.formung(rumpf, eintrag, ohne_griff=schuhe).skelett().bauen()
-            return G9griffkette.deltas(ohne['knochen'], skelett['knochen'], schuhe)
+            return G9griffkette.deltas(ohne['knochen'], Kartenwerte.aufloesen(skelett)['knochen'], schuhe)    # der Bauplan der Antwort als Liste (18.11.2026)
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
             logger.exception('Genesis 9: Fußhaltung der Schuhe %s nicht als Delta rechenbar', ', '.join(schuhe))
             return {}
@@ -295,23 +289,3 @@ class G9figur:
 
     #: Ein Presetname aus dem Rumpf, ohne Pfadzeichen (`G9materialwahl`, ausgelagert 12.10.2026).
     _name = staticmethod(G9materialwahl.name)
-
-    # --------------------------------------------------------------- Regler
-
-    @staticmethod
-    @require_GET
-    def regler(request):
-        if not G9pfade.vorhanden():
-            return JsonResponse({'bereiche': [], 'haut': [], 'augen': [],
-                                 'brauen': [], 'fehler': FEHLT})
-        from Genesis9.anhang import G9anhang
-        return JsonResponse({
-            # Nach Körperteil gegliedert (`G9reglergliederung`, 18.10.2026); `G9reglerplan.bereiche()` bleibt die Liste nach Herkunft.
-            'bereiche': G9reglergliederung.bereiche(),
-            'haut': G9hautpresets.hautpresets(),
-            'augen': G9hautpresets.augen(),
-            'praesets': G9hautwahl.kategorien() + G9schminke.katalog(),
-            'brauen': G9anhang.brauenfarben(),
-            'brauenstile': G9brauen.stile(),
-            'brauenfarben': G9brauen.farben_je_art(),
-        })

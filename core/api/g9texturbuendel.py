@@ -72,8 +72,9 @@ class G9texturbuendelapi:
     #: Mehr Bilder nimmt eine Anfrage nicht an (ein Koerper hat mit allen
     #: Anhaengen rund 25, eine Figur mit Kleidung rund 40).
     HOECHSTZAHL = 64
-    #: Zusammen hoechstens so viele Bytes; was darueber liegt, kommt einzeln.
-    HOECHSTBYTES = 48 * 1024 * 1024
+    #: Zusammen hoechstens so viele Bytes; was darueber liegt, kommt einzeln. 32 statt 48 MB (18.11.2026): Chrome behält einen Eintrag nur bis zu einem
+    #: Achtel seines Speichers — das 46-MB-Bündel des Körpers (Luna, `format=bc`) kam bei jedem Laden neu (200, 2,9 s), die Bündel mit 22–34 MB mit 304.
+    HOECHSTBYTES = 32 * 1024 * 1024
     #: Teil der Marke: steigt, wenn sich das Format der Antwort aendert.
     FASSUNG = 1
     #: So viele Bilder rechnen zugleich ihre Fassung (Pillow gibt beim Kodieren den GIL frei).

@@ -28,11 +28,11 @@ class TestFotos(unittest.TestCase):
         self.ablage = tempfile.TemporaryDirectory(dir=settings.TOOLS_ROOT / 'ProjektTemp')
         self.addCleanup(self.ablage.cleanup)
         self.objekte = Path(self.ablage.name)
-        self.test = self.objekte / 'meshgenesis' / '_test' / 'probe_mesh_genesis'
+        self.test = self.objekte / '_Output' / 'MeshGenesisJobs' / '_test' / 'probe_mesh_genesis'
         self.test.mkdir(parents=True)
 
     def _job(self, winkel, **pshuman):
-        ordner = self.objekte / 'fotogenesis' / 'Probe'
+        ordner = self.objekte / '_Foto_3D' / 'Probe'
         ordner.mkdir(parents=True)
         fotos = []
         for i, w in enumerate(winkel):

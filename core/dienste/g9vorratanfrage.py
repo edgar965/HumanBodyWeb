@@ -20,7 +20,9 @@ from django.http import HttpResponse
 
 from ..daten.netzpaket import Netzpaket
 from .g9modellvorrat import G9modellvorrat
+from .g9neustartnachlauf import G9neustartnachlauf
 from .g9vorratnachlauf import G9vorratnachlauf
+from .g9vorrang import G9vorrang
 from .netzvorratwahl import Netzvorratwahl
 
 __all__ = ['G9vorratanfrage']
@@ -40,6 +42,7 @@ class G9vorratanfrage:
         self.stabil = stabil
         self.fassung = str(fassung)
         kopf = request.headers if request is not None else {}
+        self.anfrage = request
         self.pfad = getattr(request, 'path', '')
         self.stufe_nr = stufe = self.stufe()
         self.markiert = bool(kopf.get(self.KOPF))
@@ -96,7 +99,10 @@ class G9vorratanfrage:
         if self.vorschau:
             G9vorratnachlauf.vorschau_gegangen(self.pfad)
         try:
-            return self._antwort(daten, neu_rechnen, inhaltstyp)
+            antwort = self._antwort(daten, neu_rechnen, inhaltstyp)
+            if self.markiert and not self.nur and antwort.status_code < 400:
+                G9neustartnachlauf.merken(self.anfrage)     # eine Anzeige: nach dem Neustart nachgerechnet
+            return antwort
         finally:
             if self.stufe_nr > 0 and not self.nur:
                 G9vorratnachlauf.stufe_geliefert(self.pfad)
@@ -105,7 +111,8 @@ class G9vorratanfrage:
         if daten is None:
             daten = self.holen(neu_rechnen)
         if daten is None:
-            daten = neu_rechnen()
+            with G9vorrang.vorab() if self.nur else G9vorrang.anzeige():     # Anzeigen zuerst (`G9vorrang`, 18.11.2026)
+                daten = neu_rechnen()
             if isinstance(daten, HttpResponse):
                 return daten
         self.ablegen(daten)

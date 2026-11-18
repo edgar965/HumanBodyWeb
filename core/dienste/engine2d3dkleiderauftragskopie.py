@@ -20,7 +20,7 @@ Zwei Umfänge (`mit_allem`):
     schlank   wie oben beschrieben — der Stand der Figur und der Runden, ohne Renderläufe und Protokoll (die Kopie „Edgar - Sapiens 2" aus „Edgar - Sapiens 1")
     alles     (Edgar, 05.10.2026: „Einmal MIT allen Daten, Modellen, usw. und Ausgaben") — der GANZE Auftragsordner: auch `arbeit/render/` (Renderläufe, Film), `tmp/` und `auftrag.log`;
               nur `auftrag.pid` und halb geschriebene `*.teil` bleiben zurück. NICHT dabei: Dateien außerhalb des Auftragsordners — die gespeicherten Modelle der Bibliothek und die Ablage
-              unter `output/Export/Engine2d3dKleider/` (`Engine2d3dKleiderspeichern`) gehören dem Quellauftrag; ihre Adressen enthalten seine ID.
+              unter `3DObjects/_Output/Engine2d3dKleider/` (`Engine2d3dKleiderspeichern`) gehören dem Quellauftrag; ihre Adressen enthalten seine ID.
 Die ohne Daten (nur Fotos und Einstellungen) macht `Auftragsduplikat` („Job duplizieren").
 
 Nur in einen LEEREN Zielauftrag (Status „angelegt", kein Ergebnis) und nur aus einem Auftrag, der nicht rechnet — es wird nichts überschrieben, was jemand gerechnet hat.

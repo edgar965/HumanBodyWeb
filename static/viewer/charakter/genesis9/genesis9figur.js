@@ -29,6 +29,7 @@ export class Genesis9Figur extends Genesis9Modell {
             brauenstil: this.brauenstil,
             praesets: { ...this.praesets },
             hautmischung: { ...this.hautmischung },
+            hautausgleich: { ...(this.hautausgleich || {}) },   // Gleichmäßigkeit, Symmetrie, Schatten, Retusche (`Genesis9hautausgleich`, 18.11.2026)
             teilmaterial: { ...this.teilmaterial },   // Glanz, Rauheit … je Teil (`Genesis9teilmaterial`, 09.10.2026)
             hautebenen: { ...this.hautebenen },       // Hautton, Flecken, Muskel-/Fettzeichnung, graue Haare (`Genesis9hautebenen`, 17.10.2026)
             groesse_halten: this.groesseHalten?.an ? { an: true, soll_m: this.groesseHalten.soll_m } : null,   // ohne `letzte` (`genesis9groessehalten.js`)

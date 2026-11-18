@@ -105,7 +105,7 @@ class Durchschimmerprobe:
             return self._koerper[schluessel]
         netz = G9koerpernetz(formung, stufen=self.stufen)
         fein, normalen, _baum = netz.koerperflaeche()
-        hoch = Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
+        hoch = formung.hoch()
         fein = fein + hoch
         stufe = G9basisnetz.holen().netzstufe(self.stufen)
         # ALLES im Figurraum (Boden nicht abgezogen): die Knochenmatrizen der

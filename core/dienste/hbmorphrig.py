@@ -62,7 +62,7 @@ class Hbmorphrig:
         self.formung = formung or G9formung({})
         self.basis = Torchfeld.feld(self.formung.punkte(), dtype=torch.float64)
         knochen = self.formung.skelett().gelenkknochen()
-        hoch = Torchfeld.feld([0.0, self.formung.boden(), 0.0], copy=True)
+        hoch = self.formung.hoch()
         self.kopf = {k['name']: Torchfeld.feld(k['kopf'], dtype=torch.float64) + hoch for k in knochen}
         self.eltern = {k['name']: k['eltern'] for k in knochen}
         self.bindung = self._bindung(G9haut.holen())

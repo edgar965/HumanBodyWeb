@@ -36,7 +36,7 @@ class LaufseiteTest(SimpleTestCase):
 
     def _ablage(self, o):
         wurzel = Path(o)
-        laeufe = wurzel / '3DObjects' / 'meshgenesis' / '_vorstufe' / 'laeufe'
+        laeufe = wurzel / '3DObjects' / '_Output' / 'MeshGenesisJobs' / '_vorstufe' / 'laeufe'
         for name, probe in (('2026.10.17.15.43_vorstufe_form78_v3', False), ('2026.10.18.19.00_vorstufe_form2_probe', True)):
             self._schreiben(laeufe / name / 'lauf.log', 'Netz: 1 Parameter, 2 Epochen; Regler 1318\nfertig\n')
             self._schreiben(laeufe / name / 'lauf_ergebnis.json', {'formkopf': 1318, 'epochen': 2, 'verlauf': [{'epoche': 2, 'pruefung_mm': 11.0}], 'probe': probe})

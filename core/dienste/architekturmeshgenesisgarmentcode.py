@@ -218,7 +218,7 @@ class Architekturmeshgenesisgarmentcode:
     @classmethod
     def _schnitt(cls):
         from django.conf import settings
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_schnitt'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_schnitt'
 
     @classmethod
     def bauplaene(cls, aufbau):

@@ -2,10 +2,10 @@
 """Fotogenesispapierkorb — gewählte Jobs oder Tests von `/foto-genesis/` beiseitelegen (24.10.2026, wie `Meshgenesispapierkorb` auf `/mesh-genesis/`).
 
 Edgar: „Ich sagte eine Kopie der Mesh3d-Ai jobs … keine Jobauswahl zum Löschen usw“. „Löschen“ heißt wie dort NICHT löschen:
-- **Tests** (echte Fotos, `Fotogenesisfotojobs`): der Ordner `3DObjects/fotogenesis/<Name>/` wird nach `3DObjects/fotogenesis/_beiseite/<JJJJ.MM.TT.HH.MM.SS>_geloescht/<Name>` verschoben (die Fotos, auf die
+- **Tests** (echte Fotos, `Fotogenesisfotojobs`): der Ordner `3DObjects/_Foto_3D/<Name>/` wird nach `3DObjects/_Foto_3D/_beiseite/<JJJJ.MM.TT.HH.MM.SS>_geloescht/<Name>` verschoben (die Fotos, auf die
   `job.json` zeigt, bleiben, wo sie sind). Zurückholen = Ordner zurückschieben.
-  Der Mesh-Genesis-Test des Jobs geht mit nach `3DObjects/meshgenesis/_beiseite/<Zeit>_geloescht/tests/` (`_test_mitnehmen`, 06.11.2026): Er trägt das Ergebnis des Jobs, ohne Job stünde er in der Liste von `/mesh-genesis/`.
-- **Jobs** (Exporte unter `3DObjects/modelsExport/`): nur AUSGEBLENDET — `3DObjects/fotogenesis/_ausgeblendet.json` führt die Kennung. Der Exportordner gehört der Charakter-Seite und ist die Quelle der
+  Der Mesh-Genesis-Test des Jobs geht mit nach `3DObjects/_Output/MeshGenesisJobs/_beiseite/<Zeit>_geloescht/tests/` (`_test_mitnehmen`, 06.11.2026): Er trägt das Ergebnis des Jobs, ohne Job stünde er in der Liste von `/mesh-genesis/`.
+- **Jobs** (Exporte unter `3DObjects/_Output/modelsExport/`): nur AUSGEBLENDET — `3DObjects/_Foto_3D/_ausgeblendet.json` führt die Kennung. Der Exportordner gehört der Charakter-Seite und ist die Quelle der
   Mesh-Genesis-Paare (`paar.json`); ihn zu verschieben, nähme Mesh-Genesis seine Wahrheit. Zurückholen = Eintrag aus der Datei nehmen.
 """
 
@@ -28,7 +28,7 @@ class Fotogenesispapierkorb:
 
     @staticmethod
     def wurzel():
-        return Path(settings.OBJECTS_ROOT) / 'fotogenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Foto_3D'
 
     @classmethod
     def ausgeblendet(cls):

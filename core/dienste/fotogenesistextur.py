@@ -4,7 +4,7 @@
 Edgar: „mach die textur umschaltbar, über zusatzprojekte, Recherchiere welche die besten sind, danach portiere
 sie auf torch nach unserem Muster“. Konzept `Docu/konzepte/2026-11-03_textur-engines-konzept.md`.
 
-In `3DObjects/fotogenesis/<Name>/job.json` als `textur`: {engine}; fehlt es, gilt die Vorgabe (`hautki`, der
+In `3DObjects/_Foto_3D/<Name>/job.json` als `textur`: {engine}; fehlt es, gilt die Vorgabe (`hautki`, der
 bisherige Weg). Gelesen von der Kette beim nächsten Lauf der Körperstufe (`KoerperKI_Fotos.texturwahl`).
 
     POST /api/fotogenesis/<job>/textur/   {engine}   → {ok, textur}

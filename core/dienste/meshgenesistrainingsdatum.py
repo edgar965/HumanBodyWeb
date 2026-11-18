@@ -4,8 +4,8 @@
 Edgar: „mach eine Spalte in /mesh-genesis/#jobs mit dem Datum wann die zum letzten Mal trainiert wurden".
 Ein Training zählt, wenn sein Laufordner ein `lauf_ergebnis.json` hat (das Trainingsskript schreibt es erst am Ende) — Zeitpunkt ist die Änderungszeit dieser Datei,
 also das ENDE des Trainings (der Ordnername trägt den Start). Gesucht wird an zwei Stellen:
-  * `3DObjects/meshgenesis/<Job>/_laeufe/*` — die Läufe der Jobseite (auch die des gemeinsamen Netzes, das für jeden Job einen Ordner anlegt);
-  * `3DObjects/meshgenesis/_vorstufe/laeufe/*` — die Netze der Vorstufe und der Form, wenn `training_daten` ODER `paare` den Job nennt (seit 19.10.2026 lernt das Formtraining 2 auch aus den
+  * `3DObjects/_Output/MeshGenesisJobs/<Job>/_laeufe/*` — die Läufe der Jobseite (auch die des gemeinsamen Netzes, das für jeden Job einen Ordner anlegt);
+  * `3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/*` — die Netze der Vorstufe und der Form, wenn `training_daten` ODER `paare` den Job nennt (seit 19.10.2026 lernt das Formtraining 2 auch aus den
     Trainingspaaren, `--paare`; sie stehen nur in `paare`, nicht in `training_daten` — die Tabelle zeigte deshalb bei allen Paaren „nie“, Edgar: „die sind alle nicht trainiert??“).
 Probeläufe (Name endet auf `_probe`) und `_diagnose/` zählen nicht. Gelesen wird je Ergebnisdatei nur, wenn sich Zeit oder Größe geändert haben (`_ablage`, seit 30.10.2026):
 bis dahin las die Liste /mesh-genesis/ die 26 Ergebnisse der Vorstufe (1,7 MB) für jeden der 21 Jobs neu — 571 Dateien je Aufruf; die Jobtabelle brauchte warm 0,89 s, danach 0,10 s

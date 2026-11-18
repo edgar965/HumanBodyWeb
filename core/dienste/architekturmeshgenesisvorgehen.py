@@ -2,7 +2,7 @@
 """Architekturmeshgenesisvorgehen — wie der Datensatz und das Training von Mesh-Genesis entstanden sind, für Hilfe → Architektur → Mesh-Genesis (16.10.2026).
 
 Edgar: „schreibe deine vorgehensweise von gerade eben darunter mit möglichst vielen Details, z.B. Posen, Trainingsschritte, Dauer je schritt, je pose usw".
-Beim Aufruf GELESEN: die Proben (`3DObjects/meshgenesis/<ordner>/proben.json`), der jüngste Lauf (`lauf_ergebnis.json`: Verlauf je Epoche, Maße je Gruppe) und je Probe Fehler und
+Beim Aufruf GELESEN: die Proben (`3DObjects/_Output/MeshGenesisJobs/<ordner>/proben.json`), der jüngste Lauf (`lauf_ergebnis.json`: Verlauf je Epoche, Maße je Gruppe) und je Probe Fehler und
 Abstand zur nächsten Trainingspose (`Meshgenesisdaten.proben`, `Meshgenesisvergleich`). Von Hand, jede Zahl mit Quelle: die Einstellungen des Trainingsskripts (`TRAINING`), die Zeiten je Schritt
 (`SCHRITTE`, gemessen) und die Befunde unterwegs (`BEFUNDE`).
 """

@@ -14,7 +14,7 @@ tragen dasselbe Feld (`name`, `max_length=200`), und die Tabellen der Übersicht
 genau dieses Feld. Deshalb steht der neue Name dort beim nächsten Aufruf ohne weiteres Zutun.
 
 **Was der Name sonst noch berührt:** „Mesh to 3D" legt gespeicherte Figuren unter ihm ab und
-der Mesh-Lauf kopiert sein Ergebnis als `<name>_<kennung>.glb` nach `output/Export/Foto3D`.
+der Mesh-Lauf kopiert sein Ergebnis als `<name>_<kennung>.glb` nach `3DObjects/_Output/Foto3D`.
 Beides geschieht BEIM LAUF — ein Umbenennen benennt bereits abgelegte Dateien nicht um
 (sonst hinge an einem Textfeld ein Dateiumzug). Der Name hier ist die Beschriftung des
 Auftrags, nicht der Schlüssel seiner Ablage; die Kennung bleibt unverändert.

@@ -41,7 +41,7 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Meshgenesi
 <div data-reiterfeld="jobs">
 <div class="card meshgenesis-joblist" data-loeschen="jobs">
     <h2>Jobs</h2>
-    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/meshgenesis/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/_Output/MeshGenesisJobs/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Ein Job ist ein Modell, an dem eine KI aus einem Netz ein Genesis-Modell machen lernt. Ein Klick auf eine Zeile öffnet die Seite des Jobs: Proben, Start (was das Netz sieht), Ziel (was es liefern soll) und Ergebnis (was es liefert).</p>
     {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
 </div>
@@ -50,7 +50,7 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Meshgenesi
 <div data-reiterfeld="test" hidden>
 <div class="card meshgenesis-joblist" data-loeschen="tests">
     <h2>Test</h2>
-    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/meshgenesis/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/_Output/MeshGenesisJobs/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
     <p class="hb-hinweis">Netze, für die es <strong>keine Trainingsdaten</strong> gibt — dieselben wie die Testaufträge auf /mesh-3D/ (Edgar, Zauberer, Spiralballerina …). Gerechnet mit dem Netz von Mesh-Genesis, das nur an Ursula1 trainiert ist.
         Ein Klick öffnet den Test mit zwei Feldern: <strong>Mesh</strong> (das Netz, mit dem vorhergesagten Rig) und <strong>Ausgabe</strong> (Ursula1 in der vorhergesagten Haltung). Ein Ziel gibt es nicht, darum keine Fehlerzahl.</p>
     {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
@@ -78,14 +78,14 @@ Ein Lauf öffnet seine Seite `/mesh-genesis/formtraining/<lauf>/` (`meshgenesis_
 </div>
 <div class="card meshgenesis-joblist">
     <h2>Trainingsläufe</h2>
-    <p class="hb-hinweis">Je Lauf ein Netz, das an den Jobs und den Formvarianten zugleich trainiert wird (Ordner <code>3DObjects/meshgenesis/_vorstufe/laeufe/</code>). <strong>Formkopf</strong> sagt Rig und Genesis-Formregler voraus,
+    <p class="hb-hinweis">Je Lauf ein Netz, das an den Jobs und den Formvarianten zugleich trainiert wird (Ordner <code>3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/</code>). <strong>Formkopf</strong> sagt Rig und Genesis-Formregler voraus,
         <strong>Vorstufe</strong> nur das Rig in der A-Pose. Laufende Läufe sind hervorgehoben; die Messwerte der letzten Zwischenmessung stehen im Tooltip der Statuszelle.
         Ein Klick auf eine Zeile öffnet den Lauf: Verlauf, Ergebnis je Gruppe, Vergleich mit dem vorigen Lauf, Kopfmessung, Ergebnis je Figur, Log.</p>
     {% include "djangobase/_tabelle.html" with tabelle=formtraining %}
 </div>
 <div class="card meshgenesis-joblist">
     <h2>Formvarianten ({{ formvarianten.zeilen|length }})</h2>
-    <p class="hb-hinweis">Die synthetischen Figuren: je Variante ein Charaktermix mit Formreglern auf einem der vier Jobs, in dessen Kleidung, mit eigenen Posen (Ordner <code>3DObjects/meshgenesis/FormNNN/</code>).
+    <p class="hb-hinweis">Die synthetischen Figuren: je Variante ein Charaktermix mit Formreglern auf einem der vier Jobs, in dessen Kleidung, mit eigenen Posen (Ordner <code>3DObjects/_Output/MeshGenesisJobs/FormNNN/</code>).
         Der Datenlauf rechnet je Pose zuerst MIA (Rig und Ruhelage, Make-It-Animatable), danach die A-Pose-Wolke Fassung 9, die das Formtraining liest. <strong>Prüfformen</strong> werden nie trainiert, nur gemessen.</p>
     {% include "djangobase/_tabelle.html" with tabelle=formvarianten %}
 </div>

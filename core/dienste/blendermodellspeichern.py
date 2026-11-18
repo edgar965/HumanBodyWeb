@@ -5,7 +5,7 @@ Alles wie `Meshfigurspeichern` (Modell `<Name> BlenderModel` in der Modellbiblio
 `modell` an ist — Vorgabe hier aus, siehe `Blendermodelloptionen`; Ablage mit Kacheln, Eigenmorph, Bildern
 und `bericht.json`), mit vier Unterschieden:
 
-    Ordner    `output/Export/BlenderModel/<Name>_<Anlagezeit>/` statt MeshTo3D
+    Ordner    `3DObjects/_Output/BlenderModel/<Name>_<Anlagezeit>/` statt MeshTo3D
     Adressen  die Kacheln stehen im Modell als `/api/blendermodell/<id>/datei/ergebnis/<name>` —
               `Texturquelle` löst sie zu Dateien auf, wenn `Modelltexturen.sichern` sie neben das
               Modell kopiert

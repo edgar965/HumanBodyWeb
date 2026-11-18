@@ -20,7 +20,7 @@ class Hautkilaufwahl:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_hautki' / 'laeufe'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_hautki' / 'laeufe'
 
     @staticmethod
     def eingesetzt():

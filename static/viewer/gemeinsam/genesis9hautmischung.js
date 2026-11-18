@@ -94,6 +94,15 @@ export class Genesis9hautmischung {
         }
     }
 
+    /** Ein Hautsatz der Mischung auf Prozent (0 = raus) — ohne Neubau des Körpers: Gewichte sind Uniforms; nur eine neue oder verschwundene Schicht
+     *  baut die Programme um. Bis 18.11.2026 `Genesis9Modell.hautmischungSetzen` (hierher, damit das Modell nicht weiter wächst). */
+    static async setzen(inst, id, prozent) {
+        if (prozent > 0) inst.hautmischung[id] = Math.min(100, Math.round(prozent));
+        else delete inst.hautmischung[id];
+        if (!Genesis9hautmischung.gewichte(inst)) await Genesis9hautmischung.anwenden(inst);
+        return inst;
+    }
+
     static _laden(material, i, bilder) {
         const holen = (pfad, art, srgb) => Genesis9texturen.holen(pfad, srgb, material,
             bild => Genesis9haut.mischungBild(material, i, art, bild));

@@ -26,6 +26,7 @@ import threading
 from collections import OrderedDict
 
 import torch
+from KoerperKI_alle.kartenvermutung import Kartenvermutung
 from KoerperKI_alle.torchfeld import Torchfeld
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.lagen import G9lagen
@@ -48,6 +49,8 @@ class G9lagenanfrage:
     #: Vorsatz der Kennung eines GarmentCode-Stuecks in `innen`/`aussen`.
     GC = 'gc:'
     _kaefige = OrderedDict()
+    #: Schlüssel -> Prüfsätze der Vermutungen, unter denen der Käfig entstand (`Kartenvermutung`, 18.11.2026)
+    _saetze = {}
     #: Schluessel -> Event: dieser Kaefig wird gerade von einem Thread gerechnet (`_kaefig`).
     _rechnend = {}
     _schloss = threading.Lock()
@@ -68,12 +71,13 @@ class G9lagenanfrage:
         except (TypeError, ValueError, AttributeError):
             self.rang = len(self.eintraege)
 
-    def vorbereiten(self, kennung, teile):
-        u"""`teile`: `[(G9folger, Kaefigpunkte)]` des angefragten Stuecks.
+    def vorbereiten(self, kennung, teile, herkunft=None):
+        u"""`teile`: `[(G9folger, Kaefigpunkte)]` des angefragten Stuecks; `herkunft`: je Teil `G9lagen.herkunft` oder None (Vorratsschlüssel ohne Abholen, 18.11.2026).
         Ohne getragene Stuecke die Haut selbst und zwei leere Listen."""
         if not self.eintraege and not self.gc:
             return self.lagen.koerper, [], []
-        kaefig = Torchfeld.vstack([self.lagen.gehoben(folger, punkte) for folger, punkte in teile]
+        herkunft = herkunft or [None] * len(teile)
+        kaefig = Torchfeld.vstack([self.lagen.gehoben(folger, punkte, h) for (folger, punkte), h in zip(teile, herkunft, strict=True)]
                            or [torch.zeros((0, 3), dtype=torch.float64, device='cuda')])
         andere = []
         for nummer, eintrag in enumerate(self.eintraege):
@@ -94,7 +98,7 @@ class G9lagenanfrage:
             punkte = self._gc_kaefig(eintrag)
             if punkte is not None:
                 andere.append((self.GC + str(eintrag.get('stueck') or '?'), punkte, False))
-        innen, aussen = G9lagenanatomie.unten(kennung, kaefig, andere, *self.lagen.einordnen(kaefig, andere), self._anatomie, self.lagen.NAEHE)
+        innen, aussen = G9lagenanatomie.unten(kennung, kaefig, andere, *self.lagen.einordnen(kaefig, andere, kennung), self._anatomie, self.lagen.NAEHE)
         innen, aussen = self._haar_aussen(kennung, innen, aussen)
         # Ein GarmentCode-Stueck ist EINE Stofflage — ohne `aussenlage` (24.09.2026,
         # `Genesis9/lagenflaeche.py`: 22 % der Kleidpunkte fielen dort heraus).
@@ -166,6 +170,7 @@ class G9lagenanfrage:
                 punkte = self._kaefige.get(schluessel)
                 if punkte is not None:
                     self._kaefige.move_to_end(schluessel)
+                    Kartenvermutung.uebernehmen(self._saetze.get(schluessel))      # die Vermutungen, unter denen der Käfig entstand, prüft der Nehmer mit (18.11.2026)
                     return punkte
                 rechnet = self._rechnend.get(schluessel)
                 if rechnet is None:
@@ -173,11 +178,13 @@ class G9lagenanfrage:
                     break
             rechnet.wait()
         try:
-            punkte = self.lagen.kaefig(kennung, self.formung, stile, regler)
+            with Kartenvermutung.sammeln() as saetze:
+                punkte = self.lagen.kaefig(kennung, self.formung, stile, regler)
             with self._schloss:
                 self._kaefige[schluessel] = punkte
+                self._saetze[schluessel] = saetze
                 while len(self._kaefige) > self.KAEFIGE_MAX:
-                    self._kaefige.popitem(last=False)
+                    self._saetze.pop(self._kaefige.popitem(last=False)[0], None)
         finally:
             with self._schloss:
                 fertig = self._rechnend.pop(schluessel)
@@ -279,3 +286,12 @@ class G9lagenanfrage:
     def _namen(cls, wert):
         roh = wert if isinstance(wert, (list, tuple)) else [wert]
         return [n for n in (cls._kennung(w) for w in roh) if n]
+
+
+def _leeren():
+    with G9lagenanfrage._schloss:
+        G9lagenanfrage._kaefige.clear()
+        G9lagenanfrage._saetze.clear()
+
+
+Kartenvermutung.beim_verwerfen(_leeren)

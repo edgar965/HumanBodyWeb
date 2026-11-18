@@ -126,28 +126,34 @@ HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 # (A:\Roomguest) liest sie von hier (core/api/figur_export.py, 05.09.2026).
 HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
-# Modell-Export aus dem Kontextmenü der Charakterliste (26.09.2026,
-# Docu/konzept_modellexport.md): Vorgabe-Zielordner, wählbar im Dialog. Seit
-# 18.10.2026 `3DObjects/modelsExport`, der Dialog hängt den Modellnamen an
-# (Edgar: „A:\3DTools\3DObjects\modelsExport + <Modellname> … als Default").
-HUMANBODY_MODELLEXPORT_VORGABE_DIR = OBJECTS_ROOT / 'modelsExport'
+# Alle Exporte aller Pipelines in `3DObjects/_Output` (18.11.2026, Edgar: „mach alles in
+# A:\3DTools\3DObjects\_Output für alle Exporte aller pipelines“); vorher `HumanBodyWeb/output/Export`.
+# Ebenfalls seit 18.11.2026 (Edgar: „mach beides“): die Jobs und Tests von Mesh-Genesis in
+# `_Output/MeshGenesisJobs` (vorher `3DObjects/meshgenesis`), die Foto-Genesis-Tests in
+# `3DObjects/_Foto_3D` (vorher `3DObjects/fotogenesis`). Die Dienste bilden beide Ordner aus
+# OBJECTS_ROOT (Tests biegen OBJECTS_ROOT auf einen Probeordner); gespeicherte Pfade sind umgeschrieben.
+AUSGABE_DIR = OBJECTS_ROOT / '_Output'
+# Modell-Export aus dem Kontextmenü der Charakterliste (26.09.2026, Docu/konzept_modellexport.md):
+# Vorgabe-Zielordner, wählbar im Dialog, der den Modellnamen anhängt; zugleich die Exporte von
+# Foto-Genesis und die Mesh-Genesis-Paare. Bis 18.11.2026 `3DObjects/modelsExport`.
+HUMANBODY_MODELLEXPORT_VORGABE_DIR = AUSGABE_DIR / 'modelsExport'
 #: Das Fenster „Ordner suchen" des Exportdialogs — ein eigener Prozess, weil
 #: tkinter nicht in einem Faden des Servers laufen darf (`core/dienste/ordnersuche.py`).
 ORDNERSUCHE_SKRIPT = BASE_DIR / 'werkzeug' / 'ordnersuchefenster.py'
 # Jedes fertige Mesh aus dem Reiter „Mesh" (Fotos -> freies Netz) landet zusätzlich
 # hier als GLB (Edgar, 26.09.2026) — der Auftragsordner bleibt die Quelle.
-MESH_FOTO3D_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Foto3D'
+MESH_FOTO3D_EXPORT_DIR = AUSGABE_DIR / 'Foto3D'
 # Reiter „Mesh to 3D" (Netz -> Genesis-9-Figur, 27.09.2026): je Auftrag ein Ordner mit Modell,
 # Kacheln, Eigenmorph, Bildern und Bericht; die GLB schreibt der Browser-Export dazu.
-MESHFIGUR_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshTo3D'
+MESHFIGUR_EXPORT_DIR = AUSGABE_DIR / 'MeshTo3D'
 # Bereich „BlenderModel" (Fotos -> Netz -> Figur, 29.09.2026): wie MeshTo3D, ein Ordner je Auftrag.
-BLENDERMODELL_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'BlenderModel'
+BLENDERMODELL_EXPORT_DIR = AUSGABE_DIR / 'BlenderModel'
 # Bereich „2D3D Kleider" (Vorlagenfotos -> Figur mit Kleidern, 30.09.2026): wie BlenderModel, ein Ordner je Auftrag.
-ENGINE2D3DKLEIDER_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Engine2d3dKleider'
+ENGINE2D3DKLEIDER_EXPORT_DIR = AUSGABE_DIR / 'Engine2d3dKleider'
 # Exportleiste der Tests von Mesh-Genesis (31.10.2026, `Meshgenesistestexportquelle`): ein Ordner je Test, Vorgabe des Feldes „Ordner".
-MESHGENESIS_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshGenesis'
+MESHGENESIS_EXPORT_DIR = AUSGABE_DIR / 'MeshGenesis'
 # Exportleiste der Tests von Foto-Genesis (31.10.2026, `Fotogenesisexportquelle`): ein Ordner je Test.
-FOTOGENESIS_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'FotoGenesis'
+FOTOGENESIS_EXPORT_DIR = AUSGABE_DIR / 'FotoGenesis'
 #: Blender-Skript, das eine GLB in eine .blend und/oder .fbx umschreibt — nur gerufen,
 #: wenn eins davon im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
 MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'

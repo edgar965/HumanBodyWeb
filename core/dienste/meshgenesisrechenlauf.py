@@ -77,6 +77,8 @@ class Meshgenesisrechenlauf:
         'kleider': ('kleider', 'Kleider und Haar aus dem Mesh messen (Kostüm-Weg, nur Messung für Genesis zuerst)', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
                                                                                                                       '--ohne-pruefung']),
         'garderobe': ('garderobe', 'Kleider, Haar und Requisit aus der Garderobe wählen und anpassen (Genesis zuerst)', ['-u', 'meshgenesis_garderobe_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # 18.11.2026 (Edgar: „kannst du den Code nicht mergen?“, `bausteine/stueckveredelung.py`): Stücke von Weg z mit Materialklassen aus dem Foto, Oberfläche und Glättung (Zeilen bs_*)
+        'bausteine': ('bausteine', 'Stücke veredeln: Materialklassen aus dem Foto, Gewebe, Glanz, Glättung (Genesis zuerst)', ['-u', 'meshgenesis_kostuem_bausteine.py', '--nur', '{k}', '--geschlecht', '{g}']),
         'pruefung': ('pruefung', 'Prüfung der Garderobenstücke: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--nur-pruefen', '--weg', 'z']),
     }
     #: Rückfall (27.10.2026, Edgar: „In der Kette automatisch auf den Formkopf zurückfallen, sobald MIA durchfällt“): die Regler-KI kennt nur MIAs A-Pose; stammt die jüngste A-Pose vom Rig
@@ -140,6 +142,7 @@ class Meshgenesisrechenlauf:
                 aus.append(self.GENESIS_ZUERST['proportionen'])
             elif s[0] == 'kleider':
                 aus.append(self.GENESIS_ZUERST['garderobe'])
+                aus.append(self.GENESIS_ZUERST['bausteine'])
         return tuple(aus)
 
     def mia_apose(self):
@@ -154,7 +157,7 @@ class Meshgenesisrechenlauf:
     def reglerki_wege(self):
         """Die Wege der A-Pose, die der gewählte Lauf der Regler-KI gelernt hat (`lauf_ergebnis.json` → `wege`; Läufe bis 27.10.2026 nur MIA)."""
         try:
-            datei = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_reglerki' / 'laeufe' / self.form_ki()['lauf'] / 'lauf_ergebnis.json'
+            datei = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_reglerki' / 'laeufe' / self.form_ki()['lauf'] / 'lauf_ergebnis.json'
             return list(json.loads(datei.read_text(encoding='utf-8')).get('wege') or ['mia'])
         except (OSError, ValueError, TypeError):
             return ['mia']

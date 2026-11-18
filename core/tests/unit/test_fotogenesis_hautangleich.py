@@ -53,7 +53,7 @@ class HautangleichAblageTest(unittest.TestCase):
         self.assertTrue(all(a.startswith(adresse + 'original/') for a in s['original'].values()))
 
     def test_fuer_test_nimmt_die_fotos_des_jobs(self):
-        job = self.wurzel / 'fotogenesis' / 'J'
+        job = self.wurzel / '_Foto_3D' / 'J'
         job.mkdir(parents=True)
         (job / 'job.json').write_text(json.dumps({'meshgenesis_test': 't', 'fotos': [{'winkel': 90}]}), encoding='utf-8')
         with override_settings(OBJECTS_ROOT=self.wurzel), mock.patch.object(Fotogenesishautangleich, '_zum_test', side_effect=lambda k, f: (k, f)):

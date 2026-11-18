@@ -2,7 +2,7 @@
 """Fotogenesisfotojobs — Jobs von „Foto-Genesis“ aus echten Fotos (24.10.2026, Edgar: „auch echte Fotos, …\\Tripo\\Randy, …\\Tripo\\Ed\\2026, …\\Tripo\\zauberer“).
 
 Echte Fotos haben keinen festen Namen und keine feste Zahl (Randy 4, Ed 8, Zauberer 8), keine bekannte Kamera und keine Wahrheit. Darum beschreibt je Job eine Datei
-`3DObjects/fotogenesis/<Name>/job.json`, was dazugehört — die Fotos bleiben, wo sie liegen (nichts kopiert, nichts in Edgars Ordnern geschrieben):
+`3DObjects/_Foto_3D/<Name>/job.json`, was dazugehört — die Fotos bleiben, wo sie liegen (nichts kopiert, nichts in Edgars Ordnern geschrieben):
 
     {"name": "Randy", "fotos": [{"datei": "A:\\\\…\\\\R1.jpg", "winkel": 0}, …], "netze": [{"art": "tripo3d", "datei": "…glb"}],
      "meshgenesis_test": "randy_tropical", "hinweis": "…", "koerpergroesse_m": 1.85}
@@ -46,7 +46,7 @@ class Fotogenesisfotojobs:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'fotogenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Foto_3D'
 
     @classmethod
     def alle(cls):

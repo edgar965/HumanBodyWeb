@@ -95,7 +95,7 @@ class G9kleidhumanbody:
         zusatz.update(G9passformvorgabe.werte(kennung, rumpf.get('regler_stueck')))
         zusatz.update(werte)
         zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
-        hoch = Torchfeld.feld([0.0, formung.boden(), 0.0], copy=True)
+        hoch = formung.hoch()
         schuh = cls.ist_schuh(eintrag)
         abstand = cls.HAUTABSTAND_SCHUH if schuh else cls.HAUTABSTAND
         stufen = G9netzstufe.browser()

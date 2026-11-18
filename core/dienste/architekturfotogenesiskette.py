@@ -133,7 +133,7 @@ class Architekturfotogenesiskette:
     @classmethod
     def uebersicht(cls):
         kaesten = [
-            {'titel': 'Fotos und Angaben', 'skript': '3DObjects/fotogenesis/<Job>/job.json', 'kis': [],
+            {'titel': 'Fotos und Angaben', 'skript': '3DObjects/_Foto_3D/<Job>/job.json', 'kis': [],
              'zeilen': ['4 Fotos (vorn, links,', 'hinten, rechts)', 'Körpergröße und Gewicht', 'aus der job.json', 'Brennweite aus EXIF/XMP', '(Fotobrennweite)']},
             {'titel': 'Erkennen', 'skript': 'Fotosegmente · Fotogelenke', 'kis': [('Sapiens2', '29 Klassen je Pixel'), ('SAM 3', 'Bart, Haar, Ohr'), ('ViTPose', '12 Gelenke'),
                                                                          ('MediaPipe', '478 Gesichtspunkte')],

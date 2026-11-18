@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = 'Speichert die Figur aus den Fotos eines Foto-Genesis-Jobs mit ihren Stücken als Genesis-Modell.'
 
     def add_arguments(self, parser):
-        parser.add_argument('job', help='Kennung des Jobs (Ordner unter 3DObjects/fotogenesis)')
+        parser.add_argument('job', help='Kennung des Jobs (Ordner unter 3DObjects/_Foto_3D)')
         parser.add_argument('geschlecht', choices=('weiblich', 'maennlich'))
         parser.add_argument('name', help='Name des Modells')
         parser.add_argument('--ziel', default=None, help='Ordner für das Modell (Vorgabe: die Modelle der Szene)')

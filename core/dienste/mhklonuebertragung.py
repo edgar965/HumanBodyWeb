@@ -70,7 +70,7 @@ class Mhklonuebertragung:
         alle = Torchfeld.arange(len(mh.punkte))
         g9 = G9formung({})
         stufe = G9basisnetz.holen().netzstufe(0)
-        grund = g9.punkte() - Torchfeld.feld([0.0, g9.boden(), 0.0], copy=True)
+        grund = g9.punkte() - g9.hoch()
         flaeche = (Torchfeld.feld(stufe.punkte(grund), dtype=torch.float64), Torchfeld.feld(stufe.dreiecke, dtype=torch.int64).reshape(-1, 3))
         self.koerper = mh._punktnummern(('koerper',))
         self.klon = Mhkopfklon(mh.punkte_am_boden(alle, roh), self.koerper, Mhskelett(self.formung).bauen()['knochen'], Mhhaut.roh(),
@@ -86,7 +86,7 @@ class Mhklonuebertragung:
         haut = klon_p[self.koerper]
         n_klon = self._normalen(klon_p)[self.koerper]
         netz = G9basisnetz.holen()
-        kaefig = Torchfeld.feld(netz.punkte, dtype=torch.float64) - Torchfeld.feld([0.0, g9.boden(), 0.0], copy=True)
+        kaefig = Torchfeld.feld(netz.punkte, dtype=torch.float64) - g9.hoch()
         n_kaefig = netz.normalen()
         abstand, nr = G9kollision.naechste(G9kollision.baum(haut), kaefig, k=self.KANDIDATEN)
         abstand, nr = Torchfeld.feld(abstand, dtype=torch.float64), Torchfeld.feld(nr)

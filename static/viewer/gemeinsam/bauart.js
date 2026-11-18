@@ -48,6 +48,41 @@ export class Bauart {
         return Bauart.NACHGEBEN_MM[Bauart.von(netz)] / 1000;
     }
 
+    /**
+     * So tief darf ein DECKENDES Stück in der Haut stecken und verdeckt sie noch (18.11.2026, `Hautmaske` `tiefe`, sonst `TIEFE_M` 5 mm): Die Platten des MH
+     * Cyborg Suit sind flach, die Brust sticht hindurch — an Luna bis 18 mm, an Fran (Edgar, Bild) deutlich mehr; mit der Nachgebe-Tiefe (30 mm) blieben die
+     * Brüste stehen. Durch einen deckenden Stoff sieht man nichts, also zählt die Haut bis hierhin als verdeckt. Durchsichtige Stücke: undefined.
+     */
+    static DURCHSTICH_M = 0.10;
+
+    static deckTiefeM(netz) {
+        return Bauart.durchsichtig(netz) ? undefined : Math.max(Bauart.nachgebenM(netz), Bauart.DURCHSTICH_M);
+    }
+
+    /**
+     * So weit darf ein deckendes, nicht loses Stück ÜBER der Haut stehen und verdeckt sie noch (`Hautmaske` `abstand` je Stück, sonst `ABSTAND_M` 25 mm):
+     * Die Rüstung des Cyborg Suit steht oben an der Brust mehr als 25 mm ab — dort endete die Maske, und daneben blieb durchstechende Haut im Saumband
+     * stehen. Lose Stücke (Rock, Robe) nicht: unter dem schwingenden Saum käme ausgeblendete Haut als Loch hervor.
+     */
+    static deckAbstandM(netz) {
+        return Bauart.durchsichtig(netz) || Bauart.von(netz) === 'lose' ? undefined : Bauart.DURCHSTICH_M;
+    }
+
+    /** Ab dieser Deckung gilt ein Material als deckend (`durchsichtig`). */
+    static DECKEND = 0.999;
+
+    /**
+     * Wird das Netz durchsichtig gezeichnet (ein Material mit `transparent` und Deckung unter `DECKEND`, `Stoffwerte.transparenz`, Daz „Cutout Opacity“)?
+     * Dann verdeckt es keine Haut, und sie gibt darunter nur nach, wo sie durchstößt (`Hautdurchsicht`, 18.11.2026).
+     */
+    static durchsichtig(netz) {
+        let durch = false;
+        netz?.traverse?.((o) => {
+            for (const m of [].concat(o.material || [])) if (m?.transparent && (m.opacity ?? 1) < Bauart.DECKEND) durch = true;
+        });
+        return durch;
+    }
+
     /** Was die Serverantwort eines Stücks über die Bauart sagt, ans Netz schreiben. */
     static eintragen(netz, daten) {
         netz.userData.bauart = Bauart.ARTEN.includes(daten?.bauart) ? daten.bauart : null;

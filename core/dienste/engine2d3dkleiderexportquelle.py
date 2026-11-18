@@ -10,7 +10,7 @@ dass die Abspielleiste der Bühne sie ebenfalls spielt); Mimik und Gelenkkorrekt
 
 Arbeitsordner = der Ordner des Auftrags: `arbeit/render/` (Rezept, Läufe, Programme, Warteschlange) und `ergebnis/` (Videos `render_lauf_NNN.mp4`) sind dieselben wie vor der
 Umstellung — die bisherigen Render-Läufe, ein eigenes Rezept (Randy) und die Videos bleiben sichtbar. Die Regler übernimmt die Leiste beim ersten Öffnen aus den Optionen des
-Auftrags (`regler_vorgabe`, Gruppen `render…`); danach gehören sie ihr (`arbeit/regler_werte.json`). Exportordner wie bisher `output/Export/Engine2d3dKleider/<Name>_<Anlagezeit>/`.
+Auftrags (`regler_vorgabe`, Gruppen `render…`); danach gehören sie ihr (`arbeit/regler_werte.json`). Exportordner wie bisher `3DObjects/_Output/Engine2d3dKleider/<Name>_<Anlagezeit>/`.
 """
 
 from django.core.exceptions import ValidationError

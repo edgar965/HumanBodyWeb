@@ -19,14 +19,14 @@ class KostuemohnekleiderTest(unittest.TestCase):
     def _test(self, job=None, einstellung=None, name='n2-mesh-genesis'):
         """Ablage wie `3DObjects`: Test `t` unter `meshgenesis/_test/`, Job `n2` unter `fotogenesis/`."""
         wurzel = Path(tempfile.mkdtemp(dir=r'A:\3DTools\ProjektTemp\_wegwerf'))
-        test = wurzel / 'meshgenesis' / '_test' / 't'
+        test = wurzel / '_Output' / 'MeshGenesisJobs' / '_test' / 't'
         test.mkdir(parents=True)
         (test / 'anlage.json').write_text(json.dumps({'name': name}), encoding='utf-8')
         if einstellung is not None:
             (test / 'einstellung.json').write_text(json.dumps(einstellung), encoding='utf-8')
         if job is not None:
-            (wurzel / 'fotogenesis' / 'n2').mkdir(parents=True)
-            (wurzel / 'fotogenesis' / 'n2' / 'job.json').write_text(json.dumps(job), encoding='utf-8')
+            (wurzel / '_Foto_3D' / 'n2').mkdir(parents=True)
+            (wurzel / '_Foto_3D' / 'n2' / 'job.json').write_text(json.dumps(job), encoding='utf-8')
         return test
 
     def test_nur_true_wirkt(self):

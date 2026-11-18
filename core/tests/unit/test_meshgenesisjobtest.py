@@ -16,11 +16,11 @@ class MeshgenesisjobtestTest(unittest.TestCase):
         """`jobs`: (Ordner, meshgenesis_test); `tests`: (Kennung, Name in anlage.json)."""
         wurzel = Path(tempfile.mkdtemp(dir=r'A:\3DTools\ProjektTemp\_wegwerf'))
         for ordner, test in jobs:
-            job = wurzel / 'fotogenesis' / ordner
+            job = wurzel / '_Foto_3D' / ordner
             job.mkdir(parents=True)
             (job / 'job.json').write_text(json.dumps({'meshgenesis_test': test}), encoding='utf-8')
         for kennung, name in tests:
-            ablage = wurzel / 'meshgenesis' / '_test' / kennung
+            ablage = wurzel / '_Output' / 'MeshGenesisJobs' / '_test' / kennung
             ablage.mkdir(parents=True)
             (ablage / 'anlage.json').write_text(json.dumps({'name': name}), encoding='utf-8')
         return wurzel

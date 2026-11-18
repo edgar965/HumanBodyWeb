@@ -34,6 +34,8 @@ beiden Seiten getrennt gepflegt zu werden.
 """
 import base64
 
+import torch
+from KoerperKI_alle.kartenwerte import Kartenwerte
 from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Netzfeld']
@@ -42,7 +44,7 @@ __all__ = ['Netzfeld']
 class Netzfeld:
     u"""Rohe Bytes eines Zahlenfeldes plus der Typ, mit dem sie zu lesen sind."""
 
-    __slots__ = ('rohdaten', 'typ', 'anzahl', 'genau')
+    __slots__ = ('_roh', '_karte', 'typ', 'anzahl', 'genau')
 
     #: Typen, die der Browser lesen kann (`gemeinsam/netzpaket.js`). Was hier
     #: nicht steht, hat drüben kein `TypedArray` — dann lieber jetzt ein Fehler
@@ -50,12 +52,21 @@ class Netzfeld:
     ERLAUBT = ('float32', 'uint32', 'uint16', 'uint8', 'int32')
 
     def __init__(self, rohdaten, typ, anzahl, genau=False):
-        self.rohdaten = rohdaten
+        self._roh = rohdaten
+        #: Bis zum Abholen der Tensor auf der Karte (`aus`, `abholen`; 18.11.2026).
+        self._karte = None
         self.typ = typ
         self.anzahl = anzahl
         #: Das Feld trägt NUMMERN (Punkt- oder Knochennummern als float32), keine Messwerte: `Netzpaket` kürzt es nie auf 16 Bit
         #: (`netzkurz.py`, 12.11.2026 — eine halbe Rasterstufe daneben ist ein anderer Punkt).
         self.genau = bool(genau)
+
+    @property
+    def rohdaten(self):
+        u"""Die Bytes — ein Feld auf der Karte wird spätestens hier abgeholt (sonst gesammelt in `abholen`)."""
+        if self._roh is None:
+            self._roh, self._karte = Torchfeld.als_bytes(self._karte), None
+        return self._roh
 
     @classmethod
     def aus(cls, werte, typ, genau=False):
@@ -64,12 +75,33 @@ class Netzfeld:
         `ravel()` und `ascontiguousarray` gehören zusammen: Ein (N, 3)-Feld und
         ein flaches 3N-Feld liefern dieselben Bytes — aber nur, wenn das Feld
         C-zusammenhängend ist. Nach einem `[:, [0, 2, 1]]` ist es das nicht.
+
+        Ein Feld auf der Karte bleibt dort, als eigene Kopie (eine spätere Änderung des Aufrufers erreicht die Antwort nicht), bis `abholen` alle Felder einer Antwort
+        in EINER Kopie zur CPU holt (18.11.2026; bis dahin je Feld eine, mit Wartepunkt — 82 je Reglerzug, Kartenwächter `_wegwerf/zug_kartenwaechter.py`).
         """
         ziel = Torchfeld.dtype(typ)
         if Torchfeld.typname(ziel) not in cls.ERLAUBT:
             raise ValueError('Netzfeld: Typ %s kann der Browser nicht lesen' % Torchfeld.typname(ziel))
         flach = Torchfeld.feld(Torchfeld.feld(werte).ravel(), dtype=ziel)
+        if isinstance(flach, torch.Tensor) and flach.device.type != 'cpu':
+            feld = cls(None, Torchfeld.typname(ziel), int(flach.numel()), genau=genau)
+            feld._karte = flach.detach().contiguous().clone()
+            return feld
         return cls(Torchfeld.als_bytes(flach), Torchfeld.typname(ziel), int(Torchfeld.groesse(flach)), genau=genau)
+
+    @classmethod
+    def abholen(cls, daten, mit=()):
+        u"""Alle Netzfelder in `daten` (verschachtelt in dict, list, tuple), die noch auf der Karte liegen, in EINER Kopie zur CPU — je Gerät; dieselben Bytes wie einzeln.
+        In derselben Kopie die `Kartenwerte` der Antwort (Skelett, Höhe, Boden; 18.11.2026): ihr gebauter Wert ersetzt den Platzhalter. `mit`: weitere
+        [(uint8-Feld auf der Karte, Empfänger(bytes))] in derselben Kopie (die Prüfbits der Vermutungen, `G9pruefbau`)."""
+        netzfelder = []
+        gefunden = Kartenwerte.finden(daten, auch=(Netzfeld, netzfelder))
+        weitere = [(f._karte.reshape(-1).view(torch.uint8), f._setzen) for f in netzfelder if f._roh is None and f._karte is not None] + list(mit)
+        if gefunden or weitere:
+            Kartenwerte.einsetzen(gefunden, weitere)
+
+    def _setzen(self, roh):
+        self._roh, self._karte = roh, None
 
     def base64(self):
         u"""Für den JSON-Rückfall — dieselben Bytes, ein Drittel größer."""

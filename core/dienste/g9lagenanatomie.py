@@ -12,6 +12,7 @@ Zeile „drapiert"), und an Matt0 lag die Hose ganz hinter dem Genital (im Chrom
 wenn EIN Käfigpunkt des Stücks binnen NAEHE an ihr liegt — ein Hut oder ein Schuh bleibt davon unberührt.
 """
 import torch
+from KoerperKI_alle.kartenvermutung import Kartenvermutung
 from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['G9lagenanatomie']
@@ -43,6 +44,7 @@ class G9lagenanatomie:
             if baum is None:
                 baum = cKDTree(Torchfeld.feld(kaefig, dtype=torch.float64))
             abstand, _i = baum.query(Torchfeld.feld(punkte, dtype=torch.float64))
-            if (abstand < naehe).any():
+            # Vermutet wie beim letzten Mal, geprüft mit der Antwort (`Kartenvermutung`, 18.11.2026: ohne Wartepunkt)
+            if Kartenvermutung.wert(('lagen.nah', k, len(kaefig), len(punkte)), (abstand < naehe).any(), lambda t: bool(t)):
                 dazu.append(k)
         return dazu

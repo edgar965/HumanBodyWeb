@@ -5,11 +5,11 @@ Edgar: „ein Konzept für das Erstellen eines 3D Modells aus Fotos, mit einer K
 passe dazu die Jobs an, so dass Eingabe (Fotos), ggf. Mesh (Hunyuan), Genesis Modell und das Ergebnis zu sehen ist“ — dazu „auch echte Fotos“ (Randy, Ed/2026, Zauberer).
 
 Zwei Arten, eine Form (`{id, name, art, figur, fotos: [{name, pfad, winkel}], netze, paar, test, wahrheit, hinweis}`):
-- **Export** (`art = export`, mit Wahrheit): ein Ordner unter `3DObjects/modelsExport/` mit `<Stamm>.json` und den vier Aufnahmen `<Stamm>_vorne|links|rechts|hinten.jpg` (`Modellansichten`:
+- **Export** (`art = export`, mit Wahrheit): ein Ordner unter `3DObjects/_Output/modelsExport/` mit `<Stamm>.json` und den vier Aufnahmen `<Stamm>_vorne|links|rechts|hinten.jpg` (`Modellansichten`:
   1536 × 2048, 20°, Kamera aus der Hülle der Figur). Netz: Hunyuan3D-2mv aus genau diesen Fotos (`meshgenesis/_bild3d/<Paar>_tripovergleich/…/mesh.glb` oder `<Job>/hunyuan3d/*.glb`), dann Tripo3D
   (`<Job>/tripo3d/*.glb`). `paar` = der Mesh-Genesis-Job, dessen `paar.json` diese JSON als Quelle nennt — sein Ergebnis ist heute das Genesis-Modell der Seite (Messlatte A: Tripo-Netz → Mesh-Genesis).
   Ein neuer Export mit vier Fotos erscheint ohne Eintrag im Code.
-- **Foto** (`art = foto`, ohne Wahrheit): `Fotogenesisfotojobs`, je Job eine `job.json` unter `3DObjects/fotogenesis/`.
+- **Foto** (`art = foto`, ohne Wahrheit): `Fotogenesisfotojobs`, je Job eine `job.json` unter `3DObjects/_Foto_3D/`.
 
 `winkel` je Foto: Standort der Kamera um die Figur in Grad — 0 vorne, 90 links (Kamera bei +X, die linke Körperseite), 180 hinten, 270 rechts (`Modellansichten.ANSICHTEN`); `None` = unbekannt.
 """
@@ -44,11 +44,11 @@ class Fotogenesisjobs:
 
     @staticmethod
     def ordner():
-        return Path(settings.OBJECTS_ROOT) / 'modelsExport'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'modelsExport'
 
     @staticmethod
     def meshgenesis():
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs'
 
     @classmethod
     def alle(cls):

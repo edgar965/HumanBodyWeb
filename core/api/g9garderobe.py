@@ -34,6 +34,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from Genesis9.aehnlichkeit import G9aehnlichkeit
+from Genesis9.anfragevorrat import G9anfragevorrat
 from Genesis9.bauart import G9bauart
 from Genesis9.drapierung import G9drapierung
 from Genesis9.garderobe import G9garderobe
@@ -58,6 +59,7 @@ from ..dienste.g9stueckteile import G9stueckteile
 from ..dienste.g9texturfassung import G9texturfassung
 from .g9figur import FEHLT, G9figur
 from .g9kleidhumanbody import G9kleidhumanbody
+from KoerperKI_alle.kartenwerte import Kartenwerte
 
 logger = logging.getLogger('core')
 
@@ -88,6 +90,11 @@ class G9garderobeapi:
         # „Kleidung – Generisch“ (`G9kleidgenerisch`, 30.09.2026): je Kategorie ein Sammeleintrag, gleich hinter dem
         # Haar — der Browser gruppiert in der Reihenfolge dieser Liste, also stehen sie in ihrer Kategorie vorn.
         # Der Generator „Eigen Haar“ ist seit 16.11.2026 spät eine Sorte von „Haar – Generisch“ (Edgar: „ich brauche nur einen“).
+        with G9anfragevorrat.an():      # die Regler je Stück einmal, nicht für „Kleidung – Generisch" ein zweites Mal (18.11.2026)
+            return G9garderobeapi._katalog_bauen(G9vorschau)
+
+    @staticmethod
+    def _katalog_bauen(vorschau):
         roh = [G9haargenerisch.eintrag(G9eigenhaarbau.sorten())] + G9kleidgenerisch.eintraege() + list(G9garderobe.liste())
         # `regler`: jede Frisur bekommt die fuenf gemeinsamen Formachsen dazu
         # (`G9haarachsen`) — erst hier, nicht in der abgelegten Liste je Stueck.
@@ -96,7 +103,7 @@ class G9garderobeapi:
         from Genesis9.kleidmorphe import G9kleidmorphe
         # Die Daz-Tabelle EINMAL je Anfrage: je Eintrag geholt zaehlte sie 620-mal die `.dsx` der Bibliotheken auf (10,7 s).
         daz = G9dazkategorien.tabelle()
-        stuecke = [G9garderobeapi._stueck(s, daz, G9vorschau, G9kleidmorphe) for s in roh]
+        stuecke = [G9garderobeapi._stueck(s, daz, vorschau, G9kleidmorphe) for s in roh]
         stuecke = G9garderobepflege.anwenden(stuecke)       # Umbenennen und Löschen aus dem Kontextmenü (05.10.2026)
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
 
@@ -227,7 +234,7 @@ class G9garderobeapi:
             # unbekannte Kennung bleibt eine 404, keine 500.
             teile = teile if teile is not None else G9garderobe.teile(kennung)
             bilder = bilder if bilder is not None else G9garderobe.bilder(kennung, G9figur._name(rumpf.get('variante')))
-            netze, innen, aussen, hoch = G9stueckteile.netze(
+            netze, innen, aussen, _hoch = G9stueckteile.netze(
                 kennung, eintrag, rumpf, formung, koerpernetz.koerperflaeche(), stufen,
                 bilder=bilder, stueckformung=stueckformung, bindung=bindung,
                 gc_vorrat=rumpf.get('gc_getragen'), teile=teile)
@@ -257,7 +264,7 @@ class G9garderobeapi:
             teil['zweiseitig'] = bool(eintrag.get('eigen'))
             antwort_teile.append(teil)
         return {'kennung': kennung, 'teile': antwort_teile,
-                'boden': round(hoch[1], 4), 'stufen': stufen,
+                'boden': Kartenwerte([formung.boden_feld().reshape(1)], lambda b: round(float(b[0]), 4)), 'stufen': stufen,   # mit der Antwort abgeholt (18.11.2026)
                 'innen': innen, 'aussen': aussen,
                 # Die Art entscheidet im Browser, ob die Haut darunter
                 # ausgeblendet wird (`Hautverdeckung`, nur `kleidung`).

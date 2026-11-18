@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}{% load jsfassung %}
+{% load static %}{% load fassung %}{% load jsfassung %}{% load hautmaskenfassung %}
 {% block title %}Mesh-Genesis{% endblock %}
 
 {% comment %}
@@ -19,7 +19,7 @@ Endpunkte: `core/api/meshgenesis.py`. Seit 14.10.2026 ist das die Seite EINES Jo
 {# Ziel und Ergebnis sind Genesis-Figuren aus dem Code der Charakter-Seite (`Meshgenesisgenesisfigur`): die Haut-Maske rechnet in deren Worker. #}
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
 {# Ihr Ergebnis liegt dauerhaft auf dem Server, unter der Fassung DIESES Codes (`core/dienste/jsquellen.py`, `gemeinsam/hautmaskenvorrat.js`). #}
-<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="hautmaskenfassung" content="{% hautmaskenfassung %}">
 {% comment %}Schnelle Anzeige (19.10.2026, `gemeinsam/schnellanzeige.js`): Figuren auf Daz' Käfig (grob), Leinwände mit Pixeldichte 1 — bis zu acht Figuren und 16 Felder auf einer Seite.
 Strg+Alt+H schaltet die Netzstufe weiter (grob → fein → ultrafein). Die Charakter-Seite bleibt bei der Vorgabe (fein); sie schaltet die schnelle Anzeige mit derselben Zeile ein.{% endcomment %}
 <meta name="schnellanzeige" content="an">

@@ -47,8 +47,9 @@ class Meshgenesisflaechennetz:
     ORDNER = 'anzeige'
     FASSUNGEN = (1,)
     TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd', 'augen')         # `augen` seit 24.10.2026 (Figuren der Tests, `Ursula.TEILE`)
-    #: `opazitaet` (14.11.2026): Deckkraft eines Daz-Stücks ohne Deckkraftbild (`Kleiderbau.anzeige`)
-    MATERIALWERTE = ('rauheit', 'glanz', 'metall', 'relief', 'opazitaet')
+    #: `opazitaet` (14.11.2026): Deckkraft eines Daz-Stücks ohne Deckkraftbild (`Kleiderbau.anzeige`); `umgebung` (18.11.2026): Stärke der Studio-Umgebung spiegelnder
+    #: Kostümteile (`bausteine/kostuemzeilen.py`, Browser `Meshgenesisumgebung`)
+    MATERIALWERTE = ('rauheit', 'glanz', 'metall', 'relief', 'opazitaet', 'umgebung')
     _ablage = {}
 
     @classmethod

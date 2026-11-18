@@ -55,6 +55,7 @@ from Genesis9.stueckstand import G9stueckstand
 from ..daten.netzausgabe import Netzausgabe
 from ..daten.netzpaket import Netzpaket
 from .g9antwortvorrat import G9antwortvorrat
+from .g9pruefbau import G9pruefbau
 from .g9vorratanfrage import G9vorratanfrage
 
 __all__ = ['G9antworten']
@@ -152,8 +153,7 @@ class G9antworten(G9antwortvorrat):
 
     @classmethod
     def rechnen(cls, schluessel, bauen, platte, binaer=False):
-        u"""`bauen()` einmal je Schluessel: laeuft es schon, warten und das
-        Ergebnis nehmen. Liefert Bytes oder die Fehlerantwort von `bauen`."""
+        u"""`bauen()` einmal je Schluessel: laeuft es schon, warten und das Ergebnis nehmen. Liefert Bytes oder die Fehlerantwort von `bauen`."""
         with cls._schloss:
             laeuft = cls._laufend.get(schluessel)
             if laeuft is None:
@@ -168,7 +168,7 @@ class G9antworten(G9antwortvorrat):
                 return daten
             return cls.rechnen(schluessel, bauen, platte)
         try:
-            aus = bauen()
+            aus = G9pruefbau.bauen(bauen)       # vermutete Entscheidungen, geprüft beim Abholen der Antwort (18.11.2026, `Kartenvermutung`)
             if isinstance(aus, HttpResponse):
                 return aus
             daten = cls.kodieren(aus, binaer)

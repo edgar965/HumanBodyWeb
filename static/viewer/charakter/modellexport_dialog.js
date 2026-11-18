@@ -20,7 +20,7 @@ import { Figuraufbaustand } from '../gemeinsam/figuraufbaustand.js';
  * SEIT 18.10.2026 (Edgar: „exportieren als glb, blender, fbx, und jpg", „auch in
  * json", „Per Default: json, glb und jpg aktiviert"): FBX, JPG (vier Ansichten)
  * und JSON (die Daten von „Modell speichern unter") dazu; Ordner und Dateiname
- * kommen aus `Modellexportordner` (`3DObjects/modelsExport/<Modellname>`), die
+ * kommen aus `Modellexportordner` (`3DObjects/_Output/modelsExport/<Modellname>`), die
  * Pose ist die angezeigte. Formate und Pose werden NICHT mehr vom letzten Mal
  * übernommen — Edgar hat die Vorgabe festgelegt, eine gemerkte Wahl stünde ihr
  * bei jedem Öffnen im Weg.

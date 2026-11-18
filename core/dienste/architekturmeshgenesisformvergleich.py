@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Architekturmeshgenesisformvergleich — Formkopf in der Pose gegen Formkopf auf der A-Pose-Wolke, auf Hilfe → Architektur → Mesh-Genesis, Abschnitt 3 (17.10.2026).
 
-Edgar: „BAUE das: Mein Vorschlag ist, die Form ebenfalls auf der A-Pose-Wolke zu lernen“. GELESEN: `3DObjects/meshgenesis/_vorstufe/form_vergleich.json`, geschrieben von
+Edgar: „BAUE das: Mein Vorschlag ist, die Form ebenfalls auf der A-Pose-Wolke zu lernen“. GELESEN: `3DObjects/_Output/MeshGenesisJobs/_vorstufe/form_vergleich.json`, geschrieben von
 `ProjektTemp/_wegwerf/meshgenesis_form_vergleich.py` aus den beiden Läufen (`meshgenesis_form_alle.py` in der Pose, `meshgenesis_vorstufe_form.py` auf der A-Pose). Fehlt die Datei: None, der Abschnitt sagt es.
 """
 
@@ -18,7 +18,7 @@ class Architekturmeshgenesisformvergleich:
     @staticmethod
     def datei():
         from django.conf import settings
-        return Path(settings.OBJECTS_ROOT) / 'meshgenesis' / '_vorstufe' / 'form_vergleich.json'
+        return Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / '_vorstufe' / 'form_vergleich.json'
 
     @classmethod
     def lesen(cls):

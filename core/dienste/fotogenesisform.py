@@ -5,7 +5,7 @@ Edgar: „keine eigenen erfindungen, mach zuerst das was die anderen machen!“ 
 optional, per Checkbox einstellbar im UI“. Anlass: der leere Saum der Zeile 2 (Figur ringsum 1,5–3 mm
 zu schmal, `Stueckumriss.INNEN_PX`).
 
-In `3DObjects/fotogenesis/<Name>/job.json` als `form`: {engine, bilder, finger}; fehlt es, gilt die Vorgabe
+In `3DObjects/_Foto_3D/<Name>/job.json` als `form`: {engine, bilder, finger}; fehlt es, gilt die Vorgabe
 (`auswendig`, der bisherige Weg). Gelesen von der Kette beim nächsten Lauf der Körperstufe
 (`KoerperKI_Fotos.fotokonsens.Fotokonsens.wahl`).
   engine   auswendig = `Fotoauswendig` allein; videoavatars = danach der Silhouettenkonsens von

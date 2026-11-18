@@ -28,7 +28,7 @@ class FotogenesisPshumanEingabe(FotogenesisAblageMixin, SimpleTestCase):
     BASIS = '/api/fotogenesis/fototest/pshuman'
 
     def _info(self):
-        return json.loads((self.objekte / 'fotogenesis' / 'Fototest' / 'job.json').read_text(encoding='utf-8'))
+        return json.loads((self.objekte / '_Foto_3D' / 'Fototest' / 'job.json').read_text(encoding='utf-8'))
 
     def _hoch(self, winkel, name='bild.png', inhalt=PNG):
         datei = SimpleUploadedFile(name, inhalt)
@@ -37,7 +37,7 @@ class FotogenesisPshumanEingabe(FotogenesisAblageMixin, SimpleTestCase):
     def test_sechs_plaetze_vorn_und_linke_seite_aus_den_fotos_des_jobs(self):
         info = self._info()
         fotos = [{'winkel': f['winkel'], 'pfad': f['datei']} for f in info['fotos']]
-        plaetze = Fotogenesispshumaneingabe.lesen(self.objekte / 'fotogenesis' / 'Fototest', info, fotos)
+        plaetze = Fotogenesispshumaneingabe.lesen(self.objekte / '_Foto_3D' / 'Fototest', info, fotos)
         self.assertEqual([p['winkel'] for p in plaetze], [0, 45, 90, 180, 270, 315])
         self.assertEqual([p['quelle'] for p in plaetze], ['job', None, 'job', None, None, None])
         self.assertFalse(any(p['erzeugt'] for p in plaetze))
@@ -49,7 +49,7 @@ class FotogenesisPshumanEingabe(FotogenesisAblageMixin, SimpleTestCase):
         antwort = self._hoch(180)
         self.assertEqual(antwort.status_code, 200, antwort.content)
         self.assertEqual(antwort.json()['platz']['quelle'], 'upload')
-        ziel = self.objekte / 'fotogenesis' / 'Fototest' / 'pshuman' / 'eingabe' / 'w180.png'
+        ziel = self.objekte / '_Foto_3D' / 'Fototest' / 'pshuman' / 'eingabe' / 'w180.png'
         self.assertEqual(ziel.read_bytes(), PNG)
         self.assertEqual(self._info()['pshuman']['eingabe'], {'180': str(ziel)})
         self.assertEqual(self._hoch(180, inhalt=PNG + b'zwei').status_code, 200)
@@ -67,7 +67,7 @@ class FotogenesisPshumanEingabe(FotogenesisAblageMixin, SimpleTestCase):
         self.assertEqual(antwort.status_code, 200, antwort.content)
         self.assertIsNone(antwort.json()['platz']['quelle'])
         self.assertEqual(self._info()['pshuman']['eingabe'], {})
-        eingabe = self.objekte / 'fotogenesis' / 'Fototest' / 'pshuman' / 'eingabe'
+        eingabe = self.objekte / '_Foto_3D' / 'Fototest' / 'pshuman' / 'eingabe'
         self.assertEqual(len(list(eingabe.glob('w270.vor_*.png'))), 1)
         self.assertEqual(self.client.post('%s/eingabe/270/entfernen/' % self.BASIS).status_code, 400)
 
@@ -110,24 +110,24 @@ class FotogenesisPshumanEingabe(FotogenesisAblageMixin, SimpleTestCase):
         self.assertEqual(falsch.status_code, 400)
 
     def test_erzeugte_ansichten_von_pshuman_werden_gefunden(self):
-        rembg = self.objekte / 'fotogenesis' / 'Fototest' / 'pshuman' / 'rekon' / 'rembg'
+        rembg = self.objekte / '_Foto_3D' / 'Fototest' / 'pshuman' / 'rekon' / 'rembg'
         rembg.mkdir(parents=True)
         for art in ('farbe', 'normale'):
             (rembg / ('%s_3_back.png' % art)).write_bytes(PNG)
         info = self._info()
-        plaetze = Fotogenesispshumaneingabe.lesen(self.objekte / 'fotogenesis' / 'Fototest', info, [])
+        plaetze = Fotogenesispshumaneingabe.lesen(self.objekte / '_Foto_3D' / 'Fototest', info, [])
         platz = next(p for p in plaetze if p['winkel'] == 180)
         self.assertTrue(platz['erzeugt'])
         self.assertEqual(self.client.get('%s/bild/180/normale/' % self.BASIS).status_code, 200)
 
     def test_ein_job_liest_nie_aus_einem_anderen_job(self):
         # 04.11.2026, Edgar: „die jobs sollen immer unabhängig sein, was soll der schwachsinn mit Basisjobs???“ — auch ein alter Eintrag `probe.basis` wirkt nicht mehr
-        fremd = self.objekte / 'fotogenesis' / 'Fototest'
+        fremd = self.objekte / '_Foto_3D' / 'Fototest'
         rembg = fremd / 'pshuman' / 'rekon' / 'rembg'
         rembg.mkdir(parents=True)
         for art in ('farbe', 'normale'):
             (rembg / ('%s_3_back.png' % art)).write_bytes(PNG)
-        job = self.objekte / 'fotogenesis' / 'Fototest--probe'
+        job = self.objekte / '_Foto_3D' / 'Fototest--probe'
         job.mkdir()
         platz = next(p for p in Fotogenesispshumaneingabe.lesen(job, {'probe': {'basis': 'Fototest'}}, []) if p['winkel'] == 180)
         self.assertFalse(platz['erzeugt'])

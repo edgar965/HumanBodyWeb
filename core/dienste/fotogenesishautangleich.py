@@ -66,7 +66,7 @@ class Fotogenesishautangleich:
     @classmethod
     def fuer_test(cls, kennung):
         """Der Angleich von der Testseite (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“). Gehört der Test zu einem Job, gelten dessen Fotos: Beide Seiten teilen die Ablage."""
-        for datei in (Path(settings.OBJECTS_ROOT) / 'fotogenesis').glob('*/job.json'):
+        for datei in (Path(settings.OBJECTS_ROOT) / '_Foto_3D').glob('*/job.json'):
             try:
                 job = json.loads(datei.read_text(encoding='utf-8'))
             except (OSError, ValueError):

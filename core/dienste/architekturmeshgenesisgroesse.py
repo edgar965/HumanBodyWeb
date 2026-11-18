@@ -2,7 +2,7 @@
 """Architekturmeshgenesisgroesse — Größe und Grafikspeicher des Netzes, und wie viele Regler eine Ausgabe „Genesis + Kleider“ hätte (Hilfe → Architektur → Mesh-Genesis, 16.10.2026).
 
 Edgar: „schreibe auch die Größe des Netzes darunter, sowie den GPU-Bedarf beim Laden“ und „bei der Ausgabe schreibe die gesamte Anzahl der Parameter für die Genesis- und Kleider-Regler“.
-Beides sind MESSUNGEN mit Datum, gelesen aus `3DObjects/meshgenesis/`:
+Beides sind MESSUNGEN mit Datum, gelesen aus `3DObjects/_Output/MeshGenesisJobs/`:
     netzgroesse.json   `ProjektTemp/_wegwerf/meshgenesis_netz_groesse.py` (python10, GPU): Gewichte, Datei, Speicher nach dem Laden, Spitze je Vorhersage und Trainingsschritt bei 4.096/8.192/16.384 Punkten
     reglerzahl.json    `ProjektTemp/_wegwerf/meshgenesis_kleider_regler_zaehlen.py`: Reglerkatalog des Bedienfelds (`G9reglerplan.bereiche()`) und die Regler aller Garderobe-Einträge (`G9garderobe.liste()`)
 Fehlt eine Datei, wirft `lesen` — die Seite zeigt den Grund als Befund (`Architekturmeshgenesis.teil`).
@@ -18,7 +18,7 @@ class Architekturmeshgenesisgroesse:
     @staticmethod
     def _datei(name):
         from django.conf import settings
-        pfad = Path(settings.OBJECTS_ROOT) / 'meshgenesis' / name
+        pfad = Path(settings.OBJECTS_ROOT) / '_Output' / 'MeshGenesisJobs' / name
         if not pfad.is_file():
             raise FileNotFoundError('%s fehlt — erst das Messskript aus ProjektTemp/_wegwerf/ laufen lassen' % name)
         return json.loads(pfad.read_text(encoding='utf-8'))

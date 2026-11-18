@@ -7,7 +7,7 @@ Generierung an mit pshuman“ — dann „mach beides, selektierbar“. PSHuman 
 und daraus ein farbiges Netz (`pshuman_port14/pshuman_job_rechnen.py`,
 Ablage `<Job>/pshuman/`).
 
-In `3DObjects/fotogenesis/<Name>/job.json` als `pshuman`: {zeile1, drehteller} (zwei Häkchen, frei kombinierbar);
+In `3DObjects/_Foto_3D/<Name>/job.json` als `pshuman`: {zeile1, drehteller} (zwei Häkchen, frei kombinierbar);
 fehlt es, ist beides aus — PSHuman fließt dann nicht in die Figur (das Netz steht höchstens im Feld „Netz“).
 Der Silhouettenkonsens läuft nur mit einer Zeile 1 (`Fotoauswendig.figur`: sonst „keine Stücke der Zeile 1“) —
 in einem Job ohne eigene Zeile 1 wirkt der Drehteller also erst zusammen mit `zeile1`.

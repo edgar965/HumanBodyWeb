@@ -29,7 +29,7 @@ CODE = ['meshgenesis', 'KoerperKI_alle', 'KoerperKI_Fotos', 'KopfKI', 'HaarKI', 
 #: bewusst NPZ: Npztorch und seine Werkzeuge; Tests, die alte .npz als Eingang anlegen (Npztorch liest beide)
 AUSNAHMEN = ('KoerperKI_alle/npztorch.py', '/tests/')
 #: Wurzeln, deren Dateien umgestellt sein sollen (Zählung)
-DATEN = ['3DObjects/meshgenesis', '3DObjects/fotogenesis', 'Genesis9', '3DObjects/models/Genesis9', '3DObjects/blendimport', '3DObjects/meshfigurauftraege']   # Welle 2: 13.11.2026 abends
+DATEN = ['3DObjects/_Output/MeshGenesisJobs', '3DObjects/_Foto_3D', 'Genesis9', '3DObjects/models/Genesis9', '3DObjects/blendimport', '3DObjects/meshfigurauftraege']   # Welle 2: 13.11.2026 abends
 ORDNER = W / 'ProjektTemp' / '_test_npz_torchformat'
 N = 'n' + 'p'           # Beispielcode für die Sabotage, ohne dass der numpy-Hook ihn als eigenen Code liest
 
