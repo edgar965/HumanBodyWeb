@@ -20,6 +20,7 @@ from .api.meshgenesistest import Meshgenesistestendpunkte
 from .api.meshgenesistestfaelle import Meshgenesistestfaelleendpunkte
 from .api.meshgenesistestkleider import Meshgenesistestkleiderendpunkte
 from .api.meshgenesistestmesspunkte import Meshgenesistestmesspunkteendpunkte
+from .api.meshgenesisteststoff import Meshgenesisteststoffendpunkt
 
 __all__ = ['MESHGENESIS']
 
@@ -45,6 +46,8 @@ MESHGENESIS = [
     path('api/meshgenesis/test/<str:kennung>/kleider/<str:geschlecht>/speichern/', Meshgenesistestkleiderendpunkte.speichern, name='meshgenesis_testkleiderspeichern'),
     path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/netz/', Meshgenesistestkleiderendpunkte.netz, name='meshgenesis_testkleidnetz'),
     path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/bild/<str:name>', Meshgenesistestkleiderendpunkte.bild, name='meshgenesis_testkleidbild'),
+    # Der Stoff eines Stücks für eine Bewegung (19.11.2026, Kleiderbibliothek als Stoff, `Meshgenesisteststoff`, Kette `meshgenesis_kleiderstoff_lauf.py`).
+    path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/stoff/', Meshgenesisteststoffendpunkt.stoff, name='meshgenesis_testkleidstoff'),
     path('api/meshgenesis/test/<str:kennung>/modell/<str:geschlecht>/', Meshgenesistestkleiderendpunkte.modell, name='meshgenesis_testmodell'),
     # 22.10.2026: Testfälle der Kleider-KI (FEHLER von Prüfungen je Prio) — Testseite und Jobseite des Trainingsjobs (`Meshgenesistestfaelle`)
     path('api/meshgenesis/test/<str:kennung>/testfaelle/<str:geschlecht>/', Meshgenesistestfaelleendpunkte.test, name='meshgenesis_testfaelle'),

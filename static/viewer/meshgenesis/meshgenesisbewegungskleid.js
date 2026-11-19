@@ -11,6 +11,9 @@
  */
 import * as THREE from 'three';
 import { Eigenhaut } from '../gemeinsam/eigenhaut.js';
+import { Meshgenesishaarschwung } from './meshgenesishaarschwung.js';
+import { Meshgenesiskollision } from './meshgenesiskollision.js';
+import { Meshgenesisstoffkleid } from './meshgenesisstoffkleid.js';
 import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 
 export class Meshgenesisbewegungskleid {
@@ -76,5 +79,30 @@ export class Meshgenesisbewegungskleid {
             if (!paare.length) gewicht[i * 4] = 1;          // ohne Gewicht am ersten Knochen (der Wurzel): bleibt in Ruhe am Körper, statt zum Ursprung zu fallen
         }
         return { index, gewicht };
+    }
+
+    /**
+     * Alle Stücke der Quelle an das Skelett der bewegten Figur binden (`bewegung`: `Meshgenesisfigurbewegung`; bis 19.11.2026 dort `_kleiderBinden`): je Stück das `SkinnedMesh`, der Kapselschub
+     * aus fremden Gliedern (31.10.2026 nachts), die Bewegung je Locke (16.11.2026) und der Stoff der gewählten Bewegung, wo einer gerechnet ist (`Meshgenesisstoffkleid`, 19.11.2026).
+     */
+    static alleBinden(bewegung) {
+        for (const k of bewegung.kleider) {
+            k.mesh.parent?.remove(k.mesh);
+            k.mesh.geometry.dispose();
+        }
+        bewegung.kleider = [];
+        const q = bewegung._q;
+        for (const st of q?.stuecke || []) {
+            const mesh = Meshgenesisbewegungskleid.binden(st.netz, bewegung.modell.skelett, q.knochen, bewegung._abbildung);
+            if (!mesh) continue;
+            mesh.userData.art = st.art; mesh.name = `ki_${st.id}`;      // Name = Schlüssel in `hautStuecke` (Exportleiste: `Exportleistefigur.hautDeckt`, Knotenname in GLB und .blend)
+            mesh.visible = bewegung._kleiderAn;
+            Eigenhaut.einhaengen(bewegung.modell.group, mesh, bewegung.modell.skelett);
+            Meshgenesiskollision.anbringen(mesh, q.kapseln, bewegung.modell.skelett, bewegung._abbildung, q.knochen);
+            Meshgenesishaarschwung.anbringen(mesh, st.netz, bewegung._abbildung);
+            bewegung.kleider.push({ mesh, art: st.art, adresse: st.adresse });
+        }
+        bewegung._kleiderWurzel = bewegung.modell.skelett?.rootBone || null;
+        Meshgenesisstoffkleid.anbringenAlle(bewegung);
     }
 }

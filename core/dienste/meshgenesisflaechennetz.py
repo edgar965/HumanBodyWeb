@@ -88,6 +88,9 @@ class Meshgenesisflaechennetz:
                 daten['anatomie_fertig'] = bool(z['anatomie_fertig']) if 'anatomie_fertig' in z.files else False
                 if 'normalen' in z.files and len(z['normalen']) == len(daten['uv']):
                     daten['normalen'] = Torchfeld.astype(Torchfeld.clip(Torchfeld.round(Torchfeld.astype(z['normalen'], torch.float32) * 127), -127, 127), torch.int8)
+                elif 'ruhe' in daten:                                    # 19.11.2026: sonst rechnete die Seite sie (Haar 1,64 Mio. Punkte: 2,6 s im Hauptfaden), `Meshgenesisnetznormalen`
+                    from .meshgenesisnetznormalen import Meshgenesisnetznormalen
+                    daten['normalen'] = Meshgenesisnetznormalen.aus(daten['ruhe'], daten['dreiecke'])
                 if 'punktfarbe' in z.files and len(z['punktfarbe']) == len(daten['uv']):
                     daten['punktfarbe'] = Torchfeld.astype(z['punktfarbe'], torch.uint8)
                 if 'leit' in z.files and 'leitpunkte' in z.files and len(z['leit']) == len(daten['uv']):          # Einzelsträhnen: Leitpunkt je Punkt (Bewegung je Locke, 16.11.2026)

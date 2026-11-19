@@ -18,6 +18,7 @@ import { Fotogenesisansicht } from './fotogenesisansicht.js';
 import { Fotogenesisexportfigur } from './fotogenesisexportfigur.js';
 import { Fotogenesisjoblauf } from './fotogenesisjoblauf.js';
 import { Fotogenesiskamera } from './fotogenesiskamera.js';
+import { Fotogenesiskleidermethode } from './fotogenesiskleidermethode.js';
 import { Fotogenesistestfigur } from './fotogenesistestfigur.js';
 import { Fotogenesiszeilenleiste } from './fotogenesiszeilenleiste.js';
 
@@ -54,17 +55,19 @@ export class Fotogenesisgenesiszeile {
         const neu = () => this.zeigen(false);
         let ergebnis = null;
         if (g.ergebnis) {
-            // `Fotogenesistestfigur` setzt `Meshgenesisflaechennetz.nachLaden` für sich allein — den Ruf der Figur im Feld „Genesis-Modell“ (vorher gebaut) nicht verlieren
+            // Bilder der Stücke kommen über `Meshgenesisflaechennetz.nachLaden` nach — den Ruf der Seite (Feld „Genesis-Modell“, vorher gesetzt) nicht verlieren
             const vorher = Meshgenesisflaechennetz.nachLaden;
+            Meshgenesisflaechennetz.nachLaden = () => { vorher?.(); neu(); };
             // in der A-Pose, wenn das Feld „PSHuman“ sie zeigt (10.11.2026, Edgar: „damit man das besser vergleichen kann“; `pshuman_port14/pshuman_apose.py`). Wo das Netz in der A-Pose
             // zerreißt (verwachsene Glieder, Robe mit Stab), zeigen beide Felder die Haltung des Fotos — sonst wären sie nicht vergleichbar
             ergebnis = new Fotogenesistestfigur({ kennung: g.test, adresse: g.ergebnis, apose: seite.daten.pshuman?.art === 'pshuman_apose' });
-            const eigen = Meshgenesisflaechennetz.nachLaden;
-            Meshgenesisflaechennetz.nachLaden = () => { vorher?.(); eigen?.(); neu(); };
+            ergebnis.beiAenderung = neu;          // Bilder, Masken und die feinere Stufe des Genesis9Modell (19.11.2026)
         }
         this.eintraege = [['genesis-meshgenesis', g.meshgenesis ? new Fotogenesisanpassungsfigur(g.meshgenesis, neu) : null, g.hinweise.meshgenesis, this.leiste],
                           ['genesis-ergebnis', ergebnis, g.hinweise.ergebnis, null]]
             .map(([name, figur, hinweis, leiste]) => ({ figur, hinweis, leiste, ansicht: new Fotogenesisansicht(feld(name), 'ausgabe', figur ?? { zeichnen: () => {} }, Fotogenesisgenesiszeile.KAMERA) }));
+        // Kleider: Kleiderbibliothek | Drapieren (19.11.2026, Edgar: „toggle für beide Ergebnisse im genesis view“) — derselbe Körper, nur die Stücke
+        this.kleidermethode = Fotogenesiskleidermethode.aufbauen(feld('genesis-ergebnis'), ergebnis, neu);
         // Abspielleiste und Export unter beiden Feldern (04.11.2026, Edgar: „playleiste und export für alle 3“) — derselbe Code wie unter dem Feld „Genesis-Modell“ (`Fotogenesisexportfigur`, `Fotogenesisbewegung`):
         // die Einpassung ist die Form der Zeile 1 ohne Haut und Stücke der KI, das Ergebnis die Figur der Mesh-Genesis-Testseite
         this.exportfiguren = [Fotogenesisgenesiszeile._leisten(feld('genesis-meshgenesis'), this.eintraege[0].ansicht, g.figur, true),
@@ -79,7 +82,7 @@ export class Fotogenesisgenesiszeile {
     /** Das Feld Genesis-Ergebnis für „Haut angleichen“ (`Fotogenesishautangleich`). */
     get hautort() {
         const { ansicht, figur } = this.eintraege[1];
-        return { ansicht, bereit: figur?.bereit, materialien: () => (figur?.koerper ? [figur.koerper.an.material].flat() : []) };
+        return { ansicht, bereit: figur?.bereit, materialien: () => figur?.materialien?.() ?? [] };
     }
 
     /** Leiste und Export der Karte um `feld` an die Figur unter `adresse` (`/api/meshgenesis/test/<k>/`) — null ohne Adresse oder ohne Leiste im Template. */

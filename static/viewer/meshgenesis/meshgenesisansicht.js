@@ -212,8 +212,9 @@ export class Meshgenesisansicht {
         this.grund = d?.echt ? Meshgenesisansicht.GRUND_WOLKE : Meshgenesisansicht.GRUND;
         if (d) {
             // Standardanimation (22.10.2026, `Meshgenesisfigurbewegung`): solange sie läuft oder steht, die bewegte Figur statt der stillen — ohne Rig (es zeigt die Haltung der KI, nicht die Bewegung).
-            if (this.bewegung?.aktiv) {
-                this.bewegung.einhaengen(this.inhalt, d);
+            // `false`: die Haut unter den Kleidern der bewegten Figur ist noch nicht verdeckt (`Meshgenesisbewegungsmaske`, 19.11.2026) — bis dahin die stille Figur
+            if (this.bewegung?.aktiv && this.bewegung.einhaengen(this.inhalt, d) !== false) {
+                // die bewegte Figur hängt im Feld
             } else {
                 this.zeichner.zeichnen(this.inhalt, this.art, d);
                 Meshgenesisrigzeichner.ueberlagern(this.inhalt, this.art, d);

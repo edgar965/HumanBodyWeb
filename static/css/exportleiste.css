@@ -20,6 +20,15 @@
 .exportleiste .mesh-feineinstellungen > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .exportleiste .mesh-fein-felder { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 12px; }
 .exportleiste .mesh-optionshinweis { display: block; margin: 2px 0 0; font-size: 0.85em; line-height: 1.35; }
+/* Hover-Hilfe und Bereich je Regler (`Meshoptionenhilfe`, 19.11.2026): eigener Tooltip aus `data-tip` (schwarz auf weiß, in hellem und dunklem Theme lesbar) */
+.exportleiste .mesh-mit-hilfe { position: relative; }
+.exportleiste .mesh-optionsbereich { font-size: 0.9em; opacity: 0.85; white-space: nowrap; }
+.exportleiste .mesh-optionszeichen { cursor: help; font-size: 0.95em; }
+.exportleiste .mesh-mit-hilfe[data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; left: 0; top: 100%; z-index: 50; margin-top: 2px; max-width: 380px; padding: 6px 8px;
+    background: #fff; color: #000; border: 1px solid #888; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    font-size: 0.8rem; line-height: 1.35; white-space: pre-line; pointer-events: none;
+}
 
 /* Läufe des Renders (`Exportleistelaeufe`) */
 .exportleiste-laeufe { overflow-x: auto; }

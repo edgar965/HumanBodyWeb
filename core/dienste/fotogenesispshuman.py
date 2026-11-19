@@ -56,7 +56,7 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
                  `ki_fassungen.json`; wirkt nur mit dem Häkchen „Haut-KI“, liest der Schritt „Haut“ von Mesh-Genesis beim nächsten Lauf selbst (`meshgenesis_hautki_einsatz.py`)
 
     POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, kleider_getrennt, genesis_zuerst,
-                                            haut_gibt_nach, haut_gibt_nach_mm, haar_welle, haut_ki_lauf, anzahl, dichte}   → {ok, pshuman}
+                                            haut_gibt_nach, haut_gibt_nach_mm, haar_welle, haar_laenge_abweichung, haut_ki_lauf, anzahl, dichte}   → {ok, pshuman}
 """
 
 import json
@@ -84,13 +84,19 @@ class Fotogenesispshuman:
     NACHGEBEN_EMPFEHLUNG = 30
     #: Welligkeit des Haars (Werte wie `Haarwelle.SCHALTER`), erster Eintrag = Vorgabe
     HAAR_WELLEN = (('auto', 'aus dem Netz'), ('wellig', 'wellig'), ('glatt', 'glatt'))
+    #: Haarlänge Abweichungen (19.11.2026, Edgar: „mach auch eine Einstellung bei dem Job: Haarlänge Abweichungen - daneben Schieberegler mit %“): höchste Abweichung der
+    #: Strähnenlänge vom Median in % (`meshgenesis/haar_Bart/haarlaengenabweichung.py`), Schritt, Vorgabe 100 = keine Grenze (wie bisher)
+    HAAR_LAENGE_VON, HAAR_LAENGE_BIS, HAAR_LAENGE_SCHRITT, HAAR_LAENGE_VORGABE = 0, 100, 5, 100
     #: Felder außer den Häkchen
-    ZAHLEN = ('anzahl', 'dichte', 'haut_gibt_nach_mm')
+    ZAHLEN = ('anzahl', 'dichte', 'haut_gibt_nach_mm', 'haar_laenge_abweichung')
     #: Textfelder mit eigener Prüfung (`setzen`)
     TEXTE = ('haar_welle', Hautkilaufwahl.FELD)
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
         'haut_ki_lauf': 'Welcher Lauf der Haut-KI die Hautkacheln rechnet, wenn „Haut-KI“ an ist. „eingesetzt“ (Vorgabe): der Lauf, der für alle Jobs gilt. '
                         'Ein jüngerer Lauf gilt nur für diesen Job, die übrigen bleiben beim eingesetzten. Wirkt im Schritt „Haut“ von Mesh-Genesis beim nächsten Lauf.',
+        'haar_laenge_abweichung': 'Wie stark die Haarsträhnen einer Figur in der Länge voneinander abweichen dürfen, in Prozent der mittleren Länge (Median). 100 % (Vorgabe): '
+                                  'keine Grenze, die Länge kommt aus dem Netz. Kleiner: alle Strähnen ähnlich lang, einzelne zu lange oder zu kurze werden auf die Grenze gebracht. '
+                                  'Wirkt beim nächsten Lauf der Garderobe.',
         'haar_welle': 'Ob das Haar der Figur wellig wird (mittleres und langes Haar). „aus dem Netz“ (Vorgabe): gemessen an Rillen und hellen/dunklen Bändern der Haarschale. '
                       '„wellig“ oder „glatt“ entscheidet selbst, wenn die Messung danebenliegt. Wirkt beim nächsten Lauf der Garderobe.',
         'haut_gibt_nach': 'An (Vorgabe): Haut unter einem Stück weicht bis zur gewählten Tiefe nach innen aus, damit sie nicht durch Kleid, Schuh oder Haar kommt — im Stand und in '
@@ -136,7 +142,14 @@ class Fotogenesispshuman:
                     dichte=int(dichte) if dichte in dict(cls.DICHTEN) else cls.DICHTEN[0][0],
                     haut_gibt_nach_mm=int(mm) if mm in cls.NACHGEBEN_MM else cls.NACHGEBEN_EMPFEHLUNG,
                     haar_welle=welle if welle in dict(cls.HAAR_WELLEN) else cls.HAAR_WELLEN[0][0],
+                    haar_laenge_abweichung=cls.haar_laenge(roh.get('haar_laenge_abweichung')),
                     haut_ki_lauf=str(roh.get(Hautkilaufwahl.FELD) or ''))
+
+    @classmethod
+    def haar_laenge(cls, wert):
+        """Gültiger Wert „Haarlänge Abweichungen“ (ganze %, `HAAR_LAENGE_VON`–`BIS`) oder die Vorgabe."""
+        ok = isinstance(wert, int) and not isinstance(wert, bool) and cls.HAAR_LAENGE_VON <= wert <= cls.HAAR_LAENGE_BIS
+        return wert if ok else cls.HAAR_LAENGE_VORGABE
 
     @classmethod
     def nachgeben_mm(cls, info):
@@ -167,6 +180,8 @@ class Fotogenesispshuman:
             raise ValueError('%s %r: erlaubt leer oder %s' % (lauf, rumpf[lauf], ', '.join(Hautkilaufwahl.laeufe())))
         if 'haut_gibt_nach_mm' in rumpf and (isinstance(rumpf['haut_gibt_nach_mm'], bool) or rumpf['haut_gibt_nach_mm'] not in cls.NACHGEBEN_MM):
             raise ValueError('haut_gibt_nach_mm %r: erlaubt %s' % (rumpf['haut_gibt_nach_mm'], ', '.join(str(m) for m in cls.NACHGEBEN_MM)))
+        if 'haar_laenge_abweichung' in rumpf and cls.haar_laenge(rumpf['haar_laenge_abweichung']) != rumpf['haar_laenge_abweichung']:
+            raise ValueError('haar_laenge_abweichung %r: erlaubt ganze Zahlen %d bis %d' % (rumpf['haar_laenge_abweichung'], cls.HAAR_LAENGE_VON, cls.HAAR_LAENGE_BIS))
         if 'anzahl' in rumpf and (isinstance(rumpf['anzahl'], bool) or rumpf['anzahl'] not in cls.ANZAHL):
             raise ValueError('anzahl %r: erlaubt %d bis %d' % (rumpf['anzahl'], cls.ANZAHL[0], cls.ANZAHL[-1]))
         if 'dichte' in rumpf and (isinstance(rumpf['dichte'], bool) or rumpf['dichte'] not in dict(cls.DICHTEN)):

@@ -1,0 +1,94 @@
+{% load l10n %}{% comment %}Kopfblock eines Foto-Genesis-Jobs: Einstellungen des Jobs (Fotos, Genesis, Netz, Wege, Körpergröße, Normalen, Textur, Form, PSHuman) und die Leiste Perspektive · Ausschnitt ·
+Ansicht (`Fotogenesissteuerung`). 19.11.2026, Edgar: „mach das als seitenleiste in der ersten Zeile, rechts neben dem Genesis modell“ — bei Tests mit Genesis-Zeile steht der Block in
+Zeile 1 rechts neben dem Genesis-Ergebnis (`.fotogenesis-seitenleiste`), sonst wie bisher fest oben. Eingebunden genau einmal (IDs).{% endcomment %}
+<div class="fotogenesis-oben" id="fotogenesis-oben">
+<div class="card fotogenesis-band" role="note">
+    {% if job.wahrheit %}<strong><i class="fas fa-check-circle"></i> Export mit Wahrheit.</strong> Die Fotos sind aus der Genesis-Figur {{ job.figur }} gerendert (Charakter-Seite → Exportieren).{% endif %}
+    {% if job.paar %} Genesis-Modell heute: Messlatte A — <a href="/mesh-genesis/{{ job.paar.kennung }}/">Mesh-Genesis · {{ job.paar.name }}</a> (Tripo-Netz → KI).{% endif %}
+    {% if job.wahrheit and job.test %} Messlatte A steht auf der <a href="/mesh-genesis/test/{{ job.test }}/">Mesh-Genesis-Testseite {{ job.test }}</a>.{% endif %}
+    {% comment %} 04.11.2026, Edgar: „mach den text weg … Stattdessen: Auswahl anzahl der fotos (1-6), wenn mehrere fotos dann Hochladen funktion bei den Ansichten. Auswahl ob Genesis Männlich, weiblich oder Kind“ — `Fotogenesisjobwahl`, zu „Kind“ siehe `Fotogenesisgeschlecht`. {% endcomment %}
+    {% if ist_test %}<form class="fotogenesis-groesse" id="fotogenesis-jobwahl" data-job="{{ job.id }}">
+        <label for="fotogenesis-anzahl" title="Wie viele echte Fotos in PSHuman eingehen. Bei 1 erfindet PSHuman die übrigen fünf Ansichten, ab 2 lädst du die Fotos an den Ansichten unten hoch."><i class="fas fa-images"></i> Fotos</label>
+        <select id="fotogenesis-anzahl" name="anzahl" data-reihenfolge="fest">{% for n in pshuman_anzahlen %}<option value="{{ n }}"{% if n == job.pshuman.anzahl %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+        <label for="fotogenesis-geschlecht" title="Grundfigur, mit der die Genesis-Figur gerechnet wird."><i class="fas fa-user"></i> Genesis</label>
+        <select id="fotogenesis-geschlecht" name="geschlecht" data-reihenfolge="fest">{% if not job.geschlecht %}<option value="" selected disabled>wählen</option>{% endif %}{% for w, t in geschlechter %}<option value="{{ w }}"{% if w == job.geschlecht %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <label for="fotogenesis-dichte" title="Punkte des PSHuman-Netzes: normal 480 je Körperhöhe, dicht 960 (viermal so viele Punkte, gleiche Form)."><i class="fas fa-border-all"></i> Netz</label>
+        <select id="fotogenesis-dichte" name="dichte" data-reihenfolge="fest">{% for w, t in pshuman_dichten %}<option value="{{ w }}"{% if w == job.pshuman.dichte %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        {# 11.11.2026, Edgar: „lösche nicht die alte Pipeline, kannst du eine Checkbox oben machen - ‚Kleider Getrennt‘ für die Neue Pipleine?“ — `Fotogenesispshuman`, job.json `pshuman.kleider_getrennt` #}
+        <label title="{{ pshuman_wege.kleider_getrennt.beschreibung }}"><input type="checkbox" name="kleider_getrennt"{% if job.pshuman.kleider_getrennt %} checked{% endif %}> {{ pshuman_wege.kleider_getrennt.text }}</label>
+        {# 12.11.2026, Edgar: „mach den Umbau“ — Konzept „Genesis zuerst“, Abschnitt 9: „Der neue Weg hängt an einem Häkchen am Job“; `Fotogenesispshuman`, job.json `pshuman.genesis_zuerst` #}
+        <label title="{{ pshuman_wege.genesis_zuerst.beschreibung }}"><input type="checkbox" name="genesis_zuerst"{% if job.pshuman.genesis_zuerst %} checked{% endif %}> {{ pshuman_wege.genesis_zuerst.text }}</label>
+        {# 15.11.2026 nachts, Edgar: „mach oben bei den Jobs … einen Button ‚Haut gibt nach‘ … mach auch eine mm angabe (Combo) … Standardmäßig aktiviert … eine Empfehlung“ — `Fotogenesispshuman`, `Fotogenesishautnachgeben` #}
+        <label title="{{ pshuman_wege.haut_gibt_nach.beschreibung }}"><input type="checkbox" name="haut_gibt_nach"{% if job.pshuman.haut_gibt_nach %} checked{% endif %}> {{ pshuman_wege.haut_gibt_nach.text }}</label>
+        <select id="fotogenesis-nachgeben" name="haut_gibt_nach_mm" data-reihenfolge="fest" title="So tief weicht die Haut unter Kleid, Schuh und Haar nach innen aus.">{% for mm in nachgeben_mm %}<option value="{{ mm }}"{% if mm == job.pshuman.haut_gibt_nach_mm %} selected{% endif %}>{{ mm }} mm{% if mm == nachgeben_empfehlung %} (Empfehlung){% endif %}</option>{% endfor %}</select>
+        {# 16.11.2026, Edgar zur Entscheidungsvorlage Locken: „mach b,c,d“ — D: Schalter je Job, `Fotogenesispshuman.HAAR_WELLEN`, gelesen von `meshgenesis/haar_Bart/haarwelle.py` #}
+        <label for="fotogenesis-haarwelle" title="{{ haar_welle_text }}"><i class="fas fa-water"></i> Haar</label>
+        <select id="fotogenesis-haarwelle" name="haar_welle" data-reihenfolge="fest" title="{{ haar_welle_text }}">{% for w, t in haar_wellen %}<option value="{{ w }}"{% if w == job.pshuman.haar_welle %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        {# 19.11.2026, Edgar: „mach auch eine Einstellung bei dem Job: Haarlänge Abweichungen - daneben Schieberegler mit %“ — `Fotogenesispshuman.HAAR_LAENGE_*`, gelesen von `meshgenesis/haar_Bart/haarlaengenabweichung.py` #}
+        <span class="fotogenesis-schieber" title="{{ haar_laenge_text }}"><label for="fotogenesis-haarlaenge">Haarlänge Abweichungen</label>
+            <input type="range" id="fotogenesis-haarlaenge" name="haar_laenge_abweichung" min="{{ haar_laenge_bereich.0 }}" max="{{ haar_laenge_bereich.1 }}" step="{{ haar_laenge_bereich.2 }}" value="{{ job.pshuman.haar_laenge_abweichung }}">
+            <output for="fotogenesis-haarlaenge">{{ job.pshuman.haar_laenge_abweichung }} %</output></span>
+        <label title="{{ pshuman_wege.fototextur.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.fototextur.text }}</label>
+        <label title="{{ pshuman_wege.textur_alle_fotos.beschreibung }}"><input type="checkbox" name="textur_alle_fotos"{% if job.pshuman.textur_alle_fotos %} checked{% endif %}> {{ pshuman_wege.textur_alle_fotos.text }}</label>
+        <label title="{{ pshuman_wege.hand_ersatz.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.hand_ersatz.text }}</label>
+        <label title="{{ pshuman_wege.up2you.beschreibung }}"><input type="checkbox" name="up2you"{% if job.pshuman.up2you %} checked{% endif %}> {{ pshuman_wege.up2you.text }}</label>
+        <label title="{{ pshuman_wege.haut_ki.beschreibung }}"><input type="checkbox" name="haut_ki"{% if job.pshuman.haut_ki %} checked{% endif %}> {{ pshuman_wege.haut_ki.text }}</label>
+        {# 17.11.2026, Edgar: „mach einen Job n1-HautKI als Kopie von n1, mit der neuen HautKI“ — Lauf der Haut-KI je Job, `Hautkilaufwahl`, job.json `pshuman.haut_ki_lauf` #}
+        <select id="fotogenesis-hautkilauf" name="haut_ki_lauf" data-reihenfolge="fest" aria-label="Lauf der Haut-KI" title="{{ haut_ki_lauf_text }}">{% for w, t in haut_ki_laeufe %}<option value="{{ w }}"{% if w == job.pshuman.haut_ki_lauf %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <label title="{{ pshuman_wege.keine_kleider.beschreibung }}"><input type="checkbox" name="keine_kleider"{% if job.pshuman.keine_kleider %} checked{% endif %}> {{ pshuman_wege.keine_kleider.text }}</label>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
+    <a href="{% url 'fotogenesis' %}" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
+    {% comment %} 24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“ — echte Fotos haben keinen Maßstab (dritter Einpass-Lauf: Figur 1,710 → 1,435 m). `Fotogenesiskoerpergroesse`. {% endcomment %}
+    {% if ist_test %}<form class="fotogenesis-groesse" id="fotogenesis-groesse" data-job="{{ job.id }}"
+          title="Größe der Person auf den Fotos, Scheitel bis Sohle. Fotos tragen keinen Maßstab — ohne Angabe kann die Einpassung die Figur beliebig groß oder klein machen.">
+        <label for="fotogenesis-groesse-wert"><i class="fas fa-ruler-vertical"></i> Körpergröße</label>
+        <input type="number" id="fotogenesis-groesse-wert" name="koerpergroesse_m" min="1.00" max="2.30" step="0.01" placeholder="unbekannt"
+               value="{{ job.koerpergroesse_m|default_if_none:''|unlocalize }}"> m
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
+    {% comment %} 03.11.2026, Edgar: „bei den jobs möchte ich eine Combo box haben, wo ich die engine auswählen kann. Default: Econ“, „aus einem Foto (per UI wählbar) oder aus mehreren“
+    — `Fotogenesisnormalen`, job.json `normalen`, gelesen von `KoerperKI_Fotos.normalenwahl` im nächsten Lauf. {% endcomment %}
+    {% if ist_test %}<form class="fotogenesis-groesse fotogenesis-normalen" id="fotogenesis-normalen" data-job="{{ job.id }}"
+          title="Woher die Figur das Relief aus den Normalen der Fotos bekommt — gilt ab dem nächsten Lauf der Körperstufe.">
+        <label for="fotogenesis-normalen-engine"><i class="fas fa-compass"></i> Normalen</label>
+        <select id="fotogenesis-normalen-engine" name="engine" data-reihenfolge="fest">{% for q in normalen_engines %}<option value="{{ q.wert }}" title="{{ q.beschreibung }}"{% if q.wert == job.normalen.engine %} selected{% endif %}>{{ q.text }}</option>{% endfor %}</select>
+        <select name="foto" title="Aus einem Foto oder aus allen" data-reihenfolge="fest">
+            <option value="">aus allen Fotos</option>{% for f in job.fotos %}<option value="{{ f.original.name }}"{% if f.original.name == job.normalen.foto %} selected{% endif %}>nur aus {{ f.original.name }}</option>{% endfor %}
+        </select>
+        <select name="zusammen" data-reihenfolge="fest" title="Nur ECON: wie die d-BiNI-Flächen auf die Genesis-Figur kommen">{% for w, t in normalen_zusammen %}<option value="{{ w }}"{% if w == job.normalen.zusammen %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
+    {# 03.11.2026, Edgar: „mach die textur umschaltbar, über zusatzprojekte“ — `Fotogenesistextur`, job.json `textur`, gelesen von `KoerperKI_Fotos.texturwahl` im nächsten Lauf. #}
+    {% if ist_test %}<form class="fotogenesis-groesse fotogenesis-textur" id="fotogenesis-textur" data-job="{{ job.id }}" title="Woher die Haut der Figur ihre Farben bekommt — gilt ab dem nächsten Lauf der Körperstufe.">
+        <label for="fotogenesis-textur-engine"><i class="fas fa-palette"></i> Textur</label>
+        <select id="fotogenesis-textur-engine" name="engine" data-reihenfolge="fest">{% for q in textur_engines %}<option value="{{ q.wert }}" title="{{ q.beschreibung }}"{% if q.wert == job.textur.engine %} selected{% endif %}>{{ q.text }}</option>{% endfor %}</select>
+        <label title="Eigene Zutat (Regel aus videoavatars): ein Foto färbt nur Dreiecke, deren Ecken in seiner Personenmaske liegen — nur für die Auswahl-Engine."><input type="checkbox" name="personenmaske"{% if job.textur.optionen.personenmaske %} checked{% endif %}> Personenmaske</label>
+        <label title="Eigene Zutat (Regel von Hautteile, semantischer Term wie Alldieck 2018): ein Foto färbt ein Dreieck nur, wenn an allen drei Ecken eine Sapiens-Klasse seines Körperteils liegt (Auswahl-Engine je Dreieck, TRELLIS je Pixel)."><input type="checkbox" name="teilmaske"{% if job.textur.optionen.teilmaske %} checked{% endif %}> Teilmaske</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>
+    {# 03.11.2026, Edgar: „mach zuerst das was die anderen machen“, „deine eigenen Zutaten optional, per Checkbox“ — `Fotogenesisform`, job.json `form`, gelesen von `Fotokonsens.wahl`. #}
+    <form class="fotogenesis-groesse fotogenesis-textur" id="fotogenesis-form" data-job="{{ job.id }}" title="Wie die Figur an die Umrisse der Fotos angepasst wird — gilt ab dem nächsten Lauf der Körperstufe.">
+        <label for="fotogenesis-form-engine"><i class="fas fa-user"></i> Form</label>
+        <select id="fotogenesis-form-engine" name="engine" data-reihenfolge="fest">{% for q in form_engines %}<option value="{{ q.wert }}" title="{{ q.beschreibung }}"{% if q.wert == job.form.engine %} selected{% endif %}>{{ q.text }}</option>{% endfor %}</select>
+        <label title="Eigene Zutat: videoavatars stimmt seine Strafen auf 120 Bilder ab, hier sind es wenige Fotos — der Silhouettenterm zählt 120 / Zahl der Fotos."><input type="checkbox" name="bilder"{% if job.form.bilder %} checked{% endif %}> Bildzahl-Ausgleich</label>
+        <label title="SMPLify-X: die Finger je Foto an die Handpunkte von ViTPose (nur mit videoavatars)."><input type="checkbox" name="finger"{% if job.form.finger %} checked{% endif %}> Finger</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>
+    {# 03.11.2026, Edgar: „pshuman als Option bei den jobs“, „mach beides, selektierbar“ — `Fotogenesispshuman`, job.json `pshuman`. #}
+    <form class="fotogenesis-groesse fotogenesis-textur" id="fotogenesis-pshuman" data-job="{{ job.id }}" title="Ob und wie PSHuman (Netz aus dem Vorderfoto) die Genesis-Figur mitbestimmt — gilt ab dem nächsten Lauf.">
+        <span><i class="fas fa-cube"></i> PSHuman</span>
+        <label title="{{ pshuman_wege.zeile1.beschreibung }}"><input type="checkbox" name="zeile1"{% if job.pshuman.zeile1 %} checked{% endif %}> {{ pshuman_wege.zeile1.text }}</label>
+        <label title="{{ pshuman_wege.drehteller.beschreibung }}"><input type="checkbox" name="drehteller"{% if job.pshuman.drehteller %} checked{% endif %}> {{ pshuman_wege.drehteller.text }}</label>
+        <label title="{{ pshuman_wege.vae_bildweise.beschreibung }}"><input type="checkbox" name="vae_bildweise"{% if job.pshuman.vae_bildweise %} checked{% endif %}> {{ pshuman_wege.vae_bildweise.text }}</label>
+        <span class="hb-hinweis">{% if job.pshuman.gerechnet %}gerechnet {{ job.pshuman.gerechnet }}{% else %}für diesen Job noch nicht gerechnet{% endif %}</span>
+        <button type="submit" class="btn btn-secondary btn-sm">Übernehmen</button>
+        <span class="hb-hinweis" data-meldung></span>
+    </form>{% endif %}
+</div>
+<div class="card fotogenesis-steuerung" id="fotogenesis-steuerung"></div>
+</div>

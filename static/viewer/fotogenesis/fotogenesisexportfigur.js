@@ -2,6 +2,7 @@ import { Meshgenesisanatomiehuelle } from '../meshgenesis/meshgenesisanatomiehue
 import { Meshgenesisexportquelle } from '../meshgenesis/meshgenesisexportquelle.js';
 import { Meshgenesisfigurbewegung } from '../meshgenesis/meshgenesisfigurbewegung.js';
 import { Meshgenesisflaechennetz } from '../meshgenesis/meshgenesisflaechennetz.js';
+import { Meshgenesiskikleiderfeld } from '../meshgenesis/meshgenesiskikleiderfeld.js';
 
 /**
  * Fotogenesisexportfigur — die Figur eines Foto-Genesis-Tests für die Exportleiste (31.10.2026, Server `Fotogenesisexportquelle`).
@@ -56,7 +57,7 @@ export class Fotogenesisexportfigur {
             const adresse = st.art !== 'haut' && st.wahl !== 'aus' ? st[st.wahl]?.netz : null;
             if (!adresse) continue;
             const netz = await Meshgenesisflaechennetz.holen(null, adresse).catch(fehler => { console.warn(`Fotogenesisexportfigur: ${st.id} nicht geladen (${fehler.message})`); return null; });
-            if (netz) stuecke.push({ id: st.id, art: st.art, netz });
+            if (netz) stuecke.push({ id: st.id, art: st.art, netz, kostuem: Meshgenesiskikleiderfeld.kostuem(st[st.wahl]), adresse });     // `adresse`: Stoff je Bewegung (`Meshgenesisstoffkleid`)
         }
         return { schluessel: `${this.adresse}|${g}`, figur: d.figur_genesis, stuecke, knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren, ohneKnochen: [],
                  anatomieGetragen: Meshgenesisanatomiehuelle.getragen(liste), zeile1: d.zeile1_form || null };

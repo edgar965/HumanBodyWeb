@@ -12,6 +12,10 @@
 .fotogenesis-groesse { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; flex-wrap: wrap; }
 .fotogenesis-groesse input { width: 5.5em; padding: 2px 6px; }
 .fotogenesis-groesse .hb-hinweis { margin: 0; }
+/* Schieberegler mit Wert daneben (Haarlänge Abweichungen, 19.11.2026) */
+.fotogenesis-schieber { display: inline-flex; align-items: center; gap: 6px; }
+.fotogenesis-groesse .fotogenesis-schieber input[type="range"] { width: 9em; padding: 0; }
+.fotogenesis-schieber output { min-width: 3.2em; font-variant-numeric: tabular-nums; }
 
 .fotogenesis-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .fotogenesis-zurueckzurliste { color: inherit; text-decoration: none; }
@@ -30,6 +34,30 @@
 @media (max-width: 1100px) { .fotogenesis-bereiche { grid-template-columns: minmax(0, 1fr); } }
 .fotogenesis-bereiche.fotogenesis-bereiche-zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 900px) { .fotogenesis-bereiche.fotogenesis-bereiche-zwei { grid-template-columns: minmax(0, 1fr); } }
+/* Ein Feld über die ganze Breite: das Genesis-Ergebnis allein in der ersten Zeile (19.11.2026) */
+.fotogenesis-bereiche.fotogenesis-bereiche-eins { grid-template-columns: minmax(0, 1fr); }
+/* Seitenleiste rechts neben dem Genesis-Ergebnis (19.11.2026, Edgar: „mach das als seitenleiste in der ersten Zeile, rechts neben dem Genesis modell“, „50% Genesis, 50% Leiste
+   dafür der Breite“): die Einstellungen von oben, je Formular ein Absatz; der Block hängt beim Scrollen durch die Zeile fest, ist er höher als das Fenster, scrollt er in sich. */
+.fotogenesis-bereiche.fotogenesis-mit-leiste { grid-template-columns: minmax(0, var(--fotogenesis-links, 1fr)) minmax(0, var(--fotogenesis-rechts, 1fr)); align-items: stretch; }
+@media (max-width: 1100px) { .fotogenesis-bereiche.fotogenesis-mit-leiste { grid-template-columns: minmax(0, 1fr); } .fotogenesis-griffel { display: none; } }
+.fotogenesis-seitenleiste { min-width: 0; position: relative; }
+/* Griffel in der Lücke zwischen den Spalten (`Fotogenesisgriffel`): hell auf dunklem Grund, 12 px breit, beim Ziehen in der Akzentfarbe */
+/* Die Zeile ist so hoch wie das Genesis-Feld samt Leisten (gemessen 3.018 px) — der sichtbare Strich hängt darum fest im Fenster (sticky), nicht in der Mitte der Zeile. */
+.fotogenesis-griffel { position: absolute; left: -12px; top: 0; bottom: 0; width: 12px; cursor: col-resize; touch-action: none; z-index: 41; display: flex; flex-direction: column; align-items: center; }
+.fotogenesis-griffel::before { content: ""; position: sticky; top: 35vh; margin-top: 35vh; flex: none; width: 4px; height: 96px; border-radius: 2px; background: #8a93a6; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6); }
+.fotogenesis-griffel:hover::before, .fotogenesis-griffel.fotogenesis-griffel-aktiv::before { background: var(--accent, #e94560); }
+.fotogenesis-griffel[data-tip]:hover::after { content: attr(data-tip); position: sticky; top: calc(35vh + 104px); margin-top: 8px; align-self: flex-start; flex: none; width: max-content; max-width: 260px; padding: 4px 8px; border-radius: 4px; background: #fff; color: #000; font-size: 0.8rem; white-space: normal; pointer-events: none; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.fotogenesis-seitenleiste .fotogenesis-oben { padding: 0; max-height: calc(100vh - var(--fotogenesis-leiste, 50px) - 8px); overflow-y: auto; }
+.fotogenesis-seitenleiste .fotogenesis-oben > .card { margin: 0 0 8px; padding: 8px 10px; }
+.fotogenesis-seitenleiste .fotogenesis-band { display: flex; flex-direction: column; gap: 8px; }
+.fotogenesis-seitenleiste .fotogenesis-band .btn { margin-left: 0; align-self: flex-start; }
+.fotogenesis-seitenleiste .fotogenesis-groesse { display: flex; margin-left: 0; gap: 4px 10px; padding-top: 6px; border-top: 1px solid var(--border-color, #2a2f3a); }
+.fotogenesis-seitenleiste .fotogenesis-groesse:first-child { border-top: 0; padding-top: 0; }
+.fotogenesis-seitenleiste .fotogenesis-groesse label { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+.fotogenesis-seitenleiste .fotogenesis-groesse input[type="checkbox"] { width: auto; margin: 0; }
+.fotogenesis-seitenleiste .fotogenesis-groesse select { max-width: 100%; }
+.fotogenesis-seitenleiste .fotogenesis-steuerung { flex-direction: column; align-items: flex-start; gap: 8px; }
+.fotogenesis-seitenleiste .fotogenesis-steuergruppe { flex-wrap: wrap; }
 .fotogenesis-bereich { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .fotogenesis-bereich h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .fotogenesis-bereich > .hb-hinweis { margin: 0; }

@@ -1,16 +1,18 @@
-"""Tests für `Pytorch3dTorch`: die Kerne von `pytorch3d._C` in reinem torch, auf der CPU an kleinen Zahlen.
+"""Tests für `Pytorch3dTorch`: die Kerne von `pytorch3d._C` an kleinen Zahlen.
 
-Der Vergleich mit dem Original in python10 steht in `ProjektTemp/_wegwerf/pytorch3d_port/gegenprobe.py`; hier das, was ohne Original gilt: Haufensuche gegen alle Paare, jeder Rückweg gegen die Ableitung der Vorwärtsrechnung, Handrechnungen.
+Torch; die Nachbarsuche über einen Warp-Kern auf der Karte (CPU-Eingänge gehen dorthin).
+Der Vergleich mit dem Original in python10: `ProjektTemp/_wegwerf/pytorch3d_port/gegenprobe.py`
+und `knn_warp_probe.py` (bitgleich samt Platzfolge). Hier das, was ohne Original gilt:
+Kern gegen alle Paare, Platzfolge wie `MinK`, jeder Rückweg gegen die Ableitung der
+Vorwärtsrechnung, Handrechnungen.
 """
 import unittest
-from unittest import mock
 
 import pytorch3d
 import torch
 from pytorch3d import _C
 from pytorch3d._C.abstand import Abstandkern
 from pytorch3d._C.knn import Knnkern
-from pytorch3d._C.knnhaufen import Knnhaufen
 from pytorch3d.ops import knn_points
 
 
@@ -43,45 +45,69 @@ class Knntest(unittest.TestCase):
         g = torch.Generator().manual_seed(7)
         return torch.randn(n, d, generator=g), torch.randn(m, d, generator=g)
 
-    def _gleich(self, a, b, k, norm):
-        d, i = Knnhaufen.suche(a, b, k, norm)
-        with mock.patch.object(Knnkern, 'DIREKT', 1 << 40):
-            i0, d0 = Knnkern.vorwaerts(a[None], b[None], torch.tensor([len(a)]), torch.tensor([len(b)]), norm, k)
-        d0, i0 = d0[0].sort(1).values, i0[0]
-        self.assertTrue(torch.equal(d, d0), 'Abstände weichen ab')
-        self.assertEqual(i.shape, i0.shape)
+    @staticmethod
+    def _alle_paare(a, b, norm):
+        """Alle Abstände in torch, Achse für Achse summiert — jede Operation einzeln gerundet wie im Kern."""
+        diff = a[:, None] - b[None]
+        teil = diff * diff if norm == 2 else diff.abs()
+        d = teil[..., 0]
+        for achse in range(1, teil.shape[-1]):
+            d = d + teil[..., achse]
+        return d
 
-    def test_haufen_wie_alle_paare(self):
-        for k, norm in ((1, 2), (1, 1), (4, 2), (70, 2)):        # 70 > GROESSE: die Keimsuche nimmt zwei Haufen
+    def _gleich(self, a, b, k, norm):
+        """Warp-Kern (`Knnkern`, Plätze wie `MinK` unsortiert) gegen alle Paare: nach dem Sortieren
+        dieselben Abstände, bitgleich; jede Nummer zeigt auf einen Punkt mit ihrem Abstand."""
+        a, b = a.to('cuda'), b.to('cuda')
+        voll = self._alle_paare(a, b, norm)
+        d = voll.topk(k, 1, largest=False).values
+        la, lb = torch.full((1,), len(a), device='cuda'), torch.full((1,), len(b), device='cuda')
+        i0, d0 = Knnkern.vorwaerts(a[None], b[None], la, lb, norm, k)
+        self.assertTrue(torch.equal(d, d0[0].sort(1).values), 'Abstände weichen ab')
+        self.assertTrue(torch.equal(voll.gather(1, i0[0]), d0[0]), 'Nummer passt nicht zum Abstand')
+
+    def test_kern_wie_alle_paare(self):
+        for k, norm in ((1, 2), (1, 1), (4, 2), (70, 2)):
             with self.subTest(k=k, norm=norm):
                 self._gleich(*self._punkte(500, 900), k, norm)
 
-    def test_haufen_mit_mehr_achsen_und_weniger_zielen_als_haufen(self):
+    def test_kern_mit_mehr_achsen_und_wenigen_zielen(self):
         self._gleich(*self._punkte(300, 400, 6), 3, 2)
         self._gleich(*self._punkte(300, 20), 5, 2)
 
     def test_gleiche_punkte_abstand_null(self):
-        a = self._punkte(300, 1)[0]
-        d, i = Knnhaufen.suche(a, a, 1, 2)
-        self.assertEqual(float(d.max()), 0.0)
-        self.assertTrue(torch.equal(a[i[:, 0]], a))
+        a = self._punkte(300, 1)[0].to('cuda')
+        r = knn_points(a[None], a[None], K=1)
+        self.assertEqual(float(r.dists.max()), 0.0)
+        self.assertTrue(torch.equal(a[r.idx[0, :, 0]], a))
 
-    def test_gross_geht_ueber_die_haufen_und_luecken_bleiben_null(self):
-        a, b = self._punkte(200, 300)
+    def test_luecken_bleiben_null(self):
+        a, b = (x.to('cuda') for x in self._punkte(200, 300))
         a, b = torch.stack([a, a]), torch.stack([b, b])
-        laengen1, laengen2 = torch.tensor([200, 150]), torch.tensor([300, 2])
-        with mock.patch.object(Knnkern, 'DIREKT', 0), mock.patch.object(Knnhaufen, 'suche', wraps=Knnhaufen.suche) as suche:
-            r = knn_points(a, b, lengths1=laengen1, lengths2=laengen2, K=3)
-        self.assertEqual(suche.call_count, 2)
+        laengen1, laengen2 = torch.tensor([200, 150], device='cuda'), torch.tensor([300, 2], device='cuda')
+        r = knn_points(a, b, lengths1=laengen1, lengths2=laengen2, K=3)
         self.assertEqual(float(r.dists[1, 150:].abs().max()), 0.0)
         self.assertEqual(float(r.dists[1, :, 2].abs().max()), 0.0)
 
-    def test_nicht_endlich_faellt_auf_alle_paare(self):
-        a, b = self._punkte(200, 300)
+    def test_plaetze_wie_mink(self):
+        """Wie `MinK` (`csrc/utils/mink.cuh`): die ersten K füllen die Plätze, ein echt kleinerer
+        Abstand ersetzt den größten; `_C` sortiert nicht. Abstände 5, 3, 4, 1, 2 (norm 1 auf der
+        x-Achse) → Plätze [1, 3, 2] mit Nummern [3, 1, 4]; bei Gleichstand bleibt der erste."""
+        ziel = torch.tensor([[5.0, 0, 0], [3, 0, 0], [4, 0, 0], [1, 0, 0], [2, 0, 0]], device='cuda')[None]
+        frage = torch.zeros(1, 1, 3, device='cuda')
+        eins = torch.ones(1, dtype=torch.int64, device='cuda')
+        i, d = _C.knn_points_idx(frage, ziel, eins, 5 * eins, 1, 3, -1)
+        self.assertEqual(d[0, 0].tolist(), [1.0, 3.0, 2.0])
+        self.assertEqual(i[0, 0].tolist(), [3, 1, 4])
+        gleich = torch.tensor([[1.0, 0, 0], [-1, 0, 0], [1, 0, 0]], device='cuda')[None]
+        i, _d = _C.knn_points_idx(frage, gleich, eins, 3 * eins, 2, 1, -1)
+        self.assertEqual(int(i[0, 0, 0]), 0)
+
+    def test_nicht_endliches_ziel_wird_nicht_gewaehlt(self):
+        a, b = (x.to('cuda') for x in self._punkte(200, 300))
         b[5, 0] = float('nan')
-        with mock.patch.object(Knnkern, 'DIREKT', 0), mock.patch.object(Knnhaufen, 'suche') as suche:
-            knn_points(a[None], b[None], K=1)
-        suche.assert_not_called()
+        r = knn_points(a[None], b[None], K=1)
+        self.assertFalse(bool((r.idx == 5).any()))
 
     def test_rueckweg_gegen_autograd(self):
         for norm in (1, 2):

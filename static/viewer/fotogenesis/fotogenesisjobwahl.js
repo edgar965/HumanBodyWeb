@@ -35,6 +35,13 @@ export class Fotogenesisjobwahl {
         // Welligkeit des Haars (16.11.2026, `Fotogenesispshuman.HAAR_WELLEN`): wirkt beim nächsten Lauf der Garderobe
         const welle = form.querySelector('select[name="haar_welle"]');
         if (welle) welle.addEventListener('change', () => speichern(welle, `${basis}/pshuman/`, { haar_welle: welle.value }, `Haar ${welle.selectedOptions[0].textContent}`));
+        // Haarlänge Abweichungen in % (19.11.2026, `Fotogenesispshuman.HAAR_LAENGE_*`): Anzeige beim Ziehen, gespeichert beim Loslassen; wirkt beim nächsten Lauf der Garderobe
+        const laenge = form.querySelector('input[name="haar_laenge_abweichung"]');
+        if (laenge) {
+            const anzeige = form.querySelector('output[for="fotogenesis-haarlaenge"]');
+            laenge.addEventListener('input', () => { if (anzeige) anzeige.textContent = `${laenge.value} %`; });
+            laenge.addEventListener('change', () => speichern(laenge, `${basis}/pshuman/`, { haar_laenge_abweichung: Number(laenge.value) }, `Haarlänge Abweichungen ${laenge.value} %`));
+        }
         // Lauf der Haut-KI je Job (17.11.2026, `Hautkilaufwahl`): wirkt mit dem Häkchen „Haut-KI“ im nächsten Lauf von Mesh-Genesis
         const hautLauf = form.querySelector('select[name="haut_ki_lauf"]');
         if (hautLauf) hautLauf.addEventListener('change', () => speichern(hautLauf, `${basis}/pshuman/`, { haut_ki_lauf: hautLauf.value }, `Haut-KI ${hautLauf.selectedOptions[0].textContent}`));

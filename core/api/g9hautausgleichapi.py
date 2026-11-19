@@ -2,7 +2,7 @@
 """Hautausgleich: Gleichmäßigkeit, Symmetrie, Schatten aufhellen, Retusche auf der Albedo der Haut (`G9hautausgleich`, 18.11.2026).
 
     POST /api/character/genesis9-figur/hautausgleich/
-        JSON {quellen: {1001: 'Runtime/Textures/…jpg', …}, werte: {gleich, symmetrie, schatten, retusche}}   (Werte 0 … 1)
+        JSON {quellen: {1001: 'Runtime/Textures/…jpg', …}, werte: {gleich, symmetrie, schatten, retusche, behalten, eigen}, geschlecht: 'female'|'male'}   (Werte 0 … 1)
         → {kacheln: {1001: 'Runtime/Textures/HAUTAUSGLEICH/…jpg', …}, werte} | {fehler} (400/404)
 
 Die Quellen sind die Albedo-Pfade, die der Körper gerade trägt (Bibliothekspfade, `Genesis9hautausgleich` im Browser); die Antwort sind neue Bilder in der
@@ -36,7 +36,7 @@ class G9hautausgleichapi:
             return JsonResponse({'fehler': 'Ungültige Anfrage: quellen fehlt.'}, status=400)
         werte = G9hautausgleich.werte(daten.get('werte'))
         try:
-            kacheln = G9hautausgleich.rechnen(daten['quellen'], werte)
+            kacheln = G9hautausgleich.rechnen(daten['quellen'], werte, daten.get('geschlecht'))
         except FileNotFoundError as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=404)
         return JsonResponse({'kacheln': {str(k): v for k, v in kacheln.items()}, 'werte': werte})

@@ -33,7 +33,8 @@ export class Exportleisteregler {
             behaelter.dataset.gruppe = gruppe;
             klappe.append(titel, behaelter);
             this.feld.appendChild(klappe);
-            Meshoptionenformular.bauen(behaelter, katalog, (z.optionen || {})[gruppe] || {});
+            // Hover-Hilfe und Wertebereich je Regler (19.11.2026, Edgar: „bei dem Render fenster mach eine Hilfe (Hover) und range … für jede einstellung“)
+            Meshoptionenformular.bauen(behaelter, katalog, (z.optionen || {})[gruppe] || {}, { hilfe: true });
         }
         this._gebaut = true;
     }

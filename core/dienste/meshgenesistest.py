@@ -247,15 +247,32 @@ class Meshgenesistest:
         skala = hoehe / info['vorschau_hoehe_m'] if hoehe and info.get('vorschau_hoehe_m') else 1.0
         rest = form['rest_mm'] if form else cls.figuren(p, info, endung).get(figur, info.get('ik_rest_mm'))
         info.update({'figur': figur, 'geschlecht': geschlecht, 'hoehe_m': hoehe, 'ik_rest_mm': rest, 'geschlecht_stand': Meshgenesistestgeschlechtstand.text(p, geschlecht)})
+        from .fotogesicht import Fotogesicht
+        from .meshgenesisgenesishaltung import Meshgenesisgenesishaltung
+        from .meshgenesishaltungwahl import Meshgenesishaltungwahl
+        f_rig, f_dreh, haltung = Meshgenesishaltungwahl.felder(e)
         return {
             'kennung': kennung, 'info': info, 'job': job, 'rig': beschr, 'figur_hinweis': hinweis, 'geschlechter': cls.GESCHLECHTER, 'netz_skala': round(float(skala), 6),
             'figur_netz': '/api/meshgenesis/test/%s/figur/%s' % (kennung, geschlecht) if form else None, 'form_regler': form['regler'] if form else None,
             'form_regler_gesamt': form.get('regler_gesamt') if form else None,
             # Die Figur als Genesis-Modell (22.10.2026, Animation der Ausgabe wie Mesh-3D): dieselbe wie im Ergebnis der Jobseite eines Tripo-Jobs (`Meshgenesisergebnisfigur`).
             # Seit 31.10.2026 mit der Haut der KI als `fototextur` (`Meshgenesistesthaut.kacheln`) — sonst trug sie die Katalog-Haut, anders als das Standbild.
-            'figur_genesis': dict(Meshgenesisergebnisfigur._figur(geschlecht, form['regler']), fototextur=Meshgenesistesthaut.kacheln(kennung, geschlecht)) if form else None,
+            # Seit 19.11.2026 dazu das Gesicht aus dem Frontfoto (Augenbild, Brauenfarbe, Mimik; `Fotogesicht`).
+            'figur_genesis': Fotogesicht.figur(
+                dict(Meshgenesisergebnisfigur._figur(geschlecht, form['regler']), fototextur=Meshgenesistesthaut.kacheln(kennung, geschlecht)),
+                p, geschlecht, lambda name: '/api/meshgenesis/test/%s/figur/%s/bild/%s' % (kennung, geschlecht, name)) if form else None,
+            # Die Haltung dazu als Daz-Winkel (19.11.2026): das Genesis-Ergebnis der Foto-Genesis-Seite baut
+            # die Figur damit als Genesis9Modell (`Meshgenesisgenesishaltung`)
+            # Haltung (`Meshgenesishaltungwahl`, 19.11.2026 abends): `ausgabe`/`dreh` bleiben die des Fotos (die Figur liegt über dem Fotonetz),
+            # die allein stehende Figur (`drehung_genesis`, `ausgabe_stand`/`dreh_stand`) nimmt die Standhaltung der Fußregel, wenn die Datei sie trägt
+            'drehung_genesis': (Meshgenesisgenesishaltung.drehung(
+                kin, Torchfeld.astype(e[f_dreh], torch.float64), datei, haltung) if form else None),
+            'haltung': haltung,
             'ausgabe': Torchfeld.round(Torchfeld.astype(e['rig'], torch.float64), 4).tolist(),
             'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(Torchfeld.astype(e['dreh'], torch.float64)), 5).tolist(),
+            'ausgabe_stand': Torchfeld.round(Torchfeld.astype(e[f_rig], torch.float64), 4).tolist() if haltung == 'stand' else None,
+            'dreh_stand': (Torchfeld.round(Meshgenesisdaten._quaternionen(Torchfeld.astype(e[f_dreh], torch.float64)), 5).tolist()
+                           if haltung == 'stand' else None),
             'ruhezentren': Torchfeld.round(Torchfeld.feld([k['zentrum'] for k in kin], copy=True), 6).tolist(),
             'netz': '/api/meshgenesis/test/%s/netz/?v=%d%s' % (kennung, int((p / ('vorschau%s.glb' % endung)).stat().st_mtime), endung),
             # Kapseln um die Glieder für die Kollision der Stücke in der Bewegung (31.10.2026 nachts, `KoerperKI_alle.Koerperkollision` → `meshgenesiskollision.js`)

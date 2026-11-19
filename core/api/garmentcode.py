@@ -49,7 +49,25 @@ class Garmentcode:
         except Exception:
             logger.exception('GarmentCode: Drapier-Pruefung gescheitert')
             zustand['drapierbereit'] = False
+        if zustand['drapierbereit']:
+            Garmentcode._vorwaermen()
         return JsonResponse(zustand)
+
+    @staticmethod
+    def _vorwaermen():
+        u"""Den Drapier-Dauerprozess vorwärmen, sobald der Reiter seinen Zustand holt
+        (19.11.2026, Edgar: „speicherkind soll vorwärmen“): kehrt sofort zurück. Nur im
+        Serverprozess (`G9aufwaermen.angebracht`, kein Start aus Tests oder Skripten), nur
+        auf dem Speicherweg."""
+        try:
+            from GarmentCode.drapierung import Drapierung
+            from GarmentCode.speicherarbeiter import Speicherarbeiter
+
+            from ..dienste.g9aufwaermen import G9aufwaermen
+            if G9aufwaermen.angebracht() and Drapierung.SPEICHER:
+                Speicherarbeiter.gemeinsam().vorwaermen()
+        except Exception:
+            logger.exception('GarmentCode: Vorwärmen der Drapierung gescheitert')
 
     @staticmethod
     @require_POST

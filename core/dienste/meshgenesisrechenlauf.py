@@ -26,6 +26,7 @@ from core.atomic_write import AtomarSchreiber
 
 from .meshgenesiskifassungen import Meshgenesiskifassungen
 from .meshgenesisrechenmessung import Meshgenesisrechenmessung
+from .meshgenesisrechengenesiszuerst import Meshgenesisrechengenesiszuerst
 from .meshgenesisrechenschritt import Meshgenesisrechenschritt
 
 logger = logging.getLogger('core')
@@ -65,22 +66,8 @@ class Meshgenesisrechenlauf:
     #: Schritt „form“ aus der Regler-KI statt aus dem Formkopf — nur für einen Test, dessen `einstellung.json` es nennt (`form_ki`: {"art": "reglerki", "lauf": <Lauf unter
     #: `_reglerki/laeufe`>}), nie als Vorgabe (27.10.2026, Edgar: „ich will bei einem Trainings oder Testjob mal ergebnisse sehen“)
     FORM_REGLERKI = ('form', 'Form aus der Regler-KI (Genesis-Regler, Hauptregler und Anfasser)', ['-u', 'meshgenesis_reglerki_test.py', '--lauf', '{reglerki_lauf}', '--als-form', '--nur', '{k}'])
-    #: „Genesis zuerst“ (12.11.2026, Edgar: „mach den Umbau“, Konzept `Docu/konzepte/2026-11-12_genesis-zuerst-konzept.md`, Abschnitt 9 und 10d Punkt 3): nur für einen Test mit
-    #: `genesis_zuerst` in `einstellung.json` (Häkchen am Foto-Genesis-Job, `Fotogenesisgenesisstart`). Die Figur nur aus Reglern (`--nur-regler`), danach die Prüfung „Proportionen wie im Foto“;
-    #: der Kostüm-Weg schneidet weiter, aber nur als Messung, das Ergebnis tragen Stücke der Garderobe (Weg z), und die Prüfung misst diese Stücke (`--weg z`). Die alte Kette bleibt die Vorgabe.
-    GENESIS_ZUERST = {
-        'zeile1': ('zeile1', 'Figur aus Zeile 1, nur Regler (Genesis zuerst)', ['-u', 'meshgenesis_zeile1figur.py', '--nur', '{k}', '--geschlecht', '{g}', '--nur-regler']),
-        'proportionen': ('proportionen', 'Prüfung „Proportionen wie im Foto“ (Genesis zuerst)', ['-u', 'meshgenesis_proportionen.py', '--nur', '{k}', '--geschlecht', '{g}']),
-        # nur die Haut, ohne die Stücke von Weg g (12.11.2026, Edgar: „optimiere“; am Zauberer 67,6 s): die Kleiderliste zeigt hier nur Weg z
-        'haut': ('haut', 'Haut aus der KI (Stufe 2: Farbe je Texel, ohne Kleider von Weg g)', ['-u', 'meshgenesis_stufe2_lauf.py', '--nur-einsatz', '{stufe2}', '--fassung', '{stufe2_fassung}',
-                                                                                                '--test', '{k}', '--job', '', '--geschlecht', '{g}', '--hautki', '{hautki}', '--ohne-kleider']),
-        'kleider': ('kleider', 'Kleider und Haar aus dem Mesh messen (Kostüm-Weg, nur Messung für Genesis zuerst)', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
-                                                                                                                      '--ohne-pruefung']),
-        'garderobe': ('garderobe', 'Kleider, Haar und Requisit aus der Garderobe wählen und anpassen (Genesis zuerst)', ['-u', 'meshgenesis_garderobe_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
-        # 18.11.2026 (Edgar: „kannst du den Code nicht mergen?“, `bausteine/stueckveredelung.py`): Stücke von Weg z mit Materialklassen aus dem Foto, Oberfläche und Glättung (Zeilen bs_*)
-        'bausteine': ('bausteine', 'Stücke veredeln: Materialklassen aus dem Foto, Gewebe, Glanz, Glättung (Genesis zuerst)', ['-u', 'meshgenesis_kostuem_bausteine.py', '--nur', '{k}', '--geschlecht', '{g}']),
-        'pruefung': ('pruefung', 'Prüfung der Garderobenstücke: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}', '--nur-pruefen', '--weg', 'z']),
-    }
+    #: „Genesis zuerst“: Schritte und Einreihung in `Meshgenesisrechengenesiszuerst` (abgeteilt 19.11.2026 abends, Schritt „stoff“)
+    GENESIS_ZUERST = Meshgenesisrechengenesiszuerst.SCHRITTE
     #: Rückfall (27.10.2026, Edgar: „In der Kette automatisch auf den Formkopf zurückfallen, sobald MIA durchfällt“): die Regler-KI kennt nur MIAs A-Pose; stammt die jüngste A-Pose vom Rig
     #: (MIAs Prüfung nicht bestanden) und hat der gewählte Lauf den Weg „Rig“ nicht gelernt (`reglerki_wege`), rechnet der Schritt „form“ mit dem Formkopf der KI-Fassungen
     RUECKFALL_TEXT = 'Form aus der KI (Formkopf) — Rückfall: MIAs A-Pose ist durch die Prüfung gefallen, die Regler-KI kennt nur MIAs A-Pose'
@@ -133,17 +120,7 @@ class Meshgenesisrechenlauf:
     def schritte(self):
         """Die Schritte dieses Tests: `SCHRITTE`, mit `FORM_REGLERKI`, wenn der Test die Regler-KI wählt, und mit den Schritten von `GENESIS_ZUERST`, wenn er „Genesis zuerst“ rechnet."""
         schritte = self.SCHRITTE if self.form_ki() is None else tuple(self.FORM_REGLERKI if s[0] == 'form' else s for s in self.SCHRITTE)
-        if not self.genesis_zuerst():
-            return schritte
-        aus = []
-        for s in schritte:
-            aus.append(self.GENESIS_ZUERST.get(s[0], s))
-            if s[0] == 'zeile1':
-                aus.append(self.GENESIS_ZUERST['proportionen'])
-            elif s[0] == 'kleider':
-                aus.append(self.GENESIS_ZUERST['garderobe'])
-                aus.append(self.GENESIS_ZUERST['bausteine'])
-        return tuple(aus)
+        return Meshgenesisrechengenesiszuerst.einreihen(schritte) if self.genesis_zuerst() else schritte
 
     def mia_apose(self):
         """Ob die jüngste A-Pose der Vorstufe von MIA stammt (`apose.npz` → `weg` = 'mia'); dieselbe Kette wie `Kleiderzerlegung.kette`, die auch die Regler-KI liest."""

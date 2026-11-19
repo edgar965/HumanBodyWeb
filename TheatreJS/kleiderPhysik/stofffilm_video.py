@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Macht aus `stofffilm.npz` ein MP4: der Stoff faellt auf den Koerper.
+"""Macht aus `stofffilm.pt` ein MP4: der Stoff faellt auf den Koerper.
 
-Laeuft in `python14` (pyrender, trimesh, cv2), waehrend die Simulation in
-`python10_Garment` rechnet. Bruecke ist die `.npz`.
+Laeuft in `python14` (pyrender, trimesh, cv2) wie seit 19.11.2026 auch die
+Simulation (`stofffilm.py`, CUDA-Kerne). Bruecke ist die `.pt` (vorher `.npz`
+aus `python10_Garment`).
 
 Der Koerper wird MITGERENDERT, sonst schwebt der Stoff im Nichts und man
 sieht nicht, dass er sich anlegt. Er kommt aus demselben Ordner, auf dem
@@ -17,6 +18,7 @@ import os
 import sys
 
 import numpy as np
+import torch
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 GC = os.path.join('A:', os.sep, '3DTools', 'Assets', 'GarmentCode')
@@ -32,13 +34,15 @@ class Stoffvideo:
     ABSTAND = 2.3
     BLICKHOEHE = 0.62
 
-    def __init__(self, npz, obj_koerper, obj_stoff, breite=640, hoehe=860):
+    def __init__(self, bahn, obj_koerper, obj_stoff, breite=640, hoehe=860):
         # ZENTIMETER -> METER. Die Simulation rechnet in cm (gemessen:
         # Stoffhuelle y 93 bis 143), der Koerper steht in Metern (0 bis
         # 1,68). Ohne Umrechnung liegt der Stoff hundertfach zu gross weit
         # ausserhalb des Bildes — im Video sieht man dann nur den Koerper
         # und haelt das fuer eine fehlgeschlagene Simulation.
-        self.bahn = np.load(npz)['punkte'].astype(np.float64) / 100.0
+        # cpu gewollt: pyrender (der vorhandene Renderer) rendert aus numpy-Feldern
+        punkte = torch.load(bahn, map_location='cpu', weights_only=True)['punkte']  # cpu gewollt: siehe oben
+        self.bahn = punkte.to(torch.float64).numpy() / 100.0  # cpu gewollt: Übergabe an pyrender
         self.k_punkte, self.k_flaechen = self._obj(obj_koerper)
         _p, self.s_flaechen = self._obj(obj_stoff)
         self.breite, self.hoehe = int(breite), int(hoehe)
@@ -107,7 +111,7 @@ class Stoffvideo:
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument('--npz', default=os.path.join(ORDNER, 'stofffilm.npz'))
+    zerleger.add_argument('--bahn', default=os.path.join(ORDNER, 'stofffilm.pt'))
     zerleger.add_argument('--koerper', default=None)
     zerleger.add_argument(
         '--stoff', default=os.path.join(GC, 'ausgabe', 't-shirt_female', 't-shirt_female_sim.obj')
@@ -123,7 +127,7 @@ def main():
         obj = sorted(f for f in os.listdir(ordner) if f.endswith('.obj'))
         koerper = os.path.join(ordner, obj[0])
 
-    video = Stoffvideo(werte.npz, koerper, werte.stoff)
+    video = Stoffvideo(werte.bahn, koerper, werte.stoff)
     print(
         'Stoffbahn %d Bilder, %d Punkte, %d Dreiecke'
         % (len(video.bahn), video.bahn.shape[1], len(video.s_flaechen))

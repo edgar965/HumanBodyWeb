@@ -83,7 +83,7 @@ class KleidungGarmentcode(Hilfeseite):
             'Simulation auf den Körper fallen gelassen. Der Körper '
             'liegt als OBJ in Metern mit Y oben, der Schnitt in '
             'Zentimetern.',
-            'wo': 'GarmentCode/drapierung.py · drapierlauf.py (Python 3.10)',
+            'wo': 'GarmentCode/drapierung.py · speicherkind.py / drapierlauf.py (Python 3.14, torch)',
             'falle': 'Der Körper wird ÜBERGEBEN, nicht geraten — ein '
             'danebengegriffener Ordner drapiert stumm auf einem '
             'fremden Körper.',

@@ -121,6 +121,12 @@ class Meshgenesistestanpassung:
                     bloecke.append(('anatomie_farbe', 'f4'))
                 except (OSError, ValueError, IndexError) as fehler:
                     logger.warning('Genesis-Anpassung: Farbe der Anatomie nicht lesbar: %s', fehler)
+        # die Augäpfel (19.11.2026, Edgar: „bau Augen in Zeile 1 ein“ — ohne sie standen die Augenhöhlen leer und weiß), `Meshgenesisanpassungsaugen`
+        from .meshgenesisanpassungsaugen import Meshgenesisanpassungsaugen
+        augen, kopf['augen'] = Meshgenesisanpassungsaugen.bloecke(felder['figur'])
+        if augen is not None:
+            felder.update(augen)
+            bloecke += Meshgenesisanpassungsaugen.BLOECKE
         kopf['bloecke'] = [[name, typ, int(Torchfeld.groesse(felder[name]))] for name, typ in bloecke]
         roh = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         roh += b' ' * (-len(roh) % 4)

@@ -82,7 +82,7 @@ export class Lockenpendel {
                 for (let k = 1; k < k1; k++) {
                     const a = o0 + (k - 1) * 3, b = o0 + k * 3;
                     const dx = x[b] - x[a], dy = x[b + 1] - x[a + 1], dz = x[b + 2] - x[a + 2];
-                    const d = Math.hypot(dx, dy, dz) || 1e-9;
+                    const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-9;     // nicht Math.hypot: in V8 viel langsamer (siehe unten)
                     const f = laengen[s * k1 + k] / d;
                     x[b] = x[a] + dx * f; x[b + 1] = x[a + 1] + dy * f; x[b + 2] = x[a + 2] + dz * f;
                 }
@@ -90,9 +90,11 @@ export class Lockenpendel {
         }
         const grenze = werte.GRENZE_M;
         const v = zustand.versatz;
+        // `Math.sqrt` statt `Math.hypot` (19.11.2026, three.js Weg A — Edgar: „mach A“): gemessen in Chrome an goldprinzessin_mesh_genesis_67 (82.434 Leitpunkte), je Schritt 19–25 ms
+        // mit hypot gegen 8,4–9,4 ms, je dreimal abwechselnd; Versatz und Lage bitgleich (auch an den 25.490 Punkten an der Grenze)
         for (let i = 0; i < n; i += 3) {
             let dx = x[i] - ziel[i], dy = x[i + 1] - ziel[i + 1], dz = x[i + 2] - ziel[i + 2];
-            const d = Math.hypot(dx, dy, dz);
+            const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (d > grenze) {
                 const f = grenze / d;
                 dx *= f; dy *= f; dz *= f;

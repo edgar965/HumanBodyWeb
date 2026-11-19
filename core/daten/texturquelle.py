@@ -23,8 +23,9 @@ class Texturquelle:
         r'(?P<name>[^/?#]+)/?$'
     )
 
-    #: Die Hautkachel der Figur eines Foto-Genesis-Jobs (`Fotogenesisfigur._kacheln`, 31.10.2026 für `Fotogenesismodell`) — nur Kacheln `10??.jpg`.
-    FIGUR_FOTOGENESIS = re.compile(r'^/api/fotogenesis/(?P<job>[-a-zA-Z0-9_]+)/figur/(?P<g>maennlich|weiblich)/bild/(?P<name>10\d\d\.jpg)$')
+    #: Die Hautkachel der Figur eines Foto-Genesis-Jobs (`Fotogenesisfigur._kacheln`, 31.10.2026 für `Fotogenesismodell`) — nur Kacheln `10??.jpg`;
+    #: seit 19.11.2026 auch das Augenbild des Gesichts aus dem Foto (`Fotogesicht.AUGEN`).
+    FIGUR_FOTOGENESIS = re.compile(r'^/api/fotogenesis/(?P<job>[-a-zA-Z0-9_]+)/figur/(?P<g>maennlich|weiblich)/bild/(?P<name>10\d\d\.jpg|gesicht_augen\.jpg)$')
 
     @classmethod
     def pfad(cls, adresse):

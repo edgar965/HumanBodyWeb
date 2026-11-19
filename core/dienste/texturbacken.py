@@ -46,7 +46,7 @@ class Texturbacken:
 
     @classmethod
     def hintergrundfarbe(cls, hexwert):
-        """'#ccaa88' -> (b, g, r) fuer OpenCV."""
+        """'#ccaa88' -> (b, g, r) — Kanalfolge wie die Texturen (BGR)."""
         try:
             r = int(hexwert[1:3], 16)
             g = int(hexwert[3:5], 16)
@@ -153,18 +153,19 @@ class Texturbacken:
         os.makedirs(pfad, exist_ok=True)
         return pfad
 
-    def zusammensetzen(self, cv2, textur, region, hintergrund):
-        """Koerper- und Gesichtstextur uebereinanderlegen, wenn beide da sind."""
+    def zusammensetzen(self, bilder, textur, region, hintergrund):
+        """Koerper- und Gesichtstextur uebereinanderlegen, wenn beide da sind. `bilder`: `PhotoToTexture.bilddatei.Bilddatei` (seit
+        19.11.2026 statt cv2 — die Texturen sind BGR-Tensoren auf der Karte)."""
         if region not in ('body', 'face'):
             return textur
         ordner = self.verzeichnis()
-        cv2.imwrite(os.path.join(ordner, '%s_%s.png' % (self.job_id, region)), textur)
+        bilder.schreiben(os.path.join(ordner, '%s_%s.png' % (self.job_id, region)), textur)
         koerper = os.path.join(ordner, '%s_body.png' % self.job_id)
         gesicht = os.path.join(ordner, '%s_face.png' % self.job_id)
         if not (os.path.isfile(koerper) and os.path.isfile(gesicht)):
             return textur
-        unten = cv2.imread(koerper, cv2.IMREAD_UNCHANGED)
-        oben = cv2.imread(gesicht, cv2.IMREAD_UNCHANGED)
+        unten = bilder.lesen(koerper, unveraendert=True)
+        oben = bilder.lesen(gesicht, unveraendert=True)
         if oben.shape[2] == 4:
             maske = oben[:, :, 3] > 0
         else:
@@ -173,8 +174,8 @@ class Texturbacken:
         zusammen[maske] = oben[maske]
         return zusammen
 
-    def speichern(self, cv2, textur):
+    def speichern(self, bilder, textur):
         """Fertige Textur ablegen und den Pfad relativ zum Projekt liefern."""
         name = '%s.png' % self.job_id
-        cv2.imwrite(os.path.join(self.verzeichnis(), name), textur)
+        bilder.schreiben(os.path.join(self.verzeichnis(), name), textur)
         return 'media/photo_analysis/textures/%s' % name

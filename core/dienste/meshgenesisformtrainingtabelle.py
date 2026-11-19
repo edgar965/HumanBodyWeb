@@ -4,6 +4,7 @@
 Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw.“ Eine Zeile je Ordner unter `3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/` (`Meshgenesisformtraining`),
 der jüngste zuerst; laufende Zeilen tragen die Klasse `meshgenesis-laeuft`. Gleiche Bauart wie `Meshgenesistabelle`. Seit dem Abend öffnet eine Zeile die Seite des Laufs
 (`/mesh-genesis/formtraining/<lauf>/`, `Meshgenesisformlaufendpunkte`): Klasse `meshgenesistabelle` (Klick über `Meshgenesisliste`), die Adresse trägt der Link in der Zelle „Lauf“.
+Seit 20.11.2026 mit Auswahl zum Löschen (Edgar: „mach hier buttons zum löschen“, `Meshgenesisformtrainingpapierkorb`); eingesetzte und laufende Läufe tragen ein Schloss statt des Kästchens.
 """
 
 import time
@@ -11,6 +12,7 @@ import time
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from .meshgenesisformtrainingpapierkorb import Meshgenesisformtrainingpapierkorb
 from .meshgenesisformzellen import Meshgenesisformzellen as Z
 from .meshgenesistabelle import Meshgenesistabelle
 
@@ -20,6 +22,7 @@ __all__ = ['Meshgenesisformtrainingtabelle']
 class Meshgenesisformtrainingtabelle:
     SCHLUESSEL = 'meshgenesis-formtraining'
     SPALTEN = (
+        Meshgenesistabelle.WAHL_SPALTE,
         {'label': 'Lauf', 'key': 'lauf', 'titel': 'Ordner unter 3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe ohne die Startzeit; der volle Name steht im Tooltip'},
         {'label': 'Art', 'key': 'art', 'titel': 'Formkopf: sagt das Rig UND die Genesis-Formregler voraus (Formtraining). Vorstufe: nur das Rig der Figur in der A-Pose'},
         {'label': 'Zuletzt', 'key': 'zuletzt',
@@ -41,10 +44,18 @@ class Meshgenesisformtrainingtabelle:
     )
 
     def tabelle(self, laeufe):
-        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(lauf) for lauf in laeufe],
+        eingesetzt = Meshgenesisformtrainingpapierkorb.eingesetzt()
+        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(lauf, eingesetzt) for lauf in laeufe],
                 'klasse': 'auftragstabelle meshgenesistabelle meshgenesisformtabelle', 'leer': 'Noch kein Trainingslauf unter 3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe.'}
 
-    def zeile(self, lf):
+    @staticmethod
+    def wahl_zelle(lf, eingesetzt):
+        grund = Meshgenesisformtrainingpapierkorb.sperre(lf, eingesetzt)
+        if not grund:
+            return Meshgenesistabelle.wahl_zelle(lf['name'])
+        return format_html('<td class="meshgenesis-gesperrt" title="{}"><i class="fas fa-lock" aria-label="{}"></i></td>', grund, grund)
+
+    def zeile(self, lf, eingesetzt=None):
         epochen = '%d von %d' % (lf['epoche'], lf['epochen']) if lf['zustand'] != 'fertig' and lf['epochen'] else str(lf['epoche'] or lf['epochen'] or '—')
         jobs = lf['jobs']
         figuren = len(jobs) + (lf['formvarianten'] or 0)
@@ -52,6 +63,7 @@ class Meshgenesisformtrainingtabelle:
         p = lf['proben']
         probentext = '%s / %s' % (Z.zahl(p['training']) if p['training'] is not None else '—', Z.zahl(p['pruefung']) if p['pruefung'] is not None else '—')
         zellen = (
+            self.wahl_zelle(lf, Meshgenesisformtrainingpapierkorb.eingesetzt() if eingesetzt is None else eingesetzt),
             format_html('<td data-sort="{}" title="{}"><a href="/mesh-genesis/formtraining/{}/">{}</a></td>', lf['kurz'].lower(), lf['name'], lf['name'], lf['kurz']),
             Z.text(lf['art']),
             Z.zeit(lf['letzte'] if lf['zustand'] != 'fertig' else lf['ende'], titel='Fertig' if lf['zustand'] == 'fertig' else 'Letzte Zeile im lauf.log'),

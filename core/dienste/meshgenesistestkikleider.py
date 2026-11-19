@@ -38,11 +38,12 @@ class Meshgenesistestkikleider:
     #: Wege, deren Netz aus der Bibliothek kommt (h: ein fertiges Garderobe-Stück, die KI wählt nur nach ihren Haarmaßen) — die Vorgabe „KI“ nimmt sie nie von selbst, nur auf eigene Wahl
     #: (Edgar 20.10.2026 an DamiraAlt: „wie kann es sein, dass ich so perfekte Haare habe?? die sollen doch nicht aus der Bibliothek kommen, sondern aus GarmentCode oder KI Ergebnis??“).
     AUS_DER_BIBLIOTHEK = ('h',)
-    TEXTE = {'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt (GarmentCode)', 'h': 'Bibliothek: Frisur der Garderobe nach den Haarmaßen der KI',
+    #: Methoden umbenannt (19.11.2026, Edgar: „Methode: Kleiderbibliothek (ehemals Garderobe) und Drapieren“): z = Kleiderbibliothek, f = Drapieren
+    TEXTE = {'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt (GarmentCode)', 'h': 'Bibliothek: Frisur der Kleiderbibliothek nach den Haarmaßen der KI',
              'd': 'Vergleich: Schnittdeutung (Messung, keine KI)', 'n': 'Vergleich: NeuralTailor (fremde KI)',
-             'f': 'KI: Schnitt aus der Fläche (Nähte vom Körper, flachgelegt, GarmentCode näht und drapiert)',
+             'f': 'Drapieren: Schnitt aus dem Stück (Nähte vom Körper, flachgelegt), GarmentCode näht und drapiert es als Stoff',
              'g': 'KI: Schicht auf dem Körper (Form des Stücks aus dem Schichtkopf, gegen die Zielstücke trainiert)',
-             'z': 'Garderobe: Stück der Bibliothek, nach den bedeckten Körperstellen gewählt, Länge und Weite aus dem Netz (Genesis zuerst)'}
+             'z': 'Kleiderbibliothek: fertiges Stück, nach den bedeckten Körperstellen gewählt, Länge und Weite aus dem Netz (Genesis zuerst)'}
 
     @staticmethod
     def lesen(ordner):

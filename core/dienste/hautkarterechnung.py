@@ -54,6 +54,7 @@ class Hautkarterechnung:
         tief = Hautkartemaske.durchsicht(K, N, [s for s in deckend if not s['ersatz']], bis_tiefe=True)
         if tief is not None:
             nachgeben = torch.where((maske != 0) & (tief > nachgeben), tief, nachgeben)
+        nachgeben = cls.inseln_erben(nachgeben, maske, KT)                 # Inselpunkte ohne Stück (`Hautdurchsicht.inselnErben`, 18.11.2026)
         einzug = Hautkarteeinzug.rechnen(K, N, KT, maske, deckend, nachgeben)
         durch = Hautkartemaske.durchsicht(K, N, [s for s in stoffe if s['durchsicht']])
         if durch is not None:
@@ -66,6 +67,25 @@ class Hautkarterechnung:
                 'einzug': {'werte': einzug['werte'].reshape(-1), 'gesetzt': int(zahlen[0]), 'geschnappt': int(zahlen[1]), 'band': int(zahlen[2]),
                            'weg': einzug['weg']},
                 'randabstaende': [s['randabstand'] for s in stoffe], 'ms': round((time.perf_counter() - t0) * 1000), 'aufKarte': True}
+
+    #: wie `Hautdurchsicht.RUNDEN`
+    RUNDEN = 40
+
+    @classmethod
+    def inseln_erben(cls, nachgeben, maske, KT):
+        u"""`Hautdurchsicht.inselnErben`: verdeckte Punkte ohne `nachgeben` erben den größten Wert ihrer Nachbarn über die Dreiecke, Runde für Runde."""
+        offen = (maske != 0) & ~(nachgeben > 0)
+        if not bool(offen.any()):
+            return nachgeben
+        ecken = KT.reshape(-1)
+        for _ in range(cls.RUNDEN):
+            w = nachgeben[KT].amax(dim=1).repeat_interleave(3)
+            neu = torch.zeros_like(nachgeben).scatter_reduce(0, ecken, w, reduce='amax', include_self=True)
+            besser = offen & (neu > nachgeben)
+            if not bool(besser.any()):
+                break
+            nachgeben = torch.where(besser, neu, nachgeben)
+        return nachgeben
 
     @classmethod
     def aus_bytes(cls, roh):

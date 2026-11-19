@@ -81,13 +81,17 @@ class Meshgenesistesteigenstueck:
     def _gebacken(self, arbeit, kennung, punkte, dreiecke, farben):
         """Ein Stück nur mit Punktfarben (uint8 sRGB je Punkt, UV überall 0 — die Stücke aus den Fotos von Foto-Genesis, 31.10.2026) bekommt eine Abwicklung (`Uvabwicklung`, LSCM) und ein
         gebackenes Bild (`Texturbacker.farbe_je_punkt`, Kante `BACKEN_KANTE`), beides aus dem Stoffsolver; sonst trüge das Genesis-Stück nur eine Farbe. Gemessen am Haar von EdgarTrip
-        (`ProjektTemp/_wegwerf/exportleiste/abwicklung_probe.py`): 24.846 Dreiecke, 706 Inseln, 6,2 s Abwicklung, 3,3 s Backen. → (Bild, UV je Ecke (3T, 2), v nach oben wie OBJ)."""
+        (`ProjektTemp/_wegwerf/exportleiste/abwicklung_probe.py`): 24.846 Dreiecke, 706 Inseln, 6,2 s Abwicklung, 3,3 s Backen. → (Bild, UV je Ecke (3T, 2), v nach oben wie OBJ,
+        Mittel des Bilds für das Icon — `G9stueckicon.mittel` aus dem Bild im Speicher, 19.11.2026, Edgar: „mach die gebackene PNG-Farbe auch direkt“)."""
+        from Genesis9.stueckicon import G9stueckicon
+        from KoerperKI_alle.pngtorch import Pngtorch
         from Stoffsolver.texturbacker import Texturbacker
         from Stoffsolver.uvabwicklung import Uvabwicklung
         erg = Uvabwicklung(punkte, dreiecke).rechnen()
         bild = arbeit / ('%s_farbe.png' % kennung)
-        Texturbacker.als_png(Texturbacker(punkte, dreiecke, erg.uv, groesse=self.BACKEN_KANTE).farbe_je_punkt(farben), str(bild))
-        return bild, Torchfeld.feld(erg.uv, dtype=torch.float64).reshape(-1, 2)
+        gebacken = torch.as_tensor(Texturbacker(punkte, dreiecke, erg.uv, groesse=self.BACKEN_KANTE).farbe_je_punkt(farben), device='cuda')
+        Pngtorch.schreiben(gebacken, bild)       # 19.11.2026: statt `Texturbacker.als_png` (PIL 550–710 ms, Pngtorch 70–150 ms, dieselben Pixel, `pngtorch_probe.py`)
+        return bild, Torchfeld.feld(erg.uv, dtype=torch.float64).reshape(-1, 2), G9stueckicon.mittel(gebacken)
 
     def _art(self):
         """(Kategorie, Ordnerart, Knochen) — Haar und starre Bestandteile an EINEM Knochen."""
@@ -121,12 +125,12 @@ class Meshgenesistesteigenstueck:
         kennung, anzeige_name = G9eigenstueck.kennung_und_name('%s %s' % (self.praefix, self.stueck.get('name')))
         arbeit = G9eigenstueck.arbeitsordner(kennung)
         arbeit.mkdir(parents=True, exist_ok=True)
-        bild, uv_ecken = None, (uv_feld if uv_feld is not None else uv[dreiecke].reshape(-1, 2))
+        bild, uv_ecken, mittel = None, (uv_feld if uv_feld is not None else uv[dreiecke].reshape(-1, 2)), None
         if mat.get('bild'):
             bild = arbeit / ('%s_farbe.jpg' % kennung)
             shutil.copyfile(anzeige / 'bilder' / mat['bild'], bild)
         elif punktfarbe is not None and not Torchfeld.ptp(uv, axis=0).any():
-            bild, uv_ecken = self._gebacken(arbeit, kennung, punkte, dreiecke, punktfarbe)
+            bild, uv_ecken, mittel = self._gebacken(arbeit, kennung, punkte, dreiecke, punktfarbe)
         lin = Torchfeld.feld(mat.get('farbe') or [1.0, 1.0, 1.0], dtype=torch.float64)
         farbe = tuple(round(float(Blendimportbilder.srgb(w)), 4) for w in Torchfeld.liste(lin)) if bild is None else (1.0, 1.0, 1.0)
         material = {'name': kennung + '_Mat', 'farbe': farbe, 'bild': str(bild) if bild else None, 'normalen': None, 'rauheit_bild': None, 'alpha_bild': None,
@@ -138,7 +142,8 @@ class Meshgenesistesteigenstueck:
 
         def schreiben(lage):
             gewichte = self.gewichte(Torchfeld.feld(lage, dtype=torch.float64)) if self.gewichte is not None and knochen is None else None
-            return G9eigenstueck.schreiben(lage, netz, kennung, anzeige_name, kategorie, material, heben=False, knochen=knochen, art_ordner=art, gewichte=gewichte)
+            return G9eigenstueck.schreiben(lage, netz, kennung, anzeige_name, kategorie, material, heben=False, knochen=knochen, art_ordner=art, gewichte=gewichte,
+                                           textur_mittel=mittel)
 
         bilanz = schreiben(roh)
         ruhe, bericht = G9gcfigurbau.ruhelage(bilanz['stueck'], self.regler, roh, roh)

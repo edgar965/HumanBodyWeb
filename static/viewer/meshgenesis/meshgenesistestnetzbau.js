@@ -13,6 +13,43 @@ export class Meshgenesistestnetzbau {
      * @param verdeckt Uint8Array je Dreieck (1 = unter einem gewählten Stück, fällt weg — die Hautverdeckung der Testseite, `Meshgenesistestkleider.verdeckt`) oder null
      * @returns {THREE.Mesh} Dreiecke nach Material gruppiert, geteilt markiert
      */
+    /**
+     * Index der sichtbaren Dreiecke nach Material sortiert (eine Gruppe je Material, −1 = Farbe je Punkt = das letzte), in jeder Gruppe in der Reihenfolge des Netzes; `gruppe(ab, n, m)`
+     * je nicht leerem Material. `verborgen` (Paket `Meshgenesisflaechennetz`): die Haut unter dem Anatomie-Stück, seit 08.11.2026 auch an den Testfiguren
+     * (`Meshgenesismeshanatomie.anzeigenetz`, Edgar zu n1: „Scham fehlt“). 19.11.2026 (Ladezeit): Zählsortieren in einem Uint32Array statt `push` in Listen — Haar mit
+     * 1,56 Mio. Dreiecken 162 ms; derselbe Index, dieselben Gruppen.
+     */
+    static nachMaterial(netz, anzahl, verdeckt, gruppe) {
+        const letzter = anzahl - 1, f = netz.material.length, mat = netz.material, ver = netz.verborgen, d = netz.dreiecke;
+        const zahl = new Uint32Array(anzahl), wahl = new Int32Array(f);
+        for (let t = 0; t < f; t++) {
+            if ((verdeckt && verdeckt[t]) || ver?.[t]) {
+                wahl[t] = -1;
+                continue;
+            }
+            const m = mat[t] < 0 ? letzter : mat[t];
+            wahl[t] = m;
+            zahl[m]++;
+        }
+        const anfang = new Uint32Array(anzahl);
+        let summe = 0;
+        for (let m = 0; m < anzahl; m++) {
+            anfang[m] = summe;
+            if (zahl[m]) gruppe(summe * 3, zahl[m] * 3, m);
+            summe += zahl[m];
+        }
+        const index = new Uint32Array(summe * 3);
+        for (let t = 0; t < f; t++) {
+            const m = wahl[t];
+            if (m < 0) continue;
+            const o = anfang[m]++ * 3;
+            index[o] = d[t * 3];
+            index[o + 1] = d[t * 3 + 1];
+            index[o + 2] = d[t * 3 + 2];
+        }
+        return index;
+    }
+
     static mesh(netz, matrizen, verdeckt = null) {
         if (!netz.ruhe) throw new Error('Anzeigenetz ohne Ruhelage');
         const lage = Meshgenesishaeutung.verformen(netz.ruhe, netz.knochen, netz.gewicht, netz.kopf.haut, matrizen);
@@ -23,23 +60,7 @@ export class Meshgenesistestnetzbau {
         geo.setAttribute('color', netz.farbe);
         // Dreiecke nach Material sortiert (eine Gruppe je Material, −1 = Farbe je Punkt = das letzte Material).
         const materialien = netz.materialien();
-        const letzter = materialien.length - 1;
-        const je = Array.from({ length: materialien.length }, () => []);
-        for (let t = 0; t < netz.material.length; t++) {
-            // `verborgen` (Paket `Meshgenesisflaechennetz`): die Haut unter dem Anatomie-Stück, seit 08.11.2026 auch an den Testfiguren (`Meshgenesismeshanatomie.anzeigenetz`, Edgar zu n1: „Scham fehlt“)
-            if ((verdeckt && verdeckt[t]) || netz.verborgen?.[t]) continue;
-            const m = netz.material[t] < 0 ? letzter : netz.material[t];
-            je[m].push(netz.dreiecke[t * 3], netz.dreiecke[t * 3 + 1], netz.dreiecke[t * 3 + 2]);
-        }
-        const index = new Uint32Array(je.reduce((s, l) => s + l.length, 0));
-        let ab = 0;
-        je.forEach((l, m) => {
-            if (!l.length) return;
-            index.set(l, ab);
-            geo.addGroup(ab, l.length, m);
-            ab += l.length;
-        });
-        geo.setIndex(new THREE.BufferAttribute(index, 1));
+        geo.setIndex(new THREE.BufferAttribute(Meshgenesistestnetzbau.nachMaterial(netz, materialien.length, verdeckt, (ab, n, m) => geo.addGroup(ab, n, m)), 1));
         // mitgelieferte Normalen (21.10.2026, Weg g mit Textur je Stück: die Punkte sind an den Atlasnähten doppelt — gerechnet knickte dort die Schattierung), mit der Haltung gedreht
         Meshgenesisflaechennormalen.setzen(geo, netz.normalen ? Meshgenesisflaechennormalen.gehaeutet(netz.normalen, netz.knochen, netz.gewicht, netz.kopf.haut, matrizen) : null);
         geo.userData.gemeinsam = true;          // die Felder geben ihren Inhalt bei jedem Zeichnen frei — dieses Netz bleibt

@@ -125,9 +125,12 @@ class Meshgenesistestendpunkte:
     @staticmethod
     @require_GET
     def figurbild(request, kennung, geschlecht, name):
+        from ..dienste.fotogesicht import Fotogesicht
         from ..dienste.meshgenesistesthaut import Meshgenesistesthaut
         ordner = Meshgenesistest.form_ordner(kennung, geschlecht)
-        pfad = (Meshgenesistesthaut.bild(kennung, geschlecht, name) or Meshgenesisflaechennetz.bild(ordner, name)) if ordner else None
+        # zuerst das Augenbild des Gesichts aus dem Foto (`Fotogesicht.AUGEN`, 19.11.2026), dann Hautkachel, dann Bild des Anzeigenetzes
+        pfad = (Fotogesicht.bild(Meshgenesistest.pfad(kennung), geschlecht, name) or Meshgenesistesthaut.bild(kennung, geschlecht, name)
+                or Meshgenesisflaechennetz.bild(ordner, name)) if ordner else None
         if pfad is None:
             raise Http404('Kein Bild %s für Test %s (%s)' % (name, kennung, geschlecht))
         return Auftragsdatei.antwort(request, pfad)

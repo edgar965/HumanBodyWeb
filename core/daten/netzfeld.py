@@ -77,7 +77,7 @@ class Netzfeld:
         C-zusammenhängend ist. Nach einem `[:, [0, 2, 1]]` ist es das nicht.
 
         Ein Feld auf der Karte bleibt dort, als eigene Kopie (eine spätere Änderung des Aufrufers erreicht die Antwort nicht), bis `abholen` alle Felder einer Antwort
-        in EINER Kopie zur CPU holt (18.11.2026; bis dahin je Feld eine, mit Wartepunkt — 82 je Reglerzug, Kartenwächter `_wegwerf/zug_kartenwaechter.py`).
+        in EINER Kopie zur CPU holt (18.11.2026; bis dahin je Feld eine, mit Wartepunkt — 82 je Reglerzug, GPU-Wächter `_wegwerf/zug_kartenwaechter.py`).
         """
         ziel = Torchfeld.dtype(typ)
         if Torchfeld.typname(ziel) not in cls.ERLAUBT:

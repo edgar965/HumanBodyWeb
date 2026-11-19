@@ -60,13 +60,17 @@ export class Hautdurchsicht {
             if (!nah || nah.d2 > grenze2) continue;
             const nx = normalen[3 * i], ny = normalen[3 * i + 1], nz = normalen[3 * i + 2];
             const liste = umkreis(nah.j);
-            let noetig = 0;
+            let noetig = 0, vorne = false;
             for (let l = 0; l < liste.length; l++) {
                 const k = liste[l];
                 const t = G.strahlDreieck(P, T[k], T[k + 1], T[k + 2], px, py, pz, nx, ny, nz);
                 // t < luft: der Stoff liegt hinter oder knapp vor der Haut — sie muss bis `luft` hinter ihn.
                 if (t !== null && t >= -tiefe && t < luft) noetig = naechste && noetig ? Math.min(noetig, luft - t) : Math.max(noetig, luft - t);
+                // `naechste` (deckend): liegt bis `tiefe` auch Stoff VOR der Haut, deckt er sie von außen — kein Durchstich (die Wange im Cyborg-Helm traf
+                // nach innen den Visierrahmen und zog sichtbar ein, 18.11.2026)
+                else if (naechste && t !== null && t >= luft && t <= tiefe) vorne = true;
             }
+            if (vorne) noetig = 0;
             if (noetig > 0) durch[i] = Math.max(durch[i], Math.min(noetig, grenze));
         }
     }
@@ -97,6 +101,35 @@ export class Hautdurchsicht {
             if (!maske[i] || !(durch[i] > nachgeben[i])) continue;
             nachgeben[i] = durch[i];
             zahl += 1;
+        }
+        return zahl;
+    }
+
+    /** So oft wird `nachgeben` an Inselpunkte weitergereicht (je Runde ein Dreiecksring). */
+    static RUNDEN = 40;
+
+    /**
+     * Punkte, die erst `Maskeninseln` verdeckt, gehören zu keinem Stück: `nachgeben` 0, also nur `Saumband.TIEFE_M` (10 mm) Einzug — am Rücken von Luna
+     * im Cyborg Suit standen 87 solche Punkte bis 23,7 mm vor der Platte (Chrome, 18.11.2026). Sie erben den größten Wert ihrer Nachbarn über die Dreiecke,
+     * Runde für Runde (jede Runde rechnet aus dem Stand davor), bis nichts mehr dazukommt. Zählt die Inselpunkte.
+     */
+    static inselnErben(nachgeben, maske, index) {
+        const n = maske.length, offen = new Uint8Array(n);
+        let zahl = 0;
+        for (let i = 0; i < n; i++) if (maske[i] && !(nachgeben[i] > 0)) { offen[i] = 1; zahl += 1; }
+        if (!zahl) return 0;
+        const neu = new Float32Array(n);
+        for (let r = 0; r < Hautdurchsicht.RUNDEN; r++) {
+            neu.fill(0);
+            for (let t = 0; t < index.length; t += 3) {
+                const a = index[t], b = index[t + 1], c = index[t + 2], w = Math.max(nachgeben[a], nachgeben[b], nachgeben[c]);
+                if (w > neu[a]) neu[a] = w;
+                if (w > neu[b]) neu[b] = w;
+                if (w > neu[c]) neu[c] = w;
+            }
+            let geaendert = 0;
+            for (let i = 0; i < n; i++) if (offen[i] && neu[i] > nachgeben[i]) { nachgeben[i] = neu[i]; geaendert += 1; }
+            if (!geaendert) break;
         }
         return zahl;
     }

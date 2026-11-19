@@ -11,16 +11,17 @@
  * nur auf Anforderung — die Schleife hier läuft nur, solange gespielt wird.
  */
 import * as THREE from 'three';
-import { Eigenhaut } from '../gemeinsam/eigenhaut.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
 import { fetchRetarget } from '../retarget_hybrid.js';
 import { Meshgenesisanatomiehuelle } from './meshgenesisanatomiehuelle.js';
 import { Meshgenesisbewegungsfigur } from './meshgenesisbewegungsfigur.js';
 import { Meshgenesisbodenstand } from './meshgenesisbodenstand.js';
+import { Meshgenesisbewegungsmaske } from './meshgenesisbewegungsmaske.js';
 import { Meshgenesisbewegungskleid } from './meshgenesisbewegungskleid.js';
 import { Meshgenesisgenesisfigur } from './meshgenesisgenesisfigur.js';
 import { Meshgenesishaarschwung } from './meshgenesishaarschwung.js';
+import { Meshgenesisstoffkleid } from './meshgenesisstoffkleid.js';
 import { Meshgenesiskikleiderfeld } from './meshgenesiskikleiderfeld.js';
 import { Meshgenesiskollision } from './meshgenesiskollision.js';
 import { Meshgenesisohneglieder } from './meshgenesisohneglieder.js';
@@ -30,7 +31,7 @@ export class Meshgenesisfigurbewegung {
 
     /**
      * @param ansicht das Feld der Ergebnisfigur (`Meshgenesisansicht`)
-     * @param quelle `async () => ({schluessel, figur, stuecke: [{id, art, netz}], knochen: [Namen], ruhezentren, anatomieGetragen})` oder null (keine Genesis-Figur für diese Probe)
+     * @param quelle `async () => ({schluessel, figur, stuecke: [{id, art, netz, kostuem}], knochen: [Namen], ruhezentren, anatomieGetragen})` oder null (keine Genesis-Figur für diese Probe)
      */
     constructor(ansicht, quelle) {
         this.ansicht = ansicht;
@@ -116,25 +117,7 @@ export class Meshgenesisfigurbewegung {
         return true;
     }
 
-    _kleiderBinden() {
-        for (const k of this.kleider) {
-            k.mesh.parent?.remove(k.mesh);
-            k.mesh.geometry.dispose();
-        }
-        this.kleider = [];
-        const q = this._q;
-        for (const st of q?.stuecke || []) {
-            const mesh = Meshgenesisbewegungskleid.binden(st.netz, this.modell.skelett, q.knochen, this._abbildung);
-            if (!mesh) continue;
-            mesh.userData.art = st.art; mesh.name = `ki_${st.id}`;      // Name = Schlüssel in `hautStuecke` (Exportleiste: `Exportleistefigur.hautDeckt`, Knotenname in GLB und .blend)
-            mesh.visible = this._kleiderAn;
-            Eigenhaut.einhaengen(this.modell.group, mesh, this.modell.skelett);
-            Meshgenesiskollision.anbringen(mesh, q.kapseln, this.modell.skelett, this._abbildung, q.knochen);    // Stücke aus fremden Gliedern geschoben (31.10.2026 nachts)
-            Meshgenesishaarschwung.anbringen(mesh, st.netz, this._abbildung);    // Einzelsträhnen: eigene Bewegung je Locke (16.11.2026)
-            this.kleider.push({ mesh, art: st.art });
-        }
-        this._kleiderWurzel = this.modell.skelett?.rootBone || null;
-    }
+    _kleiderBinden() { Meshgenesisbewegungskleid.alleBinden(this); }     // Stücke, Kapselschub, Locken, Stoff (seit 19.11.2026 dort)
 
     async _bewegungHolen() {
         const wahl = this.wahl;
@@ -151,6 +134,7 @@ export class Meshgenesisfigurbewegung {
         this.fps = this.dauer > 0 && this.bilder > 1 ? (this.bilder - 1) / this.dauer : 30;
         this._wurzel = null;                // neuer Mischer beim nächsten `_pruefen`
         this._melden('');
+        Meshgenesisstoffkleid.anbringenAlle(this);      // der Stoff gilt je Bewegung (19.11.2026)
     }
 
     /**
@@ -179,7 +163,7 @@ export class Meshgenesisfigurbewegung {
     /** Vom Feld gerufen (`Meshgenesisansicht._fuellen`), solange `aktiv`: die bewegte Figur statt der stillen, in der Ansichtsart der Zeile. */
     einhaengen(inhalt, d) {
         const gruppe = this.modell?.group;
-        if (!gruppe) return;
+        if (!gruppe || !Meshgenesisbewegungsmaske.zeigen(this, inhalt, d?.kleider !== false)) return false;     // ohne Hautmaske die stille Figur (19.11.2026)
         gruppe.position.set(0, 0, 0);
         gruppe.quaternion.identity();
         gruppe.traverse(o => { o.frustumCulled = false; o.layers.set(1); });
@@ -209,8 +193,10 @@ export class Meshgenesisfigurbewegung {
     _bild() {
         if (this.action) Meshgenesisbodenstand.richten(this.modell, this.kleider);     // wie die Charakter-Seite: tiefster Punkt auf den Boden (31.10.2026)
         Genesis9gelenke.takt(this.modell);
+        Meshgenesisstoffkleid.stellen(this.kleider, this.action?.time);
         Meshgenesishaarschwung.stellen(this.kleider, this.spielt ? (this._dt || 0) : 0, this.modell.group);     // Bewegung je Locke (pausiert: 0, die Locken liegen an)
         Meshgenesiskollision.stellen(this.kleider, this.modell.group);
+        Meshgenesisbewegungsmaske.nachBild(this);
         this.ansicht.zeichnen();
         this.beiAenderung?.();
     }

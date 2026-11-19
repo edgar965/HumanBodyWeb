@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { Meshgenesismeshanpassung } from '../meshgenesis/meshgenesismeshanpassung.js';
 import { Meshgenesislinienzeichner as LZ } from '../meshgenesis/meshgenesislinienzeichner.js';
+import { Fotogenesisanpassungsaugen } from './fotogenesisanpassungsaugen.js';
 import { Fotogenesisnetz } from './fotogenesisnetz.js';
 
 export class Fotogenesisanpassungsfigur {
@@ -18,6 +19,7 @@ export class Fotogenesisanpassungsfigur {
         this.figur = null;
         this.figurHaut = null;
         this.hautMaterialien = null;
+        this.augen = null;                // {geometrie, materialien} (`Fotogenesisanpassungsaugen`)
         this.modus = 'textur';
         this.fehler = '';
         this.bereit = this._laden();
@@ -34,9 +36,11 @@ export class Fotogenesisanpassungsfigur {
             const z = Meshgenesismeshanpassung.prototype;
             this.figur = Meshgenesismeshanpassung._geometrie(daten.figur, daten.figur_dreiecke);
             this.figurHaut = daten.uv && kopf.textur ? z._haut.call(this, daten, kopf.textur) : null;
+            // die Augäpfel (19.11.2026, Edgar: „bau Augen in Zeile 1 ein“ — das Körpernetz allein hat leere Augenhöhlen)
+            this.augen = Fotogenesisanpassungsaugen.bauen(daten, kopf.augen, () => this._neu());
             let boden = Number.isFinite(kopf.netz_boden) ? kopf.netz_boden : Infinity;
             if (!Number.isFinite(boden) && daten.netz_punkte) for (let i = 1; i < daten.netz_punkte.length; i += 3) boden = Math.min(boden, daten.netz_punkte[i]);
-            for (const g of [this.figur, this.figurHaut]) g?.translate(0, -boden, 0);
+            for (const g of [this.figur, this.figurHaut, this.augen?.geometrie]) g?.translate(0, -boden, 0);
         } catch (fehler) {
             this.fehler = fehler.message;
         }
@@ -58,7 +62,14 @@ export class Fotogenesisanpassungsfigur {
         if (this.modus === 'textur') {
             inhalt.add(this.figurHaut ? new THREE.Mesh(this.figurHaut, this.hautMaterialien)
                 : Meshgenesismeshanpassung.prototype._objekt.call(this, this.figur, Meshgenesismeshanpassung.FIGURFARBE, 1));
+            if (this.augen) inhalt.add(new THREE.Mesh(this.augen.geometrie, this.augen.materialien));
             return;
+        }
+        if (this.augen) {                                // die Augen in den anderen Ansichtsarten wie der Körper: Ersatzmaterial auf Ebene 1
+            const augen = new THREE.Mesh(this.augen.geometrie);
+            augen.layers.set(1);
+            augen.userData.meshgenesisFremd = true;
+            inhalt.add(augen);
         }
         // die anderen Ansichtsarten wie die Testfiguren der Zeile (`Fotogenesistestfigur`): Ersatzmaterial auf Ebene 1 (`Fotogenesisnetz.ersatz`) — mit dem eigenen Material auf Ebene 0
         // stand Feld 1 im Fotolicht flach und orange da (04.11.2026, Leiste der dritten Zeile, „Netz“ im Chrome)

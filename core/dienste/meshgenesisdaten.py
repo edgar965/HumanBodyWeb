@@ -113,23 +113,22 @@ class Meshgenesisdaten:
 
     @staticmethod
     def _quaternionen(m):
-        """(N, 3, 3) Drehmatrizen → (N, 4) Quaternionen (x, y, z, w), wie three.js `Quaternion.setFromRotationMatrix` (Fallunterscheidung nach der Spur)."""
-        aus = torch.zeros((len(m), 4), dtype=torch.float64, device='cuda')
-        for i, r in enumerate(m):
-            spur = r[0, 0] + r[1, 1] + r[2, 2]
-            if spur > 0:
-                s = 0.5 / Torchfeld.sqrt(spur + 1.0)
-                aus[i] = Torchfeld.feld(((r[2, 1] - r[1, 2]) * s, (r[0, 2] - r[2, 0]) * s, (r[1, 0] - r[0, 1]) * s, 0.25 / s))
-            elif r[0, 0] > r[1, 1] and r[0, 0] > r[2, 2]:
-                s = 2.0 * Torchfeld.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2])
-                aus[i] = Torchfeld.feld((0.25 * s, (r[0, 1] + r[1, 0]) / s, (r[0, 2] + r[2, 0]) / s, (r[2, 1] - r[1, 2]) / s))
-            elif r[1, 1] > r[2, 2]:
-                s = 2.0 * Torchfeld.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2])
-                aus[i] = Torchfeld.feld(((r[0, 1] + r[1, 0]) / s, 0.25 * s, (r[1, 2] + r[2, 1]) / s, (r[0, 2] - r[2, 0]) / s))
-            else:
-                s = 2.0 * Torchfeld.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1])
-                aus[i] = Torchfeld.feld(((r[0, 2] + r[2, 0]) / s, (r[1, 2] + r[2, 1]) / s, 0.25 * s, (r[1, 0] - r[0, 1]) / s))
-        return aus
+        """(N, 3, 3) Drehmatrizen → (N, 4) Quaternionen (x, y, z, w), wie three.js `Quaternion.setFromRotationMatrix` (Fallunterscheidung nach der Spur).
+        19.11.2026: alle Matrizen auf einmal (vorher eine Python-Schleife über Karten-Tensoren, 0,2 s von 0,23 s in `Meshgenesistest.daten`); je Fall dieselben Ausdrücke in derselben
+        Reihenfolge, gewählt mit `torch.where` — bitgleich zur Schleife (`ProjektTemp/_wegwerf/ladezeit/quaternionen_probe.py`, alle vier Fälle, mit Sabotage)."""
+        r = torch.as_tensor(m, dtype=torch.float64, device='cuda').reshape(-1, 3, 3)
+        r00, r01, r02, r10, r11, r12, r20, r21, r22 = r.reshape(-1, 9).unbind(1)
+        spur = r00 + r11 + r22
+        s1 = 0.5 / torch.sqrt(spur + 1.0)
+        s2 = 2.0 * torch.sqrt(1.0 + r00 - r11 - r22)
+        s3 = 2.0 * torch.sqrt(1.0 + r11 - r00 - r22)
+        s4 = 2.0 * torch.sqrt(1.0 + r22 - r00 - r11)
+        q1 = torch.stack(((r21 - r12) * s1, (r02 - r20) * s1, (r10 - r01) * s1, 0.25 / s1), 1)
+        q2 = torch.stack((0.25 * s2, (r01 + r10) / s2, (r02 + r20) / s2, (r21 - r12) / s2), 1)
+        q3 = torch.stack(((r01 + r10) / s3, 0.25 * s3, (r12 + r21) / s3, (r02 - r20) / s3), 1)
+        q4 = torch.stack(((r02 + r20) / s4, (r12 + r21) / s4, 0.25 * s4, (r10 - r01) / s4), 1)
+        fall2 = ((r00 > r11) & (r00 > r22))[:, None]
+        return torch.where((spur > 0)[:, None], q1, torch.where(fall2, q2, torch.where((r11 > r22)[:, None], q3, q4)))
 
     @staticmethod
     def _plan(ordner):

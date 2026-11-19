@@ -1,3 +1,5 @@
+import { Meshoptionenhilfe } from './meshoptionenhilfe.js';
+
 /**
  * Meshoptionenformular — baut die Optionsfelder aus `Meshoptionen.katalog()` (JSON im
  * `#mesh-katalog`-Script-Tag oder per fetch) in einen Behälter.
@@ -16,13 +18,17 @@ export class Meshoptionenformular {
      * @param {HTMLElement} behaelter
      * @param {object} katalog `{optionen: [...], rollen: [...]}`
      * @param {object} werte aktuelle Werte (Vorgabe, wenn leer)
+     * @param {object} einstellung `{hilfe: true}`: Hover-Hilfe und Wertebereich je Feld (`Meshoptionenhilfe`, 19.11.2026 für das Render-Fenster)
      */
-    static bauen(behaelter, katalog, werte = {}) {
+    static bauen(behaelter, katalog, werte = {}, einstellung = {}) {
         behaelter.innerHTML = '';
         const fein = katalog.optionen.filter(f => f.fein);
-        for (const feld of katalog.optionen.filter(f => !f.fein)) {
-            behaelter.appendChild(Meshoptionenformular._zeile(feld, werte));
-        }
+        const zeile = feld => {
+            const z = Meshoptionenformular._zeile(feld, werte);
+            if (einstellung.hilfe) Meshoptionenhilfe.anbringen(z, z.querySelector('label'), feld);
+            return z;
+        };
+        for (const feld of katalog.optionen.filter(f => !f.fein)) behaelter.appendChild(zeile(feld));
         if (!fein.length) return;
         const klappe = document.createElement('details');
         klappe.className = 'mesh-feineinstellungen';
@@ -34,7 +40,7 @@ export class Meshoptionenformular {
         // `::details-content`) — so kann eine Seite sie mit `.mesh-fein-felder` anordnen; ohne Regel bleibt es wie vorher.
         const felder = document.createElement('div');
         felder.className = 'mesh-fein-felder';
-        for (const feld of fein) felder.appendChild(Meshoptionenformular._zeile(feld, werte));
+        for (const feld of fein) felder.appendChild(zeile(feld));
         klappe.appendChild(felder);
         behaelter.appendChild(klappe);
         Meshoptionenformular._gilt(behaelter, katalog.gilt_nach);

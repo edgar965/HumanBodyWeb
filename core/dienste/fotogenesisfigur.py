@@ -78,16 +78,31 @@ class Fotogenesisfigur:
             return None
         modell = json.loads((fig / 'modell.json').read_text(encoding='utf-8'))
         with Npztorch.lesen(p / ('ergebnis_Form_%s.npz' % g)) as e:
+            # Haltung wie `Meshgenesistest.daten` (19.11.2026 abends): `ausgabe`/`dreh` die des Fotos, die allein stehende Figur
+            # (`drehung_genesis`, `ausgabe_stand`/`dreh_stand`) die Standhaltung der Fußregel, wenn die Datei sie trägt (`Meshgenesishaltungwahl`)
+            from .meshgenesishaltungwahl import Meshgenesishaltungwahl
+            f_rig, f_dreh, haltung = Meshgenesishaltungwahl.felder(e)
             ausgabe, dreh = Torchfeld.astype(e['rig'], torch.float64), Torchfeld.astype(e['dreh'], torch.float64)
+            rig_stand, dreh_stand = Torchfeld.astype(e[f_rig], torch.float64), Torchfeld.astype(e[f_dreh], torch.float64)
             # Form der Zeile 1 in der Ruhelage (`KoerperKI_Fotos.Zeile1versatz`, 31.10.2026 nachts) — die Abspielleiste der Zeile 1 legt sie auf die bewegte Figur (`Fotogenesiszeile1form`)
             zeile1 = {k: base64.b64encode(Torchfeld.als_bytes(Torchfeld.astype(e['zeile1_' + k], Torchfeld.dtype('<f4')))).decode('ascii') for k in ('ruhe', 'versatz')} if 'zeile1_versatz' in e.files else None
         name = (modell.get('kopfbild') or {}).get('quelle') or 'nur Fotos'
         from .meshgenesisergebnisfigur import Meshgenesisergebnisfigur
         # Die Figur als Genesis9Modell (31.10.2026, Exportleiste): dieselbe Angabe wie `Meshgenesistest.daten`, dazu die Kacheln der Haut aus den Fotos als `fototextur`
         figur = dict(Meshgenesisergebnisfigur._figur(g, modell['figur']['regler']), fototextur=cls._kacheln(kennung, p, g))
+        from .fotogesicht import Fotogesicht
+        # dazu das Gesicht aus dem Frontfoto (19.11.2026: Augenbild, Brauenfarbe, Mimik), abgelegt in `<Job>/figur/gesicht_<g>/`
+        figur = Fotogesicht.figur(figur, p, g, lambda name: '/api/fotogenesis/%s/figur/%s/bild/%s' % (kennung, g, name))
+        from .meshgenesisgenesishaltung import Meshgenesisgenesishaltung
+        # die Haltung als Daz-Winkel für Genesis9Modell (19.11.2026, `Fotogenesistestfigur`)
+        drehung = Meshgenesisgenesishaltung.drehung(kin, dreh_stand, p / ('ergebnis_Form_%s.npz' % g), haltung)
+        stand = haltung == 'stand'
         return {'kennung': kennung, 'info': {'name': name, 'geschlecht': g, 'gerechnet': (modell.get('kopfbild') or {}).get('gerechnet')}, 'job': None, 'rig': beschr,
                 'figur_netz': '/api/fotogenesis/%s/figur/%s' % (kennung, g), 'form_regler': modell['figur']['regler'], 'figur_genesis': figur,
+                'drehung_genesis': drehung, 'haltung': haltung,
                 'ausgabe': Torchfeld.round(ausgabe, 4).tolist(), 'dreh': Torchfeld.round(Meshgenesisdaten._quaternionen(dreh), 5).tolist(),
+                'ausgabe_stand': Torchfeld.round(rig_stand, 4).tolist() if stand else None,
+                'dreh_stand': Torchfeld.round(Meshgenesisdaten._quaternionen(dreh_stand), 5).tolist() if stand else None,
                 'ruhezentren': Torchfeld.round(Torchfeld.feld([k['zentrum'] for k in kin], copy=True), 6).tolist(), 'zeile1_ursprung': cls._ursprung(p.parent), 'zeile1_form': zeile1}
 
     @staticmethod
@@ -130,6 +145,10 @@ class Fotogenesisfigur:
         if form is None:
             return None
         haut = Path(form).parent / ('haut_%s' % geschlecht)
+        from .fotogesicht import Fotogesicht
+        augen = Fotogesicht.bild(Path(form).parent, geschlecht, name)           # das Augenbild des Gesichts aus dem Foto (`Fotogesicht`, 19.11.2026)
+        if augen is not None:
+            return augen
         if cls.HAUTBILD.match(str(name)):
             try:
                 ziel = json.loads((haut / 'anzeige.json').read_text(encoding='utf-8')).get('bilder', {}).get(str(name))

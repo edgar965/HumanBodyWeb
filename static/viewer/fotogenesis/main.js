@@ -24,6 +24,7 @@ import { Exportleiste } from '../exportleiste/exportleiste.js';
 import { Fotogenesisbewegung } from './fotogenesisbewegung.js';
 import { Fotogenesisexportfigur } from './fotogenesisexportfigur.js';
 import { Fotogenesismodellspeichern } from './fotogenesismodellspeichern.js';
+import { Fotogenesisgriffel } from './fotogenesisgriffel.js';
 
 const start = document.getElementById('fotogenesis-start')?.dataset ?? {};
 const daten = JSON.parse(document.getElementById('fotogenesis-daten')?.textContent || '{}');
@@ -39,6 +40,7 @@ if (start.test === '1') {
     Fotogenesisjobwahl.binden(element('fotogenesis-jobwahl'));
     Auftragname.binden();
 }
+Fotogenesisgriffel.binden(document.querySelector('.fotogenesis-mit-leiste'));      // Zeile 1: Genesis-Ergebnis | Seitenleiste, Grenze ziehbar (19.11.2026)
 const seite = Fotogenesisseite.aufbauen();
 if (daten.genesiszeile?.ergebnis) Fotogenesishautangleich.binden(element('fotogenesis-hautangleich'), () => seite.genesiszeile?.hautort);
 if (daten.genesiszeile?.ergebnis) Fotogenesisweitverdeckung.binden(element('fotogenesis-weitverdeckung'));         // Haut unter weiten Stücken (08.11.2026)

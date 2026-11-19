@@ -70,7 +70,11 @@ export class Meshgenesishaarschwung {
             const s = mesh.userData.haarschwung;
             const sk = mesh.skeleton;
             if (!s || !sk) continue;
-            const mat = sk.bones.map((b, i) => m.multiplyMatrices(b.matrixWorld, sk.boneInverses[i]).premultiply(mesh.bindMatrixInverse).multiply(mesh.bindMatrix).elements.slice());
+            // Knochenmatrizen in EINEM Feld statt einem Feld je Knochen (19.11.2026, three.js Weg A): gemessen in Chrome an goldprinzessin_mesh_genesis_67 (82.434 Leitpunkte,
+            // 215 Knochen) 4,6–4,9 ms gegen 3,1–3,4 ms je Bild, je dreimal abwechselnd, `ziel` bitgleich
+            if (!s.matrizen || s.matrizen.length !== sk.bones.length * 16) s.matrizen = new Float64Array(sk.bones.length * 16);
+            const e = s.matrizen;
+            for (let i = 0; i < sk.bones.length; i++) e.set(m.multiplyMatrices(sk.bones[i].matrixWorld, sk.boneInverses[i]).premultiply(mesh.bindMatrixInverse).multiply(mesh.bindMatrix).elements, i * 16);
             const { ruhe, index, gewicht, ziel } = s;
             for (let j = 0, n = s.g * s.k1; j < n; j++) {
                 const x = ruhe[j * 3], y = ruhe[j * 3 + 1], z = ruhe[j * 3 + 2];
@@ -78,10 +82,10 @@ export class Meshgenesishaarschwung {
                 for (let c = 0; c < 4; c++) {
                     const w = gewicht[j * 4 + c];
                     if (!w) continue;
-                    const e = mat[index[j * 4 + c]];
-                    px += w * (e[0] * x + e[4] * y + e[8] * z + e[12]);
-                    py += w * (e[1] * x + e[5] * y + e[9] * z + e[13]);
-                    pz += w * (e[2] * x + e[6] * y + e[10] * z + e[14]);
+                    const o = index[j * 4 + c] * 16;
+                    px += w * (e[o] * x + e[o + 4] * y + e[o + 8] * z + e[o + 12]);
+                    py += w * (e[o + 1] * x + e[o + 5] * y + e[o + 9] * z + e[o + 13]);
+                    pz += w * (e[o + 2] * x + e[o + 6] * y + e[o + 10] * z + e[o + 14]);
                 }
                 ziel[j * 3] = px; ziel[j * 3 + 1] = py; ziel[j * 3 + 2] = pz;
             }

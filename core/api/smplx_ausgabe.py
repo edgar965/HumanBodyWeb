@@ -87,7 +87,7 @@ class SmplxAusgabe:
         Projektionswegen, zwei sys.path-Umwegen und dem Zusammensetzen der
         Teiltexturen. Das liegt jetzt in Texturbacken und SmplxNetz.
         """
-        import cv2
+        from PhotoToTexture.bilddatei import Bilddatei  # torch statt cv2 (19.11.2026): BGR-Tensoren auf der Karte
 
         from ..models import PhotoAnalysisJob
 
@@ -95,7 +95,7 @@ class SmplxAusgabe:
             job = PhotoAnalysisJob.objects.get(id=job_id)
         except PhotoAnalysisJob.DoesNotExist:
             return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
-        foto = SmplxAusgabe._foto(cv2, job)
+        foto = SmplxAusgabe._foto(Bilddatei, job)
         if not isinstance(foto, tuple):
             return foto  # fertige Fehlerantwort
         bild, daten = foto
@@ -106,15 +106,15 @@ class SmplxAusgabe:
         except SmplxNetzFehler as fehler:
             logger.exception('smplx_texture: SmplxNetzFehler')
             return JsonResponse({'ok': False, 'error': str(fehler)}, status=500)
-        return SmplxAusgabe._backen(cv2, request, job, daten, bild, vertices, faces)
+        return SmplxAusgabe._backen(Bilddatei, request, job, daten, bild, vertices, faces)
 
     @staticmethod
-    def _foto(cv2, job):
+    def _foto(bilder, job):
         """(Bild, Ergebnisdaten) — oder gleich die passende Fehlerantwort."""
         pfad = os.path.join(str(settings.BASE_DIR), job.photo_file)
         if not os.path.isfile(pfad):
             return JsonResponse({'ok': False, 'error': 'Photo not found'}, status=404)
-        bild = cv2.imread(pfad)
+        bild = bilder.lesen(pfad)
         if bild is None:
             return JsonResponse({'ok': False, 'error': 'Could not read photo'}, status=500)
         try:
@@ -124,7 +124,7 @@ class SmplxAusgabe:
             return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
 
     @staticmethod
-    def _backen(cv2, request, job, daten, foto, vertices, faces):
+    def _backen(bilder, request, job, daten, foto, vertices, faces):
         region = request.GET.get('region', 'all')
         if region not in Texturbacken.REGIONEN:
             region = 'all'
@@ -137,12 +137,11 @@ class SmplxAusgabe:
         except Exception as fehler:  # noqa: BLE001
             logger.exception('Textur backen fehlgeschlagen (Region %s)', region)
             return JsonResponse({'ok': False, 'error': str(fehler)}, status=500)
-        textur = backen.zusammensetzen(cv2, textur, region, hintergrund)
-        daten['texture_path'] = backen.speichern(cv2, textur)
+        textur = backen.zusammensetzen(bilder, textur, region, hintergrund)
+        daten['texture_path'] = backen.speichern(bilder, textur)
         try:
             job.result_json = json.dumps(daten, default=str)
             job.save(update_fields=['result_json'])
         except Exception:  # noqa: BLE001
             logger.error('Texturpfad fuer %s nicht speicherbar', job.id, exc_info=True)
-        _, puffer = cv2.imencode('.png', textur)
-        return HttpResponse(puffer.tobytes(), content_type='image/png')
+        return HttpResponse(bilder.png(textur), content_type='image/png')

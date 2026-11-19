@@ -98,7 +98,8 @@ class SohlenlageTest(SimpleTestCase):
         flaechen = np.array([[0, 1, 2], [0, 2, 3], [1, 4, 2], [3, 5, 0], [4, 5, 5]])
         kontur = np.array([[-1, 0, -1], [2, 0, -1], [2, 0, 2], [-1, 0, 2]], dtype=float)
         original = Sohlenhalt.__dict__['kontur']
-        Sohlenhalt.kontur = classmethod(lambda cls, cloth, name: cls.verdichtet(kontur))
+        # Seit 19.11.2026 `kontur(spez, panelname, skala, shift_y)` (Sohle über `Stoffmodell`)
+        Sohlenhalt.kontur = classmethod(lambda cls, spez, name, *_: cls.verdichtet(kontur))
         try:
             ziele = Sohlenhalt.ziele(stoff, {'x_sohle': [0, 1, 2, 3]}, init, flaechen)
         finally:

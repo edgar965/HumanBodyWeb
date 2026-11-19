@@ -8,11 +8,15 @@ Koerper faellt und sich legt. Bisher wurde davon nur das letzte Bild
 aufgehoben; die Bewegung dazwischen hat nie jemand gesehen.
 
 Gerechnet wird NICHTS NEU und NICHTS ANDERS: Es laeuft genau der Weg von
-`drapierlauf.py`, nur ist `sim_frame_sequence` durch eine Fassung ersetzt,
-die je Bild `garment.current_verts` mitschreibt. Damit ist das Video
-garantiert dieselbe Simulation, die auch das Kleidungsstueck erzeugt.
+`drapierlauf.py`, nur ist die Bildschleife (`Bildfolge.laufen`) durch eine
+Fassung ersetzt, die jedes n-te Bild die Stofflage mitschreibt. Damit ist das
+Video garantiert dieselbe Simulation, die auch das Kleidungsstueck erzeugt.
 
-Laeuft in `A:\\3DTools\\python10_Garment` (Warp-Fork, numpy 1.26).
+Seit 19.11.2026 mit den CUDA-Kernen (`xpbdtorch`, `Dateisimulation` wie in
+`drapierlauf.py`) statt mit Warps `run_sim` (Edgar: „Stofffilm auch auf die
+Kerne umstellen“). Laeuft in `A:\\3DTools\\python14`; die Ablage ist
+`stofffilm.pt` ({'punkte': (Bilder, Punkte, 3) float32 in cm}), gelesen von
+`stofffilm_video.py` — vorher `stofffilm.npz` aus `python10_Garment`.
 
 Aufruf:
     python stofffilm.py --spez <..._specification.json>
@@ -22,8 +26,9 @@ Aufruf:
 import argparse
 import os
 import sys
+import time
 
-import numpy as np
+import torch
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 GC = os.path.join('A:', os.sep, '3DTools', 'Assets', 'GarmentCode')
@@ -39,45 +44,55 @@ class Stofffilm:
         self.jedes = int(jedes)
         self.hoechstens = int(hoechstens)
         self.bilder = []
+        self.stoff = None
 
-    def _mitschnitt(self, urspruenglich):
-        """Ersetzt `sim_frame_sequence` — rechnet dasselbe, sammelt dabei."""
+    def _mitschnitt(self):
+        """Ersetzt `Bildfolge.laufen` — dieselbe Schleife (Ruhe-Abbruch,
+        Zeitgrenze), hoechstens `hoechstens` Bilder, sammelt dabei."""
+        from GarmentCode.xpbdtorch.bildfolge import SimTimeOutError
+
         film = self
 
-        def sequenz(garment, config, store_usd=False, verbose=False):
+        def laufen(stoff, config):
+            beginn = time.time()
             for nummer in range(0, min(config.max_sim_steps, film.hoechstens)):
-                garment.frame = nummer
-                garment.run_frame()
+                stoff.frame = nummer
+                stoff.run_frame()
                 if nummer % film.jedes == 0:
-                    film.bilder.append(np.array(garment.current_verts, dtype=np.float32))
+                    film.bilder.append(stoff.current_verts.clone())
                 if nummer >= config.zero_gravity_steps and nummer >= config.min_sim_steps:
-                    ruht, _ = garment.is_static()
+                    ruht, _ = stoff.is_static()
                     if ruht:
                         break
+                if time.time() - beginn > config.max_sim_time:
+                    raise SimTimeOutError
             # Das letzte Bild gehoert dazu, auch wenn es nicht auf das
             # Raster faellt: Es ist das Ergebnis, das die Figur anzieht.
-            film.bilder.append(np.array(garment.current_verts, dtype=np.float32))
-            film.dreiecke = garment.f_cloth_sim if hasattr(garment, 'f_cloth_sim') else None
-            film.garment = garment
+            film.bilder.append(stoff.current_verts.clone())
+            film.stoff = stoff
 
-        return sequenz
+        return laufen
 
     def laufen(self):
-        sys.path.insert(0, GC)
+        repo = os.path.join(GC, 'upstream')
+        assets = os.path.dirname(GC)
+        # 3DTools (KoerperKI_alle), Assets (GarmentCode.*), GarmentCode (drapierlauf), upstream (pygarment)
+        for pfad in (os.path.dirname(assets), assets, GC, repo):
+            if pfad not in sys.path:
+                sys.path.insert(0, pfad)
         import drapierlauf
 
-        drapierlauf._cache_umlenken()
-        repo = os.path.join(GC, 'upstream')
         os.chdir(repo)
-        sys.path.insert(0, repo)
 
         import pygarment.data_config as data_config
-        from pygarment.meshgen import simulation
+        from GarmentCode.schnelltriangulation import Schnelltriangulation
+        from GarmentCode.xpbdtorch.bildfolge import Bildfolge
+        from GarmentCode.xpbdtorch.dateisimulation import Dateisimulation
         from pygarment.meshgen.boxmeshgen import BoxMesh
         from pygarment.meshgen.sim_config import PathCofig
 
-        simulation.sim_frame_sequence = self._mitschnitt(simulation.sim_frame_sequence)
-        from pygarment.meshgen.simulation import run_sim
+        Schnelltriangulation.einsetzen()    # wie `drapierlauf.py`: dasselbe Netz mit weniger Python-Aufwand
+        Bildfolge.laufen = staticmethod(self._mitschnitt())
 
         name = os.path.basename(self.spez)[: -len('_specification.json')]
         # Die Systemdatei sagt `PathCofig`, WO der Koerper liegt — sie wird
@@ -89,7 +104,7 @@ class Stofffilm:
         eigenschaften = data_config.Properties(
             os.path.join(repo, 'assets', 'Sim_props', 'gui_sim_props.yaml')
         )
-        # DICTS, nicht Listen — `run_sim` schreibt `stats[...][name]`.
+        # DICTS, nicht Listen — die Simulation schreibt `stats[...][name]`.
         # Mit Listen bricht es NACH der Simulation ab, und der ganze
         # Mitschnitt waere weg gewesen.
         eigenschaften.set_section_stats(
@@ -109,15 +124,7 @@ class Stofffilm:
         netz = BoxMesh(wege.in_g_spec, eigenschaften['sim']['config']['resolution_scale'])
         netz.load()
         netz.serialize(wege, store_panels=False, uv_config=eigenschaften['render']['config']['uv_texture'])
-        run_sim(
-            netz.name,
-            eigenschaften,
-            wege,
-            save_v_norms=False,
-            store_usd=False,
-            optimize_storage=False,
-            verbose=False,
-        )
+        Dateisimulation.laufen(netz.name, eigenschaften, wege)
         return self.bilder
 
 
@@ -129,7 +136,7 @@ def main():
     zerleger.add_argument('--koerper', default=os.path.join(GC, 'koerper', 'female'))
     zerleger.add_argument('--koerpername', default=None)
     zerleger.add_argument('--jedes', type=int, default=3)
-    zerleger.add_argument('--aus', default=os.path.join(ORDNER, 'stofffilm.npz'))
+    zerleger.add_argument('--aus', default=os.path.join(ORDNER, 'stofffilm.pt'))
     werte = zerleger.parse_args()
 
     name = werte.koerpername
@@ -143,14 +150,14 @@ def main():
     bilder = film.laufen()
     if not bilder:
         raise SystemExit('Kein einziges Bild mitgeschnitten.')
-    feld = np.array(bilder)
-    print('Mitschnitt %d Bilder, %d Stoffpunkte' % (len(feld), feld.shape[1]))
-    weg = np.linalg.norm(feld[-1] - feld[0], axis=1)
+    feld = torch.stack(bilder)
+    print('Mitschnitt %d Bilder, %d Stoffpunkte' % (feld.shape[0], feld.shape[1]))
+    weg = torch.linalg.vector_norm(feld[-1] - feld[0], dim=1)
     print(
         'Fallweg    Median %.1f mm, groesster %.1f mm'
-        % (float(np.median(weg)) * 10.0, float(weg.max()) * 10.0)
+        % (float(weg.quantile(0.5)) * 10.0, float(weg.max()) * 10.0)
     )
-    np.savez_compressed(werte.aus, punkte=feld)
+    torch.save({'punkte': feld.cpu()}, werte.aus)  # cpu gewollt: Ablage fuer `stofffilm_video.py`
     print('Ablage     %s (%.1f MB)' % (werte.aus, os.path.getsize(werte.aus) / 1048576.0))
     return 0
 

@@ -77,15 +77,11 @@ export class Meshgenesisflaechennetz {
         }
         // Farbe je Punkt (21.10.2026 abends, Weg g Fassung 3: aus dem Eingang): uint8 sRGB → lineare Farbe für das Material der Farbe je Punkt (Material −1, `materialien`).
         if (this.kopf.punktfarbe) {
+            // 19.11.2026 (Ladezeit, Haar mit 1,64 Mio. Punkten): eine Tafel je Stufe statt `Color.setRGB` je Punkt — dieselbe Umrechnung (je Kanal unabhängig), bitgleich
             const roh = new Uint8Array(puffer, ab, v * 3);
+            const tafel = Meshgenesisflaechennetz.linearTafel();
             const lin = new Float32Array(v * 3);
-            const c = new THREE.Color();
-            for (let i = 0; i < v; i++) {
-                c.setRGB(roh[i * 3] / 255, roh[i * 3 + 1] / 255, roh[i * 3 + 2] / 255, THREE.SRGBColorSpace);
-                lin[i * 3] = c.r;
-                lin[i * 3 + 1] = c.g;
-                lin[i * 3 + 2] = c.b;
-            }
+            for (let i = 0; i < roh.length; i++) lin[i] = tafel[roh[i]];
             this.farbe = new THREE.BufferAttribute(lin, 3);
             ab += auf4(v * 3);
         }
@@ -121,6 +117,19 @@ export class Meshgenesisflaechennetz {
         /** Indexlisten, die nur an der Verbindung hängen (ganze Figur, nur Körper, Kleider) — für alle Proben dieselben (`Meshgenesisflaechen.teil`). */
         this.indexAblage = new Map();
         this._materialien = null;
+    }
+
+    /** sRGB-Stufe 0…255 → linearer Wert, wie `THREE.Color.setRGB(…, SRGBColorSpace)` je Kanal (einmal gerechnet). */
+    static linearTafel() {
+        if (!Meshgenesisflaechennetz._tafel) {
+            const t = new Float32Array(256), c = new THREE.Color();
+            for (let s = 0; s < 256; s++) {
+                c.setRGB(s / 255, s / 255, s / 255, THREE.SRGBColorSpace);
+                t[s] = c.r;
+            }
+            Meshgenesisflaechennetz._tafel = t;
+        }
+        return Meshgenesisflaechennetz._tafel;
     }
 
     /** Dreiecke dieses Netzes auf dem Käfig — so lang ist eine Maske des Servers (`verdeckt` der Stücke, gerechnet auf dem Käfig). */

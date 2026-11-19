@@ -15,39 +15,45 @@ export class Meshgenesiskikleiderfeld {
     static WEGE = new Set(['k', 's', 'h', 'f', 'g', 'z']);
     /** = `Kleiderverdeckung.TIEFE_KOSTUEM_M` auf dem Server (ProjektTemp/_wegwerf/meshgenesis_kleider_verdeckung.py) */
     static STOFF_TIEFE_M = 0.040;
-    static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Schnitt aus der Fläche', g: 'Schicht aus der KI', h: 'Frisur der Garderobe (Bibliothek)', z: 'Garderobe' };
+    // Methoden umbenannt (19.11.2026, Edgar: „Methode: Kleiderbibliothek (ehemals Garderobe) und Drapieren“) — z ist die Kleiderbibliothek, f das Drapieren
+    static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Drapieren', g: 'Schicht aus der KI', h: 'Frisur der Kleiderbibliothek', z: 'Kleiderbibliothek' };
 
-    /** → {gruppe, rig, namen: [Text je Stück]} oder null (keine KI-Kleider gewählt). */
+    /** → {gruppe, rig, namen: [Text je Stück], stuecke, liste} oder null (keine KI-Kleider gewählt). `ki.weg(st)`: welcher Weg je Zeile (Vorgabe: der wirksame `st.wahl`;
+     *  `Fotogenesistestfigur` nimmt für die Methode „Drapieren“ f, wo es ein Netz hat). `ki.daten`: eine schon geholte Liste (dann kein zweiter Abruf). */
     static async laden(ki) {
-        const antwort = await fetch(ki.liste);
-        if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
-        const daten = await antwort.json();
+        let daten = ki.daten;
+        if (!daten) {
+            const antwort = await fetch(ki.liste);
+            if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
+            daten = await antwort.json();
+        }
+        const wegVon = ki.weg ?? (st => st.wahl);
         const matrizen = Meshgenesishaeutung.ausDrehungen(ki.dreh, ki.rig, ki.ruhezentren);
         const gruppe = new THREE.Group();
         const namen = [], stuecke = [];
         // Alle Stücke zugleich holen (08.11.2026, Edgar: „alle modelle sollen innerhalb von max. 5 s angezeigt werden“): vorher wartete jedes Stück auf das vorige — im Log der Seite
         // „Zauberer Alle Textur“ lagen zwischen zwei Stücken 35–75 s, weil nach jeder Textur die Seite neu rechnete (`Fotogenesisseite.nachgeladen`). Gebaut wird weiter in der Reihenfolge der Liste.
-        const wahl = (daten.stuecke || []).filter(st => st.quelle === 'ki' && Meshgenesiskikleiderfeld.WEGE.has(st.wahl) && st[st.wahl]?.netz);
-        const netze = await Promise.all(wahl.map(st => Meshgenesisflaechennetz.holen(null, st[st.wahl].netz)
+        const wahl = (daten.stuecke || []).map(st => ({ st, w: wegVon(st) })).filter(({ st, w }) => st.quelle === 'ki' && Meshgenesiskikleiderfeld.WEGE.has(w) && st[w]?.netz);
+        const netze = await Promise.all(wahl.map(({ st, w }) => Meshgenesisflaechennetz.holen(null, st[w].netz)
             .catch(fehler => { console.warn('Meshgenesiskikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message); return null; })));
-        for (const [i, st] of wahl.entries()) {
+        for (const [i, { st, w }] of wahl.entries()) {
             const netz = netze[i];
             if (!netz) continue;
             try {
                 const mesh = Meshgenesistestnetzbau.mesh(netz, matrizen);
                 mesh.userData.art = st.art;
                 gruppe.add(mesh);
-                namen.push(`${st.name} (${Meshgenesiskikleiderfeld.TEXT[st.wahl]})`);
-                const e = st[st.wahl];
-                const kostuem = !!(e.kostuem || e.uebertrag?.art === 'rueckhaeutung');                  // Kostüm-Weg A (Stück aus dem Eingang ausgeschnitten)
-                stuecke.push({ id: st.id, art: st.art, ruhe: netz.ruhe, dreiecke: netz.dreiecke, netz, kostuem });   // `netz`: die Animation bindet das Stück an das Skelett der Figur (`Meshgenesisbewegungskleid`)
+                namen.push(`${st.name} (${Meshgenesiskikleiderfeld.TEXT[w]})`);
+                const kostuem = Meshgenesiskikleiderfeld.kostuem(st[w]);
+                // `netz`: die Animation bindet das Stück an das Skelett der Figur (`Meshgenesisbewegungskleid`); `mesh`: das gezeigte, gehäutete Stück (`Fotogenesistestfigur._hautStuecke`)
+                stuecke.push({ id: st.id, art: st.art, weg: w, ruhe: netz.ruhe, dreiecke: netz.dreiecke, netz, kostuem, mesh, adresse: st[w].netz });
             } catch (fehler) {
                 console.warn('Meshgenesiskikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message);
             }
         }
         if (!gruppe.children.length) return null;
         gruppe.userData.meshgenesisFremd = true;          // das Feld gibt die Gruppe beim Leeren nicht frei
-        return { gruppe, rig: ki.rig, namen, stuecke, kleiderAn: true };
+        return { gruppe, rig: ki.rig, namen, stuecke, kleiderAn: true, liste: daten };
     }
 
     /**
@@ -55,6 +61,15 @@ export class Meshgenesiskikleiderfeld {
      * Genesis-Figur im Ergebnis fallen dort weg, wo ein Stück sie verdeckt (`Hautverdeckung`, `Anatomieverdeckung`) — Edgar an Mann1: „aus der Hose kommt Genital heraus“. Die Figur im
      * Ergebnis ist aus denselben Reglern gebaut wie die Figur, auf der die Stücke liegen; ihre Ruhelage ist dieselbe. Haar verdeckt keine Haut (`Hautverdeckung.zaehlt`).
      */
+    /**
+     * Kostümstück für `hautStuecke` (Eintrag des gewählten Wegs `st[st.wahl]`): Kostüm-Weg A (aus dem Eingang ausgeschnitten, `kostuem` oder Rückhäutung) und die Bausteine-Hüllen
+     * (`bausteine/kostuemzeilen.py`). Alle Quellen der Bewegung fragen hier (19.11.2026: Testseite und Foto-Genesis gaben das Feld nicht weiter; im Tanz stand die Haut der
+     * Goldprinzessin in Flecken vor der Hülle, weil ihre UV-Nähte unverschweißt als lockere Ränder zählten — gesehen an der Kopie _52 mit und ohne das Feld).
+     */
+    static kostuem(e) {
+        return !!(e?.kostuem || e?.uebertrag?.art === 'rueckhaeutung');
+    }
+
     static hautStuecke(ki) {
         const aus = {};
         for (const st of ki?.stuecke || []) {

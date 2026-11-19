@@ -253,6 +253,7 @@ def durch(K: wp.array2d(dtype=wp.float64), N: wp.array2d(dtype=wp.float64), S: w
         return
     j = int(nah[0])
     noetig = wp.float64(0.0)
+    vorne = int(0)  # noqa: UP018 - Warp: in der Schleife gesetzte Variable braucht den Typkonstruktor
     m = int(nach_a[j]) - 1
     while m < int(nach_a[j + 1]):
         w = j
@@ -271,8 +272,12 @@ def durch(K: wp.array2d(dtype=wp.float64), N: wp.array2d(dtype=wp.float64), S: w
                         noetig = wp.min(noetig, luft - t)
                     elif luft - t > noetig:
                         noetig = luft - t
+                elif naechste != 0 and not wp.isnan(t) and t >= luft and t <= tiefe:
+                    vorne = 1                                                 # Stoff auch vor der Haut: deckt von außen, kein Durchstich
             o = o + 1
         m = m + 1
+    if vorne != 0:
+        noetig = wp.float64(0.0)
     if noetig > wp.float64(0.0):
         neu = wp.min(noetig, grenze)
         if neu > wp.float64(aus[i]):

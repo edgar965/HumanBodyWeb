@@ -36,7 +36,7 @@ __all__ = ['Fotogenesishautangleich']
 
 class Fotogenesishautangleich:
     ORDNER = 'angleich'
-    FASSUNG = 3
+    FASSUNG = 4             # = `Hautangleich.FASSUNG` (4 seit 19.11.2026: auch das Gesicht); ältere Felder → „Vorbereiten“ erscheint wieder
     KACHEL = re.compile(r'^10\d\d$')
     REGLER = {'dunkel': (0, 1), 'hell': (0, 1), 'unsichtbar': (0, 1), 'zeichnung': (0, 1), 'bezug': (-1, 1), 'reichweite': (0, 1)}
     DATEN = {'felder': 'felder.bin', 'netz': 'netz.bin'}

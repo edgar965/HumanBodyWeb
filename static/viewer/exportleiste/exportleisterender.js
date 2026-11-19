@@ -41,6 +41,9 @@ export class Exportleisterender {
         this.laeufe = new Exportleistelaeufe($('exportleiste-laeufe'), teil => leiste.adresse(teil), nummern => this.neu(nummern), nummern => this.loeschen(nummern));
         this._dauer = 0;
         this._schickt = false;
+        // Start oder Löschen schlug fehl: die Meldung bleibt bis zum nächsten Versuch oder bis ein Render läuft — der Takt der Leiste zeichnet den Block alle 10 s neu
+        // und löschte sie vorher gleich wieder (19.11.2026: zweimal riss der Upload der Goldprinzessin beim Neuladen des Servers ab, die Seite zeigte danach nichts)
+        this._fehler = null;
         this._ganz = true;
         for (const knopf of this.stufen) {
             knopf.addEventListener('click', () => {
@@ -86,9 +89,11 @@ export class Exportleisterender {
     }
 
     _anzeigen(r, fehlt) {
+        if (r.status === 'laeuft') this._fehler = null;
         this.meldung.classList.toggle('hb-schlecht', r.status === 'fehler');
         this.meldung.replaceChildren();
         const zeile = text => { const d = document.createElement('div'); d.textContent = text; this.meldung.appendChild(d); return d; };
+        if (this._fehler) zeile(this._fehler).classList.add('hb-schlecht');
         if (r.status === 'laeuft') {
             const vergangen = r.start ? Math.round(Date.now() / 1000 - r.start) : 0;
             const neu = r.neu_nr ? ` · Lauf #${r.neu_nr} neu${r.wartend ? `, ${r.wartend} warten` : ''}` : '';
@@ -128,6 +133,7 @@ export class Exportleisterender {
 
     /** Löschen (`Exportleistelaeufe`): die Läufe samt Video und Bogen; die Antwort trägt den neuen Stand der Tabelle. */
     async loeschen(nummern) {
+        this._fehler = null;
         try {
             const antwort = await Serverabruf.senden(this.leiste.adresse('render/loeschen/'), { nummern });
             if (antwort.error) throw new Error(antwort.error);
@@ -135,14 +141,15 @@ export class Exportleisterender {
             this.zeigen(this.leiste.zustand || {});
             return true;
         } catch (fehler) {
-            this.meldung.classList.add('hb-schlecht');
-            this.meldung.textContent = `Löschen fehlgeschlagen: ${fehler.daten?.error || fehler.message}`;
+            this._fehler = `Löschen fehlgeschlagen (${new Date().toLocaleTimeString('de-DE')}): ${fehler.daten?.error || fehler.message}`;
+            this.zeigen(this.leiste.zustand || {});
             return false;
         }
     }
 
     async _senden(teil, eigen) {
         this._schickt = eigen.quelle || 'rendern';           // „Neu rendern" gehört zum Block „Rendern“
+        this._fehler = null;
         this.zeigen(this.leiste.zustand || {});
         const exp = this.leiste.export;
         try {
@@ -158,9 +165,8 @@ export class Exportleisterender {
             if (this.leiste.zustand) this.leiste.zustand.render = antwort.render;
         } catch (fehler) {
             this._schickt = false;
+            this._fehler = `Render nicht gestartet (${new Date().toLocaleTimeString('de-DE')}): ${fehler.daten?.error || fehler.message}`;
             this.zeigen(this.leiste.zustand || {});
-            this.meldung.classList.add('hb-schlecht');
-            this.meldung.textContent = `Render nicht gestartet: ${fehler.daten?.error || fehler.message}`;
             return false;
         }
         this._schickt = false;

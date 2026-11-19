@@ -15,6 +15,7 @@ import { Meshgenesisfigurbewegung } from './meshgenesisfigurbewegung.js';
 import { Meshgenesisfigurbewegungsleiste } from './meshgenesisfigurbewegungsleiste.js';
 import { Meshgenesisflaechennetz } from './meshgenesisflaechennetz.js';
 import { Meshgenesishaeutung } from './meshgenesishaeutung.js';
+import { Meshgenesiskikleiderfeld } from './meshgenesiskikleiderfeld.js';
 import { Meshgenesisrigzeichner } from './meshgenesisrigzeichner.js';
 import { Meshgenesistestfaelle } from './meshgenesistestfaelle.js';
 import { Meshgenesisohneglieder } from './meshgenesisohneglieder.js';
@@ -118,7 +119,7 @@ export class Meshgenesistestseite {
         for (const st of this.kleider?.liste?.stuecke ?? []) {
             if (!this.ansicht.kleider) break;          // Knopf „Kleider“ aus: kein Stück bewegt sich mit, auch das Haar nicht (30.10.2026, Edgar: „die Haare werden nicht deaktiviert“)
             const netz = st.art !== 'haut' && st.wahl !== 'aus' ? this.kleider.netze.get(`${st.wahl}/${st.id}`) : null;
-            if (netz) stuecke.push({ id: st.id, art: st.art, netz: await netz.catch(() => null) });
+            if (netz) stuecke.push({ id: st.id, art: st.art, netz: await netz.catch(() => null), kostuem: Meshgenesiskikleiderfeld.kostuem(st[st.wahl]), adresse: st[st.wahl]?.netz });
         }
         const ohneKnochen = this._ohneKnochen();
         return { schluessel: `${this.kennung}|${d.info.geschlecht}|${ohneKnochen.join(',')}`, figur: d.figur_genesis, stuecke: stuecke.filter(s => s.netz), knochen: d.rig.knochen.map(k => k.name),

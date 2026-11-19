@@ -43,6 +43,7 @@ export class Hautrechnung {
         // Deckende Stücke ohne Ersatzstücke (die senkt `Hautanschmiegung`): verdeckte Haut vor dem Stoff darf bis hinter ihn nachgeben (`Hautdurchsicht.anheben`, 18.11.2026).
         const tief = Hautdurchsicht.alle(pos, normalen, deckend.filter((s) => !s.ersatz), true);
         if (tief) Hautdurchsicht.anheben(nachgeben, maske, tief);
+        Hautdurchsicht.inselnErben(nachgeben, maske, index);              // Inselpunkte ohne Stück: `nachgeben` der Nachbarn (18.11.2026)
         // Die eigenen Ruhenormalen des Körpers gelten auch für den Einzug — nicht ein zweites Mal gerechnet (270 ms).
         const einzug = Hauteinzugrechnung.rechnen(pos, maske, index,
                                                   { kanten: Saumschnitt.kanten(deckend), hautnormalen: normalen, nachgeben });

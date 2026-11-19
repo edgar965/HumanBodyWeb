@@ -1,42 +1,42 @@
 /**
- * Fotogenesistestfigur — Feld 3 „Genesis-Modell“ eines Tests aus echten Fotos (24.10.2026): die Ausgabe des Mesh-Genesis-Tests zum selben Netz (`meshgenesis_test` in der `job.json`).
+ * Fotogenesistestfigur — die Figur eines Mesh-Genesis-Tests auf der Foto-Genesis-Seite: Feld „Genesis-Ergebnis“ (`Fotogenesisgenesiszeile`) und Feld 3 eines Tests aus echten Fotos
+ * (`Fotogenesisseite`, die eigene Figur `<Job>/figur/`).
  *
- * Edgar: „Ich sehe den job nicht mit den bildern“ — bis dahin zeigte ein Fotojob in Feld 3 nur einen Verweis auf die Testseite. Gebaut wird wie auf der Testseite (`Meshgenesistestseite._figurBauen`):
- * Anzeigenetz (`Meshgenesisflaechennetz`) mit den Knochenmatrizen der vorhergesagten Haltung gehäutet (`Meshgenesistestnetzbau`), aus `/api/meshgenesis/test/<kennung>/`. Dazu (24.10.2026 abends):
- *  - Kleider und Haar aus der KI, wie die Testseite sie gewählt hat (`Meshgenesiskikleiderfeld`) — Schalter „Kleider“ zeigt sie oder nur den Körper;
- *  - die Augäpfel (`kleider_<g>/k/ki_augen`, `KopfKI.Augenstueck`): die Anzeige der Testfigur hat leere Augenhöhlen, die Bilder der Karte „Kopf“ zeigen Augäpfel — Edgar: „das Genesis
- *    ergebnis und bild ergebnis oben zeigen was anderes als die bilder unten“;
- *  - die Ansichtsart der Leiste (Ersatzmaterial auf Ebene 1 wie `Fotogenesisnetz`; vorher wirkte kein Schalter auf Feld 3).
+ * Seit 19.11.2026 mit dem Code der Charakter-Seite (Edgar: „merge beide anzeigen zu einem Code. nimm die schnellste lösung von beiden“): der Körper ist ein `Genesis9Modell` in der Haltung
+ * der KI (`drehung_genesis`, Daz-Winkel vom Server, `Meshgenesisgenesishaltung`) bzw. in der A-Pose (`apose`, die Ruhelage), starr auf das Rig der Probe gelegt wie auf der Mesh-Genesis-Jobseite
+ * (`Meshgenesisgenesisfigur._ausrichten`); Kleider und Haar aus der KI, wie die Testseite sie gewählt hat (`Meshgenesiskikleiderfeld`), Haut darunter weg (`Hautverdeckung`, wie in Charakter).
+ * Bis dahin: vorab gerechnetes Anzeigenetz (`Meshgenesisflaechennetz`, Netzstufe 1) mit eigener Häutung (`Meshgenesistestnetzbau`) und Augäpfeln aus der KI. Gemessen im Chrome (frischer Tab,
+ * Goldprinzessin _57, Körper, Augen und 7 Stücke, je dreimal): Anzeigenetz 2.258–2.921 ms, Genesis9Modell 2.305–2.803 ms — gleich schnell; die Abspielleiste und der Export bauen die Figur
+ * ohnehin als Genesis9Modell (`Fotogenesisexportfigur`). Nicht übernommen (nur der alte Job mit eigener Figur und Zeile 1 nutzte sie): die Vorlage der Zeile 1 auf dem Anzeigenetz
+ * (`Fotogenesiszeile1`) und die Haltung je Foto in den Seitenbildern (`inHaltung`) — `Fotogenesisseitenbild` nimmt dann die gemeinsame Haltung.
  * Dieselbe Schnittstelle wie `Fotogenesisgenesis` (`bereit`, `probe`, `auftrag`, `fertig`, `zeichnen`, `rahmen`).
  */
 import * as THREE from 'three';
-import { Meshgenesisflaechennetz } from '../meshgenesis/meshgenesisflaechennetz.js';
+import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
+import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
+import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { Meshgenesisgenesisfigur } from '../meshgenesis/meshgenesisgenesisfigur.js';
-import { Meshgenesishaeutung } from '../meshgenesis/meshgenesishaeutung.js';
 import { Meshgenesiskikleiderfeld } from '../meshgenesis/meshgenesiskikleiderfeld.js';
 import { Meshgenesisrigzeichner } from '../meshgenesis/meshgenesisrigzeichner.js';
-import { Meshgenesistestnetzbau } from '../meshgenesis/meshgenesistestnetzbau.js';
 import { Fotogenesisnetz } from './fotogenesisnetz.js';
-import { Fotogenesistrainingfigur } from './fotogenesistrainingfigur.js';
-import { Fotogenesiszeile1 } from './fotogenesiszeile1.js';
 
 export class Fotogenesistestfigur {
-    /** @param {{kennung: string, adresse: string}} test aus den Seitendaten (`Fotogenesisseitendaten`) @param seite `Fotogenesisseite` (Fotowahl, Zeile 1 für `Fotogenesiszeile1`) oder null */
+    static _nummer = 0;
+    static WACHE_MS = 500;
+
+    /** @param {{kennung: string, adresse: string, apose?: boolean, eigen?: boolean}} test aus den Seitendaten @param seite `Fotogenesisseite` oder null */
     constructor(test, seite = null) {
         this.test = test;
         this.seite = seite;
-        this.vorlage = null;         // `Fotogenesiszeile1`: Körper auf der Genesis-Figur der Zeile 1
         this.probe = null;           // die Antwort der Testschnittstelle, sobald die Figur gebaut ist
-        this.figur = null;
+        this.modell = null;          // Genesis9Modell
+        this.figur = null;           // THREE.Group: Körper (modell.group) und Stücke
         this.kleider = null;
-        this.koerper = null;         // {an, aus}: Körper mit der Haut unter allen Stücken weg bzw. nur unter dem Haar
-        this.augen = null;
         this.fehler = '';
         this.text = '';
-        // Ein Bild des Anzeigenetzes kommt nach: dieselbe Meldung wie bei einer fertigen Genesis-Figur, die Seite zeichnet neu — und rendert Feld 4 nach (`nachgeladen`, gesetzt von
-        // `Fotogenesisseite`): vorher waren die Texturen beim Rendern noch nicht da, die Figur in Feld 4 kam schwarz (gesehen 24.10.2026).
+        // Ein Bild, eine Maske oder die feinere Netzstufe kommt nach: `nachgeladen` (Vergleich der Seite, `Fotogenesisseite`) und `beiAenderung` (Feld neu zeichnen, `Fotogenesisgenesiszeile`)
         this.nachgeladen = null;
-        Meshgenesisflaechennetz.nachLaden = () => { Meshgenesisgenesisfigur.neuZeichnen?.(); this.nachgeladen?.(); };
+        this.beiAenderung = null;
         this.bereit = this._bauen();
     }
 
@@ -45,56 +45,37 @@ export class Fotogenesistestfigur {
             const antwort = await fetch(this.test.adresse);
             const daten = await antwort.json();
             if (!antwort.ok) throw new Error(daten.error || `HTTP ${antwort.status}`);
+            if (!daten.figur_genesis) throw new Error('der Test hat keine Genesis-Figur');
             // A-Pose (10.11.2026, Edgar: „mach doch das pshuman mesh und die genesis ausgabe in allen jobs auf die A-Pose, damit man das besser vergleichen kann“): die Ruhelage von Genesis 9 —
-            // jede Drehung die Einheit, jedes Gelenk an seinem Ruhezentrum; Körper, Augen, Kleider und Rig folgen derselben Haltung
+            // Körper, Kleider und Rig in derselben Haltung
             if (this.test.apose) Object.assign(daten, { dreh: daten.dreh.map(() => [0, 0, 0, 1]), ausgabe: daten.ruhezentren.map(p => [...p]) });
-            const matrizen = Meshgenesishaeutung.ausDrehungen(daten.dreh, daten.ausgabe, daten.ruhezentren);
-            const geschlecht = String(daten.figur_netz).split('/').filter(Boolean).pop();
-            // Körper, Kleiderliste, Augäpfel und Stücke zugleich holen (08.11.2026, Ladezeit): vorher wartete jeder Abruf auf den vorigen
-            const listeAbruf = fetch(`${this.test.adresse}kleider/${geschlecht}/`).then(a => (a.ok ? a.json() : null)).catch(() => null);
-            const augenAbruf = Meshgenesisflaechennetz.holen(null, `${this.test.adresse}kleid/${geschlecht}/k/ki_augen`)
-                .catch(fehler => { console.warn(`Fotogenesistestfigur: keine Augäpfel (${fehler.message})`); return null; });
-            const kleiderAbruf = Meshgenesiskikleiderfeld.laden({ liste: `${this.test.adresse}kleider/${geschlecht}/`, dreh: daten.dreh, rig: daten.ausgabe, ruhezentren: daten.ruhezentren })
+            // Die Figur steht hier allein (nicht über dem Fotonetz): Standhaltung der Fußregel, wenn der Server sie liefert (19.11.2026 abends,
+            // `Meshgenesishaltungwahl`) — Körper (`drehung_genesis`), Stücke und Rig in derselben Haltung
+            else if (daten.ausgabe_stand && daten.dreh_stand) Object.assign(daten, { ausgabe: daten.ausgabe_stand, dreh: daten.dreh_stand });
+            const geschlecht = daten.info?.geschlecht || String(daten.figur_netz).split('/').filter(Boolean).pop();
+            // Körper und Stücke zugleich (08.11.2026, Ladezeit)
+            this._kleiderQuelle = { liste: `${this.test.adresse}kleider/${geschlecht}/`, dreh: daten.dreh, rig: daten.ausgabe, ruhezentren: daten.ruhezentren };
+            const kleiderAbruf = Meshgenesiskikleiderfeld.laden(this._kleiderQuelle)
                 .catch(fehler => { console.warn(`Fotogenesistestfigur: Kleider nicht geladen (${fehler.message})`); return null; });
-            // Netzstufe 1 (09.11.2026, Edgar: „das ganze Anzeigenetz in Stufe 1“), mit der Unterteilungsmatrix für die Zeile 1 (`Fotogenesiszeile1`)
-            const netz = await Meshgenesisflaechennetz.holen(daten.job, daten.figur_netz, { stufe: 1, matrix: true });
-            this.figur = new THREE.Group();
-            // Haut unter den Stücken weglassen wie die Mesh-Genesis-Testseite (`Meshgenesistestkleider.verdeckt` → `Meshgenesistestnetzbau.mesh(…, verdeckt)`). Bis 24.10.2026 20 Uhr fehlte das hier:
-            // gemessen im Chrome zeichnete der Körper alle 64.632 Dreiecke, die Haut stach durch Shorts und Socken, das Genital hing unter den Shorts (Abnahme über `Fotogenesisseitenbild`).
-            // Zwei Körper: mit allen Stücken verdeckt, und ganz (Schalter „Kleider“ aus). Bis 08.11.2026 blieb ohne Kleider die Haut unter dem Haar weg, obwohl der Schalter seit 30.10.2026
-            // auch das Haar ausblendet (`Meshgenesiskikleiderfeld.kleiderZeigen`) — Edgar an n1: „Haar fehlt im Genesis modell, am rücken ist loch“.
-            const liste = await listeAbruf;
-            // In einem tragenden Stück kein Genital (24.10.2026 abends, Edgar: „fixe!“ — es hing unter den Shorts frei): seit 08.11.2026 steht das in der Maske des Stücks selbst, nach
-            // DER Regel des Servers (`Kleideranatomie.getragen`, `Meshgenesistestkikleider.zeilen`); bis dahin verdeckte hier jede gewählte Hose die ganze Anatomie (`hose`, eine zweite Regel).
-            // Die Masken sind auf dem Käfig gerechnet: auf Stufe 1 gelten sie für die Kinder jedes Käfigdreiecks (`dreieckmaske`).
-            const an = netz.dreieckmaske(Fotogenesistestfigur.verdeckt(liste, netz.kaefigDreiecke));
-            this.koerper = { an: Meshgenesistestnetzbau.mesh(netz, matrizen, an), aus: Meshgenesistestnetzbau.mesh(netz, matrizen, null) };
-            this.figur.add(this.koerper.an, this.koerper.aus);
-            this._bau = { netz, an, aus: null, liste: `${this.test.adresse}kleider/${geschlecht}/`, augen: null };
-            const augenNetz = await augenAbruf;
-            this._bau.augen = augenNetz;
-            try {
-                this.augen = augenNetz ? Meshgenesistestnetzbau.mesh(augenNetz, matrizen) : null;
-            } catch (fehler) {
-                console.warn(`Fotogenesistestfigur: keine Augäpfel (${fehler.message})`);
-                this.augen = null;
-            }
-            if (this.augen) this.figur.add(this.augen);
+            const ohneWinkel = !this.test.apose && !daten.drehung_genesis;
+            const figur = { ...daten.figur_genesis, pose: '', drehung: this.test.apose ? null : (daten.drehung_genesis || null) };
+            const modell = new Genesis9Modell(`fotogenesis_test_${++Fotogenesistestfigur._nummer}`, figur);
+            await modell.bauen();
+            this.modell = modell;
             this.kleider = await kleiderAbruf;
+            this.figur = new THREE.Group();
+            this.figur.add(modell.group);
             if (this.kleider) this.figur.add(this.kleider.gruppe);
-            this.figur.traverse(o => { o.layers.set(1); o.frustumCulled = false; });
             this.figur.userData.meshgenesisFremd = true;          // gehört nicht dem Feld (`Meshgenesisansicht._leeren` gibt es dann nicht frei)
-            // `Meshgenesiskikleiderfeld` beschriftet Weg k als „aus dem Netz geschnitten“ — hier sind die Stücke aus den Fotos geschnitten (`Fotoschale`)
-            if (this.kleider && this.test.eigen) this.kleider.namen = this.kleider.namen.map(n => n.replace('aus dem Netz geschnitten', 'aus den Fotos geschnitten'));
-            const zeile1 = this.seite?.trainingfigur;
-            if (daten.zeile1_ursprung && zeile1) {
-                await zeile1.bereit;
-                if (zeile1.daten?.genesis) this.vorlage = new Fotogenesiszeile1(this.figur, [this.koerper.an, this.koerper.aus], Fotogenesistrainingfigur._feld(daten.zeile1_ursprung, Int32Array), netz);
-            }
-            this.text = (this.test.eigen ? `Genesis-Modell dieses Jobs (<Job>/figur/, ${daten.info?.name ?? ''}) in der Haltung aus den Fotos`
-                : `Ausgabe des Mesh-Genesis-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) ${this.test.apose ? 'in der A-Pose' : 'in der Haltung aus dem Netz'}`) + (this.augen ? ', mit Augäpfeln' : '')
-                + `${this.kleider ? `, ${this.kleider.namen.join(', ')}` : ''}.`;
             this.probe = daten;
+            this._ausrichten();
+            this._hautStuecke();
+            this._textKopf = this.test.eigen ? `Genesis-Modell dieses Jobs (<Job>/figur/, ${daten.info?.name ?? ''}) in der Haltung aus den Fotos`
+                : `Ausgabe des Mesh-Genesis-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) ${this.test.apose ? 'in der A-Pose' : ohneWinkel ? 'in der Ruhelage (Winkel der Haltung fehlen)' : daten.haltung === 'stand' ? 'in der Haltung aus dem Netz, Füße flach (Fußregel)' : 'in der Haltung aus dem Netz'}`;
+            this._textSetzen();
+            this._wachen();
+            // Alle Stufen bis zur Einstellung dauerhaft ablegen lassen, wie in Charakter nach dem Laden
+            Genesis9vorrat.fuellen(modell).catch(f => console.warn(`Genesis9vorrat: ${f.message}`));
         } catch (fehler) {
             // „fehlt“ ausdrücklich (13.11.2026, Edgar: „dann mach hinweis, dass es fehlt!!“)
             this.fehler = `Genesis-Ergebnis fehlt: Figur des Tests ${this.test.kennung} nicht geladen (${fehler.message}).`;
@@ -102,41 +83,98 @@ export class Fotogenesistestfigur {
         }
     }
 
-    /**
-     * Dieselbe Figur in einer anderen Haltung (Haltung je Foto, Auftrag EdgarTrip 24.10.2026): Körper, Augen und Kleider mit den Knochenmatrizen dieser Haltung neu gehäutet, sichtbar wie
-     * die gezeigte Figur. Für `Fotogenesisseitenbild` — die vier Fotos entstanden nacheinander, jedes in eigener Haltung. @returns {Promise<THREE.Group>}
-     */
-    async inHaltung(dreh, ausgabe) {
-        const b = this._bau, matrizen = Meshgenesishaeutung.ausDrehungen(dreh, ausgabe, this.probe.ruhezentren);
-        const gruppe = new THREE.Group();
-        const an = Meshgenesistestnetzbau.mesh(b.netz, matrizen, b.an), aus = Meshgenesistestnetzbau.mesh(b.netz, matrizen, b.aus);
-        an.visible = this.koerper.an.visible;
-        aus.visible = this.koerper.aus.visible;
-        gruppe.add(an, aus);
-        if (b.augen) gruppe.add(Meshgenesistestnetzbau.mesh(b.augen, matrizen));
-        if (this.kleider) {
-            const k = await Meshgenesiskikleiderfeld.laden({ liste: b.liste, dreh, rig: ausgabe, ruhezentren: this.probe.ruhezentren });
-            k.gruppe.visible = this.kleider.gruppe.visible;
-            gruppe.add(k.gruppe);
-        }
-        gruppe.traverse(o => { o.layers.set(1); o.frustumCulled = false; });
-        return gruppe;
+    /** Text des Felds: Figur und Stücke. `Meshgenesiskikleiderfeld` beschriftet Weg k als „aus dem Netz geschnitten“ — bei der eigenen Figur sind sie aus den Fotos (`Fotoschale`). */
+    _textSetzen() {
+        const namen = (this.kleider?.namen ?? []).map(n => (this.test.eigen ? n.replace('aus dem Netz geschnitten', 'aus den Fotos geschnitten') : n));
+        this.text = `${this._textKopf}${namen.length ? `, ${namen.join(', ')}` : ''}.`;
     }
 
     /**
-     * Die Dreiecke des Körpers unter den Stücken der Kleiderliste (Server: `verdeckt` = Bits je Dreieck, base64, little-endian; dieselbe Lesart wie `Meshgenesistestkleider.verdeckt`).
-     * → Uint8Array (1 = weglassen) oder null.
+     * Methode der Kleider (19.11.2026, Edgar: „Kleiderbibliothek (ehemals Garderobe) und Drapieren … toggle für beide Ergebnisse im genesis view“, `Fotogenesiskleidermethode`):
+     * derselbe Körper, nur die Stücke wechseln. 'drapieren' nimmt je Zeile das drapierte Stück (Weg f), wo es ein Netz hat, sonst das wirksame (Kleiderbibliothek); geladen beim
+     * ersten Umschalten. → {drapiert, versucht} (Zeilen mit drapiertem Netz / Zeilen, für die Drapieren gerechnet wurde) oder null.
      */
-    static verdeckt(liste, anzahl) {
-        let aus = null;
-        for (const st of liste?.stuecke || []) {
-            const bits = st.wahl !== 'aus' ? st[st.wahl]?.verdeckt : null;
-            if (!bits) continue;
-            aus ??= new Uint8Array(anzahl);
-            const bytes = Uint8Array.from(atob(bits), c => c.charCodeAt(0));
-            for (let t = 0; t < anzahl; t++) if (bytes[t >> 3] & (1 << (t & 7))) aus[t] = 1;
+    async methodeSetzen(methode) {
+        await this.bereit;
+        if (!this.modell || !this._kleiderQuelle) return null;
+        this._saetze ??= { bibliothek: this.kleider };
+        if (!(methode in this._saetze)) {
+            // „drapieren“ nur die drapierten Stücke, „gemischt“ drapiert, wo es eins gibt, sonst die Kleiderbibliothek (19.11.2026, Edgar: „sehe ich nicht, welches was ist,
+            // mach einen dritten Button der mir entweder das eine oder das andere zeigt“) — null fällt in `Meshgenesiskikleiderfeld.laden` heraus
+            const weg = methode === 'gemischt' ? st => (st.f?.netz ? 'f' : st.wahl) : st => (st.f?.netz ? 'f' : null);
+            this._saetze[methode] = await Meshgenesiskikleiderfeld.laden({ ...this._kleiderQuelle, daten: this._saetze.bibliothek?.liste, weg })
+                .catch(fehler => { console.warn(`Fotogenesistestfigur: Drapieren nicht geladen (${fehler.message})`); return undefined; });
+            if (this._saetze[methode] === undefined) { delete this._saetze[methode]; return null; }
         }
-        return aus;
+        const neu = this._saetze[methode];
+        if (neu !== this.kleider) {
+            const an = this.kleider?.kleiderAn ?? true;
+            if (this.kleider) this.figur.remove(this.kleider.gruppe);
+            this.kleider = neu;
+            if (neu) {
+                this.figur.add(neu.gruppe);
+                Meshgenesiskikleiderfeld.kleiderZeigen(neu, an);
+                this._ausrichten();
+                this._hautStuecke();
+            } else {
+                this.modell.hautStuecke = {};
+                Hautverdeckung.planen(this.modell);
+            }
+            this._textSetzen();
+        }
+        const liste = (this._saetze.bibliothek ?? neu)?.liste?.stuecke ?? [];
+        return { drapiert: (neu?.stuecke ?? []).filter(st => st.weg === 'f').length, versucht: liste.filter(st => st.quelle === 'ki' && st.f).length };
+    }
+
+    /** Körper starr auf das Rig der Probe (dieselben Punkte, mit denen die Stücke gehäutet sind) — nach jeder feineren Stufe neu, sie ersetzt Netze und Skelett. */
+    _ausrichten() {
+        Meshgenesisgenesisfigur._ausrichten(this.modell.group, this.probe.rig?.knochen ?? [], this.probe.ausgabe, null);
+        this.figur.traverse(o => { o.layers.set(1); o.frustumCulled = false; });
+    }
+
+    /**
+     * Haut und Anatomie-Stück unter den Stücken weg wie in Charakter und Studio (`Hautverdeckung`) — mit den Stücken in der Lage, in der sie gezeigt werden, im Rahmen des Körpers.
+     * Der Server rechnet die Haltung in das Netz des Körpers ein (`drehung`; gehäutete Punkte = Rohpunkte, gemessen 19.11.2026), `Meshgenesiskikleiderfeld.hautStuecke` nimmt aber
+     * die Ruhelage der Stücke: die Maske verglich den gestellten Körper mit Stücken in Ruhelage, und an der Brust der Goldprinzessin stand Haut vor dem Kostüm.
+     */
+    _hautStuecke() {
+        const ki = this.kleider;
+        if (!ki) return;
+        this.figur.updateMatrixWorld(true);
+        const umkehr = this.modell.group.matrixWorld.clone().invert(), v = new THREE.Vector3();
+        const gestellt = { ...ki, stuecke: ki.stuecke.map(st => {
+            const lage = st.mesh?.geometry?.getAttribute('position');
+            if (!lage) return st;
+            const ruhe = new Float32Array(lage.count * 3);
+            for (let p = 0; p < lage.count; p++) {
+                v.fromBufferAttribute(lage, p).applyMatrix4(umkehr);
+                ruhe[p * 3] = v.x; ruhe[p * 3 + 1] = v.y; ruhe[p * 3 + 2] = v.z;
+            }
+            return { ...st, ruhe };
+        }) };
+        this.modell.hautStuecke = Meshgenesiskikleiderfeld.hautStuecke(gestellt);
+        ki.haut = gestellt.haut;          // der Schalter „Kleider“ blendet diese Stoffe mit aus (`Meshgenesiskikleiderfeld.kleiderZeigen`)
+        Hautverdeckung.planen(this.modell);
+    }
+
+    /** Was nach `bauen()` noch kommt (Bilder, Masken, feinere Stufe), zeichnet sonst niemand: dieselbe Wache wie `Meshgenesisgenesisfigur` (Stände vergleichen, nur bei Änderung melden). */
+    _wachen() {
+        let stand = Meshgenesisgenesisfigur._stand(this.modell);
+        clearInterval(this._wache);
+        this._wache = setInterval(() => {
+            if (document.hidden || !this.modell) return;
+            const neu = Meshgenesisgenesisfigur._stand(this.modell);
+            if (neu.bau === stand.bau && neu.rest === stand.rest) return;
+            if (neu.bau !== stand.bau) this._ausrichten();
+            stand = neu;
+            this.beiAenderung?.();
+            this.nachgeladen?.();
+        }, Fotogenesistestfigur.WACHE_MS);
+    }
+
+    /** Die Materialien des Körpers (für „Haut angleichen“, `Fotogenesishautangleich`). */
+    materialien() {
+        return this.modell?.bodyMesh ? [this.modell.bodyMesh.material].flat() : [];
     }
 
     auftrag(quelle, modus, kleider, rig = false) {
@@ -145,21 +183,18 @@ export class Fotogenesistestfigur {
 
     /** Zeichner von `Meshgenesisansicht`: `d` aus `auftrag` — Kleider (mit Haar) ein/aus, Ansichtsart als Ersatzmaterial, Rig (Knopf „Rig“) darüber. */
     zeichnen(inhalt, _art, d) {
-        if (!this.figur || !this.koerper) {          // `figur` steht schon, während die Liste der Stücke noch lädt — ein Fotowechsel dann warf (31.10.2026 nachts, Konsole)
+        if (!this.figur || !this.modell) {
             inhalt.userData.hinweis = this.fehler || 'Figur des Tests wird gebaut …';
             return;
         }
-        const an = d?.kleider !== false;
-        if (this.kleider) this.kleider.gruppe.visible = an;
-        this.koerper.an.visible = an;
-        this.koerper.aus.visible = !an;
-        this.vorlage?.setzen(this.seite.steuerung.foto, this.seite.trainingfigur.daten.genesis);
+        // Schalter „Kleider“: ausgeblendet zeigt die Figur die Haut darunter wieder (die Maske rechnet ohne die Stücke neu)
+        if (this.kleider && Meshgenesiskikleiderfeld.kleiderZeigen(this.kleider, d?.kleider !== false)) Hautverdeckung.planen(this.modell);
         inhalt.add(this.figur);
         inhalt.userData.genesisErsatz = Fotogenesisnetz.ersatz(d?.modus ?? 'textur');
         if (d?.rig) inhalt.add(this.rigZeichnen());
     }
 
-    /** Das Skelett der Testfigur: dieselben Punkte (`ausgabe`), mit denen die Figur gehäutet ist, Zeichnung wie auf der Mesh-Genesis-Testseite (`Meshgenesisrigzeichner`, ohne Tiefentest).
+    /** Das Skelett der Testfigur: die Punkte `ausgabe`, auf die Körper und Stücke gelegt sind, Zeichnung wie auf der Mesh-Genesis-Testseite (`Meshgenesisrigzeichner`).
      *  Als `nurAnsicht` markiert: Hülle und Rendering für Feld 3 und den Vergleich lassen es aus (`Fotogenesiskamera.huelle`, `Fotogenesisvergleich.rendern`). */
     rigZeichnen() {
         const beschr = this.probe.rig;

@@ -1,3 +1,4 @@
+import { Genesis9hautfalten } from './genesis9hautfalten.js';
 import { Genesis9texturen } from './genesis9texturen.js';
 import { Protokoll } from './protokoll.js';
 import { Serverabruf } from './serverabruf.js';
@@ -18,6 +19,11 @@ export class Genesis9hautausgleich {
     static ADRESSE = '/api/character/genesis9-figur/hautausgleich/';
     static GRUPPEN = ['Head', 'Body', 'Arms', 'Legs'];
     static FELDER = [
+        // „Eigenheiten" (19.11.2026, Edgar: „ein Muster der durchschnittlichen Haut und einen Regler, der nur die Eigenheiten der jetzigen Haut übernimmt") —
+        // wirkt unter 100 %; der Server nimmt die Durchschnittshaut des Geschlechts der Figur (`G9durchschnittshaut`).
+        { name: 'eigen', label: 'Eigenheiten', vorgabe: 100, hilfe: 'Wie viel von der eigenen Zeichnung dieser Haut bleibt (Flecken, Licht und Schatten von etwa '
+            + '4 mm bis 13 cm). Darunter kommt die Zeichnung einer Durchschnittshaut aus der Bibliothek (Rötung an Nase und Wangen, Lider, Lippen — ohne Fotolicht), '
+            + 'im Hautton dieser Haut. 100 % = die Haut, wie sie ist; 0 % = Durchschnittshaut mit den Poren und Muttermalen dieser Haut. Wirkt nach allen übrigen Korrekturen.' },
         { name: 'gleich', label: 'Gleichmäßigkeit', hilfe: 'Glättet Flecken, Lichtränder und Farbsprünge mittlerer Größe (etwa 4 mm bis 3 cm) — '
             + 'z. B. Schattenflecken und Streifen aus dem Foto. Poren, Muttermale und Merkmale, die auf beiden Körperseiten gleich sind '
             + '(Augen, Brauen, Lippen, Brustwarzen), bleiben.' },
@@ -31,7 +37,7 @@ export class Genesis9hautausgleich {
             + 'Gleichmäßigkeit, Symmetrie und Schatten verschont werden: 100 % = alle bleiben, wie sie sind; 0 % = sie werden mitgeglättet. '
             + 'Unter 100 % darf auch die Retusche Muttermale angleichen. Rechnet allein nichts.' },
     ];
-    /** Nur diese lösen eine Rechnung aus; „Muttermale behalten" bestimmt, wie sie wirken. */
+    /** Nur diese lösen über 0 eine Rechnung aus, „Eigenheiten" unter 100; „Muttermale behalten" bestimmt, wie sie wirken. */
     static WIRKEN = ['gleich', 'symmetrie', 'schatten', 'retusche'];
     static WARTEN_MS = 250;
 
@@ -49,7 +55,7 @@ export class Genesis9hautausgleich {
 
     static aktiv(inst) {
         const werte = Genesis9hautausgleich.werte(inst);
-        return Genesis9hautausgleich.WIRKEN.some(name => werte[name] > 0);
+        return Genesis9hautausgleich.WIRKEN.some(name => werte[name] > 0) || werte.eigen < 100;
     }
 
     /** Die Materialien der vier Hautgruppen am Körper, deren Albedo ein Bibliothekspfad ist. */
@@ -84,7 +90,7 @@ export class Genesis9hautausgleich {
         const werte = Object.fromEntries(Object.entries(Genesis9hautausgleich.werte(inst)).map(([k, v]) => [k, v / 100]));
         let antwort;
         try {
-            antwort = await Serverabruf.rechnen(Genesis9hautausgleich.ADRESSE, { quellen, werte });
+            antwort = await Serverabruf.rechnen(Genesis9hautausgleich.ADRESSE, { quellen, werte, geschlecht: Genesis9hautfalten.geschlecht(inst) });
         } catch (fehler) {
             Protokoll.warnung('Hautausgleich', `nicht gerechnet: ${fehler.message}`);
             return;
