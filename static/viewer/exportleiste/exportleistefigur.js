@@ -59,9 +59,10 @@ export class Exportleistefigur {
         }
     }
 
-    /** Die Angaben zur Figur für den Server (Figur, Regler, Höhe — derselbe Retarget wie im Browser, `Exportleistebewegung`; `haut_deckt`: `hautDeckt`). */
+    /** Die Angaben zur Figur für den Server (Figur, Regler, Höhe — derselbe Retarget wie im Browser, `Exportleistebewegung`; `haut_deckt`: `hautDeckt`; `kette`: Stücke mit Stoff/Haar
+     *  aus der Mesh-Genesis-Kette, `Meshgenesisexportquelle.kette`). */
     static stellung(m) {
-        return { figur: m.figur || '', regler: m.regler || {}, hoehe_m: m.hoehe_m || 0, haut_deckt: Exportleistefigur.hautDeckt(m.inst) };
+        return { figur: m.figur || '', regler: m.regler || {}, hoehe_m: m.hoehe_m || 0, haut_deckt: Exportleistefigur.hautDeckt(m.inst), kette: m.kette || [] };
     }
 
     /**
@@ -103,7 +104,13 @@ export class Exportleistefigur {
     async glb() {
         const modell = await this._modell();
         await Hautverdeckung.anwendenAsync(modell.inst);
-        const bytes = await Modellexport.glbBytes(modell.inst, { ...Exportleistefigur.OPTIONEN, hautWieSzene: true });
+        const frei = modell.ruhen?.();             // Stoff der Kette in die Ruhelage, solange die Datei entsteht (`Meshgenesisstoffkleid.ruhen`)
+        let bytes;
+        try {
+            bytes = await Modellexport.glbBytes(modell.inst, { ...Exportleistefigur.OPTIONEN, hautWieSzene: true });
+        } finally {
+            frei?.();
+        }
         return { blob: new Blob([bytes], { type: 'model/gltf-binary' }), modell };
     }
 

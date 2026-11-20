@@ -196,3 +196,14 @@
 .fotogenesis-hautangleich-regler label { display: grid; grid-template-columns: 11em minmax(0, 1fr) 3.5em; align-items: center; gap: 8px; font-size: 0.9rem; }
 .fotogenesis-hautangleich-regler output { text-align: right; font-variant-numeric: tabular-nums; }
 .fotogenesis-hautangleich-knoepfe { display: flex; gap: 8px; margin-top: 4px; }
+/* Haut-Korrekturen aus „Charakter" (20.11.2026, `Fotogenesishautkorrektur`, Block `Genesis9hautausgleichregler`): Zeilen wie „Haut angleichen", ⓘ wie `genesis9material.css` */
+.fotogenesis-hautkorrektur .hb-hautebenengruppe > summary { display: none; }
+.fotogenesis-hautkorrektur .slider-row { display: grid; grid-template-columns: 11em minmax(0, 1fr) 3.5em; align-items: center; gap: 8px; font-size: 0.9rem; }
+.fotogenesis-hautkorrektur .slider-value { text-align: right; font-variant-numeric: tabular-nums; }
+.fotogenesis-hautkorrektur .hb-korrektur-label { position: relative; cursor: help; }
+.fotogenesis-hautkorrektur .hb-korrektur-info { margin-left: 5px; color: var(--accent); font-size: 0.85em; }
+.fotogenesis-hautkorrektur .hb-korrektur-label:hover .hb-korrektur-info::after {
+    content: attr(data-erklaerung); position: absolute; left: 0; top: calc(100% + 4px); z-index: 60; width: 300px; white-space: normal;
+    background: var(--bg-card, #1b1d2a); color: var(--text); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 10px;
+    font-size: 0.76rem; line-height: 1.4; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}

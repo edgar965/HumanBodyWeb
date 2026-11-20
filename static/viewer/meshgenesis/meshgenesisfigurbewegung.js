@@ -22,6 +22,7 @@ import { Meshgenesisbewegungskleid } from './meshgenesisbewegungskleid.js';
 import { Meshgenesisgenesisfigur } from './meshgenesisgenesisfigur.js';
 import { Meshgenesishaarschwung } from './meshgenesishaarschwung.js';
 import { Meshgenesisstoffkleid } from './meshgenesisstoffkleid.js';
+import { Meshgenesishaarfilm } from './meshgenesishaarfilm.js';
 import { Meshgenesiskikleiderfeld } from './meshgenesiskikleiderfeld.js';
 import { Meshgenesiskollision } from './meshgenesiskollision.js';
 import { Meshgenesisohneglieder } from './meshgenesisohneglieder.js';
@@ -135,6 +136,7 @@ export class Meshgenesisfigurbewegung {
         this._wurzel = null;                // neuer Mischer beim nächsten `_pruefen`
         this._melden('');
         Meshgenesisstoffkleid.anbringenAlle(this);      // der Stoff gilt je Bewegung (19.11.2026)
+        Meshgenesishaarfilm.anbringenAlle(this);        // Haar und Bart ebenso (Schritt „haar“, 20.11.2026)
     }
 
     /**
@@ -194,7 +196,7 @@ export class Meshgenesisfigurbewegung {
         if (this.action) Meshgenesisbodenstand.richten(this.modell, this.kleider);     // wie die Charakter-Seite: tiefster Punkt auf den Boden (31.10.2026)
         Genesis9gelenke.takt(this.modell);
         Meshgenesisstoffkleid.stellen(this.kleider, this.action?.time);
-        Meshgenesishaarschwung.stellen(this.kleider, this.spielt ? (this._dt || 0) : 0, this.modell.group);     // Bewegung je Locke (pausiert: 0, die Locken liegen an)
+        Meshgenesishaarschwung.stellen(this.kleider, this.spielt ? (this._dt || 0) : 0, this.modell.group, this.action?.time);     // je Locke (pausiert: 0); mit Ablage aus der Kette
         Meshgenesiskollision.stellen(this.kleider, this.modell.group);
         Meshgenesisbewegungsmaske.nachBild(this);
         this.ansicht.zeichnen();

@@ -5,6 +5,7 @@
 from django.http import Http404, HttpResponse
 from django.views.decorators.http import require_GET
 
+from ..dienste.meshgenesistesthaar import Meshgenesistesthaar
 from ..dienste.meshgenesisteststoff import Meshgenesisteststoff
 
 __all__ = ['Meshgenesisteststoffendpunkt']
@@ -19,4 +20,15 @@ class Meshgenesisteststoffendpunkt:
             raise Http404('Kein Stoff %s/%s für %s (Test %s, %s)' % (weg, stueck, request.GET.get('bvh'), kennung, geschlecht))
         antwort = HttpResponse(paket, content_type='application/octet-stream')
         antwort['Cache-Control'] = 'no-store'                                # neu gerechnet = neue Daten (projekt.md: der Fix muss ankommen)
+        return antwort
+
+    @staticmethod
+    @require_GET
+    def haar(request, kennung, geschlecht, weg, stueck):
+        u"""`…/haar/?bvh=`: die Bewegung von Haar oder Bart (Leitsträhnen, Schritt „haar“, `Meshgenesistesthaar`, 20.11.2026); 404 — die Seite rechnet ihre Pendel."""
+        paket = Meshgenesistesthaar.paket(kennung, geschlecht, weg, stueck, request.GET.get('bvh'))
+        if paket is None:
+            raise Http404('Kein Haar %s/%s für %s (Test %s, %s)' % (weg, stueck, request.GET.get('bvh'), kennung, geschlecht))
+        antwort = HttpResponse(paket, content_type='application/octet-stream')
+        antwort['Cache-Control'] = 'no-store'
         return antwort

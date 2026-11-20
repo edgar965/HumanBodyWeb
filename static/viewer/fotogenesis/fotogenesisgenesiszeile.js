@@ -79,10 +79,11 @@ export class Fotogenesisgenesiszeile {
         if (testfaelle) new Meshgenesistestfaelle(testfaelle).laden(`${testfaelle.dataset.adresse}?t=${Date.now()}`);
     }
 
-    /** Das Feld Genesis-Ergebnis für „Haut angleichen“ (`Fotogenesishautangleich`). */
+    /** Das Feld Genesis-Ergebnis für „Haut angleichen“ (`Fotogenesishautangleich`) und die Haut-Korrekturen (`Fotogenesishautkorrektur`: Modell und Ablage). */
     get hautort() {
         const { ansicht, figur } = this.eintraege[1];
-        return { ansicht, bereit: figur?.bereit, materialien: () => figur?.materialien?.() ?? [] };
+        return { ansicht, bereit: figur?.bereit, materialien: () => figur?.materialien?.() ?? [], modell: () => figur?.modell ?? null,
+                 korrekturadresse: () => figur?.korrekturadresse ?? null };
     }
 
     /** Leiste und Export der Karte um `feld` an die Figur unter `adresse` (`/api/meshgenesis/test/<k>/`) — null ohne Adresse oder ohne Leiste im Template. */

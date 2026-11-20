@@ -42,6 +42,15 @@ export class Fotogenesisjobwahl {
             laenge.addEventListener('input', () => { if (anzeige) anzeige.textContent = `${laenge.value} %`; });
             laenge.addEventListener('change', () => speichern(laenge, `${basis}/pshuman/`, { haar_laenge_abweichung: Number(laenge.value) }, `Haarlänge Abweichungen ${laenge.value} %`));
         }
+        // Bartmethode (20.11.2026, `Fotogenesispshuman.BART_METHODEN`): Bart-Engine, gemischt oder Eigen Bart — wirkt beim nächsten Lauf der Garderobe
+        const bart = form.querySelector('select[name="bart_methode"]');
+        if (bart) bart.addEventListener('change', () => speichern(bart, `${basis}/pshuman/`, { bart_methode: bart.value }, `Bart ${bart.selectedOptions[0].textContent}`));
+        // Wellen von Eigen Bart (20.11.2026, `Fotogenesispshuman.BART_WELLEN`): wellig oder glatt — wirkt beim nächsten Lauf der Garderobe
+        const bartWelle = form.querySelector('select[name="bart_welle"]');
+        if (bartWelle) bartWelle.addEventListener('change', () => speichern(bartWelle, `${basis}/pshuman/`, { bart_welle: bartWelle.value }, `Eigen Bart ${bartWelle.selectedOptions[0].textContent}`));
+        // Haarmethode (20.11.2026, `Fotogenesispshuman.HAAR_METHODEN`): Haar-Engine oder Eigen Haar — wirkt beim nächsten Lauf der Garderobe
+        const haar = form.querySelector('select[name="haar_methode"]');
+        if (haar) haar.addEventListener('change', () => speichern(haar, `${basis}/pshuman/`, { haar_methode: haar.value }, `Haupthaar ${haar.selectedOptions[0].textContent}`));
         // Lauf der Haut-KI je Job (17.11.2026, `Hautkilaufwahl`): wirkt mit dem Häkchen „Haut-KI“ im nächsten Lauf von Mesh-Genesis
         const hautLauf = form.querySelector('select[name="haut_ki_lauf"]');
         if (hautLauf) hautLauf.addEventListener('change', () => speichern(hautLauf, `${basis}/pshuman/`, { haut_ki_lauf: hautLauf.value }, `Haut-KI ${hautLauf.selectedOptions[0].textContent}`));

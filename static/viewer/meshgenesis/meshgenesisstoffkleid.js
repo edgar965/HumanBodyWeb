@@ -82,12 +82,31 @@ export class Meshgenesisstoffkleid {
         delete mesh.userData.stoff;
     }
 
+    /**
+     * Für einen Export (`Meshgenesisexportquelle`, 20.11.2026): alle Stoffstücke in die Ruhelage, bis die zurückgegebene Funktion sie wieder freigibt. `stellen` schreibt Ruhe + Versatz in die
+     * Punkte — die GLB trug sonst das Stück im gerade gezeigten Bild (zauberer_23: Robe bis 265 mm neben der Ruhe, der Render-Abgleich `Kettenfilm` wies sie ab).
+     */
+    static ruhen(kleider) {
+        const gehalten = [];
+        for (const { mesh } of kleider || []) {
+            const s = mesh.userData.stoff;
+            if (!s) continue;
+            const pos = mesh.geometry.getAttribute('position');
+            pos.array.set(s.ruhe);
+            pos.needsUpdate = true;
+            Meshgenesisstoffkleid.normalen(mesh.geometry, s);
+            s.halt = true;
+            gehalten.push(s);
+        }
+        return () => { for (const s of gehalten) { s.halt = false; s.stand = -1; } };
+    }
+
     /** Je Bild (nach dem Mischer): `zeit` in Sekunden der Bewegung. */
     static stellen(kleider, zeit) {
         const v = new THREE.Vector3();
         for (const { mesh } of kleider || []) {
             const s = mesh.userData.stoff;
-            if (!s || !mesh.visible || !s.ecken.length) continue;
+            if (!s || s.halt || !mesh.visible || !s.ecken.length) continue;
             const f = s.film;
             const t = Math.max(0, zeit || 0) * f.fps / f.jedes;
             const a = Math.min(Math.floor(t), f.bilder - 1), b = Math.min(a + 1, f.bilder - 1), u = Math.min(Math.max(t - a, 0), 1);

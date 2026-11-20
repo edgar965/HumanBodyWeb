@@ -81,7 +81,8 @@ class Stoffsolverdrapierung:
         auftrag = {'koerper': str(stamm) + '_koerper.npz', 'stueck': str(stamm) + '_stueck.npz',
                    'aus': str(stamm) + '_nachher.npz', 'bericht': str(stamm) + '_bericht.json', 'bilder': int(bilder),
                    'druck': float(druck), 'steifigkeit': float(steifigkeit), 'schwerkraft': self.SCHWERKRAFT,
-                   'anheften': torch.flatten(fest).nonzero()[:, 0].tolist(), 'rechner': 'warp'}
+                   # 'auto' statt 'warp' (20.11.2026): im Warp-Stoffsolver dasselbe mit GPU, in der torch-Fassung (Zurückspielen, Edgar „ja, alle“) ist 'warp' ein Fehler
+                   'anheften': torch.flatten(fest).nonzero()[:, 0].tolist(), 'rechner': 'auto'}
         AtomarSchreiber.json_schreiben(Path(str(stamm) + '_auftrag.json'), auftrag)
         return auftrag
 

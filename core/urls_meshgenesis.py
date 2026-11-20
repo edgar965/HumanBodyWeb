@@ -48,6 +48,8 @@ MESHGENESIS = [
     path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/bild/<str:name>', Meshgenesistestkleiderendpunkte.bild, name='meshgenesis_testkleidbild'),
     # Der Stoff eines Stücks für eine Bewegung (19.11.2026, Kleiderbibliothek als Stoff, `Meshgenesisteststoff`, Kette `meshgenesis_kleiderstoff_lauf.py`).
     path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/stoff/', Meshgenesisteststoffendpunkt.stoff, name='meshgenesis_testkleidstoff'),
+    # Haar und Bart in Bewegung (20.11.2026, Schritt „haar“, `Meshgenesistesthaar`)
+    path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/haar/', Meshgenesisteststoffendpunkt.haar, name='meshgenesis_testkleidhaar'),
     path('api/meshgenesis/test/<str:kennung>/modell/<str:geschlecht>/', Meshgenesistestkleiderendpunkte.modell, name='meshgenesis_testmodell'),
     # 22.10.2026: Testfälle der Kleider-KI (FEHLER von Prüfungen je Prio) — Testseite und Jobseite des Trainingsjobs (`Meshgenesistestfaelle`)
     path('api/meshgenesis/test/<str:kennung>/testfaelle/<str:geschlecht>/', Meshgenesistestfaelleendpunkte.test, name='meshgenesis_testfaelle'),

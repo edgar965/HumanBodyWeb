@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { Lockenpendel } from '../gemeinsam/lockenpendel.js';
 import { Shaderpatch } from '../gemeinsam/shaderpatch.js';
+import { Meshgenesishaarfilm } from './meshgenesishaarfilm.js';
 
 export class Meshgenesishaarschwung {
     static KOPF = 'attribute float schwungLeit;\nuniform sampler2D schwungTex;\nuniform float schwungK1;\n';
@@ -58,18 +59,21 @@ export class Meshgenesishaarschwung {
         // immer ein Klon (samt dem Eingriff der Kollision, `Shaderpatch.klonen`) — ohne Kapseln trüge das Stück sonst das geteilte Material des Standbilds (`Meshgenesisgemeinsam`)
         const klonen = m => Shaderpatch.anhaengen(Shaderpatch.klonen(m), 'haarschwung', eingriff);
         mesh.material = Array.isArray(mesh.material) ? mesh.material.map(klonen) : klonen(mesh.material);
-        mesh.userData.haarschwung = { zustand: Lockenpendel.anlegen(ruhe, g, k1), ruhe, index, gewicht, ziel: new Float32Array(n * 3), daten, tex, g, k1 };
+        // `q`: Drehung der Abbildung für die Versätze aus der Kette (`Meshgenesishaarfilm`, 20.11.2026; dort in Modellkoordinaten der Kette)
+        const q = abbildung?.quaternion && !abbildung.quaternion.equals(new THREE.Quaternion()) ? abbildung.quaternion : null;
+        mesh.userData.haarschwung = { zustand: Lockenpendel.anlegen(ruhe, g, k1), ruhe, index, gewicht, ziel: new Float32Array(n * 3), daten, tex, g, k1, q, film: null };
         return true;
     }
 
-    /** Je Bild nach dem Mischer. @param dt Sekunden seit dem letzten Bild (0: Locken zurück auf die Figur) */
-    static stellen(kleider, dt, gruppe) {
+    /** Je Bild nach dem Mischer. @param dt Sekunden seit dem letzten Bild (0: Locken zurück auf die Figur) @param zeit Sekunden der Bewegung (für die Bewegung aus der Kette) */
+    static stellen(kleider, dt, gruppe, zeit) {
         gruppe?.updateMatrixWorld(true);
         const m = new THREE.Matrix4(), inv = new THREE.Matrix4(), unten = new THREE.Vector3();
         for (const { mesh } of kleider || []) {
             const s = mesh.userData.haarschwung;
             const sk = mesh.skeleton;
             if (!s || !sk) continue;
+            if (s.film) { Meshgenesishaarfilm.stellen(s, zeit); continue; }          // gerechnet in der Kette (Schritt „haar“, 20.11.2026) statt Pendel
             // Knochenmatrizen in EINEM Feld statt einem Feld je Knochen (19.11.2026, three.js Weg A): gemessen in Chrome an goldprinzessin_mesh_genesis_67 (82.434 Leitpunkte,
             // 215 Knochen) 4,6–4,9 ms gegen 3,1–3,4 ms je Bild, je dreimal abwechselnd, `ziel` bitgleich
             if (!s.matrizen || s.matrizen.length !== sk.bones.length * 16) s.matrizen = new Float64Array(sk.bones.length * 16);

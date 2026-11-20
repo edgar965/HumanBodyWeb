@@ -2,13 +2,16 @@
 """Meshgenesisformvariantentabelle — die Formvarianten (synthetische Figuren des Formtrainings) im Reiter „Formtraining“ auf /mesh-genesis/ als djangoBase-Tabelle (18.10.2026).
 
 Eine Zeile je `3DObjects/_Output/MeshGenesisJobs/FormNNN/` (`Meshgenesisformvarianten`): Figur, Datenstand (MIA und Wolken Fassung 9 je Probe), der jüngste fertige Formlauf mit ihrem Formfehler.
-Gleiche Bauart wie `Meshgenesistabelle`; eine Zeile öffnet die Seite der Variante (`/mesh-genesis/formvariante/<Name>/`, seit 18.10.2026 abends — Klasse `meshgenesistabelle`, Link in der ersten Zelle).
+Gleiche Bauart wie `Meshgenesistabelle`; eine Zeile öffnet die Seite der Variante (`/mesh-genesis/formvariante/<Name>/`, seit 18.10.2026 abends — Klasse `meshgenesistabelle`, Link in der Zelle „Formvariante“).
+Seit 20.11.2026 mit Auswahl zum Löschen (Edgar: „ja, alle“, `Meshgenesisformtrainingpapierkorb`); was gerade gerechnet wird, trägt ein Schloss statt des Kästchens.
 """
 
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from .meshgenesisformtrainingpapierkorb import Meshgenesisformtrainingpapierkorb
 from .meshgenesisformzellen import Meshgenesisformzellen as Z
+from .meshgenesistabelle import Meshgenesistabelle
 
 __all__ = ['Meshgenesisformvariantentabelle']
 
@@ -17,6 +20,7 @@ class Meshgenesisformvariantentabelle:
     SCHLUESSEL = 'meshgenesis-formvarianten'
     ZUSTAND = {'fertig': 'Daten Fassung 9 fertig', 'wird gerechnet': 'wird gerechnet', 'mia': 'MIA fertig, Wolken fehlen', 'unvollständig': 'unvollständig', 'offen': 'offen'}
     SPALTEN = (
+        Meshgenesistabelle.WAHL_SPALTE,
         {'label': 'Formvariante', 'key': 'name', 'titel': 'Ordner unter 3DObjects/_Output/MeshGenesisJobs'},
         {'label': 'Grundlage', 'key': 'grundlage', 'titel': 'Der Job, dessen Figur und Kleidung die Variante abwandelt (modell.json → grundlage)'},
         {'label': 'Letzter Lauf', 'key': 'lauf',
@@ -42,7 +46,10 @@ class Meshgenesisformvariantentabelle:
         rolle = 'trainiert' if lauf.get('gruppe') == 'training' else 'nur gemessen (Prüfform)'
         figur = {'maennlich': 'männlich'}.get(v['geschlecht'], v['geschlecht'] or '—') + (' · Kind' if v['kind'] else '')
         gruppe = {'training': 'Training', 'pruefung': 'Prüfform'}.get(v['gruppe'], v['gruppe'] or '—')
+        grund = Meshgenesisformtrainingpapierkorb.sperre_variante(v)
         zellen = (
+            format_html('<td class="meshgenesis-gesperrt" title="{}"><i class="fas fa-lock" aria-label="{}"></i></td>', grund, grund) if grund
+            else Meshgenesistabelle.wahl_zelle(v['name']),
             format_html('<td data-sort="{}"><a href="/mesh-genesis/formvariante/{}/">{}</a></td>', v['name'].lower(), v['name'], v['name']),
             Z.text(v['grundlage'] or '—'),
             Z.zeit(lauf.get('zeit'), titel='%s — %s' % (lauf['lauf'], rolle)) if lauf else Z.LEER,

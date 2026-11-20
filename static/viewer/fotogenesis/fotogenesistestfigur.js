@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
-import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
+import { Meshgenesisanatomiehuelle } from '../meshgenesis/meshgenesisanatomiehuelle.js';
 import { Meshgenesisgenesisfigur } from '../meshgenesis/meshgenesisgenesisfigur.js';
 import { Meshgenesiskikleiderfeld } from '../meshgenesis/meshgenesiskikleiderfeld.js';
 import { Meshgenesisrigzeichner } from '../meshgenesis/meshgenesisrigzeichner.js';
@@ -23,6 +23,8 @@ import { Fotogenesisnetz } from './fotogenesisnetz.js';
 export class Fotogenesistestfigur {
     static _nummer = 0;
     static WACHE_MS = 500;
+    /** Arten, die die Methode „Eigen“ ersetzt (= `Bibliotheksfarbe.ARTEN` / `Garderobeeigen.KLEID` auf dem Server) */
+    static KLEIDUNG = new Set(['oberteil', 'kleid', 'anzug', 'hose', 'rock', 'unterwaesche']);
 
     /** @param {{kennung: string, adresse: string, apose?: boolean, eigen?: boolean}} test aus den Seitendaten @param seite `Fotogenesisseite` oder null */
     constructor(test, seite = null) {
@@ -92,18 +94,22 @@ export class Fotogenesistestfigur {
     /**
      * Methode der Kleider (19.11.2026, Edgar: „Kleiderbibliothek (ehemals Garderobe) und Drapieren … toggle für beide Ergebnisse im genesis view“, `Fotogenesiskleidermethode`):
      * derselbe Körper, nur die Stücke wechseln. 'drapieren' nimmt je Zeile das drapierte Stück (Weg f), wo es ein Netz hat, sonst das wirksame (Kleiderbibliothek); geladen beim
-     * ersten Umschalten. → {drapiert, versucht} (Zeilen mit drapiertem Netz / Zeilen, für die Drapieren gerechnet wurde) oder null.
+     * ersten Umschalten. 'eigen' (20.11.2026, Edgar: „mach doch einen dritten Modus für die Kleider - "Eigen"“) nur die eigenen, an das Netzstück gepassten Stücke (Weg e).
+     * → {gezeigt, versucht} (Zeilen mit Netz der Methode / Zeilen, für die sie gerechnet wurde) oder null.
      */
     async methodeSetzen(methode) {
         await this.bereit;
         if (!this.modell || !this._kleiderQuelle) return null;
         this._saetze ??= { bibliothek: this.kleider };
+        const w = methode === 'eigen' ? 'e' : 'f';
         if (!(methode in this._saetze)) {
             // „drapieren“ nur die drapierten Stücke, „gemischt“ drapiert, wo es eins gibt, sonst die Kleiderbibliothek (19.11.2026, Edgar: „sehe ich nicht, welches was ist,
             // mach einen dritten Button der mir entweder das eine oder das andere zeigt“) — null fällt in `Meshgenesiskikleiderfeld.laden` heraus
-            const weg = methode === 'gemischt' ? st => (st.f?.netz ? 'f' : st.wahl) : st => (st.f?.netz ? 'f' : null);
+            // „eigen“ wechselt nur die Kleidung (Weg e baut nur sie); Haar, Bart, Hut, Requisiten, Schuhe bleiben wie in der Kleiderbibliothek — sonst stand edgar kahl da (Chrome, 20.11.2026)
+            const weg = methode === 'gemischt' ? st => (st.f?.netz ? 'f' : st.wahl)
+                : methode === 'eigen' ? st => (st.e?.netz ? 'e' : Fotogenesistestfigur.KLEIDUNG.has(st.art) ? null : st.wahl) : st => (st[w]?.netz ? w : null);
             this._saetze[methode] = await Meshgenesiskikleiderfeld.laden({ ...this._kleiderQuelle, daten: this._saetze.bibliothek?.liste, weg })
-                .catch(fehler => { console.warn(`Fotogenesistestfigur: Drapieren nicht geladen (${fehler.message})`); return undefined; });
+                .catch(fehler => { console.warn(`Fotogenesistestfigur: Methode ${methode} nicht geladen (${fehler.message})`); return undefined; });
             if (this._saetze[methode] === undefined) { delete this._saetze[methode]; return null; }
         }
         const neu = this._saetze[methode];
@@ -118,12 +124,12 @@ export class Fotogenesistestfigur {
                 this._hautStuecke();
             } else {
                 this.modell.hautStuecke = {};
-                Hautverdeckung.planen(this.modell);
+                Meshgenesisanatomiehuelle.planen(this.modell);
             }
             this._textSetzen();
         }
         const liste = (this._saetze.bibliothek ?? neu)?.liste?.stuecke ?? [];
-        return { drapiert: (neu?.stuecke ?? []).filter(st => st.weg === 'f').length, versucht: liste.filter(st => st.quelle === 'ki' && st.f).length };
+        return { gezeigt: (neu?.stuecke ?? []).filter(st => st.weg === w).length, versucht: liste.filter(st => st.quelle === 'ki' && st[w]).length };
     }
 
     /** Körper starr auf das Rig der Probe (dieselben Punkte, mit denen die Stücke gehäutet sind) — nach jeder feineren Stufe neu, sie ersetzt Netze und Skelett. */
@@ -154,7 +160,10 @@ export class Fotogenesistestfigur {
         }) };
         this.modell.hautStuecke = Meshgenesiskikleiderfeld.hautStuecke(gestellt);
         ki.haut = gestellt.haut;          // der Schalter „Kleider“ blendet diese Stoffe mit aus (`Meshgenesiskikleiderfeld.kleiderZeigen`)
-        Hautverdeckung.planen(this.modell);
+        // In einem tragenden Stück kein Anatomie-Stück — DIE Regel des Servers (`traegt_anatomie`, `Meshgenesisanatomiehuelle`) wie bewegte Figur, Testseite und Export. Beim Umbau auf
+        // `Genesis9Modell` (19.11.2026) fiel sie hier weg: an G_Generisch_4 stach das Geograft in Zacken durch den Anzug, an edgar_fotos das Glied durch die Shorts (Edgar, 20.11.2026)
+        this.modell.anatomieGetragen = () => !!this.kleider?.kleiderAn && Meshgenesisanatomiehuelle.getragen(this.kleider?.liste);
+        Meshgenesisanatomiehuelle.planen(this.modell);
     }
 
     /** Was nach `bauen()` noch kommt (Bilder, Masken, feinere Stufe), zeichnet sonst niemand: dieselbe Wache wie `Meshgenesisgenesisfigur` (Stände vergleichen, nur bei Änderung melden). */
@@ -177,6 +186,12 @@ export class Fotogenesistestfigur {
         return this.modell?.bodyMesh ? [this.modell.bodyMesh.material].flat() : [];
     }
 
+    /** Wohin die Haut-Korrekturen dieser Figur gehen (`Fotogenesishautkorrektur`, Server `Meshgenesistesthautkorrektur`, 20.11.2026) — null ohne Figur des Tests. */
+    get korrekturadresse() {
+        const g = this.probe?.info?.geschlecht;
+        return this.modell && g && !this.test.eigen ? `${this.test.adresse}hautkorrektur/${g}/` : null;
+    }
+
     auftrag(quelle, modus, kleider, rig = false) {
         return { echt: true, zeile: 'test', quelle, modus, kleider, rig };
     }
@@ -188,7 +203,7 @@ export class Fotogenesistestfigur {
             return;
         }
         // Schalter „Kleider“: ausgeblendet zeigt die Figur die Haut darunter wieder (die Maske rechnet ohne die Stücke neu)
-        if (this.kleider && Meshgenesiskikleiderfeld.kleiderZeigen(this.kleider, d?.kleider !== false)) Hautverdeckung.planen(this.modell);
+        if (this.kleider && Meshgenesiskikleiderfeld.kleiderZeigen(this.kleider, d?.kleider !== false)) Meshgenesisanatomiehuelle.planen(this.modell);
         inhalt.add(this.figur);
         inhalt.userData.genesisErsatz = Fotogenesisnetz.ersatz(d?.modus ?? 'textur');
         if (d?.rig) inhalt.add(this.rigZeichnen());

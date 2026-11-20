@@ -12,7 +12,8 @@ import { Serverabruf } from './serverabruf.js';
  * der vier Hautgruppen eingesetzt — ohne Neubau des Körpers; alle Werte 0 legt die ursprüngliche Karte zurück. Nach jedem Körperbau neu (`Genesis9Modell`).
  *
  * Quelle ist die Albedo, die das Material beim Bau bekam (`userData.albedo`, `Genesis9netz`): ein Bibliothekspfad. Fotokacheln eines Modells (`/api/…`,
- * `Genesis9fototextur`) bleiben unberührt.
+ * `Genesis9fototextur`) bleiben unberührt — außer den Hautkacheln eines Mesh-Genesis-Tests (`TESTKACHEL`, Figur der Foto-Genesis-Jobseite, 20.11.2026): die legt der Server
+ * selbst als Bibliotheksbild ab (`Meshgenesistesthautkorrektur.bibliothek`).
  */
 export class Genesis9hautausgleich {
 
@@ -23,7 +24,8 @@ export class Genesis9hautausgleich {
         // wirkt unter 100 %; der Server nimmt die Durchschnittshaut des Geschlechts der Figur (`G9durchschnittshaut`).
         { name: 'eigen', label: 'Eigenheiten', vorgabe: 100, hilfe: 'Wie viel von der eigenen Zeichnung dieser Haut bleibt (Flecken, Licht und Schatten von etwa '
             + '4 mm bis 13 cm). Darunter kommt die Zeichnung einer Durchschnittshaut aus der Bibliothek (Rötung an Nase und Wangen, Lider, Lippen — ohne Fotolicht), '
-            + 'im Hautton dieser Haut. 100 % = die Haut, wie sie ist; 0 % = Durchschnittshaut mit den Poren und Muttermalen dieser Haut. Wirkt nach allen übrigen Korrekturen.' },
+            + 'im Hautton dieser Haut. 100 % = die Haut, wie sie ist; 0 % = Durchschnittshaut mit den Poren und Muttermalen dieser Haut. '
+            + 'Brauen, Wimpern und Lippen dieser Haut bleiben. Wirkt nach allen übrigen Korrekturen.' },
         { name: 'gleich', label: 'Gleichmäßigkeit', hilfe: 'Glättet Flecken, Lichtränder und Farbsprünge mittlerer Größe (etwa 4 mm bis 3 cm) — '
             + 'z. B. Schattenflecken und Streifen aus dem Foto. Poren, Muttermale und Merkmale, die auf beiden Körperseiten gleich sind '
             + '(Augen, Brauen, Lippen, Brustwarzen), bleiben.' },
@@ -40,6 +42,8 @@ export class Genesis9hautausgleich {
     /** Nur diese lösen über 0 eine Rechnung aus, „Eigenheiten" unter 100; „Muttermale behalten" bestimmt, wie sie wirken. */
     static WIRKEN = ['gleich', 'symmetrie', 'schatten', 'retusche'];
     static WARTEN_MS = 250;
+    /** Hautkachel eines Mesh-Genesis-Tests (`Meshgenesistesthaut.kacheln`) — als Quelle erlaubt */
+    static TESTKACHEL = /^\/api\/meshgenesis\/test\/[^/?]+\/figur\/[^/?]+\/bild\/10\d\d\.jpg/;
 
     static werte(inst) {
         return Object.fromEntries(Genesis9hautausgleich.FELDER.map(f => {
@@ -64,7 +68,7 @@ export class Genesis9hautausgleich {
         if (!netz) return [];
         return (Array.isArray(netz.material) ? netz.material : [netz.material])
             .filter(m => Genesis9hautausgleich.GRUPPEN.includes(m?.userData?.gruppe) && m.userData.kachel && m.userData.albedo
-                && !String(m.userData.albedo).startsWith('/'));
+                && (!String(m.userData.albedo).startsWith('/') || Genesis9hautausgleich.TESTKACHEL.test(String(m.userData.albedo))));
     }
 
     /** Einen Wert stellen (Prozent) und nach kurzer Ruhe anwenden. */

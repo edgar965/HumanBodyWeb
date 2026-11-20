@@ -22,6 +22,7 @@ from django.conf import settings
 from .engine2d3dkleiderrenderallgemein import Engine2d3dKleiderrenderallgemein
 from .engine2d3dkleiderrenderlaeufe import Engine2d3dKleiderrenderlaeufe
 from .exportleistebewegung import Exportleistebewegung
+from .exportleistekette import Exportleistekette
 
 logger = logging.getLogger('core')
 
@@ -36,7 +37,8 @@ class Exportleisterender:
     GRENZEN_PX = (64, 4096)
     #: „ohne Physik" (MP4-Export und Rendern, 31.10.2026): die Schalter des Katalogs `Figurfilm.Filmregler` (renderqualitaet `stoff.modus`: haut | hybrid | sim; renderphysik `*.an`)
     PHYSIK_AUS = {('renderqualitaet', 'stoff.modus'): 'haut', ('renderphysik', 'haar.an'): False, ('renderphysik', 'bart.an'): False,
-                  ('renderphysik', 'uhr.an'): False, ('renderphysik', 'wind.staerke'): 0.0, ('renderphysik', 'haar.schwung'): 0.0}
+                  ('renderphysik', 'uhr.an'): False, ('renderphysik', 'wind.staerke'): 0.0, ('renderphysik', 'haar.schwung'): 0.0,
+                  ('renderphysik', 'kettenfilm.an'): False}
     MIN_SEKUNDEN = 10 / 30
     #: 384 als Vorgabe und Obergrenze (05.11.2026, Edgar: Sand auf der Haut von Edgar_1, „mach die Standardausgabe bei Qualität rendern sehr hoch“): erst dort ist das Rauschen weg, bei 192 und 256 nur
     #: schwächer (`ProjektTemp/_wegwerf/edgar1_textur/sprenkel_probe.py`).
@@ -128,7 +130,8 @@ class Exportleisterender:
                 'physik': angaben.get('physik') is not False,
                 'name': str(angaben.get('name') or self.job.name())[:120], 'anmerkung': str(angaben.get('anmerkung') or '').strip()[:600],
                 'datei': str(angaben.get('datei') or '').strip()[:120],          # Dateiname des Videos ohne Endung (leer: `<name>_render`)
-                'bvh': str(bvh), 'bvh_sekunden': ganz, 'stellung': angaben.get('stellung') or {},
+                # `kette`: Stücke mit Stoff/Haar aus der Mesh-Genesis-Kette für diese BVH als Dateien (`Exportleistekette`, 20.11.2026) — der Render spielt sie ab
+                'bvh': str(bvh), 'bvh_sekunden': ganz, 'stellung': Exportleistekette.aufloesen(angaben.get('stellung') or {}, bvh),
                 # welcher Knopf startete (01.11.2026, Edgar: „warum sind zwei Sanduhren am laufen? ich habe nur den Render button geklickt“) — die Sanduhr nur dort
                 'quelle': 'mp4' if angaben.get('quelle') == 'mp4' else 'rendern',
                 'ordner': str(Modellexportziel.pruefen(angaben.get('ordner') or str(self.job.exportordner())))}

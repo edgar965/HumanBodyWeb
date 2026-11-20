@@ -11,12 +11,12 @@ import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 import { Meshfighautstueck } from '../meshfigur/meshfighautstueck.js';
 
 export class Meshgenesiskikleiderfeld {
-    // z (12.11.2026, „Genesis zuerst“): Stück der Garderobe, Server `Meshgenesistestkikleider`
-    static WEGE = new Set(['k', 's', 'h', 'f', 'g', 'z']);
+    // z (12.11.2026, „Genesis zuerst“): Stück der Garderobe, Server `Meshgenesistestkikleider`; e (20.11.2026): Methode „Eigen“, an das Netzstück gepasst
+    static WEGE = new Set(['k', 's', 'h', 'f', 'g', 'z', 'e']);
     /** = `Kleiderverdeckung.TIEFE_KOSTUEM_M` auf dem Server (ProjektTemp/_wegwerf/meshgenesis_kleider_verdeckung.py) */
     static STOFF_TIEFE_M = 0.040;
     // Methoden umbenannt (19.11.2026, Edgar: „Methode: Kleiderbibliothek (ehemals Garderobe) und Drapieren“) — z ist die Kleiderbibliothek, f das Drapieren
-    static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Drapieren', g: 'Schicht aus der KI', h: 'Frisur der Kleiderbibliothek', z: 'Kleiderbibliothek' };
+    static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Drapieren', g: 'Schicht aus der KI', h: 'Frisur der Kleiderbibliothek', z: 'Kleiderbibliothek', e: 'Eigen' };
 
     /** → {gruppe, rig, namen: [Text je Stück], stuecke, liste} oder null (keine KI-Kleider gewählt). `ki.weg(st)`: welcher Weg je Zeile (Vorgabe: der wirksame `st.wahl`;
      *  `Fotogenesistestfigur` nimmt für die Methode „Drapieren“ f, wo es ein Netz hat). `ki.daten`: eine schon geholte Liste (dann kein zweiter Abruf). */

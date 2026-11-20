@@ -55,8 +55,17 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
   haut_ki_lauf   Edgar 17.11.2026: „mach einen Job n1-HautKI als Kopie von n1, mit der neuen HautKI“: welcher Lauf der Haut-KI (`Hautkilaufwahl`), '' (Vorgabe) = der eingesetzte aus
                  `ki_fassungen.json`; wirkt nur mit dem Häkchen „Haut-KI“, liest der Schritt „Haut“ von Mesh-Genesis beim nächsten Lauf selbst (`meshgenesis_hautki_einsatz.py`)
 
+  bart_methode   Edgar 20.11.2026: „versuche das zu mergen oder per Option auszuwählen - Weg z (Bart-Engine) und Eigen Bart Methodik für bart“: 'gemischt'
+                 (Bart-Engine mit den Wurzeln aus Eigen Bart; Vorgabe seit 20.11.2026 mittags, Edgar: „nimm gemischt als Vorgabe für den Bart“), 'engine' (der Weg bis dahin),
+                 'eigen' (Eigen Bart ganz); liest die Garderobe (Weg z) beim nächsten Lauf selbst (`meshgenesis/haar_Bart/bartmethode.py`)
+
+  bart_welle     Edgar 20.11.2026: „ja, Wellen für Eigen Bart, aber per einstellung im UI“: 'wellig' (Vorgabe) / 'glatt' — nur für Eigen Bart (`Bartmethode.welle`), beim nächsten Lauf
+
+  haar_methode   Edgar 20.11.2026: „Sonst nehmen wir optional im Job das ‚Eigen Haar‘? das hat besser funktioniert“: 'engine' (Vorgabe, der bisherige Weg), 'eigen' (Eigen Haar
+                 mit Länge, Wellen und Farbe aus dem Netz); liest die Garderobe (Weg z) beim nächsten Lauf selbst (`meshgenesis/haar_Bart/haarmethode.py`)
+
     POST /api/fotogenesis/<job>/pshuman/   {zeile1, drehteller, vae_bildweise, fototextur, textur_alle_fotos, hand_ersatz, up2you, haut_ki, keine_kleider, kleider_getrennt, genesis_zuerst,
-                                            haut_gibt_nach, haut_gibt_nach_mm, haar_welle, haar_laenge_abweichung, haut_ki_lauf, anzahl, dichte}   → {ok, pshuman}
+                                            haut_gibt_nach, haut_gibt_nach_mm, haar_welle, haar_laenge_abweichung, bart_methode, bart_welle, haar_methode, haut_ki_lauf, anzahl, dichte}   → {ok, pshuman}
 """
 
 import json
@@ -87,11 +96,27 @@ class Fotogenesispshuman:
     #: Haarlänge Abweichungen (19.11.2026, Edgar: „mach auch eine Einstellung bei dem Job: Haarlänge Abweichungen - daneben Schieberegler mit %“): höchste Abweichung der
     #: Strähnenlänge vom Median in % (`meshgenesis/haar_Bart/haarlaengenabweichung.py`), Schritt, Vorgabe 100 = keine Grenze (wie bisher)
     HAAR_LAENGE_VON, HAAR_LAENGE_BIS, HAAR_LAENGE_SCHRITT, HAAR_LAENGE_VORGABE = 0, 100, 5, 100
+    #: Wie Weg z den Bart baut (Werte wie `Bartmethode.METHODEN`, 20.11.2026), erster Eintrag = Vorgabe
+    BART_METHODEN = (('gemischt', 'gemischt'), ('engine', 'Bart-Engine'), ('eigen', 'Eigen Bart'))
+    #: Wellen von Eigen Bart (Werte wie `Bartmethode.WELLEN`, 20.11.2026), erster Eintrag = Vorgabe
+    BART_WELLEN = (('wellig', 'wellig'), ('glatt', 'glatt'))
+    #: Wie Weg z das Haupthaar baut (Werte wie `Haarmethode.METHODEN`, 20.11.2026), erster Eintrag = Vorgabe
+    HAAR_METHODEN = (('engine', 'Haar-Engine'), ('eigen', 'Eigen Haar'))
     #: Felder außer den Häkchen
     ZAHLEN = ('anzahl', 'dichte', 'haut_gibt_nach_mm', 'haar_laenge_abweichung')
     #: Textfelder mit eigener Prüfung (`setzen`)
-    TEXTE = ('haar_welle', Hautkilaufwahl.FELD)
+    TEXTE = ('haar_welle', 'bart_methode', 'bart_welle', 'haar_methode', Hautkilaufwahl.FELD)
+    #: Textfelder mit fester Auswahl (Feld → (Wert, Anzeige)-Paare, erster = Vorgabe), geprüft in `setzen`, ergänzt in `lesen`
+    AUSWAHL = {'bart_welle': BART_WELLEN}  # noqa: RUF012 — nur gelesen
     BESCHREIBUNG = {  # noqa: RUF012 — nur gelesen
+        'haar_methode': 'Wie das Haupthaar gebaut wird. „Haar-Engine“ (Vorgabe): Strähnen auf der Form des Haars aus dem Netz, Länge je Strähne wie im Netz. '
+                        '„Eigen Haar“: nach den Reglern von „Eigen Haar“ auf der Kopfhaut der Figur, gleichmäßig lang und dicht, Länge, Wellen und Farbe aus dem Netz. '
+                        'Wirkt beim nächsten Lauf der Garderobe.',
+        'bart_methode': 'Wie der Bart gebaut wird. „gemischt“ (Vorgabe): Form und Länge aus dem Netz, angesetzt dort, wo bei Genesis-Bärten Bart wächst (Schnurrbart, Kinn, '
+                        'Wangen, Koteletten, Hals). „Bart-Engine“: Strähnen auf der Form des Barts aus dem Netz, angesetzt an Kinn und Kiefer, Länge wie im Netz. '
+                        '„Eigen Bart“: ganz nach den Reglern von „Eigen Bart“, gleich lang und gerade fallend, Länge und Farbe aus dem Netz. Wirkt beim nächsten Lauf der Garderobe.',
+        'bart_welle': 'Nur für „Eigen Bart“: „wellig“ (Vorgabe) gibt den Strähnen Wellen (1 cm hoch, 10 cm lang, leicht gedreht, wie „Eigen Haar“), „glatt“ lässt sie gerade fallen. '
+                      '„gemischt“ und „Bart-Engine“ nehmen ihre Wellen aus der Vorlage. Wirkt beim nächsten Lauf der Garderobe.',
         'haut_ki_lauf': 'Welcher Lauf der Haut-KI die Hautkacheln rechnet, wenn „Haut-KI“ an ist. „eingesetzt“ (Vorgabe): der Lauf, der für alle Jobs gilt. '
                         'Ein jüngerer Lauf gilt nur für diesen Job, die übrigen bleiben beim eingesetzten. Wirkt im Schritt „Haut“ von Mesh-Genesis beim nächsten Lauf.',
         'haar_laenge_abweichung': 'Wie stark die Haarsträhnen einer Figur in der Länge voneinander abweichen dürfen, in Prozent der mittleren Länge (Median). 100 % (Vorgabe): '
@@ -143,7 +168,10 @@ class Fotogenesispshuman:
                     haut_gibt_nach_mm=int(mm) if mm in cls.NACHGEBEN_MM else cls.NACHGEBEN_EMPFEHLUNG,
                     haar_welle=welle if welle in dict(cls.HAAR_WELLEN) else cls.HAAR_WELLEN[0][0],
                     haar_laenge_abweichung=cls.haar_laenge(roh.get('haar_laenge_abweichung')),
-                    haut_ki_lauf=str(roh.get(Hautkilaufwahl.FELD) or ''))
+                    bart_methode=roh.get('bart_methode') if roh.get('bart_methode') in dict(cls.BART_METHODEN) else cls.BART_METHODEN[0][0],
+                    haar_methode=roh.get('haar_methode') if roh.get('haar_methode') in dict(cls.HAAR_METHODEN) else cls.HAAR_METHODEN[0][0],
+                    haut_ki_lauf=str(roh.get(Hautkilaufwahl.FELD) or ''),
+                    **{f: roh.get(f) if roh.get(f) in dict(w) else w[0][0] for f, w in cls.AUSWAHL.items()})
 
     @classmethod
     def haar_laenge(cls, wert):
@@ -175,6 +203,13 @@ class Fotogenesispshuman:
             raise ValueError('Unbekannte Felder %s' % (fremd,))
         if 'haar_welle' in rumpf and rumpf['haar_welle'] not in dict(cls.HAAR_WELLEN):
             raise ValueError('haar_welle %r: erlaubt %s' % (rumpf['haar_welle'], ', '.join(w for w, _t in cls.HAAR_WELLEN)))
+        if 'bart_methode' in rumpf and rumpf['bart_methode'] not in dict(cls.BART_METHODEN):
+            raise ValueError('bart_methode %r: erlaubt %s' % (rumpf['bart_methode'], ', '.join(w for w, _t in cls.BART_METHODEN)))
+        if 'haar_methode' in rumpf and rumpf['haar_methode'] not in dict(cls.HAAR_METHODEN):
+            raise ValueError('haar_methode %r: erlaubt %s' % (rumpf['haar_methode'], ', '.join(w for w, _t in cls.HAAR_METHODEN)))
+        for f, w in cls.AUSWAHL.items():
+            if f in rumpf and rumpf[f] not in dict(w):
+                raise ValueError('%s %r: erlaubt %s' % (f, rumpf[f], ', '.join(x for x, _t in w)))
         lauf = Hautkilaufwahl.FELD
         if lauf in rumpf and not (isinstance(rumpf[lauf], str) and Hautkilaufwahl.gueltig(rumpf[lauf])):
             raise ValueError('%s %r: erlaubt leer oder %s' % (lauf, rumpf[lauf], ', '.join(Hautkilaufwahl.laeufe())))

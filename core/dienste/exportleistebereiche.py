@@ -15,8 +15,9 @@ class Exportleistebereiche:
         from .engine2d3dkleiderexportquelle import Engine2d3dKleiderexportquelle
         from .meshgenesisanpassungexportquelle import Meshgenesisanpassungexportquelle
         from .meshgenesistestexportquelle import Meshgenesistestexportquelle
+        from .studioexportquelle import Studioexportquelle
         klassen = (Meshgenesistestexportquelle, Meshgenesisanpassungexportquelle, Fotogenesisexportquelle,
-                   Engine2d3dKleiderexportquelle)
+                   Engine2d3dKleiderexportquelle, Studioexportquelle)
         return {k.BEREICH: k for k in klassen}
 
     @classmethod

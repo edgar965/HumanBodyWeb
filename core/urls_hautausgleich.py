@@ -9,5 +9,7 @@ from .api.g9hautmaskenrechnen import G9hautmaskenrechnen
 
 HAUTAUSGLEICH = [
     path('api/character/genesis9-figur/hautausgleich/', G9hautausgleichapi.rechnen, name='g9_figur_hautausgleich'),
+    # Korrekturen an der Figur eines Mesh-Genesis-Tests (Foto-Genesis-Jobseite, 20.11.2026, `Meshgenesistesthautkorrektur`)
+    path('api/meshgenesis/test/<str:kennung>/hautkorrektur/<str:geschlecht>/', G9hautausgleichapi.speichern, name='meshgenesis_test_hautkorrektur'),
     path('api/character/genesis9-figur/hautmasken/<str:fassung>/<str:schluessel>/rechnen/', G9hautmaskenrechnen.rechnen, name='g9_figur_hautmasken_rechnen'),
 ]

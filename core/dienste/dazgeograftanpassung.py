@@ -217,5 +217,5 @@ class Dazgeograftanpassung:
 
         kanten = Torchfeld.cat([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]])
         nachbar = sp.coo_matrix((torch.ones(len(kanten), dtype=torch.float64, device='cuda'), (kanten[:, 0], kanten[:, 1])), shape=(n, n)).tocsr()
-        nachbar = Torchfeld.astype((nachbar + nachbar.T) > 0, torch.float64)
+        nachbar = ((nachbar + nachbar.T) > 0).astype(torch.float64)       # dünn bleibt dünn (`Duennmatrix.astype`; `Torchfeld.astype` wirft, 20.11.2026)
         return sp.diags(Torchfeld.feld(nachbar.sum(axis=1)).ravel()) - nachbar

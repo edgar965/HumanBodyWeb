@@ -154,6 +154,8 @@ ENGINE2D3DKLEIDER_EXPORT_DIR = AUSGABE_DIR / 'Engine2d3dKleider'
 MESHGENESIS_EXPORT_DIR = AUSGABE_DIR / 'MeshGenesis'
 # Exportleiste der Tests von Foto-Genesis (31.10.2026, `Fotogenesisexportquelle`): ein Ordner je Test.
 FOTOGENESIS_EXPORT_DIR = AUSGABE_DIR / 'FotoGenesis'
+# Exportleiste im BVH Studio (20.11.2026, `Studioexportquelle`): ein Ordner je Genesis-9-Modell, darin `exportleiste/` (Render-Läufe, Regler).
+STUDIO_EXPORT_DIR = AUSGABE_DIR / 'Studio'
 #: Blender-Skript, das eine GLB in eine .blend und/oder .fbx umschreibt — nur gerufen,
 #: wenn eins davon im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
 MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'

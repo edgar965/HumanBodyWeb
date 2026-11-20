@@ -19,6 +19,7 @@ import { Fotogenesispshuman } from './fotogenesispshuman.js';
 import { Fotogenesispshumaneingabe } from './fotogenesispshumaneingabe.js';
 import { Fotogenesisjobwahl } from './fotogenesisjobwahl.js';
 import { Fotogenesishautangleich } from './fotogenesishautangleich.js';
+import { Fotogenesishautkorrektur } from './fotogenesishautkorrektur.js';
 import { Fotogenesisweitverdeckung } from './fotogenesisweitverdeckung.js';
 import { Exportleiste } from '../exportleiste/exportleiste.js';
 import { Fotogenesisbewegung } from './fotogenesisbewegung.js';
@@ -43,6 +44,8 @@ if (start.test === '1') {
 Fotogenesisgriffel.binden(document.querySelector('.fotogenesis-mit-leiste'));      // Zeile 1: Genesis-Ergebnis | Seitenleiste, Grenze ziehbar (19.11.2026)
 const seite = Fotogenesisseite.aufbauen();
 if (daten.genesiszeile?.ergebnis) Fotogenesishautangleich.binden(element('fotogenesis-hautangleich'), () => seite.genesiszeile?.hautort);
+// Haut-Korrekturen aus „Charakter" (20.11.2026) an derselben Figur
+if (daten.genesiszeile?.ergebnis) Fotogenesishautkorrektur.binden(element('fotogenesis-hautkorrektur'), () => seite.genesiszeile?.hautort);
 if (daten.genesiszeile?.ergebnis) Fotogenesisweitverdeckung.binden(element('fotogenesis-weitverdeckung'));         // Haut unter weiten Stücken (08.11.2026)
 if (daten.test?.eigen) {
     const figur = new Fotogenesisexportfigur(daten.test.adresse, seite.genesisfeld);

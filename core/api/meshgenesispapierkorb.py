@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Meshgenesispapierkorbendpunkt — gewählte Jobs oder Tests von `/mesh-genesis/` beiseitelegen (23.10.2026), siehe `Meshgenesispapierkorb`.
 
-    POST /api/meshgenesis/loeschen/   {art: 'jobs'|'tests'|'formtraining', ids: [...]}  → {ok, ziel, ergebnis: [{kennung, ok, fehler?}]}
+    POST /api/meshgenesis/loeschen/   {art: 'jobs'|'tests'|'formtraining'|'formvarianten', ids: [...]}  → {ok, ziel, ergebnis: [{kennung, ok, fehler?}]}
 
-'formtraining' (20.11.2026): Trainingsläufe des Reiters „Formtraining“, `Meshgenesisformtrainingpapierkorb`.
+'formtraining', 'formvarianten' (20.11.2026): Trainingsläufe und Formvarianten des Reiters „Formtraining“, `Meshgenesisformtrainingpapierkorb`.
 """
 
 import json
@@ -26,8 +26,8 @@ class Meshgenesispapierkorbendpunkt:
         except ValueError:
             return JsonResponse({'error': 'Rumpf ist kein JSON'}, status=400)
         art, ids = (rumpf.get('art'), rumpf.get('ids')) if isinstance(rumpf, dict) else (None, None)
-        formtraining = art == Meshgenesisformtrainingpapierkorb.ART
+        formtraining = art in Meshgenesisformtrainingpapierkorb.ARTEN
         if not (formtraining or art in Meshgenesispapierkorb.ARTEN) or not isinstance(ids, list) or not ids:
-            return JsonResponse({'error': 'Erwartet {art: jobs|tests|formtraining, ids: [...]}'}, status=400)
-        aus = Meshgenesisformtrainingpapierkorb.loeschen(ids) if formtraining else Meshgenesispapierkorb.loeschen(art, ids)
+            return JsonResponse({'error': 'Erwartet {art: jobs|tests|formtraining|formvarianten, ids: [...]}'}, status=400)
+        aus = (Meshgenesisformtrainingpapierkorb if formtraining else Meshgenesispapierkorb).loeschen(art, ids)
         return JsonResponse(dict(aus, ok=all(e['ok'] for e in aus['ergebnis'])))

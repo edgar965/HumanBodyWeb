@@ -248,6 +248,7 @@ class Meshgenesistest:
         rest = form['rest_mm'] if form else cls.figuren(p, info, endung).get(figur, info.get('ik_rest_mm'))
         info.update({'figur': figur, 'geschlecht': geschlecht, 'hoehe_m': hoehe, 'ik_rest_mm': rest, 'geschlecht_stand': Meshgenesistestgeschlechtstand.text(p, geschlecht)})
         from .fotogesicht import Fotogesicht
+        from .meshgenesistesthautkorrektur import Meshgenesistesthautkorrektur
         from .meshgenesisgenesishaltung import Meshgenesisgenesishaltung
         from .meshgenesishaltungwahl import Meshgenesishaltungwahl
         f_rig, f_dreh, haltung = Meshgenesishaltungwahl.felder(e)
@@ -257,10 +258,10 @@ class Meshgenesistest:
             'form_regler_gesamt': form.get('regler_gesamt') if form else None,
             # Die Figur als Genesis-Modell (22.10.2026, Animation der Ausgabe wie Mesh-3D): dieselbe wie im Ergebnis der Jobseite eines Tripo-Jobs (`Meshgenesisergebnisfigur`).
             # Seit 31.10.2026 mit der Haut der KI als `fototextur` (`Meshgenesistesthaut.kacheln`) — sonst trug sie die Katalog-Haut, anders als das Standbild.
-            # Seit 19.11.2026 dazu das Gesicht aus dem Frontfoto (Augenbild, Brauenfarbe, Mimik; `Fotogesicht`).
-            'figur_genesis': Fotogesicht.figur(
+            # Seit 19.11.2026 dazu das Gesicht aus dem Frontfoto (Augenbild, Brauenfarbe, Mimik; `Fotogesicht`), seit 20.11.2026 die Haut-Korrekturen (`Meshgenesistesthautkorrektur`).
+            'figur_genesis': Meshgenesistesthautkorrektur.figur(Fotogesicht.figur(
                 dict(Meshgenesisergebnisfigur._figur(geschlecht, form['regler']), fototextur=Meshgenesistesthaut.kacheln(kennung, geschlecht)),
-                p, geschlecht, lambda name: '/api/meshgenesis/test/%s/figur/%s/bild/%s' % (kennung, geschlecht, name)) if form else None,
+                p, geschlecht, lambda name: '/api/meshgenesis/test/%s/figur/%s/bild/%s' % (kennung, geschlecht, name)), kennung, geschlecht) if form else None,
             # Die Haltung dazu als Daz-Winkel (19.11.2026): das Genesis-Ergebnis der Foto-Genesis-Seite baut
             # die Figur damit als Genesis9Modell (`Meshgenesisgenesishaltung`)
             # Haltung (`Meshgenesishaltungwahl`, 19.11.2026 abends): `ausgabe`/`dreh` bleiben die des Fotos (die Figur liegt über dem Fotonetz),

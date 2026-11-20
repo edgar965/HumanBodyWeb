@@ -15,9 +15,9 @@ const de = (n, s = 0) => Number(n).toLocaleString('de-DE', { minimumFractionDigi
 // d und n sind Vergleichslinien zum Schnitt s (20.10.2026): wählbar, nie Vorgabe, nie im Ergebnis der Jobseite
 // f (21.10.2026): Schnitt aus der Fläche — Nähte vom Körper, flachgelegt, GarmentCode näht und drapiert; Vorgabe vor s
 // g (21.10.2026): Schicht aus der KI — der Schichtkopf gibt die Form des Stücks je Punkt des Genesis-Käfigs aus, gegen die Zielstücke trainiert
-// z (12.11.2026, „Genesis zuerst“): Stück der Garderobe (`meshgenesis_garderobe_lauf.py`), in solchen Tests die Vorgabe
-const WEGTEXT = { a: 'Katalog', b: 'Mesh-3D-Lauf', k: 'KI geschnitten', s: 'KI Schnitt', f: 'Drapieren', g: 'KI Schicht', h: 'Bibliothek Frisur', d: 'Vergleich Schnittdeutung', n: 'Vergleich NeuralTailor', z: 'Kleiderbibliothek', aus: 'aus' };
-const WEGE = ['z', 'g', 'k', 'f', 's', 'h', 'd', 'n', 'a', 'b'];
+// z (12.11.2026, „Genesis zuerst“): Stück der Garderobe (`meshgenesis_garderobe_lauf.py`), in solchen Tests die Vorgabe; e (20.11.2026): Methode „Eigen“ (`meshgenesis_eigen_lauf.py`)
+const WEGTEXT = { a: 'Katalog', b: 'Mesh-3D-Lauf', k: 'KI geschnitten', s: 'KI Schnitt', f: 'Drapieren', g: 'KI Schicht', h: 'Bibliothek Frisur', d: 'Vergleich Schnittdeutung', n: 'Vergleich NeuralTailor', z: 'Kleiderbibliothek', e: 'Eigen', aus: 'aus' };
+const WEGE = ['z', 'e', 'g', 'k', 'f', 's', 'h', 'd', 'n', 'a', 'b'];
 
 export class Meshgenesistestkleider {
     constructor(karte, seite) {

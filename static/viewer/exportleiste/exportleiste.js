@@ -73,9 +73,17 @@ export class Exportleiste {
         }
     }
 
-    /** Neuer BVH-Vorschlag der Seite → neu laden; läuft ein Render → neu laden (Fortschritt). */
+    /** Neue Adresse oder neuer BVH-Vorschlag der Seite → neu laden; läuft ein Render → neu laden (Fortschritt). */
     _takt() {
         if (document.visibilityState === 'hidden') return;
+        // Eine Seite mit wechselnder Figur (BVH Studio: Figur der gewählten Spur, 20.11.2026) gibt `adresse()` — die Leiste zieht um
+        const adresse = this.quelle.adresse?.() || null;
+        if (adresse && adresse !== this.basis) {
+            this.basis = adresse;
+            this.wurzel.dataset.adresse = adresse;
+            this.laden();
+            return;
+        }
         let vorschlag = null;
         try { vorschlag = this.quelle.bvh?.() || null; } catch (fehler) { console.warn('Exportleiste: Vorschlag der BVH nicht lesbar', fehler); }
         if (vorschlag !== this._vorschlag) {

@@ -32,14 +32,21 @@ class Meshgenesisrechengenesiszuerst:
         # die Vorgabe bleibt; die Foto-Genesis-Seite schaltet um (`Fotogenesiskleidermethode`). Gemessen 30 s je Stück (Median, 64 echte Stücke)
         'drapieren': ('drapieren', 'Kleider drapieren: Schnitt aus dem Stück, als Stoff genäht und drapiert (zweites Ergebnis neben der Kleiderbibliothek, Genesis zuerst)',
                       ['-u', 'meshgenesis_drapieren_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # 20.11.2026 (Edgar: „mach doch einen dritten Modus für die Kleider - "Eigen" neben Drapieren und Bibliothek und rechne das auch für jeden Job aus“): drittes Ergebnis, Weg e
+        'eigen': ('eigen', 'Eigene Kleider: je Kleidungsstück ein eigenes Stück, an das Stück aus dem Netz gepasst (drittes Ergebnis neben Kleiderbibliothek und Drapieren, Genesis zuerst)',
+                  ['-u', 'meshgenesis_eigen_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
         'pruefung': ('pruefung', 'Prüfung der Stücke der Kleiderbibliothek: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
                                                                                                   '--nur-pruefen', '--weg', 'z']),
         # 19.11.2026 abends (Edgar: „Ja“ auf „Soll der Stoff ein fester Job-Schritt nach Weg z werden?“): die Stücke von Weg z (auch die aus den Bausteinen) über die Animation der Seite als
         # Stoff (Stoffsolver mit Kernmotor); die Seite zeigt sie dann mit Falten statt als zweite Haut. Gemessen gk_anzug + gk_mieder (goldprinzessin_mesh_genesis_64): 5 + 9 s Simulation
         'stoff': ('stoff', 'Kleider der Kleiderbibliothek als Stoff über die Animation der Seite (Genesis zuerst)', ['-u', 'meshgenesis_kleiderstoff_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # 20.11.2026 (Edgar: „Weg 2“ — Physik überall mit demselben Code): Haar und Bart in Bewegung, die Leitsträhnen mit der Stoffsolver-Straehnenbahn auf den Kernen; die Seite
+        # zeigt sie statt eigener Pendel. Gemessen zauberer_23: ki_haar 1.478 Leitsträhnen 49 s, z_bart 814 Leitsträhnen 60 s (1.004 Bilder)
+        'haar': ('haar', 'Haar und Bart der Kleiderbibliothek in Bewegung über die Animation der Seite (Genesis zuerst)', ['-u', 'meshgenesis_kleiderhaar_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
     }
-    #: Schritte, die nach einem Schritt der alten Kette dazukommen (in dieser Reihenfolge). „stoff“ als letzter: ein Fehler dort hält keinen anderen Schritt auf, die Seite zeigt dann gehäutet
-    NACH = {'zeile1': ('proportionen',), 'kleider': ('garderobe', 'bausteine', 'drapieren'), 'pruefung': ('stoff',)}
+    #: Schritte, die nach einem Schritt der alten Kette dazukommen (in dieser Reihenfolge). „stoff“ und „haar“ als letzte: ein Fehler dort hält keinen anderen Schritt auf, die Seite zeigt
+    #: dann gehäutet bzw. ihre Pendel
+    NACH = {'zeile1': ('proportionen',), 'kleider': ('garderobe', 'bausteine', 'drapieren', 'eigen'), 'pruefung': ('stoff', 'haar')}
 
     @classmethod
     def einreihen(cls, schritte):

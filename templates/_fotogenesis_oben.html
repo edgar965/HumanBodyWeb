@@ -28,6 +28,15 @@ Zeile 1 rechts neben dem Genesis-Ergebnis (`.fotogenesis-seitenleiste`), sonst w
         <span class="fotogenesis-schieber" title="{{ haar_laenge_text }}"><label for="fotogenesis-haarlaenge">Haarlänge Abweichungen</label>
             <input type="range" id="fotogenesis-haarlaenge" name="haar_laenge_abweichung" min="{{ haar_laenge_bereich.0 }}" max="{{ haar_laenge_bereich.1 }}" step="{{ haar_laenge_bereich.2 }}" value="{{ job.pshuman.haar_laenge_abweichung }}">
             <output for="fotogenesis-haarlaenge">{{ job.pshuman.haar_laenge_abweichung }} %</output></span>
+        {# 20.11.2026, Edgar: „versuche das zu mergen oder per Option auszuwählen - Weg z (Bart-Engine) und Eigen Bart Methodik für bart“ — `Fotogenesispshuman.BART_METHODEN`, gelesen von `meshgenesis/haar_Bart/bartmethode.py` #}
+        <label for="fotogenesis-bartmethode" title="{{ bart_methode_text }}">Bart</label>
+        <select id="fotogenesis-bartmethode" name="bart_methode" data-reihenfolge="fest" title="{{ bart_methode_text }}">{% for w, t in bart_methoden %}<option value="{{ w }}"{% if w == job.pshuman.bart_methode %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        {# 20.11.2026, Edgar: „ja, Wellen für Eigen Bart, aber per einstellung im UI“ — `Fotogenesispshuman.BART_WELLEN`, gelesen von `Bartmethode.welle` #}
+        <label for="fotogenesis-bartwelle" title="{{ bart_welle_text }}"><i class="fas fa-water"></i> Eigen Bart</label>
+        <select id="fotogenesis-bartwelle" name="bart_welle" data-reihenfolge="fest" title="{{ bart_welle_text }}">{% for w, t in bart_wellen %}<option value="{{ w }}"{% if w == job.pshuman.bart_welle %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        {# 20.11.2026, Edgar: „Sonst nehmen wir optional im Job das ‚Eigen Haar‘? das hat besser funktioniert“ — `Fotogenesispshuman.HAAR_METHODEN`, gelesen von `meshgenesis/haar_Bart/haarmethode.py` #}
+        <label for="fotogenesis-haarmethode" title="{{ haar_methode_text }}">Haupthaar</label>
+        <select id="fotogenesis-haarmethode" name="haar_methode" data-reihenfolge="fest" title="{{ haar_methode_text }}">{% for w, t in haar_methoden %}<option value="{{ w }}"{% if w == job.pshuman.haar_methode %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
         <label title="{{ pshuman_wege.fototextur.beschreibung }}"><input type="checkbox" name="fototextur"{% if job.pshuman.fototextur %} checked{% endif %}> {{ pshuman_wege.fototextur.text }}</label>
         <label title="{{ pshuman_wege.textur_alle_fotos.beschreibung }}"><input type="checkbox" name="textur_alle_fotos"{% if job.pshuman.textur_alle_fotos %} checked{% endif %}> {{ pshuman_wege.textur_alle_fotos.text }}</label>
         <label title="{{ pshuman_wege.hand_ersatz.beschreibung }}"><input type="checkbox" name="hand_ersatz"{% if job.pshuman.hand_ersatz %} checked{% endif %}> {{ pshuman_wege.hand_ersatz.text }}</label>

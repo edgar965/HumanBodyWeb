@@ -14,6 +14,7 @@ import { Eigenhaut } from '../gemeinsam/eigenhaut.js';
 import { Meshgenesishaarschwung } from './meshgenesishaarschwung.js';
 import { Meshgenesiskollision } from './meshgenesiskollision.js';
 import { Meshgenesisstoffkleid } from './meshgenesisstoffkleid.js';
+import { Meshgenesishaarfilm } from './meshgenesishaarfilm.js';
 import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 
 export class Meshgenesisbewegungskleid {
@@ -104,5 +105,6 @@ export class Meshgenesisbewegungskleid {
         }
         bewegung._kleiderWurzel = bewegung.modell.skelett?.rootBone || null;
         Meshgenesisstoffkleid.anbringenAlle(bewegung);
+        Meshgenesishaarfilm.anbringenAlle(bewegung);              // Haar und Bart aus der Kette (Schritt „haar“, 20.11.2026)
     }
 }

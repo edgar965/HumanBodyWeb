@@ -1,5 +1,6 @@
 import { Exportleistefigur } from '../exportleiste/exportleistefigur.js';
 import { Meshgenesisbewegungsfigur } from './meshgenesisbewegungsfigur.js';
+import { Meshgenesisstoffkleid } from './meshgenesisstoffkleid.js';
 
 /**
  * Meshgenesisexportquelle — die Figur der Testseite von Mesh-Genesis für die Exportleiste (31.10.2026, `Exportleiste`, Server `Meshgenesistestexportquelle`).
@@ -30,6 +31,16 @@ export class Meshgenesisexportquelle {
         await Exportleistefigur.vollBauen(b.modell);
         await b.vorbereiten();
         const m = b.modell;
-        return { inst: m, figur: m.figur, regler: m.regler || {}, hoehe_m: Meshgenesisbewegungsfigur.hoehe(m) };
+        // `ruhen`: Stoffstücke für die Datei in die Ruhelage (`Meshgenesisstoffkleid.ruhen`), `Exportleistefigur.glb` gibt sie danach frei
+        return { inst: m, figur: m.figur, regler: m.regler || {}, hoehe_m: Meshgenesisbewegungsfigur.hoehe(m), kette: Meshgenesisexportquelle.kette(b),
+                 ruhen: () => Meshgenesisstoffkleid.ruhen(b.kleider) };
+    }
+
+    /**
+     * Die Stücke mit Adresse der Kleiderbibliothek (`{name, adresse, art}`, Name = Knoten in der GLB): Der Server sucht dazu Stoff und Haar aus der Kette für die BVH des Renders
+     * (`Exportleistekette`), der Render spielt sie ab wie die Seite (`Figurfilm.Kettenfilm`, 20.11.2026, Edgar „Weg 2“).
+     */
+    static kette(b) {
+        return (b.kleider || []).filter(k => k.adresse && k.mesh?.name).map(k => ({ name: k.mesh.name, adresse: k.adresse, art: k.art || '' }));
     }
 }

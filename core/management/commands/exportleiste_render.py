@@ -74,6 +74,7 @@ class Command(BaseCommand):
         from core.dienste.engine2d3dkleiderrenderlaeufe import Engine2d3dKleiderrenderlaeufe
         from core.dienste.engine2d3dkleiderrenderneu import Engine2d3dKleiderrenderneu
         from core.dienste.exportleistebewegung import Exportleistebewegung
+        from core.dienste.exportleistekettenlauf import Exportleistekettenlauf
         from core.dienste.modellexportziel import Modellexportziel
 
         auftrag = json.loads(render._datei('auftrag.json').read_text(encoding='utf-8'))
@@ -97,6 +98,8 @@ class Command(BaseCommand):
         self._vorbereiten(programme, name, glb)
         optionen = render.leiste.optionen() if auftrag.get('physik') is not False else render.ohne_physik(render.leiste.optionen())
         regler = Filmregler.schreiben(render._datei('regler.json'), optionen)
+        # Stoff und Haar der Kleiderbibliothek: fehlt der Kette die Ablage für diese BVH und diese Regler, mit denselben Kettenschritten nachrechnen (20.11.2026, Edgar „Weg 2“)
+        Exportleistekettenlauf.vorbereiten(render, optionen, regler, auftrag.get('stellung') or {}, auftrag['bvh'], glb)
         py = sys.executable
         gesamt = max(n, int(round(float(auftrag.get('bvh_sekunden') or 0) * render.FPS)))
         gemeinsam = [str(programme / 'video_bauen.py'), name, str(bewegung), '--glb', str(glb), '--regler', str(regler), '--gesamt-bilder', str(gesamt), '--start-bild', '0']

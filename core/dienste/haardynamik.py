@@ -113,7 +113,8 @@ class Haardynamik:
         Npztorch.speichern(str(stamm) + '_koerper.npz', punkte=Torchfeld.feld(k_punkte, dtype=torch.float32), dreiecke=Torchfeld.feld(k_dreiecke, dtype=torch.int32), komprimiert=True, fuer_numpy=True)
         auftrag = {'straehnen': str(stamm) + '_straehnen.npz', 'koerper': str(stamm) + '_koerper.npz',
                    'aus': str(stamm) + '_nachher.npz', 'bericht': str(stamm) + '_bericht.json', 'bilder': int(bilder),
-                   'schwerkraft': self.SCHWERKRAFT, 'material': str(material), 'dicke': 0.0, 'rechner': 'warp',
+                   # 'auto' statt 'warp' (20.11.2026): im Warp-Stoffsolver dasselbe mit GPU, in der torch-Fassung (Zurückspielen, Edgar „ja, alle“) ist 'warp' ein Fehler
+                   'schwerkraft': self.SCHWERKRAFT, 'material': str(material), 'dicke': 0.0, 'rechner': 'auto',
                    'haarargumente': argumente}
         if material_felder:
             auftrag['material_felder'] = dict(material_felder)

@@ -32,7 +32,8 @@ class Meshgenesistestkikleider:
     #: z (12.11.2026, „Genesis zuerst“, Edgar: „mach den Umbau“, Konzept `Docu/konzepte/2026-11-12_genesis-zuerst-konzept.md`): ein Stück der Garderobe, gewählt nach der Messung am Stück des
     #: Kostüm-Wegs und mit der Passform angepasst (`meshgenesis/meshgenesis_garderobe_lauf.py`). In solchen Tests ist z die Vorgabe (`Kikleiderliste.garderobe_entscheidet`) — Edgar hat am
     #: 12.11.2026 „Garderobe als Vorgabe“ bejaht (Konzept Abschnitt 9, Frage 1); z steht darum nicht in `AUS_DER_BIBLIOTHEK`.
-    KI = ('k', 's', 'h', 'f', 'g', 'z')
+    #: e (20.11.2026, Edgar: „mach doch einen dritten Modus für die Kleider - "Eigen"“): eigenes Stück, an das Netzstück gepasst (`meshgenesis_eigen_lauf.py`); wählbar, nie Vorgabe
+    KI = ('k', 's', 'h', 'f', 'g', 'z', 'e')
     VERGLEICH = ('d', 'n')
     WEGE = KI + VERGLEICH
     #: Wege, deren Netz aus der Bibliothek kommt (h: ein fertiges Garderobe-Stück, die KI wählt nur nach ihren Haarmaßen) — die Vorgabe „KI“ nimmt sie nie von selbst, nur auf eigene Wahl
@@ -43,7 +44,8 @@ class Meshgenesistestkikleider:
              'd': 'Vergleich: Schnittdeutung (Messung, keine KI)', 'n': 'Vergleich: NeuralTailor (fremde KI)',
              'f': 'Drapieren: Schnitt aus dem Stück (Nähte vom Körper, flachgelegt), GarmentCode näht und drapiert es als Stoff',
              'g': 'KI: Schicht auf dem Körper (Form des Stücks aus dem Schichtkopf, gegen die Zielstücke trainiert)',
-             'z': 'Kleiderbibliothek: fertiges Stück, nach den bedeckten Körperstellen gewählt, Länge und Weite aus dem Netz (Genesis zuerst)'}
+             'z': 'Kleiderbibliothek: fertiges Stück, nach den bedeckten Körperstellen gewählt, Länge und Weite aus dem Netz (Genesis zuerst)',
+             'e': 'Eigen: eigenes Stück, an das Stück aus dem Netz gepasst (Form und Farbe aus dem Netz)'}
 
     @staticmethod
     def lesen(ordner):

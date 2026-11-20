@@ -9,6 +9,7 @@ gezeichnet von `Fotogenesisgenesiszeile`, folgt der Leiste oben.{% endcomment %}
     {% if g.stand %}<p class="hb-hinweis">{{ g.stand }}</p>{% endif %}
     {% if g.lauf and g.ergebnis %}<p class="hb-hinweis">{{ g.lauf }}</p>{% endif %}
     {% if g.ergebnis %}{% include "_fotogenesis_hautangleich.html" with adresse=hautangleich_adresse %}
+    {% include "_fotogenesis_hautkorrektur.html" %}
     {% include "_fotogenesis_weitverdeckung.html" with adresse=weitverdeckung_adresse %}{% endif %}
     {# Abspielleiste und Export wie auf der Mesh-Genesis-Testseite (Bereich meshgenesistest, dieselbe Figur wie dort) #}
     {% if g.ergebnis %}{% include "_meshgenesis_figurbewegung.html" with adresse=bewegung_adresse %}

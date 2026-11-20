@@ -8,6 +8,7 @@ import { setupPlayback } from './playback.js';
 import { setupToolbar } from './tools.js';
 import { setupExportPanel } from './export_video.js';
 import { bindClothExportButtons } from './export1.js';
+import { Studioexportquelle } from './studioexportquelle.js';
 import { Projektwiederherstellung } from './projekt_wiederherstellung.js';
 import { Sitzung } from './sitzung.js';
 import { createFloorTrack } from './spur_boden.js';
@@ -36,7 +37,7 @@ export class Studiostart {
     static AUFBAUEN = [setupTimeline, setupPlayback, setupToolbar,
                        setupExportPanel, bindClothExportButtons,
                        setupViewportContextMenu, setupTheatreMenu,
-                       setupSceneObjectImport];
+                       setupSceneObjectImport, () => Studioexportquelle.starten()];
 
     /** Schlüssel, unter dem die verworfene Sitzung ihren Anzeigestand ablegt. */
     static UI_SCHLUESSEL = 'bvhStudio_sessionState__ui';

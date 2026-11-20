@@ -76,15 +76,19 @@ Ein Lauf öffnet seine Seite `/mesh-genesis/formtraining/<lauf>/` (`meshgenesis_
     <ul>{% for zeile in jetzt %}<li>{{ zeile }}</li>{% endfor %}</ul>
     <p class="hb-hinweis">Stand beim Laden der Seite (Formvarianten höchstens 30 s alt). Ein Lauf, der noch auf die GPU oder auf Daten wartet, hat noch keinen Ordner und erscheint erst, wenn er beginnt.</p>
 </div>
-<div class="card meshgenesis-joblist">
+<div class="card meshgenesis-joblist" data-loeschen="formtraining">
     <h2>Trainingsläufe</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/_Output/MeshGenesisJobs/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p class="hb-hinweis">Läufe mit Schloss setzt die Kette ein (<code>ki_fassungen.json</code>) oder sie laufen gerade — die lassen sich nicht löschen.</p>
     <p class="hb-hinweis">Je Lauf ein Netz, das an den Jobs und den Formvarianten zugleich trainiert wird (Ordner <code>3DObjects/_Output/MeshGenesisJobs/_vorstufe/laeufe/</code>). <strong>Formkopf</strong> sagt Rig und Genesis-Formregler voraus,
         <strong>Vorstufe</strong> nur das Rig in der A-Pose. Laufende Läufe sind hervorgehoben; die Messwerte der letzten Zwischenmessung stehen im Tooltip der Statuszelle.
         Ein Klick auf eine Zeile öffnet den Lauf: Verlauf, Ergebnis je Gruppe, Vergleich mit dem vorigen Lauf, Kopfmessung, Ergebnis je Figur, Log.</p>
     {% include "djangobase/_tabelle.html" with tabelle=formtraining %}
 </div>
-<div class="card meshgenesis-joblist">
+<div class="card meshgenesis-joblist" data-loeschen="formvarianten">
     <h2>Formvarianten ({{ formvarianten.zeilen|length }})</h2>
+    <p><button type="button" class="btn btn-danger" data-aktion="loeschen" disabled title="Ordner nach 3DObjects/_Output/MeshGenesisJobs/_beiseite/ verschieben"><span><i class="fas fa-trash"></i> Gewählte löschen (<span class="meshgenesis-zaehler">0</span>)</span></button></p>
+    <p class="hb-hinweis">Die Formvarianten liest keine Kette beim Rechnen, nur das Formtraining: Wer den Formkopf neu trainieren will, braucht sie (oder rechnet sie neu — MIA je Pose). Varianten mit Schloss werden gerade gerechnet.</p>
     <p class="hb-hinweis">Die synthetischen Figuren: je Variante ein Charaktermix mit Formreglern auf einem der vier Jobs, in dessen Kleidung, mit eigenen Posen (Ordner <code>3DObjects/_Output/MeshGenesisJobs/FormNNN/</code>).
         Der Datenlauf rechnet je Pose zuerst MIA (Rig und Ruhelage, Make-It-Animatable), danach die A-Pose-Wolke Fassung 9, die das Formtraining liest. <strong>Prüfformen</strong> werden nie trainiert, nur gemessen.</p>
     {% include "djangobase/_tabelle.html" with tabelle=formvarianten %}

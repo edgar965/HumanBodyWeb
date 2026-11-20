@@ -33,6 +33,7 @@ __all__ = ['Meshgenesisteststoff']
 class Meshgenesisteststoff:
     TEIL = re.compile(r'^[A-Za-z0-9_\-]+$')
     FASSUNG = 2                     # = `Kleiderstofflauf.FASSUNG`
+    ORDNER = 'stoff'                # `Meshgenesistesthaar`: 'haar'
     KOPF = ('fassung', 'bvh', 'fps', 'jedes', 'skala', 'bilder', 'punkte', 'bewegt')
 
     @classmethod
@@ -49,7 +50,7 @@ class Meshgenesisteststoff:
         name = cls.name(bvh)
         if name is None or Meshgenesistestkleider.stueck_ordner(kennung, geschlecht, weg, stueck) is None:
             return None
-        ordner = Meshgenesistestkleider.ordner(kennung, geschlecht) / weg / stueck / 'stoff'
+        ordner = Meshgenesistestkleider.ordner(kennung, geschlecht) / weg / stueck / cls.ORDNER
         feld, kopf = ordner / (name + '.npz'), ordner / (name + '.json')
         if not kopf.is_file() or not Npztorch.da(feld):
             return None
