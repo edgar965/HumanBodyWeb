@@ -142,18 +142,9 @@ export class Werkzeugleiste {
         }
     }
 
-    /**
-     * Video-Export: zum Export-Reiter wechseln und den Bereich auf die ganze
-     * Länge stellen, falls dort noch nichts steht.
-     */
+    /** MP4: zum Reiter „Rendern“ (Exportleiste) wechseln — der alte Reiter „Export“ ist seit 21.11.2026 weg. */
     _exportknopf() {
-        document.getElementById('btn-export-video')?.addEventListener('click', () => {
-            fn.switchPropsTab('export');
-            const bis = document.getElementById('export-to');
-            if (bis && (bis.value === '0' || !bis.value)) {
-                bis.value = Math.round(state.project.duration * state.project.fps);
-            }
-        });
+        document.getElementById('btn-export-video')?.addEventListener('click', () => fn.switchPropsTab('rendern'));
     }
 
     _reiter() {

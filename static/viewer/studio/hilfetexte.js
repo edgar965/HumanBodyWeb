@@ -7,7 +7,7 @@
  * UMBAU 18.08.2026: 329 Zeilen reiner Text. Geteilt nach Thema:
  *
  *     hilfetexte_spuren.js     Animation, Kamera, Licht, Audio
- *     hilfetexte_bedienung.js  Tastenkuerzel, Animationen, Export
+ *     hilfetexte_bedienung.js  Tastenkuerzel, Animationen
  *
  * `HELP_CONTENT` bleibt die eine Anlaufstelle — `hilfefenster.js` schlaegt
  * darin nach.

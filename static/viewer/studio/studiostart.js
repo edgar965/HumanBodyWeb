@@ -6,8 +6,7 @@ import { createSceneLightTracks } from './spur_lichter.js';
 import { setupTimeline } from './timeline.js';
 import { setupPlayback } from './playback.js';
 import { setupToolbar } from './tools.js';
-import { setupExportPanel } from './export_video.js';
-import { bindClothExportButtons } from './export1.js';
+import './bvhausgabe.js';
 import { Studioexportquelle } from './studioexportquelle.js';
 import { Projektwiederherstellung } from './projekt_wiederherstellung.js';
 import { Sitzung } from './sitzung.js';
@@ -33,9 +32,8 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  */
 export class Studiostart {
 
-    /** Reihenfolge des Aufbaus. */
+    /** Reihenfolge des Aufbaus. Die Reiter „Export“ und „Export1 (Cloth)“ sind seit 21.11.2026 weg (Edgar: „alte Export-Reiter können weg“), MP4 kommt aus „Rendern“. */
     static AUFBAUEN = [setupTimeline, setupPlayback, setupToolbar,
-                       setupExportPanel, bindClothExportButtons,
                        setupViewportContextMenu, setupTheatreMenu,
                        setupSceneObjectImport, () => Studioexportquelle.starten()];
 

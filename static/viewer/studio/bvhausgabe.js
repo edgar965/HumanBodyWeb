@@ -221,3 +221,8 @@ export class Bvhausgabe {
         URL.revokeObjectURL(adresse);          // sonst bleibt der Blob liegen
     }
 }
+
+// Werkzeugleiste (BVH-Knopf) und Zeitleistenmenü rufen über die Registrierung; stand bis 21.11.2026 in `export_video.js`, das mit dem Reiter „Export“ ging.
+fn.exportBVH = () => Bvhausgabe.spur();
+fn.saveBvhAs = () => Bvhausgabe.speichernUnter();
+fn.saveBvhToLibrary = () => Bvhausgabe.inBibliothekSpeichern();

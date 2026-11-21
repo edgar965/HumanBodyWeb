@@ -12,7 +12,7 @@ export class Hilfefenster {
 
     /** Themen in der Reihenfolge des Menüs; Kennung ist `dd-help-<thema>`. */
     static THEMEN = ['tracks', 'camera', 'light', 'audio', 'shortcuts',
-                     'animations', 'export'];
+                     'animations'];          // „export“ (Cloth-Export) ging am 21.11.2026 mit dem Reiter „Export1“
 
     static verdrahten(menue) {
         for (const thema of Hilfefenster.THEMEN) {

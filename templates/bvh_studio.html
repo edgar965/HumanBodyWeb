@@ -86,9 +86,6 @@
     .toolbar-dd-item.gauss-gedaempft { color: #888; }
     .gauss-marke { font-size: 0.65rem; color: #4caf50; }
     .gauss-pfeil { font-size: 0.65rem; }
-    /* Gesperrter Knopf (Export läuft). Stand als `style.opacity = '0.5'`
-       im JavaScript — Befund `jsstilfassungen`. */
-    .knopf-gesperrt { opacity: 0.5; }
     .lib-item {
         padding: 4px 8px; font-size: 0.78rem; color: var(--text); cursor: grab;
         border-radius: 3px; word-break: break-all;
@@ -182,14 +179,6 @@
     .studio-properties h3 { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 8px; }
     .prop-group { margin-bottom: 12px; }
     .prop-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 0.8rem; }
-    /* Export-Tab: Breiten-/Höhen- und Crop-Zahlenfelder nebeneinander, nur
-       sichtbar wenn „Benutzerdefiniert" bzw. „Bildausschnitt" gewählt ist
-       (werzeugleiste dazu in `export_video.js`, nicht hier). */
-    .export-massfeld { display: none; }
-    .export-massfeld.an { display: flex; }
-    .export-zahl { width: 70px; }
-    .export-crf-zeile { display: flex; align-items: center; gap: 6px; flex: 1; }
-    .export-crf-regler { flex: 1; }
     .prop-row label { color: var(--text-muted); min-width: 70px; }
     .prop-row input, .prop-row select {
         flex: 1; padding: 3px 6px; background: var(--bg-card); color: var(--text);
@@ -380,17 +369,6 @@
 }   /* 3x */
 .hb-abstand-unten.hb-abstand-unten.hb-abstand-unten { margin-bottom:6px; }   /* 3x */
 .hb-balken.hb-balken.hb-balken { height:4px; background:var(--bg-card); border-radius:2px; overflow:hidden; }   /* 4x */
-/* Die Fuellung des Balkens. Stand bis zum 30.08.2026 in vier Fassungen:
-   zweimal als erzeugte Klasse `hb-height-100`, zweimal inline mit der Farbe
-   der Engine. `export1.js` setzt nur noch die Breite. */
-.cloth-progress-fill {
-    height:100%;
-    width:0%;
-    background:#4caf50;
-    transition:width 0.25s;
-}
-.cloth-progress[data-engine="warp_blender"] .cloth-progress-fill { background:#00bcd4; }
-.cloth-progress[data-engine="warp_only"] .cloth-progress-fill { background:#e91e63; }
 .hb-dehnt-fein.hb-dehnt-fein.hb-dehnt-fein { flex:1; font-size:0.72rem; }   /* 3x */
 .hb-erklaerung.hb-erklaerung.hb-erklaerung {
     font-size:0.7rem;
@@ -448,28 +426,18 @@
     font-size:0.7rem;
     color:var(--text-muted);
 }   /* 2x */
-/* Gefuellte Knoepfe: der Anwenden-Knopf der Werkzeuge und die vier
-   Export-Knoepfe der Cloth-Engines. Standen am 30.08.2026 in VIER Fassungen —
-   zwei erzeugte Klassen (mit sechs gleichen Zeilen, Befund `doppelcode`) und
-   zwei Inline-Stile an den Engines 2 und 3, die sich nur in der Farbe
-   unterschieden. `.cloth-export-btn` hatte bis dahin ueberhaupt keine Regel:
-   Die Klasse stand nur im JavaScript, das die Knoepfe anbindet. */
-.hb-knopf-anwenden.hb-knopf-anwenden.hb-knopf-anwenden,
-.cloth-export-btn {
+/* Gefüllter Knopf: der Anwenden-Knopf der Werkzeuge (die Cloth-Export-Knöpfe,
+   die diese Regel bis zum 21.11.2026 mitbenutzten, sind mit dem Reiter
+   „Export1 (Cloth)“ weg). */
+.hb-knopf-anwenden.hb-knopf-anwenden.hb-knopf-anwenden {
     color:#fff;
     border:none;
     border-radius:4px;
     cursor:pointer;
     font-size:0.8rem;
-}
-.hb-knopf-anwenden.hb-knopf-anwenden.hb-knopf-anwenden {
     padding:5px 12px;
     background:var(--accent);
 }   /* 2x */
-/* Vier Engines, vier Farben — die Grundform steht oben. */
-.cloth-export-btn { width:100%; padding:6px 10px; background:#4caf50; }
-.cloth-export-btn[data-engine="warp_blender"] { background:#00bcd4; }
-.cloth-export-btn[data-engine="warp_only"] { background:#e91e63; }
 .hb-width-16px.hb-width-16px.hb-width-16px { width:16px; color:#e91e63; }   /* 2x */
 </style>
 {% endblock %}
@@ -605,8 +573,6 @@
             <div class="hb-trennlinie"></div>
             <div class="toolbar-dd-item" id="dd-help-animations"><i
                  class="fas fa-running hb-symbolspalte"></i> Animationen</div>
-            <div class="toolbar-dd-item" id="dd-help-export"><i
-                 class="fas fa-file-export hb-symbolspalte"></i> Export (MP4 + Cloth)</div>
         </div>
     </div>
     <div class="hb-dehnt"></div>
@@ -719,10 +685,8 @@
         <div class="props-tabs">
             <div class="props-tab active" data-tab="props">Eigenschaften</div>
             <div class="props-tab" data-tab="tools">Tools</div>
-            <div class="props-tab" data-tab="export">Export</div>
+            {# 21.11.2026, Edgar: „alte Export-Reiter können weg“ — „Export“ (Video aus dem Viewport) und „Export1 (Cloth)“ sind ausgebaut, MP4 kommt aus „Rendern“ #}
             <div class="props-tab" data-tab="rendern" title="Render mit allen Reglern, Export GLB/OBJ/Blender/MP4 (Exportleiste, nur Genesis 9)"><i class="fas fa-film"></i> Rendern</div>
-            <div class="reiterumbruch"></div>
-            <div class="props-tab reiter-export" data-tab="export1"><i class="fas fa-tshirt"></i> Export1 (Cloth)</div>
         </div>
         <div id="props-tab-props" class="props-tab-content active">
             <div id="props-content">
@@ -769,99 +733,11 @@
                 </div>
             </div>
         </div>
-        <div id="props-tab-export" class="props-tab-content">
-            <div id="export-content">
-                <h3 class="hb-abschnittstitel"><i class="fas fa-video"></i> Video Export</h3>
-                <div class="prop-group">
-                    <div class="prop-row"><label>Zielordner:</label><input type="text" id="export-target-dir" value=""
-                         class="hb-flex-1" placeholder="Einstellungen > BVH Studio"></div>
-                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="export-filename"
-                         value="bvh_studio_export.mp4" class="hb-dehnt"></div>
-                    <div class="prop-row"><label>Von (Frame):</label><input type="number" id="export-from" value="0"
-                         min="0"></div>
-                    <div class="prop-row"><label>Bis (Frame):</label><input type="number" id="export-to" value="0"
-                         min="0"></div>
-                    <div class="prop-row"><label>FPS:</label>
-                        <select id="export-fps">
-                            <option value="24">24</option>
-                            <option value="30" selected>30</option>
-                            <option value="60">60</option>
-                        </select>
-                    </div>
-                    <div class="prop-row"><label>Aufloesung:</label>
-                        <select id="export-resolution" data-reihenfolge="fest">
-                            <option value="viewport">Viewport (aktuell)</option>
-                            <option value="720">720p (1280&times;720)</option>
-                            <option value="1080" selected>1080p (1920&times;1080)</option>
-                            <option value="1440">1440p (2560&times;1440)</option>
-                            <option value="2160">4K (3840&times;2160)</option>
-                            <option value="custom">Benutzerdefiniert</option>
-                        </select>
-                    </div>
-                    <div class="prop-row export-massfeld" id="export-custom-res">
-                        <label></label>
-                        <input type="number" id="export-width" value="1920" min="16" max="7680" class="export-zahl"
-                               placeholder="Breite">
-                        <input type="number" id="export-height" value="1080" min="16" max="4320" class="export-zahl"
-                               placeholder="H&ouml;he">
-                    </div>
-                    <div class="prop-row"><label>Format:</label>
-                        <select id="export-format">
-                            <option value="mp4" selected>MP4 (H.264)</option>
-                            <option value="webm">WebM (VP9)</option>
-                            <option value="png">PNG Sequenz (ZIP)</option>
-                        </select>
-                    </div>
-                    <div class="prop-row"><label>Qualitaet (CRF):</label>
-                        <div class="export-crf-zeile">
-                            <input type="range" id="export-crf" min="0" max="51" value="18" class="export-crf-regler">
-                            <span id="export-crf-val">18</span>
-                        </div>
-                    </div>
-                    <div class="prop-row"><label>Hintergrund:</label>
-                        <select id="export-bg">
-                            <option value="scene" selected>Szene (wie im Viewport)</option>
-                            <option value="transparent">Transparent (nur PNG/WebM)</option>
-                            <option value="greenscreen">Greenscreen</option>
-                            <option value="black">Schwarz</option>
-                            <option value="white">Wei&szlig;</option>
-                        </select>
-                    </div>
-                    <div class="prop-row"><label>Bildausschnitt:</label>
-                        <input type="checkbox" id="export-crop-an">
-                    </div>
-                    <div class="prop-row export-massfeld" id="export-crop-felder">
-                        <label></label>
-                        <input type="number" id="export-crop-x" value="0" min="0" class="export-zahl" placeholder="X">
-                        <input type="number" id="export-crop-y" value="0" min="0" class="export-zahl" placeholder="Y">
-                        <input type="number" id="export-crop-w" value="0" min="1" class="export-zahl" placeholder="Breite">
-                        <input type="number" id="export-crop-h" value="0" min="1" class="export-zahl" placeholder="H&ouml;he">
-                    </div>
-                    <div class="prop-row"><label>Engine:</label>
-                        <select id="export-engine">
-                            <option value="server" selected>Server (ffmpeg)</option>
-                            <option value="browser">Browser (MediaRecorder, immer WebM)</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="export-progress">
-                    <div id="export-status-text">Bereit</div>
-                    <div class="fortschritt-rinne">
-                        <div id="export-progress-bar"></div>
-                    </div>
-                </div>
-                <div class="exportknopfzeile">
-                    <button id="export-start"><i class="fas fa-circle fehlertext"></i> Export starten</button>
-                    <button id="export-cancel"><i class="fas fa-stop"></i> Abbrechen</button>
-                </div>
-            </div>
-        </div>
         {# 20.11.2026, Edgar: „/studio/ … da drin möchte ich den Renderer usw. haben“ — die Exportleiste für die Genesis-9-Figur der gewählten Spur (`Studioexportquelle`) #}
         <div id="props-tab-rendern" class="props-tab-content">
             <div class="hb-hinweis" id="studio-rendern-hinweis" hidden>Der Render rechnet nur Genesis-9-Figuren: über „Modell hinzufügen → Genesis 9“ eine Figur ins Projekt stellen.</div>
             {% include "_exportleiste.html" with bereich="studio" kennung="basis" ohne_speichern=1 %}
         </div>
-        {% include "_studio_export1.html" %}
         <!-- Debug Panel -->
         <div id="debug-panel">
             <div class="export-abschnittstitel"><i class="fas fa-bug"></i> Debug</div>
@@ -1095,64 +971,6 @@
     font-size:0.8rem;
     color:var(--text-muted);
 }
-#export-progress {
-    display:none;
-    margin-bottom:10px;
-}
-#export-status-text {
-    font-size:0.8rem;
-    color:var(--text-muted);
-    margin-bottom:4px;
-}
-#export-progress-bar {
-    height:100%;
-    background:var(--accent);
-    width:0%;
-    transition:width 0.2s;
-}
-#export-start {
-    flex:1;
-    padding:6px 12px;
-    background:var(--accent);
-    color:#fff;
-    border:none;
-    border-radius:4px;
-    cursor:pointer;
-    font-size:0.82rem;
-}
-#export-cancel {
-    padding:6px 12px;
-    background:var(--bg-card);
-    color:var(--text-muted);
-    border:1px solid var(--border);
-    border-radius:4px;
-    cursor:pointer;
-    font-size:0.82rem;
-    display:none;
-}
-#cloth-duration {
-    width:70px;
-}
-#cloth-export-status {
-    display:none;
-    margin-top:12px;
-    padding:8px;
-    background:var(--bg-card);
-    border-radius:4px;
-    font-size:0.75rem;
-    color:var(--text-muted);
-}
-#cloth-export-cancel {
-    margin-top:6px;
-    padding:4px 10px;
-    background:var(--bg-secondary);
-    color:var(--text);
-    border:1px solid var(--border);
-    border-radius:3px;
-    cursor:pointer;
-    font-size:0.75rem;
-    display:none;
-}
 #debug-panel {
     border-top:1px solid var(--border);
     padding:8px 12px;
@@ -1191,78 +1009,10 @@
     border-color:var(--border);
     margin:16px 0;
 }
-.cloth-erklaerung.cloth-erklaerung.cloth-erklaerung {
-    font-size:0.72rem;
-    color:var(--text-muted);
-    margin-bottom:12px;
-    line-height:1.5;
-}
-.cloth-titel.cloth-titel.cloth-titel {
-    font-size:0.85rem;
-    color:var(--accent);
-    margin-bottom:8px;
-}
-.engine-beschreibung.engine-beschreibung.engine-beschreibung {
-    font-size:0.72rem;
-    color:var(--text-muted);
-    margin-bottom:8px;
-    line-height:1.4;
-}
-.engine-empfehlung.engine-empfehlung.engine-empfehlung {
-    color:var(--accent);
-    font-weight:400;
-    font-size:0.7rem;
-}
-.engine-rahmen.engine-rahmen.engine-rahmen {
-    border:1px solid var(--border);
-    border-radius:6px;
-    padding:10px;
-    margin-top:12px;
-}
-.engine-rahmen-skinning.engine-rahmen-skinning.engine-rahmen-skinning {
-    border:1px solid #4caf50;
-    padding:8px;
-    border-radius:4px;
-    margin-top:8px;
-}
-.engine-titel-blender.engine-titel-blender.engine-titel-blender {
-    font-size:0.82rem;
-    color:#4caf50;
-    font-weight:600;
-    margin-bottom:4px;
-}
-.engine-titel-skinning.engine-titel-skinning.engine-titel-skinning {
-    font-weight:600;
-    color:#4caf50;
-    margin-bottom:6px;
-}
-.engine-titel-warp.engine-titel-warp.engine-titel-warp {
-    font-size:0.82rem;
-    color:#00bcd4;
-    font-weight:600;
-    margin-bottom:4px;
-}
-.engine-titel-warppur.engine-titel-warppur.engine-titel-warppur {
-    font-size:0.82rem;
-    color:#e91e63;
-    font-weight:600;
-    margin-bottom:4px;
-}
 .export-abschnittstitel.export-abschnittstitel.export-abschnittstitel {
     font-size:0.78rem;
     color:var(--accent);
     margin-bottom:4px;
-}
-.exportfussnote.exportfussnote.exportfussnote {
-    margin-top:10px;
-    font-size:0.7rem;
-    color:var(--text-muted);
-    line-height:1.4;
-}
-.exportknopfzeile.exportknopfzeile.exportknopfzeile {
-    display:flex;
-    gap:6px;
-    margin-top:10px;
 }
 .leistenbeschriftung.leistenbeschriftung.leistenbeschriftung {
     font-size:0.78rem;
@@ -1290,15 +1040,6 @@
 .menue-trenner.menue-trenner.menue-trenner {
     border-top:1px solid var(--border,#334);
     margin:4px 0;
-}
-.reiter-export.reiter-export.reiter-export {
-    flex:1;
-    text-align:center;
-    background:rgba(233,30,99,0.08);
-}
-.reiterumbruch.reiterumbruch.reiterumbruch {
-    flex-basis:100%;
-    height:0;
 }
 .spurwerkzeugleiste.spurwerkzeugleiste.spurwerkzeugleiste {
     display:flex;
