@@ -1,0 +1,37 @@
+{# Übersicht der Methoden auf /settings/kleider/ (21.11.2026, Edgar: „mach nochmal eine klare Tabelle und Erklärungen … zu den Methoden … mit allen offenen Punkten“). Inhalt: meshgenesis/kleidmethoden.json #}
+<div class="settings-section" id="kleider-methoden">
+    <h3>Methoden im Überblick <span class="hint">Stand {{ methoden_stand }}, gemessen am Zauberer (Robe)</span></h3>
+    <p class="hint">Je Kleidungszeile entsteht ein Stück in einem oder mehreren Wegen. Der <strong>Kostüm-Weg</strong> ist die Eingabe
+        (aus dem Foto-Netz ausgeschnitten); Kleiderbibliothek, Eigen und Drapieren bauen daraus ihr Stück. Welcher Weg angezeigt wird,
+        wählen die Knöpfe über dem Genesis-Ergebnis des Jobs. „Eigen“ heißt bei Kleidern etwas anderes als bei Haar und Bart.</p>
+    {% for gruppe in methoden_gruppen %}
+    <h4>{{ gruppe.name }}</h4>
+    <p class="hint">{{ gruppe.text }}</p>
+    <table class="methoden-tabelle">
+        <thead>
+            <tr><th>Methode</th><th>Was sie tut</th><th>Gut</th><th>Offene Punkte</th></tr>
+        </thead>
+        <tbody>
+        {% for m in gruppe.methoden %}
+            <tr>
+                <td><strong>{{ m.name }}</strong><br><span class="hint">Weg {{ m.weg }}</span><br><span class="hint">{{ m.wahl }}</span></td>
+                <td>{{ m.was }}<br><span class="hint">Quelle: {{ m.quelle }}</span></td>
+                <td><ul>{% for g in m.gut %}<li>{{ g }}</li>{% endfor %}</ul></td>
+                <td><ul class="offen">{% for o in m.offen %}<li>{{ o }}</li>{% endfor %}</ul></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+</div>
+<style>
+.methoden-tabelle { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 0.8rem; }
+.methoden-tabelle th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.methoden-tabelle td { vertical-align: top; padding: 8px; border-bottom: 1px solid var(--border); }
+.methoden-tabelle td:nth-child(1) { width: 14%; }
+.methoden-tabelle td:nth-child(2) { width: 24%; }
+.methoden-tabelle td:nth-child(3) { width: 20%; }
+.methoden-tabelle ul { margin: 0; padding-left: 16px; }
+.methoden-tabelle ul.offen li { margin-bottom: 4px; }
+#kleider-methoden h4 { margin: 14px 0 2px; font-size: 0.9rem; }
+</style>

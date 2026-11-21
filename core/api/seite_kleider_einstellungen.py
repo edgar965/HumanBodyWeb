@@ -26,14 +26,20 @@ class KleiderEinstellungenSeite(TemplateView):
 
     def get_context_data(self, **kwargs):
         from ..dienste.garmentbauart import Garmentbauart
+        from ..dienste.kleidregelnkatalog import Kleidregelnkatalog
         from ..models import AppSettings
 
         prefs = dict(AppSettings.load().ui_prefs or {})
         for name, wert in self.VORGABEN.items():
             prefs[name] = '1' if str(prefs.get(name, wert)) in ('1', 'True', 'true') else '0'
         # GarmentCode-Bau (25.09.2026): eine Wahl, kein Schalter.
+        # Methoden-Übersicht und Kleidungsregeln (21.11.2026, Konzept `2026-11-21_bibliothek-anpassen-konzept.md`, Abschnitt 10; Katalog `meshgenesis/kleidregeln.json`)
+        voreinstellungen, alle_kennungen = Kleidregelnkatalog.voreinstellungen()
+        methoden_stand, methoden_gruppen = Kleidregelnkatalog.methoden()
         return dict(super().get_context_data(**kwargs), prefs=prefs,
-                    gc_bauart=Garmentbauart.aus(prefs), gc_bauarten=Garmentbauart.WAHLEN)
+                    gc_bauart=Garmentbauart.aus(prefs), gc_bauarten=Garmentbauart.WAHLEN,
+                    regel_gruppen=Kleidregelnkatalog.regeln(prefs), regel_voreinstellungen=voreinstellungen, regel_alle=alle_kennungen,
+                    regel_praefix=Kleidregelnkatalog.PRAEFIX, methoden_stand=methoden_stand, methoden_gruppen=methoden_gruppen)
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heisst sonst ``view``.

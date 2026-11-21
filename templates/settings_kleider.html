@@ -6,6 +6,8 @@
 {% block formular_zusatz %} id="kleider-settings-form"{% endblock %}
 
 {% block einstellungen_karten %}
+{% include "settings_kleider_methoden.html" %}
+{% include "settings_kleider_regeln.html" %}
 <div class="settings-section">
     <h3>Kleidung in der Bewegung</h3>
     <div class="settings-row">
@@ -86,5 +88,13 @@ import { Gcstueckeknopf } from "{% fassungspfad 'js/einstellungen/gcstueckeknopf
 
 Vorgabenformular.anmelden('kleider-settings-form', 'Kleider-Einstellungen gespeichert — gilt nach dem Neuladen der Seiten.');
 Gcstueckeknopf.aufbauen();
+
+// Voreinstellungen der Kleidungsregeln: setzt nur die Häkchen, gespeichert wird mit „Speichern“ wie alles andere
+for (const knopf of document.querySelectorAll('#kleider-regeln [data-regeln]')) {
+    knopf.addEventListener('click', () => {
+        const an = new Set(JSON.parse(knopf.dataset.regeln));
+        for (const feld of document.querySelectorAll('#kleider-regeln input[type=checkbox][data-kennung]')) feld.checked = an.has(feld.dataset.kennung);
+    });
+}
 </script>
 {% endblock %}

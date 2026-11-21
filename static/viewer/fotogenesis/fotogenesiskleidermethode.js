@@ -31,7 +31,8 @@ export class Fotogenesiskleidermethode extends Fotogenesisschalterleiste {
         this._gruppe('Kleider', [
             { wert: 'bibliothek', text: 'Kleiderbibliothek', titel: 'Nur die fertigen Stücke der Kleiderbibliothek, in Länge, Weite und Farbe an das Stück aus dem Netz angepasst' },
             { wert: 'drapieren', text: 'Drapieren', titel: 'Nur die Stücke aus dem Netz als Schnittmuster, von GarmentCode genäht und als Stoff drapiert — Stücke ohne Drapierergebnis fehlen' },
-            { wert: 'gemischt', text: 'Gemischt', titel: 'Drapiert, wo es ein brauchbares Stück gibt, sonst das Stück der Kleiderbibliothek' },
+            // „Gemischt“ nicht mehr als Knopf (21.11.2026, Edgar: „gemischt methode ist auch gaga, am besten entferne die aus dem UI“): es erbt die Schwächen beider Wege. `methodeSetzen('gemischt')`
+            // und die Hinweise unten bleiben, damit sich der Knopf wieder einsetzen lässt: { wert: 'gemischt', text: 'Gemischt', titel: 'Drapiert, wo es ein brauchbares Stück gibt, sonst das Stück der Kleiderbibliothek' }
             { wert: 'eigen', text: 'Eigen', titel: 'Kleidung als eigene Stücke, an das Stück aus dem Netz gepasst — Form und Farbe aus dem Netz; Haar, Hut, Requisiten und Schuhe wie in der Kleiderbibliothek' },
         ], 'methode');
         this.hinweis = behaelter.appendChild(Object.assign(document.createElement('span'), { className: 'fotogenesis-steuername' }));

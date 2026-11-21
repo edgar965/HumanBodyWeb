@@ -1,0 +1,47 @@
+{# Kleidungsregeln auf /settings/kleider/ (21.11.2026, Edgar: „die Kleidungsregeln sollen auswählbar sein unter Einstellungen – Kleider, für alle Pipelines (Eigen, Drapieren, Bibliothek)“). Katalog: meshgenesis/kleidregeln.json #}
+<div class="settings-section" id="kleider-regeln">
+    <h3>Kleidungsregeln</h3>
+    <p class="hint"><strong>Stand: die Wahl wird gespeichert, die Kette liest sie noch nicht.</strong> Die Schalter ändern heute kein Ergebnis;
+        sie werden in Stufen angeschlossen (erst Bibliothek, dann Eigen, dann Drapieren, Konzept 2026-11-21_bibliothek-anpassen-konzept.md,
+        Abschnitt 10). Die Spalten zeigen, wo die Regel schon läuft: <em>läuft</em>, <em>teilweise</em>, <em>nur in anderem Weg</em>
+        (dort gebaut, hier noch nicht), <em>nicht gebaut</em>, <em>nicht gemessen</em> (Drapieren: GarmentCode näht Säume und Kragen selbst).</p>
+    <div class="settings-row regel-knoepfe">
+        <label>Voreinstellung:</label>
+        {% for v in regel_voreinstellungen %}
+        <button type="button" class="btn btn-secondary" data-regeln='{{ v.json }}' title="{{ v.text }}">{{ v.name }}</button>
+        {% endfor %}
+        <span class="hint">Danach „Speichern“ unten.</span>
+    </div>
+    <table class="methoden-tabelle regeln-tabelle">
+        <thead>
+            <tr><th></th><th>Regel</th><th>Bibliothek</th><th>Eigen</th><th>Drapieren</th><th>Prüfung</th></tr>
+        </thead>
+        {% for gruppe in regel_gruppen %}
+        <tbody>
+            <tr class="regel-gruppe"><td colspan="6">{{ gruppe.name }}</td></tr>
+            {% for r in gruppe.regeln %}
+            <tr>
+                <td>
+                    <input type="hidden" name="{{ r.schluessel }}" value="0">
+                    <input type="checkbox" name="{{ r.schluessel }}" id="{{ r.schluessel }}" value="1" data-kennung="{{ r.kennung }}"{% if r.an %} checked{% endif %}>
+                </td>
+                <td><label for="{{ r.schluessel }}"><strong>{{ r.nr }}. {{ r.name }}</strong></label><br><span class="hint">{{ r.text }}</span></td>
+                {% for weg, text, stand in r.wege %}<td class="stand stand-{{ stand }}">{{ text }}</td>{% endfor %}
+                <td class="hint">{{ r.messung }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% endfor %}
+    </table>
+</div>
+<style>
+.regeln-tabelle td:nth-child(1) { width: 3%; }
+.regeln-tabelle td:nth-child(2) { width: 42%; }
+.regeln-tabelle td.stand { font-size: 0.75rem; white-space: nowrap; }
+.regeln-tabelle td.stand-gebaut { color: #3fb950; }
+.regeln-tabelle td.stand-teilweise, .regeln-tabelle td.stand-herauszuloesen { color: #d29922; }
+.regeln-tabelle td.stand-neu { color: #f85149; }
+.regeln-tabelle td.stand-nicht_gemessen { color: var(--text-muted); }
+.regeln-tabelle tr.regel-gruppe td { color: var(--accent); font-weight: 600; padding-top: 14px; }
+.regel-knoepfe .btn { padding: 3px 10px; }
+</style>
