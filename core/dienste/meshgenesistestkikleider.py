@@ -18,6 +18,7 @@ import torch
 from KoerperKI_alle.npztorch import Npztorch
 import json
 import logging
+from .kleidregelnstand import Kleidregelnstand
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,8 @@ class Meshgenesistestkikleider:
     #: Kostüm-Wegs und mit der Passform angepasst (`meshgenesis/meshgenesis_garderobe_lauf.py`). In solchen Tests ist z die Vorgabe (`Kikleiderliste.garderobe_entscheidet`) — Edgar hat am
     #: 12.11.2026 „Garderobe als Vorgabe“ bejaht (Konzept Abschnitt 9, Frage 1); z steht darum nicht in `AUS_DER_BIBLIOTHEK`.
     #: e (20.11.2026, Edgar: „mach doch einen dritten Modus für die Kleider - "Eigen"“): eigenes Stück, an das Netzstück gepasst (`meshgenesis_eigen_lauf.py`); wählbar, nie Vorgabe
-    KI = ('k', 's', 'h', 'f', 'g', 'z', 'e')
+    #: p (21.11.2026, Edgar: „baue kandidatenwahl als extra Methode“): das passendste Stück der Kleiderbibliothek aus mehreren Kandidaten (`meshgenesis_passend_lauf.py`); wählbar, nie Vorgabe
+    KI = ('k', 's', 'h', 'f', 'g', 'z', 'e', 'p')
     VERGLEICH = ('d', 'n')
     WEGE = KI + VERGLEICH
     #: Wege, deren Netz aus der Bibliothek kommt (h: ein fertiges Garderobe-Stück, die KI wählt nur nach ihren Haarmaßen) — die Vorgabe „KI“ nimmt sie nie von selbst, nur auf eigene Wahl
@@ -45,7 +47,8 @@ class Meshgenesistestkikleider:
              'f': 'Drapieren: Schnitt aus dem Stück (Nähte vom Körper, flachgelegt), GarmentCode näht und drapiert es als Stoff',
              'g': 'KI: Schicht auf dem Körper (Form des Stücks aus dem Schichtkopf, gegen die Zielstücke trainiert)',
              'z': 'Kleiderbibliothek: fertiges Stück, nach den bedeckten Körperstellen gewählt, Länge und Weite aus dem Netz (Genesis zuerst)',
-             'e': 'Eigen: eigenes Stück, an das Stück aus dem Netz gepasst (Form und Farbe aus dem Netz)'}
+             'e': 'Eigen: eigenes Stück, an das Stück aus dem Netz gepasst (Form und Farbe aus dem Netz)',
+             'p': 'Passend: das passendste Stück der Kleiderbibliothek aus mehreren Kandidaten (kleinster Abstand zum Netzstück), mit Passform-Morph'}
 
     @staticmethod
     def lesen(ordner):
@@ -85,6 +88,7 @@ class Meshgenesistestkikleider:
                     eintrag[weg] = dict(e, netz=adresse.format(weg=weg, id=st['id']))
                 if isinstance(eintrag.get(weg), dict) and anatomie is not None:
                     eintrag[weg] = cls._anatomie_tragen(eintrag[weg], anatomie, st.get('art'))
+            Kleidregelnstand.ergaenzen(eintrag, ordner, st['id'])
             aus.append(eintrag)
         info = {k: kopf.get(k) for k in ('gerechnet', 'grund', 'zerlegung', 'ausschnitt', 'quelle_ki', 'schnitt_lauf', 'probe')}
         return aus, info

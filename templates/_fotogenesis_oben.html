@@ -47,6 +47,7 @@ Zeile 1 rechts neben dem Genesis-Ergebnis (`.fotogenesis-seitenleiste`), sonst w
         <label title="{{ pshuman_wege.keine_kleider.beschreibung }}"><input type="checkbox" name="keine_kleider"{% if job.pshuman.keine_kleider %} checked{% endif %}> {{ pshuman_wege.keine_kleider.text }}</label>
         <span class="hb-hinweis" data-meldung></span>
     </form>{% endif %}
+    {% include "_fotogenesis_kleiderregeln.html" %}
     <a href="{% url 'fotogenesis' %}" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
     {% comment %} 24.10.2026, Edgar: „körpergröße kann ich angeben im Job oben“ — echte Fotos haben keinen Maßstab (dritter Einpass-Lauf: Figur 1,710 → 1,435 m). `Fotogenesiskoerpergroesse`. {% endcomment %}
     {% if ist_test %}<form class="fotogenesis-groesse" id="fotogenesis-groesse" data-job="{{ job.id }}"

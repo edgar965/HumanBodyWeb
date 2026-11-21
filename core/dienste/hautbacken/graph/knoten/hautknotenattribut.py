@@ -3,30 +3,14 @@
 (`kernel/svm/vertex_color.h`, `svm_node_vertex_color`: fehlt die Ebene, sind Farbe und Alpha 0; sonst RGBA → Farbe = xyz, Alpha = w, Bump-Versatz `val += dx · Filterbreite`); `main` ersetzt ihn
 später durch einen Attribut-Knoten mit `missing = 0` (`VertexColorNode::expand`) — dasselbe Verhalten. Der Attribut-Knoten liest wie `kernel/svm/attribute.h`
 (`svm_node_attr_surface_eval`: „Fac" = Mittel von xyz). Byte-Farben sind schon im Export in Linear umgerechnet (`blendnetzattribute.py`, wie `AttributeConverter<ColorGeometry4b>`).
+Kern `hb_farbattribut` (`hautbackenkerne_cu/hautknotenkern.cuh`; bis 21.11.2026 Warp hier).
 """
 
-import warp as wp
-
-from ...hautfunktionen import average3
+from ...hautbackenkernbau import Hautbackenkernbau
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten
 
 __all__ = ['Hautknotenattribut']
-
-
-@wp.kernel
-def _farbattribut(val: wp.array(dtype=wp.vec4), dx: wp.array(dtype=wp.vec4), dy: wp.array(dtype=wp.vec4), modus: int, breite: float, farbe: wp.array(dtype=wp.vec3),
-                  alpha: wp.array(dtype=wp.float32), fac: wp.array(dtype=wp.float32)):
-    i = wp.tid()
-    v = val[i]
-    if modus == 1:
-        v = v + dx[i] * breite
-    elif modus == 2:
-        v = v + dy[i] * breite
-    rgb = wp.vec3(v[0], v[1], v[2])
-    farbe[i] = rgb
-    alpha[i] = v[3]
-    fac[i] = average3(rgb)
 
 
 class Hautknotenattribut(Hautknoten):
@@ -51,5 +35,5 @@ class Hautknotenattribut(Hautknoten):
             return {'Color': nichts, 'Alpha': ctx.konstante('f', 0.0)}
         g = graph.geraet
         farbe, alpha, fac = Hautwert.leer('c', ctx.n, g), Hautwert.leer('f', ctx.n, g), Hautwert.leer('f', ctx.n, g)
-        wp.launch(_farbattribut, dim=ctx.n, inputs=[feld[0], feld[1], feld[2], modus[0], float(modus[1]), farbe.daten, alpha.daten, fac.daten], device=g)
+        Hautbackenkernbau.lauf('hb_farbattribut', ctx.n, feld[0], feld[1], feld[2], int(modus[0]), float(modus[1]), farbe.daten, alpha.daten, fac.daten)
         return {'Color': farbe, 'Vector': Hautwert('v', farbe.daten), 'Alpha': alpha, 'Fac': fac}

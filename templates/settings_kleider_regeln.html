@@ -1,10 +1,12 @@
 {# Kleidungsregeln auf /settings/kleider/ (21.11.2026, Edgar: „die Kleidungsregeln sollen auswählbar sein unter Einstellungen – Kleider, für alle Pipelines (Eigen, Drapieren, Bibliothek)“). Katalog: meshgenesis/kleidregeln.json #}
 <div class="settings-section" id="kleider-regeln">
     <h3>Kleidungsregeln</h3>
-    <p class="hint"><strong>Stand: die Wahl wird gespeichert, die Kette liest sie noch nicht.</strong> Die Schalter ändern heute kein Ergebnis;
-        sie werden in Stufen angeschlossen (erst Bibliothek, dann Eigen, dann Drapieren, Konzept 2026-11-21_bibliothek-anpassen-konzept.md,
-        Abschnitt 10). Die Spalten zeigen, wo die Regel schon läuft: <em>läuft</em>, <em>teilweise</em>, <em>nur in anderem Weg</em>
-        (dort gebaut, hier noch nicht), <em>nicht gebaut</em>, <em>nicht gemessen</em> (Drapieren: GarmentCode näht Säume und Kragen selbst).</p>
+    <p class="hint"><strong>Stand: drei Regeln setzt die Stufe „Kleidungsregeln“ durch</strong> — <em>Fetzen weg</em>, <em>Glatter Rand</em> und <em>Rock an beiden Beinen</em>,
+        als Schritt nach Kleiderbibliothek, Drapieren und Eigen, bei jedem neuen Lauf, wenn der Schalter an ist. Die Wahl gilt ab dem nächsten Start einer Rechnung; ein Job
+        kann sie überstimmen (Foto-Genesis-Seite, „Kleidungsregeln dieses Jobs“). Die übrigen Regeln laufen in ihrem Weg von selbst oder sind noch nicht gebaut: ihr Schalter
+        ändert dann nichts, die Stufe schreibt es je Stück ehrlich in den Eintrag (Konzept 2026-11-21_bibliothek-anpassen-konzept.md, Abschnitt 10). Die Spalten zeigen, wo die
+        Regel läuft: <em>läuft</em>, <em>teilweise</em>, <em>nur in anderem Weg</em>, <em>nicht gebaut</em>, <em>nicht gemessen</em> (Drapieren: GarmentCode näht Säume
+        und Kragen selbst).</p>
     <div class="settings-row regel-knoepfe">
         <label>Voreinstellung:</label>
         {% for v in regel_voreinstellungen %}

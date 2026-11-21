@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET
 
 from ..dienste.fotogenesisform import Fotogenesisform
 from ..dienste.fotogenesisjobs import Fotogenesisjobs
+from ..dienste.fotogenesiskleiderregeln import Fotogenesiskleiderregeln
 from ..dienste.fotogenesisnormalen import Fotogenesisnormalen
 from ..dienste.fotogenesisgeschlecht import Fotogenesisgeschlecht
 from ..dienste.fotogenesispshuman import Fotogenesispshuman
@@ -85,6 +86,7 @@ class Fotogenesisendpunkte:
                                                'haar_laenge_bereich': (Fotogenesispshuman.HAAR_LAENGE_VON, Fotogenesispshuman.HAAR_LAENGE_BIS, Fotogenesispshuman.HAAR_LAENGE_SCHRITT),
                                                'haut_ki_laeufe': Hautkilaufwahl.auswahl(), 'haut_ki_lauf_text': Fotogenesispshuman.BESCHREIBUNG['haut_ki_lauf'],
                                                'geschlechter': Fotogenesisgeschlecht.WAHL,
+                                               'kleider_regeln_zeilen': Fotogenesiskleiderregeln.zeilen(job) if test else [],
                                                'pshuman_vorschlag': Fotogenesispshumaneingabe.VORSCHLAG})
 
     @staticmethod

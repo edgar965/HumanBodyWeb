@@ -18,6 +18,7 @@ import { Fotogenesisform } from './fotogenesisform.js';
 import { Fotogenesispshuman } from './fotogenesispshuman.js';
 import { Fotogenesispshumaneingabe } from './fotogenesispshumaneingabe.js';
 import { Fotogenesisjobwahl } from './fotogenesisjobwahl.js';
+import { Fotogenesiskleiderregeln } from './fotogenesiskleiderregeln.js';
 import { Fotogenesishautangleich } from './fotogenesishautangleich.js';
 import { Fotogenesishautkorrektur } from './fotogenesishautkorrektur.js';
 import { Fotogenesisweitverdeckung } from './fotogenesisweitverdeckung.js';
@@ -39,6 +40,7 @@ if (start.test === '1') {
     Fotogenesispshuman.binden(element('fotogenesis-pshuman'));
     Fotogenesispshumaneingabe.binden(element('fotogenesis-pshumaneingabe'), element('fotogenesis-jobwahl'));
     Fotogenesisjobwahl.binden(element('fotogenesis-jobwahl'));
+    Fotogenesiskleiderregeln.binden(element('fotogenesis-kleiderregeln'));       // Kleidungsregeln dieses Jobs (21.11.2026)
     Auftragname.binden();
 }
 Fotogenesisgriffel.binden(document.querySelector('.fotogenesis-mit-leiste'));      // Zeile 1: Genesis-Ergebnis | Seitenleiste, Grenze ziehbar (19.11.2026)

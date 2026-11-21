@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Hautbacken — die Haut einer fremden Datei auf die Genesis-Kacheln backen, ohne Blender (NVIDIA Warp auf der GPU).
+"""Hautbacken — die Haut einer fremden Datei auf die Genesis-Kacheln backen, ohne Blender (eigene CUDA-Kerne auf der GPU, `hautbackenkerne_cu/`; bis 21.11.2026 NVIDIA Warp).
 
 Edgar (10.10.2026): „portiere das Backen, mach dafür einen eigenen Ordner, portiere schön objektorientiert, und mache tests, ob das gleiche herauskommt wie bei Blender." und
 „übernimm den ganzen Code, keine Fehler! Erfinde nichts!!" — darum ist der Rechenweg Cycles' Rechenweg, aus dem Blender-Quelltext (v5.2.2) übernommen, und jede Stelle, die davon abweicht

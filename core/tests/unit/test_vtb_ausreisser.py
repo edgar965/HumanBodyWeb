@@ -11,8 +11,13 @@ BDD - GEGEBEN / DANN
     EinSprung           ... im Ort wird erkannt und entfernt, alles danach rückt um den Sprung zurück, davor bitgleich
     EineDrehkippe       ... (drei Bilder je 40°) wird erkannt; danach dreht die Wurzel weiter wie vorher
     PaarweiseBilder     ... (30 fps auf 60 fps verdoppelt) und eine anhaltende Pirouette bleiben unangetastet
+    Anfang              ... (21.11.2026, Edgar „Anfang mit Bvhausreisser filtern“): Zittern der Tiefe in den ersten 0,2 s mit 3,6 m/s (unter
+                        4 m/s) wird erkannt, ab dem Bild danach steht alles wie vorher, der Weg am Anfang schrumpft; dasselbe Zittern mitten
+                        in der Bahn bleibt (dort gilt nur die Schwelle von 4 m/s)
 
-Läuft nur auf Ansage (Regel „Tests nur auf Ansage“). Nicht gelaufen beim Schreiben (20.11.2026).
+Läuft nur auf Ansage (Regel „Tests nur auf Ansage“). Nicht gelaufen beim Schreiben (20.11.2026, Anfang 21.11.2026).
+Sabotage Anfang (von Hand): in `spruenge` `sprung = sprung | self.anfang` weglassen → „Zittern am Anfang erkannt“ rot; in `anwenden`
+den Block „der Anfang rückt an den Tanz“ weglassen → „danach wie vorher“ rot.
 """
 
 import math
@@ -87,6 +92,48 @@ class PaarweiseBilder(unittest.TestCase):
         grad = torch.where(t < 1.0, t * 90.0, 90.0 + (t - 1.0) * 1500.0)  # ab 1 s anhaltend 1.500°/s
         q = _um_y(grad)
         _, p = _gehen(240)
+        _, _, schritte = Bvhausreisser(60.0).anwenden(q, p, 1.0)
+        self.assertEqual(schritte, [])
+
+
+def _zittern(ab, n=240):
+    """Gehen mit 0,3 m/s; ab Bild `ab` zwölf Bilder lang springt die Tiefe (z) je zwei Bilder um ±3 cm (Schritte 6 cm = 3,6 m/s)."""
+    q, p = _gehen(n, m_s=0.3)
+    i = torch.arange(n, device=KARTE)
+    drin = (i >= ab) & (i < ab + 12)
+    p[:, 2] += torch.where(drin, torch.where(((i - ab) // 2) % 2 == 0, 0.03, -0.03), 0.0).to(p.dtype)
+    return q, p
+
+
+class Zwischen(unittest.TestCase):
+    def test_nach_dem_letzten_guten_der_letzte(self):
+        u"""Review 21.11.2026: ein Schritt nach dem letzten guten nahm den VORLETZTEN guten (DanceKurz Bild 1003)."""
+        werte = torch.tensor([[1.0], [2.0], [3.0], [9.0]], dtype=torch.float64, device=KARTE)
+        gut = torch.tensor([True, True, True, False], device=KARTE)
+        self.assertEqual(Bvhausreisser._zwischen(werte, gut)[3, 0].item(), 3.0)
+        gut = torch.tensor([False, True, False, True], device=KARTE)
+        aus = Bvhausreisser._zwischen(torch.tensor([[9.0], [2.0], [9.0], [4.0]], dtype=torch.float64, device=KARTE), gut)
+        self.assertEqual(aus[:, 0].tolist(), [2.0, 2.0, 3.0, 4.0])             # vor dem ersten: der erste; dazwischen linear
+
+
+class Anfang(unittest.TestCase):
+    def test_zittern_am_anfang_erkannt_danach_wie_vorher(self):
+        q, p = _zittern(1)
+        f = Bvhausreisser(60.0)
+        q2, p2, schritte = f.anwenden(q, p, 1.0)
+        anfang = (f.anfang.nonzero()[:, 0] + 1).tolist()
+        self.assertTrue(anfang)
+        self.assertEqual(sorted(schritte), anfang)                          # alle Sprünge kommen aus der Regel des Anfangs
+        self.assertLessEqual(max(anfang), int(Bvhausreisser.ANFANG_S * 60))
+        k = max(anfang) + 1
+        self.assertLess(float((p2[k:] - p[k:]).abs().max()), 1e-12)
+        self.assertLess(float((q2[k:] - q[k:]).abs().max()), 1e-12)
+        weg_vorher = float((p[1:k + 1] - p[:k]).norm(dim=-1).sum())
+        weg_nachher = float((p2[1:k + 1] - p2[:k]).norm(dim=-1).sum())
+        self.assertLess(weg_nachher, 0.5 * weg_vorher)
+
+    def test_sabotage_dasselbe_zittern_in_der_mitte_bleibt(self):
+        q, p = _zittern(120)
         _, _, schritte = Bvhausreisser(60.0).anwenden(q, p, 1.0)
         self.assertEqual(schritte, [])
 

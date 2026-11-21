@@ -4,42 +4,14 @@ Filterbreite als Knotenwert); Blender-Quelltext vom 10.10.2026.
 
 Die Höhe wird dreimal ausgewertet: in der Mitte und an den um `Filterbreite · dx` bzw. `· dy` versetzten Koordinaten (der Bump-Versatz der Attribut- und Koordinatenknoten). Die
 Pixel-Ableitungen beim Backen sind die gepackten (`init_from_bake.h`: `ray.dP = differential_make_compact(dP)`): `differential_from_compact(Ng, dP)` mit den Orthonormalen von Ng —
-nicht die wirklichen Pixelrichtungen (`Hautkontext.differenziale`). Ist der Normal-Eingang nicht verbunden, gilt `sd->N`.
+nicht die wirklichen Pixelrichtungen (`Hautkontext.differenziale`). Ist der Normal-Eingang nicht verbunden, gilt `sd->N`. Kern `hb_bump` (bis 21.11.2026 Warp hier).
 """
 
-import warp as wp
-
-from ...hautfunktionen import safe_normalize3, signf
+from ...hautbackenkernbau import Hautbackenkernbau
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten
 
 __all__ = ['Hautknotenbump']
-
-
-@wp.kernel
-def _bump(h_c: wp.array(dtype=wp.float32), h_x: wp.array(dtype=wp.float32), h_y: wp.array(dtype=wp.float32), normal_ein: wp.array(dtype=wp.vec3),
-          dpx: wp.array(dtype=wp.vec3), dpy: wp.array(dtype=wp.vec3), staerke: wp.array(dtype=wp.float32), abstand: wp.array(dtype=wp.float32), breite: float,
-          umkehren: int, aus: wp.array(dtype=wp.vec3)):
-    """`svm_node_set_bump`."""
-    i = wp.tid()
-    n = normal_ein[i]
-    rx = wp.cross(dpy[i], n)
-    ry = wp.cross(n, dpx[i])
-    c = h_c[i]
-    det = wp.dot(dpx[i], rx)
-    surfgrad = (h_x[i] - c) * rx + (h_y[i] - c) * ry
-    absdet = wp.abs(det)
-    s = staerke[i]
-    scale = abstand[i]
-    if umkehren > 0:
-        scale = scale * -1.0
-    s = wp.max(s, 0.0)
-    ergebnis = safe_normalize3(breite * absdet * n - scale * signf(det) * surfgrad)
-    if ergebnis[0] == 0.0 and ergebnis[1] == 0.0 and ergebnis[2] == 0.0:
-        ergebnis = n
-    else:
-        ergebnis = wp.normalize(s * ergebnis + (1.0 - s) * n)
-    aus[i] = ergebnis
 
 
 class Hautknotenbump(Hautknoten):
@@ -66,6 +38,6 @@ class Hautknotenbump(Hautknoten):
             normal_ein = n_shader
         dpx, dpy = ctx.differenziale()[:2]
         aus = Hautwert.leer('v', ctx.n, g)
-        wp.launch(_bump, dim=ctx.n, inputs=[h_c.daten, h_x.daten, h_y.daten, normal_ein, dpx, dpy, self.ein(graph, ctx, modus, 'Strength', 'f').daten,
-                                            self.ein(graph, ctx, modus, 'Distance', 'f').daten, breite, int(bool(self.eig.get('invert'))), aus.daten], device=g)
+        Hautbackenkernbau.lauf('hb_bump', ctx.n, h_c.daten, h_x.daten, h_y.daten, normal_ein, dpx, dpy, self.ein(graph, ctx, modus, 'Strength', 'f').daten,
+                               self.ein(graph, ctx, modus, 'Distance', 'f').daten, breite, int(bool(self.eig.get('invert'))), aus.daten)
         return {'Normal': aus}

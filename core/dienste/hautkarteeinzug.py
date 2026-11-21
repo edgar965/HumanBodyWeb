@@ -4,20 +4,19 @@ u"""Hautkarteeinzug — `Hauteinzugrechnung.rechnen` (mit `Saumschnitt`, `Saumba
 Wie JS: die offenen Kanten aller deckenden Stücke als Strecken (je Stück in der Reihenfolge, in der die `Map` sie zuerst sah), ihre Mitten als float32
 im Gitter (25 mm); die Randecken (verdeckt, an einem gezeichneten Dreieck); der Weg auf der Haut zur nächsten gezeichneten (`Hautkartewege`, bis
 `BAND_M`); die Dicke je verdecktem Punkt bis `nachgeben / ANTEIL` (float32 wie dort); dann der Kern `einzug`. Konstanten aus `saumband.js`,
-`saumschnitt.js`, `hautdicke.js`.
+`saumschnitt.js`, `hautdicke.js`. Die Kerne `hk_dicke`, `hk_einzug` (`hautkartekerne_cu/hautkarteeinzug.cuh`, `Hautkartekernbau`) — bis 21.11.2026 Warp
+(`hautkartewarpeinzug.py`).
 """
 import torch
-import warp as wp
 
-from . import hautkartewarpeinzug as kern
 from .hautkartegitter import Hautkartegitter
+from .hautkartekernbau import Hautkartekernbau
 from .hautkartewege import Hautkartewege
 
 __all__ = ['Hautkarteeinzug']
 
-
-def _a(t, typ):
-    return wp.from_torch(t.contiguous(), dtype=typ)
+F64, F32, I64, U8 = torch.float64, torch.float32, torch.int64, torch.uint8
+_a = Hautkartekernbau.feld
 
 
 class Hautkarteeinzug:
@@ -55,7 +54,6 @@ class Hautkarteeinzug:
     def rechnen(cls, K, N, KT, maske, stoffe, nachgeben):
         u"""`{werte (n, 3) float32, gesetzt, geschnappt, band, weg (n,) uint8}` — Zahlen als Tensoren (eine Abholung mit der Antwort)."""
         n, g = len(K), K.device
-        strom = wp.stream_from_torch(torch.cuda.current_stream(g))
         verdeckt = maske != 0
         kanten = cls.kanten(stoffe)
         mit_kanten = kanten is not None and len(kanten) > 0
@@ -77,16 +75,16 @@ class Hautkarteeinzug:
         weite = torch.clamp(reich32.to(torch.float64), min=cls.REICHWEITE_M)
         dg = Hautkartegitter(K, cls.DICKENZELLE_M)
         dicken = torch.full((n,), float('inf'), dtype=torch.float32, device=g)
-        wp.launch(kern.dicke, dim=n, inputs=[_a(K, wp.float64), _a(N, wp.float64), _a(dg.schl, wp.int64), _a(dg.folge, wp.int64), cls.DICKENZELLE_M,
-                                             _a(maske, wp.uint8), _a(weite, wp.float64), cls.QUER_M, cls.QUER_MAX_M, _a(dicken, wp.float32)], stream=strom)
-        werte = torch.zeros((n, 3), dtype=torch.float32, device=g)
-        geschnappt = torch.zeros(n, dtype=torch.uint8, device=g)
-        anteil = torch.full((1,), cls.ANTEIL, dtype=torch.float64, device=g)
-        wp.launch(kern.einzug, dim=n, inputs=[_a(K, wp.float64), _a(N, wp.float64), _a(maske, wp.uint8), _a(ecken, wp.uint8), _a(kanten, wp.float64),
-                                              _a(mg.schl, wp.int64), _a(mg.folge, wp.int64), cls.KANTENZELLE_M, int(mit_kanten),
-                                              cls.SCHNAPP_M * cls.SCHNAPP_M, cls.UNTERKANTE_M, _a(abstaende, wp.float64), _a(nachgeben, wp.float32),
-                                              cls.TIEFE_M, cls.STEIGUNG, _a(dicken, wp.float32), _a(anteil, wp.float64), _a(werte, wp.float32),
-                                              _a(geschnappt, wp.uint8)], stream=strom)
+        rufen = Hautkartekernbau.rufen
+        with torch.cuda.device(g):
+            rufen('hk_dicke', n, _a(K, F64), _a(N, F64), _a(dg.schl, I64), len(dg.schl), _a(dg.folge, I64), cls.DICKENZELLE_M, _a(maske, U8), _a(weite, F64),
+                  cls.QUER_M, cls.QUER_MAX_M, dicken)
+            werte = torch.zeros((n, 3), dtype=torch.float32, device=g)
+            geschnappt = torch.zeros(n, dtype=torch.uint8, device=g)
+            anteil = torch.full((1,), cls.ANTEIL, dtype=torch.float64, device=g)
+            rufen('hk_einzug', n, _a(K, F64), _a(N, F64), _a(maske, U8), _a(ecken, U8), _a(kanten, F64), _a(mg.schl, I64), len(mg.schl), _a(mg.folge, I64),
+                  cls.KANTENZELLE_M, int(mit_kanten), cls.SCHNAPP_M * cls.SCHNAPP_M, cls.UNTERKANTE_M, _a(abstaende, F64), _a(nachgeben, F32), cls.TIEFE_M,
+                  cls.STEIGUNG, _a(dicken, F32), anteil, werte, geschnappt)
         im_band = abstaende <= cls.BAND_M
         return {'werte': werte, 'gesetzt': verdeckt.sum(), 'geschnappt': (geschnappt != 0).sum(), 'band': (verdeckt & im_band).sum(),
                 'weg': (verdeckt & ~im_band).to(torch.uint8)}

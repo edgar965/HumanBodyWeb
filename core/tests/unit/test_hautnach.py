@@ -15,7 +15,7 @@ Sabotage-Gegenprobe (11.10.2026, danach rückgängig): in `Hautnachfilter.kern` 
 """
 
 import numpy as np
-import warp as wp
+import torch
 from django.test import SimpleTestCase
 from PIL import Image
 from scipy import ndimage
@@ -37,14 +37,14 @@ class FilterTest(SimpleTestCase):
         f = Hautnachfilter(GERAET)
         a = np.random.default_rng(7).random((90, 130)).astype(np.float32)
         for sigma in (1.5, 3.0, 12.0, 48.0):
-            gpu = f.gauss(wp.array(a, dtype=wp.float32, device=GERAET), sigma).numpy()
+            gpu = f.gauss(f.feld(a, torch.float32), sigma).cpu().numpy()
             self.assertLess(float(np.abs(gpu - ndimage.gaussian_filter(a, sigma)).max()), 5e-6, 'sigma %s' % sigma)
 
     def test_2_dilatation_gleicht_scipy_texel_fuer_texel(self):
         f = Hautnachfilter(GERAET)
         m = np.random.default_rng(3).random((70, 90)) > 0.99
         for schritte in (1, 2, 3):
-            gpu = f.dilatation(wp.array(m.astype(np.uint8), dtype=wp.uint8, device=GERAET), schritte).numpy().astype(bool)
+            gpu = f.dilatation(f.feld(m, torch.uint8), schritte).cpu().numpy().astype(bool)
             self.assertTrue(np.array_equal(gpu, ndimage.binary_dilation(m, iterations=schritte)), 'Schritte %d' % schritte)
 
 

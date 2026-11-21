@@ -5,20 +5,20 @@ die von Hand nachzurechnen sind. Der Vergleich mit Blender selbst (49 Materialie
 Eingänge wie im Principled BSDF von Blender 5.2: Diffus nimmt die Normale des Graphen `n`; Glanz, Metall und Untergrund `ensure_valid_specular_reflection(n)` (nur mit „Bump Map Correction");
 der Coat `sd->N` (die geglättete Normale — ein unverbundener „Coat Normal" hängt Cycles an den Geometry-Knoten), die Sheen-Schicht `normalize(mix(n, sd->N, coat_weight))`.
 
-Sabotage-Gegenprobe (11.10.2026, je eine Änderung in `hautclosurekernel.py`, danach rückgängig): siehe Ende der Datei.
+Sabotage-Gegenprobe (11.10.2026, je eine Änderung in `hautclosurekernel.py`, danach rückgängig): siehe Ende der Datei. Seit 21.11.2026 steht die Rechnung in
+`hautbacken/hautbackenkerne_cu/hautclosurekern.cuh` (CUDA statt Warp); die Gegenprobe wäre dort zu wiederholen (nicht gelaufen).
 """
 
 import math
 
 import numpy as np
-import warp as wp
+import torch
 from django.test import SimpleTestCase
 
 from core.dienste.hautbacken.closure import Hautclosure
 from core.dienste.hautbacken.closure.hautclosure import EINGAENGE
-from core.dienste.hautbacken.closure.hautclosurekernel import normale_mittel
-from core.dienste.hautbacken.graph import hautalphakernel as alpha_kern
 from core.dienste.hautbacken.graph.hautalpha import Hautalpha
+from core.dienste.hautbacken.hautbackenkernbau import Hautbackenkernbau
 
 GERAET = 'cuda:0'
 Z = (0.0, 0.0, 1.0)
@@ -46,7 +46,6 @@ class Kern:
 
     @classmethod
     def laden(cls):
-        wp.init()
         if cls.closure is None:
             cls.closure = Hautclosure(GERAET)
         return cls.closure
@@ -61,19 +60,22 @@ class Kern:
         def feld(name):
             w = werte[name]
             if name in SKALARE:
-                return wp.array(np.full(k, w, dtype=np.float32), dtype=wp.float32, device=GERAET)
-            return wp.array(np.tile(np.asarray(w, dtype=np.float32), (k, 1)), dtype=wp.vec3, device=GERAET)
+                return torch.full((k,), float(w), dtype=torch.float32, device=GERAET)
+            return torch.as_tensor(w, dtype=torch.float32, device=GERAET).reshape(1, 3).expand(k, 3).contiguous()
 
-        vec = lambda a: wp.array(np.asarray(a, dtype=np.float32).reshape(-1, 3) if np.ndim(a) > 1 else np.tile(np.asarray(a, dtype=np.float32), (k, 1)), dtype=wp.vec3, device=GERAET)   # noqa: E731
-        aus = wp.zeros(k, dtype=wp.vec3, device=GERAET)
-        wp.launch(normale_mittel, dim=k, inputs=[vec(normalen), vec(ng), vec(n_glatt), wp.array(np.full(k, rueck, dtype=np.int32), dtype=wp.int32, device=GERAET),
-                                                 feld('basis'), feld('metallisch'), feld('rauheit'), feld('ior'), feld('spec_stufe'), feld('spec_tint'), feld('aniso'),
-                                                 feld('sheen_g'), feld('sheen_r'), feld('sheen_t'), feld('coat_g'), feld('coat_r'), feld('coat_i'), feld('coat_t'),
-                                                 vec(n_glatt if coat_n is None else coat_n), int(coat_n is not None), feld('trans_g'),
-                                                 feld('sss_g'), feld('sss_radius'), feld('sss_skala'), int(multi), 0, int(korrektur),
-                                                 t['ggx_E'], t['ggx_Eavg'], t['ggx_gen_schlick_ior_s'], t['sheen_ltc'],
-                                                 t['ggx_glass_E'], t['ggx_glass_Eavg'], t['ggx_glass_inv_E'], t['ggx_glass_inv_Eavg'], aus], device=GERAET)
-        return aus.numpy()
+        def vec(a):
+            v = torch.as_tensor(a, dtype=torch.float32, device=GERAET)
+            return (v.reshape(-1, 3) if v.dim() > 1 else v.reshape(1, 3).expand(k, 3)).contiguous()
+
+        aus = torch.zeros((k, 3), dtype=torch.float32, device=GERAET)
+        Hautbackenkernbau.lauf('hb_normale_mittel', k, vec(normalen), vec(ng), vec(n_glatt), torch.full((k,), int(rueck), dtype=torch.int32, device=GERAET),
+                               feld('basis'), feld('metallisch'), feld('rauheit'), feld('ior'), feld('spec_stufe'), feld('spec_tint'), feld('aniso'),
+                               feld('sheen_g'), feld('sheen_r'), feld('sheen_t'), feld('coat_g'), feld('coat_r'), feld('coat_i'), feld('coat_t'),
+                               vec(n_glatt if coat_n is None else coat_n), int(coat_n is not None), feld('trans_g'),
+                               feld('sss_g'), feld('sss_radius'), feld('sss_skala'), int(multi), 0, int(korrektur),
+                               t['ggx_E'], t['ggx_Eavg'], t['ggx_gen_schlick_ior_s'], t['sheen_ltc'],
+                               t['ggx_glass_E'], t['ggx_glass_Eavg'], t['ggx_glass_inv_E'], t['ggx_glass_inv_Eavg'], aus)
+        return aus.cpu().numpy()
 
 
 class ClosureMittelTest(SimpleTestCase):
@@ -188,16 +190,15 @@ class ClosureMittelTest(SimpleTestCase):
     # ------------------------------------------------------------------ Alpha
 
     def test_7b_der_normal_pass_faellt_unter_alpha_0_5_weg(self):
-        """`hautalphakernel.nullen`: Alpha < 0,5 → Nullvektor (Blender schreibt dort (128,128,128)), ab 0,5 unverändert (`average(alpha) >= pass_alpha_threshold`); Alpha außerhalb 0…1 wird geklemmt.
-        Darüber ändert Alpha die gebackene Normale nicht (Zoo `glanz_alpha_fest`: 0,01 Stufen Abweichung gegen Blender, mit einer Transparent-Closure im Mittel wären es 12)."""
-        wp.init()
+        """`hb_nullen` (bis 21.11.2026 `hautalphakernel.nullen`): Alpha < 0,5 → Nullvektor (Blender schreibt dort (128,128,128)), ab 0,5 unverändert
+        (`average(alpha) >= pass_alpha_threshold`); Alpha außerhalb 0…1 wird geklemmt. Darüber ändert Alpha die gebackene Normale nicht (Zoo `glanz_alpha_fest`: 0,01 Stufen Abweichung
+        gegen Blender, mit einer Transparent-Closure im Mittel wären es 12)."""
         alpha = [-0.3, 0.0, 0.2, 0.4999, 0.5, 0.9, 1.0, 1.7]
-        welt = np.tile(np.array([0.0, 0.6, 0.8], dtype=np.float32), (len(alpha), 1))
-        aus = wp.zeros(len(alpha), dtype=wp.vec3, device=GERAET)
-        wp.launch(alpha_kern.nullen, dim=len(alpha), inputs=[wp.array(np.asarray(alpha, dtype=np.float32), dtype=wp.float32, device=GERAET), Hautalpha.SCHWELLE,
-                                                             wp.array(welt, dtype=wp.vec3, device=GERAET), aus], device=GERAET)
+        welt = torch.tensor([0.0, 0.6, 0.8], dtype=torch.float32, device=GERAET).expand(len(alpha), 3).contiguous()
+        aus = torch.zeros((len(alpha), 3), dtype=torch.float32, device=GERAET)
+        Hautbackenkernbau.lauf('hb_nullen', len(alpha), torch.tensor(alpha, dtype=torch.float32, device=GERAET), Hautalpha.SCHWELLE, welt, aus)
         erwartet = [0, 0, 0, 0, 1, 1, 1, 1]
-        self.assertEqual([int(np.linalg.norm(v) > 0.5) for v in aus.numpy()], erwartet)
+        self.assertEqual([int(float(v.norm()) > 0.5) for v in aus], erwartet)
         self.assertEqual(Hautalpha.SCHWELLE, 0.5)
 
     # ------------------------------------------------------------------ Aufrufer: Gründe und Auslöser

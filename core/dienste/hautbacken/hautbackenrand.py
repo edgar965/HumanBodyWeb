@@ -11,9 +11,8 @@ die Blender leer lässt. Was dahinter bleibt, ist leer und wird wie bisher von `
 import cv2
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
-import warp as wp
 
-from . import hautbackenkernel as kern
+from .hautbackenkernbau import Hautbackenkernbau
 
 __all__ = ['Hautbackenrand']
 
@@ -22,16 +21,18 @@ class Hautbackenrand:
     BREITE_PX = 16
 
     def __init__(self, geraet='cuda:0', breite=BREITE_PX):
-        self.geraet, self.breite = geraet, int(breite)
+        self.geraet, self.breite = torch.device(geraet), int(breite)
 
     def erweitern(self, bild, maske):
         """`(bild, maske)`: `bild` `(h, w, 3)` uint8 im Speicher, `maske` `(h, w)` bool (gebacken). Gibt Bild und Maske mit dem Rand zurück."""
         h, w = maske.shape
         nah = cv2.dilate(Torchfeld.roh(Torchfeld.astype(maske, torch.uint8)), Torchfeld.roh(torch.ones((2 * self.breite + 1, 2 * self.breite + 1), dtype=torch.uint8, device='cuda')))
-        a_bild = wp.array(Torchfeld.feld(bild), dtype=wp.uint8, device=self.geraet)
-        a_maske = wp.array(Torchfeld.astype(maske, torch.uint8), dtype=wp.uint8, device=self.geraet)
-        a_nah = wp.array(nah, dtype=wp.uint8, device=self.geraet)
-        aus = wp.empty_like(a_bild)
-        aus_maske = wp.empty_like(a_maske)
-        wp.launch(kern.erweitern, dim=(h, w), inputs=[a_bild, a_maske, a_nah, self.breite, aus, aus_maske], device=self.geraet)
-        return aus.numpy(), Torchfeld.astype(aus_maske.numpy(), torch.bool)
+        g = self.geraet
+        a_bild = Torchfeld.feld(bild).to(device=g, dtype=torch.uint8).contiguous()
+        a_maske = Torchfeld.feld(Torchfeld.astype(maske, torch.uint8)).to(device=g, dtype=torch.uint8).contiguous()
+        a_nah = Torchfeld.feld(nah).to(device=g, dtype=torch.uint8).contiguous()
+        aus = torch.empty_like(a_bild)
+        aus_maske = torch.empty_like(a_maske)
+        with torch.cuda.device(g):
+            Hautbackenkernbau.rufen('hb_erweitern', h, w, a_bild, a_maske, a_nah, self.breite, aus, aus_maske)      # bis 21.11.2026 Warp-Kern `erweitern`
+        return aus.cpu().numpy(), Torchfeld.astype(aus_maske.cpu().numpy(), torch.bool)

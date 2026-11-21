@@ -4,21 +4,20 @@ u"""Hautkartemaske — `Hautmaske.verdeckt` (mit `Hautmaskeersatz`, `Maskeninsel
 Je Stück wie JS, in derselben Reihenfolge: Randpunkte (Kanten mit einem Dreieck) und Nachbarn, lockere Randpunkte (`locker`), `RANDRINGE` Ringe um sie
 gesperrt (starr: keine), die erlaubten Dreiecke je Punkt, dann je Körperpunkt der Kern `stueck`; ein Ersatzstück danach mit seinem Randabstand
 (`Stueckrand.randabstand`: Punkte auf 1e-5 m verschweißt, Rand = Kanten mit einem Dreieck, Wege über das Netz bis `RING_M` + 4 mm) und dem Kern
-`ersatz`. Zuletzt die Inseln. Konstanten wie in `hautmaske.js`, `hautmaskeersatz.js`, `hautmaskegeometrie.js`, `hautdurchsicht.js`.
+`ersatz`. Zuletzt die Inseln. Konstanten wie in `hautmaske.js`, `hautmaskeersatz.js`, `hautmaskegeometrie.js`, `hautdurchsicht.js`. Die Kerne `hk_locker`,
+`hk_stueck`, `hk_ersatz`, `hk_durch` (`hautkartekerne_cu/hautkartemaske.cuh`, `Hautkartekernbau`) — bis 21.11.2026 Warp (`hautkartewarpmaske.py`).
 """
 import torch
-import warp as wp
 
-from . import hautkartewarpmaske as kern
 from .hautkartegitter import Hautkartegitter
 from .hautkarteinseln import Hautkarteinseln
+from .hautkartekernbau import Hautkartekernbau
 from .hautkartewege import Hautkartewege
 
 __all__ = ['Hautkartemaske']
 
-
-def _a(t, typ):
-    return wp.from_torch(t.contiguous(), dtype=typ)
+F64, F32, I64, U8 = torch.float64, torch.float32, torch.int64, torch.uint8
+_a = Hautkartekernbau.feld
 
 
 class Hautkartemaske:
@@ -34,10 +33,6 @@ class Hautkartemaske:
     ERSATZ_SENKUNG_M = 0.009
     RING_M = 0.03
     LUFT_M = 0.001
-
-    @staticmethod
-    def _strom(g):
-        return wp.stream_from_torch(torch.cuda.current_stream(g))
 
     @staticmethod
     def huelle(S, rand):
@@ -74,39 +69,41 @@ class Hautkartemaske:
         u"""(n,) uint8 Maske; `ersatz`, `hoehe`, `rand`, `nachgeben` werden gefüllt; je Ersatzstück `stoff['randabstand']`."""
         n, g = len(K), K.device
         maske = torch.zeros(n, dtype=torch.uint8, device=g)
-        strom = cls._strom(g)
-        for stoff in stoffe:
-            S, ST = stoff['punkte'], stoff['dreiecke']
-            if not len(S) or not len(ST):
-                continue
-            starr = bool(stoff['starr'])
-            ringe, nahe = (0, stoff['nahe'] if stoff['nahe'] is not None else cls.NAHE_M) if starr else (cls.RANDRINGE, 0.0)
-            tiefe = max(cls.TIEFE_M, stoff['tiefe'] or 0.0)
-            abstand = max(cls.ABSTAND_M, stoff.get('abstand') or 0.0)       # je Stück wie `hautmaske.js` (18.11.2026, `Bauart.deckAbstandM`)
-            weite = max(abstand, tiefe, cls.NAHE_M)
-            wert = float(stoff['nachgeben'] or 0.0)
-            (nach_a, nach_z), _inz, randpunkt = cls._netz(S, ST)
-            locker = torch.zeros(len(S), dtype=torch.uint8, device=g)
-            rnr = torch.nonzero(randpunkt).reshape(-1)
-            if len(rnr):
-                wp.launch(kern.locker, dim=len(rnr), inputs=[_a(S, wp.float64), _a(rnr, wp.int64), _a(K, wp.float64), _a(N, wp.float64),
-                                                             _a(kgitter.schl, wp.int64), _a(kgitter.folge, wp.int64), cls.ZELLE_M, cls.ENG_M,
-                                                             _a(locker, wp.uint8)], stream=strom)
-            _nach, (inz_a, inz_z), _r = cls._netz(S, ST, locker=locker.bool(), ringe=ringe)
-            sg = Hautkartegitter(S, cls.ZELLE_M)
-            wp.launch(kern.stueck, dim=n, inputs=[_a(K, wp.float64), _a(N, wp.float64), _a(S, wp.float64), _a(ST, wp.int64), _a(sg.schl, wp.int64),
-                                                  _a(sg.folge, wp.int64), cls.ZELLE_M, _a(cls.huelle(S, weite), wp.float64), weite * weite, tiefe,
-                                                  abstand, float(nahe), _a(nach_a, wp.int64), _a(nach_z, wp.int64), _a(inz_a, wp.int64),
-                                                  _a(inz_z, wp.int64), wert, _a(maske, wp.uint8), _a(nachgeben, wp.float32)], stream=strom)
-            if stoff['ersatz']:
-                stoff['randabstand'] = cls.randabstand(S, ST, cls.RING_M + 0.004)
-                wp.launch(kern.ersatz, dim=n, inputs=[_a(K, wp.float64), _a(N, wp.float64), _a(S, wp.float64), _a(sg.schl, wp.int64),
-                                                      _a(sg.folge, wp.int64), cls.ZELLE_M, _a(cls.huelle(S, max(cls.ABSTAND_M, tiefe)), wp.float64),
-                                                      cls.ABSTAND_M, tiefe, cls.ERSATZ_RADIUS_M ** 2, cls.ERSATZ_SENKUNG_M ** 2,
-                                                      _a(stoff['randabstand'], wp.float64), _a(maske, wp.uint8), _a(ersatz, wp.uint8),
-                                                      _a(hoehe, wp.float32), _a(rand, wp.float32)], stream=strom)
+        with torch.cuda.device(g):
+            for stoff in stoffe:
+                cls._verdeckt_stueck(K, N, kgitter, stoff, maske, ersatz, hoehe, rand, nachgeben)
         maske, _zu = Hautkarteinseln.schliessen(maske, KT, cls.INSEL_MAX, pos32, cls.INSEL_FLAECHE_M2)
         return maske
+
+    @classmethod
+    def _verdeckt_stueck(cls, K, N, kgitter, stoff, maske, ersatz, hoehe, rand, nachgeben):
+        u"""Ein Stück von `verdeckt`: lockere Randpunkte, erlaubte Dreiecke, Kern `hk_stueck`, beim Ersatzstück Randabstand und Kern `hk_ersatz`."""
+        n, g, rufen = len(K), K.device, Hautkartekernbau.rufen
+        S, ST = stoff['punkte'], stoff['dreiecke']
+        if not len(S) or not len(ST):
+            return
+        starr = bool(stoff['starr'])
+        ringe, nahe = (0, stoff['nahe'] if stoff['nahe'] is not None else cls.NAHE_M) if starr else (cls.RANDRINGE, 0.0)
+        tiefe = max(cls.TIEFE_M, stoff['tiefe'] or 0.0)
+        abstand = max(cls.ABSTAND_M, stoff.get('abstand') or 0.0)           # je Stück wie `hautmaske.js` (18.11.2026, `Bauart.deckAbstandM`)
+        weite = max(abstand, tiefe, cls.NAHE_M)
+        wert = float(stoff['nachgeben'] or 0.0)
+        (nach_a, nach_z), _inz, randpunkt = cls._netz(S, ST)
+        locker = torch.zeros(len(S), dtype=torch.uint8, device=g)
+        rnr = torch.nonzero(randpunkt).reshape(-1)
+        if len(rnr):
+            rufen('hk_locker', len(rnr), _a(S, F64), _a(rnr, I64), _a(K, F64), _a(N, F64), _a(kgitter.schl, I64), len(kgitter.schl), _a(kgitter.folge, I64),
+                  cls.ZELLE_M, cls.ENG_M, locker)
+        _nach, (inz_a, inz_z), _r = cls._netz(S, ST, locker=locker.bool(), ringe=ringe)
+        sg = Hautkartegitter(S, cls.ZELLE_M)
+        rufen('hk_stueck', n, _a(K, F64), _a(N, F64), _a(S, F64), _a(ST, I64), _a(sg.schl, I64), len(sg.schl), _a(sg.folge, I64), cls.ZELLE_M,
+              _a(cls.huelle(S, weite), F64), weite * weite, tiefe, abstand, float(nahe), _a(nach_a, I64), _a(nach_z, I64), _a(inz_a, I64), _a(inz_z, I64),
+              wert, _a(maske, U8), _a(nachgeben, F32))
+        if stoff['ersatz']:
+            stoff['randabstand'] = cls.randabstand(S, ST, cls.RING_M + 0.004)
+            rufen('hk_ersatz', n, _a(K, F64), _a(N, F64), _a(S, F64), _a(sg.schl, I64), len(sg.schl), _a(sg.folge, I64), cls.ZELLE_M,
+                  _a(cls.huelle(S, max(cls.ABSTAND_M, tiefe)), F64), cls.ABSTAND_M, tiefe, cls.ERSATZ_RADIUS_M ** 2, cls.ERSATZ_SENKUNG_M ** 2,
+                  _a(stoff['randabstand'], F64), _a(maske, U8), _a(ersatz, U8), _a(hoehe, F32), _a(rand, F32))
 
     @staticmethod
     def _schweiss(S):
@@ -142,7 +139,6 @@ class Hautkartemaske:
             return None
         n, g = len(K), K.device
         aus = torch.zeros(n, dtype=torch.float32, device=g)
-        strom = cls._strom(g)
         for s in liste:
             tiefe = max(cls.TIEFE_M, s['tiefe'] or 0.0)
             grenze = tiefe if bis_tiefe else max(0.0, float(s['nachgeben'] or 0.0))
@@ -152,8 +148,8 @@ class Hautkartemaske:
             weite = max(tiefe, cls.ABSTAND_M)
             (nach_a, nach_z), (inz_a, inz_z), _r = cls._netz(S, ST, alle_erlaubt=True)
             sg = Hautkartegitter(S, cls.ZELLE_M)
-            wp.launch(kern.durch, dim=n, inputs=[_a(K, wp.float64), _a(N, wp.float64), _a(S, wp.float64), _a(ST, wp.int64), _a(sg.schl, wp.int64),
-                                                 _a(sg.folge, wp.int64), cls.ZELLE_M, _a(cls.huelle(S, weite), wp.float64), weite * weite, tiefe,
-                                                 cls.LUFT_M, grenze, _a(nach_a, wp.int64), _a(nach_z, wp.int64), _a(inz_a, wp.int64), _a(inz_z, wp.int64),
-                                                 int(bis_tiefe), _a(aus, wp.float32)], stream=strom)
+            with torch.cuda.device(g):
+                Hautkartekernbau.rufen('hk_durch', n, _a(K, F64), _a(N, F64), _a(S, F64), _a(ST, I64), _a(sg.schl, I64), len(sg.schl), _a(sg.folge, I64),
+                                       cls.ZELLE_M, _a(cls.huelle(S, weite), F64), weite * weite, tiefe, cls.LUFT_M, grenze, _a(nach_a, I64), _a(nach_z, I64),
+                                       _a(inz_a, I64), _a(inz_z, I64), int(bis_tiefe), aus)
         return aus

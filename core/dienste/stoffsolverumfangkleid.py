@@ -19,7 +19,7 @@ class Stoffsolverumfangkleid:
          'Quality 12 rechnet 13 Schritte, 19 rechnet 20: mit Blenders Zählung 0,0001 mm, mit der eingestellten Zahl 12 und 6,6 mm daneben. '
          'Gilt auch für Wind, weiche Ziele, bewegte Pins und Körper und das Haar.'),
         ('Kleid', 'Kollision Körper und Selbst (Dreieck gegen Dreieck), Reibung',
-         [(S + 'kollisionsablauf.py', 'Kollisionsablauf'), (S + 'geraeteruhe.py', 'Geraeteruhe')], 'blender',
+         [(S + 'kollisionsablauf.py', 'Kollisionsablauf')], 'blender',
          'Impulse, Runden und Reibung wie `collision.cc`. Der GPU-Motor rechnet Ruhelängen und -winkel wie Blender in float32 aus denselben Punkten: '
          'nur Selbstkollision am Oberteil 0,13 mm (Blender gegen Blender 0,13 mm), davor +0,5 bis +2,7 mm Bias in z.'),
         ('Kleid', 'Implizites Verfahren (Baraff–Witkin, Blenders CG)', [(S + 'implizitesverfahren.py', 'ImplizitesVerfahren')], 'blender',
@@ -56,7 +56,7 @@ class Stoffsolverumfangkleid:
          'Die Zufallstextur stimmt bei bekanntem Samen auf 0,000 mm (mit falschem Samen 15 mm daneben). Auf dem Gerät gleich dem Host; 138 von 141 Knotenbäumen (der Rest: float32-Transzendente, ein Gleichstand an einer Fugenkante). '
          'Nicht gebaut: Kurven-Knoten, Knotengruppen, Rauschen-Knoten, stumme Knoten, 16-Bit- und EXR-Bilder; Zufallstextur ohne Farbe mit Nabla 0 liest in Blender nicht initialisierten Speicher.'),
         ('Kleid', 'Bewegte Feldobjekte (Lage je Bild: Verschieben, Drehen, Skalieren, verformte Netze)',
-         [(S + 'feldbahn.py', 'Feldbahn'), (S + 'windkraftbewegt.py', 'Windkraftbewegt'), (S + 'warpfeldbewegung.py', 'Warpfeldbewegung')], 'blender',
+         [(S + 'feldbahn.py', 'Feldbahn'), (S + 'windkraftbewegt.py', 'Windkraftbewegt')], 'blender',
          'Alle 14 Fälle gleich (Wind, Punktkraft, Luftwiderstand, Magnet, Wirbel, Textur, Oberfläche und Punkte bewegt oder per Shape Key verformt): 0,0001 bis 0,02 mm im Mittel; '
          'mit festem Feld liegt der Solver 0,12 bis 146 mm daneben (die Skalierung eines Empty wirkt nicht: 0,0000 mm). '
          'Blender nimmt die Lage je Bild ohne Zwischenwerte (ein halbes Bild Versatz: 1,7 mm); die Geschwindigkeit des Feldobjekts wirkt bei Stoff nicht. '
@@ -82,6 +82,6 @@ class Stoffsolverumfangkleid:
         ('Körper', 'collision_quality, Impuls-Klammern, Dicke, Abstand, Culling, Gruppen „Object/Self Collisions"',
          [(S + 'kollisionseinstellungen.py', 'Kollisionseinstellungen')], 'blender',
          'Gleich bis auf `impulse_clamp` 0,04 und `self_impulse_clamp` 0,02: dort ist Blender selbst chaotisch, unklar.'),
-        ('Körper', 'Bewegter Körper', [(S + 'warpkoerpersatz.py', 'WarpKoerpersatz')], 'blender',
+        ('Körper', 'Bewegter Körper', [(S + 'kollisionskoerper.py', 'Kollisionskoerper')], 'blender',
          'Hub, seitlich, schräg, abrupter Halt, Quality 12: 0,007 bis 0,5 mm im Rauschen von Blender; im CUDA-Graph. Der Host (float64) weicht bei koplanarem Aufprall ab, das Gerät liegt näher an Blender.'),
     ]

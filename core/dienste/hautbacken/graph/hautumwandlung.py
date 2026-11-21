@@ -5,61 +5,28 @@
     Farbe → Zahl          `NODE_CONVERT_CF`: `linear_rgb_to_gray` = dot(c, `rgb_to_y`) — die Leuchtdichte-Gewichte des Arbeitsfarbraums (`GRAU`)
     Vektor → Zahl         `NODE_CONVERT_VF`: `average`
     Farbe ↔ Vektor        keine Rechnung (beides `float3`)
+
+Kerne `hb_f_zu_v`, `hb_c_zu_f`, `hb_v_zu_f` (`Hautbackenkernbau`; bis 21.11.2026 Warp-Kerne hier); feste Werte als `torch.full` (float32 wie vorher).
 """
 
-import warp as wp
+import torch
 
-from ..hautfunktionen import average3
+from ..hautbackenkernbau import Hautbackenkernbau
 from .hautwert import Hautwert
 
 __all__ = ['Hautumwandlung']
 
 
-@wp.kernel
-def _f_zu_v(a: wp.array(dtype=wp.float32), aus: wp.array(dtype=wp.vec3)):
-    i = wp.tid()
-    aus[i] = wp.vec3(a[i], a[i], a[i])
-
-
-@wp.kernel
-def _c_zu_f(a: wp.array(dtype=wp.vec3), y: wp.vec3, aus: wp.array(dtype=wp.float32)):
-    i = wp.tid()
-    aus[i] = wp.dot(a[i], y)
-
-
-@wp.kernel
-def _v_zu_f(a: wp.array(dtype=wp.vec3), aus: wp.array(dtype=wp.float32)):
-    i = wp.tid()
-    aus[i] = average3(a[i])
-
-
-@wp.kernel
-def _fuellen_f(wert: float, aus: wp.array(dtype=wp.float32)):
-    i = wp.tid()
-    aus[i] = wert
-
-
-@wp.kernel
-def _fuellen_v(wert: wp.vec3, aus: wp.array(dtype=wp.vec3)):
-    i = wp.tid()
-    aus[i] = wert
-
-
 class Hautumwandlung:
-    #: `kernel_data.film.rgb_to_y`: die Gewichte der Leuchtdichte im Arbeitsfarbraum (Blender-Vorgabe Linear Rec.709). Gemessen wird der Wert im Vergleich mit Blender
-    #: (`test_hautbacken_knoten.py`, Baustein Farbe → Zahl), nicht angenommen — bis die Messung vorliegt, steht hier die Vorgabe von OpenColorIO für Rec.709.
     GRAU = (0.2126729, 0.7151522, 0.0721750)
 
     @staticmethod
     def konstante(art, wert, n, geraet):
         """Ein Feld der Länge `n` mit dem festen Wert (Zahl, oder drei Zahlen für Farbe/Vektor)."""
         if art == 'f':
-            feld = wp.zeros(n, dtype=wp.float32, device=geraet)
-            wp.launch(_fuellen_f, dim=n, inputs=[float(wert), feld], device=geraet)
-        else:
-            feld = wp.zeros(n, dtype=wp.vec3, device=geraet)
-            wp.launch(_fuellen_v, dim=n, inputs=[wp.vec3(float(wert[0]), float(wert[1]), float(wert[2])), feld], device=geraet)
-        return Hautwert(art, feld)
+            return Hautwert(art, torch.full((n,), float(wert), dtype=torch.float32, device=geraet))
+        v = torch.tensor([float(wert[0]), float(wert[1]), float(wert[2])], dtype=torch.float32, device=geraet)
+        return Hautwert(art, v.expand(n, 3).contiguous())
 
     @classmethod
     def nach(cls, wert, art, geraet):
@@ -67,15 +34,17 @@ class Hautumwandlung:
         if wert.art == art:
             return wert
         n = len(wert.daten)
-        if art == 'f':
-            aus = wp.zeros(n, dtype=wp.float32, device=geraet)
-            if wert.art == 'c':
-                wp.launch(_c_zu_f, dim=n, inputs=[wert.daten, wp.vec3(*cls.GRAU), aus], device=geraet)
-            else:
-                wp.launch(_v_zu_f, dim=n, inputs=[wert.daten, aus], device=geraet)
-            return Hautwert('f', aus)
-        if wert.art == 'f':
-            aus = wp.zeros(n, dtype=wp.vec3, device=geraet)
-            wp.launch(_f_zu_v, dim=n, inputs=[wert.daten, aus], device=geraet)
-            return Hautwert(art, aus)
+        rufen = Hautbackenkernbau.rufen
+        with torch.cuda.device(geraet):
+            if art == 'f':
+                aus = torch.zeros(n, dtype=torch.float32, device=geraet)
+                if wert.art == 'c':
+                    rufen('hb_c_zu_f', n, wert.daten, *cls.GRAU, aus)
+                else:
+                    rufen('hb_v_zu_f', n, wert.daten, aus)
+                return Hautwert('f', aus)
+            if wert.art == 'f':
+                aus = torch.zeros((n, 3), dtype=torch.float32, device=geraet)
+                rufen('hb_f_zu_v', n, wert.daten, aus)
+                return Hautwert(art, aus)
         return Hautwert(art, wert.daten)           # Farbe ↔ Vektor: dasselbe Feld

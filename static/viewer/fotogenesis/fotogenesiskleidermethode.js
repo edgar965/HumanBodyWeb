@@ -9,7 +9,9 @@
  *   Gemischt           drapiert, wo es ein brauchbares Stück gibt, sonst das der Kleiderbibliothek (bis dahin „Drapieren“)
  *   Eigen              nur die eigenen Stücke, an das Stück aus dem Netz gepasst, Form und Farbe aus dem Netz (Weg e, `meshgenesis_eigen_lauf.py`; 20.11.2026, Edgar:
  *                      „mach doch einen dritten Modus für die Kleider - "Eigen" neben Drapieren und Bibliothek“); übrige Kleidung fehlt, Haar, Hut, Requisiten wie Bibliothek
- * Der Hinweis sagt, wie viele Stücke drapiert bzw. eigen sind.
+ *   Passend            nur die Kleidung aus der Kleiderbibliothek, das passendste Stück aus mehreren Kandidaten, mit Passform-Morph (Weg p, `meshgenesis_passend_lauf.py`; 21.11.2026,
+ *                      Edgar: „baue kandidatenwahl als extra Methode“); übrige Kleidung fehlt, Haar, Hut, Requisiten wie Bibliothek
+ * Der Hinweis sagt, wie viele Stücke drapiert, eigen bzw. passend sind.
  */
 import { Fotogenesisschalterleiste } from './fotogenesisschalterleiste.js';
 
@@ -34,23 +36,25 @@ export class Fotogenesiskleidermethode extends Fotogenesisschalterleiste {
             // „Gemischt“ nicht mehr als Knopf (21.11.2026, Edgar: „gemischt methode ist auch gaga, am besten entferne die aus dem UI“): es erbt die Schwächen beider Wege. `methodeSetzen('gemischt')`
             // und die Hinweise unten bleiben, damit sich der Knopf wieder einsetzen lässt: { wert: 'gemischt', text: 'Gemischt', titel: 'Drapiert, wo es ein brauchbares Stück gibt, sonst das Stück der Kleiderbibliothek' }
             { wert: 'eigen', text: 'Eigen', titel: 'Kleidung als eigene Stücke, an das Stück aus dem Netz gepasst — Form und Farbe aus dem Netz; Haar, Hut, Requisiten und Schuhe wie in der Kleiderbibliothek' },
+            { wert: 'passend', text: 'Passend', titel: 'Kleidung: aus mehreren Stücken der Kleiderbibliothek das mit dem kleinsten Abstand zum Netzstück, mit Passform-Morph; Haar, Hut, Requisiten und Schuhe wie in der Kleiderbibliothek' },
         ], 'methode');
         this.hinweis = behaelter.appendChild(Object.assign(document.createElement('span'), { className: 'fotogenesis-steuername' }));
     }
 
     async _wechseln() {
         const methode = this.methode;
-        const name = methode === 'eigen' ? 'Eigen' : 'Drapieren';
+        const name = { eigen: 'Eigen', passend: 'Passend' }[methode] ?? 'Drapieren';
+        const eigenschaft = { eigen: 'eigen', passend: 'passend' }[methode] ?? 'drapiert';
         this.hinweis.textContent = methode === 'bibliothek' ? '' : `${name} wird geladen …`;
         const zahl = await this.figur.methodeSetzen(methode);
         if (methode !== this.methode) return;            // inzwischen umgeschaltet: der spätere Ruf schreibt den Hinweis
         if (methode !== 'bibliothek') {
             const rest = methode === 'gemischt' ? 'die übrigen aus der Kleiderbibliothek'
-                : methode === 'eigen' ? 'die übrigen Kleidungsstücke sind ausgeblendet; Haar, Hut, Requisiten und Schuhe wie in der Kleiderbibliothek' : 'die übrigen sind ausgeblendet';
+                : methode === 'eigen' || methode === 'passend' ? 'die übrigen Kleidungsstücke sind ausgeblendet; Haar, Hut, Requisiten und Schuhe wie in der Kleiderbibliothek' : 'die übrigen sind ausgeblendet';
             this.hinweis.textContent = !zahl ? `${name} nicht geladen`
-                : zahl.versucht ? `${zahl.gezeigt} von ${zahl.versucht} Kleidungsstücken ${methode === 'eigen' ? 'eigen' : 'drapiert'}, ${rest}`
+                : zahl.versucht ? `${zahl.gezeigt} von ${zahl.versucht} Kleidungsstücken ${eigenschaft}, ${rest}`
                     : methode === 'gemischt' ? 'Für diesen Test ist Drapieren nicht gerechnet — alle Stücke aus der Kleiderbibliothek'
-                        : `Für diesen Test ist ${name} nicht gerechnet — keine ${methode === 'eigen' ? 'eigenen' : 'drapierten'} Stücke`;
+                        : `Für diesen Test ist ${name} nicht gerechnet — keine ${{ eigen: 'eigenen', passend: 'passenden' }[methode] ?? 'drapierten'} Stücke`;
         }
         this.neu();
     }

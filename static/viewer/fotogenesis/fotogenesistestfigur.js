@@ -95,19 +95,20 @@ export class Fotogenesistestfigur {
      * Methode der Kleider (19.11.2026, Edgar: „Kleiderbibliothek (ehemals Garderobe) und Drapieren … toggle für beide Ergebnisse im genesis view“, `Fotogenesiskleidermethode`):
      * derselbe Körper, nur die Stücke wechseln. 'drapieren' nimmt je Zeile das drapierte Stück (Weg f), wo es ein Netz hat, sonst das wirksame (Kleiderbibliothek); geladen beim
      * ersten Umschalten. 'eigen' (20.11.2026, Edgar: „mach doch einen dritten Modus für die Kleider - "Eigen"“) nur die eigenen, an das Netzstück gepassten Stücke (Weg e).
+     * 'passend' (21.11.2026, Edgar: „baue kandidatenwahl als extra Methode“) nur die passendsten Stücke der Kleiderbibliothek aus mehreren Kandidaten (Weg p), sonst wie 'eigen'.
      * → {gezeigt, versucht} (Zeilen mit Netz der Methode / Zeilen, für die sie gerechnet wurde) oder null.
      */
     async methodeSetzen(methode) {
         await this.bereit;
         if (!this.modell || !this._kleiderQuelle) return null;
         this._saetze ??= { bibliothek: this.kleider };
-        const w = methode === 'eigen' ? 'e' : 'f';
+        const w = methode === 'eigen' ? 'e' : methode === 'passend' ? 'p' : 'f';
         if (!(methode in this._saetze)) {
             // „drapieren“ nur die drapierten Stücke, „gemischt“ drapiert, wo es eins gibt, sonst die Kleiderbibliothek (19.11.2026, Edgar: „sehe ich nicht, welches was ist,
             // mach einen dritten Button der mir entweder das eine oder das andere zeigt“) — null fällt in `Meshgenesiskikleiderfeld.laden` heraus
             // „eigen“ wechselt nur die Kleidung (Weg e baut nur sie); Haar, Bart, Hut, Requisiten, Schuhe bleiben wie in der Kleiderbibliothek — sonst stand edgar kahl da (Chrome, 20.11.2026)
             const weg = methode === 'gemischt' ? st => (st.f?.netz ? 'f' : st.wahl)
-                : methode === 'eigen' ? st => (st.e?.netz ? 'e' : Fotogenesistestfigur.KLEIDUNG.has(st.art) ? null : st.wahl) : st => (st[w]?.netz ? w : null);
+                : methode === 'eigen' || methode === 'passend' ? st => (st[w]?.netz ? w : Fotogenesistestfigur.KLEIDUNG.has(st.art) ? null : st.wahl) : st => (st[w]?.netz ? w : null);
             this._saetze[methode] = await Meshgenesiskikleiderfeld.laden({ ...this._kleiderQuelle, daten: this._saetze.bibliothek?.liste, weg })
                 .catch(fehler => { console.warn(`Fotogenesistestfigur: Methode ${methode} nicht geladen (${fehler.message})`); return undefined; });
             if (this._saetze[methode] === undefined) { delete this._saetze[methode]; return null; }

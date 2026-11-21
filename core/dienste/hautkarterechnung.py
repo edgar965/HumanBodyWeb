@@ -5,7 +5,7 @@ Edgar, 18.11.2026: „Hautverdeckung auf GPU, alles auf GPU!“ Die Haut-Maske r
 belasteter CPU, `hautrechnung.js`); jede neue Reglerstellung ist ein neuer Schlüssel im Vorrat, also eine neue Rechnung. Hier dieselbe Rechnung mit
 denselben Eingaben (Punkte und voller Index des Körpers in Ruhe, die Stücke mit ihren Einstellungen) und demselben Ergebnis (`maske`, `ersatz`, `hoehe`,
 `rand`, `normalen` — nur mit Ersatzstück, nur dann liest der Browser sie —, `einzug`, `randabstaende`, `ms`): Normalen (`Hautkartenormalen`), Maske
-(`Hautkartemaske`), Einzug (`Hautkarteeinzug`), Durchsicht. Die Kerne bilden die Schleifen von JS nach, in double ohne FMA (`Hautkartewarphilfe`).
+(`Hautkartemaske`), Einzug (`Hautkarteeinzug`), Durchsicht. Die Kerne bilden die Schleifen von JS nach, in double ohne FMA (`hautkartekerne_cu/`, `Hautkartekernbau`; bis 21.11.2026 Warp, `Hautkartewarphilfe`).
 Abweichen kann, was JS in anderer Reihenfolge summiert (Fläche einer Insel) — gemessen im Browser gegen den Worker (`_wegwerf/hautkarte_vergleich.js`).
 """
 import time

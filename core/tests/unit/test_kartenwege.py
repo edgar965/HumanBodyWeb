@@ -5,8 +5,8 @@ angehefteten Speicher), `Kartenwerte` (Antwortzahlen, in einer Kopie abgeholt), 
 Gegenproben, aus denen die Tests stammen: `_wegwerf/kartenrunden_probe.py` (508.831 Werte gleich), `_wegwerf/knochenformel_probe.py` (36 Fälle gleich),
 `_wegwerf/knochenformel_fremd_probe.py`; `Kartenvermutung` (Entscheidungen vermutet, auf der Karte geprüft): `_wegwerf/zug_referenz.py falsch`, `lagenentscheid_probe.py`.
 Braucht die Grafikkarte (sonst übersprungen), `test_4` auch die Genesis-9-Bibliothek. Nicht gelaufen — läuft nur auf Ansage.
-Sabotage: in `Kartenrunden.runden` durch die Python-Zahl `f` teilen statt durch den 0-d-Tensor → `test_1` rot; in `formelkernwarp.summen` die Summenformeln mit
-`mal` statt `plus` → `test_4` rot.
+Sabotage: in `Kartenrunden.runden` durch die Python-Zahl `f` teilen statt durch den 0-d-Tensor → `test_1` rot; in `k_summen` (`Genesis9/g9kerne_cu/g9kerne.cu`, bis 21.11.2026
+`formelkernwarp.summen`) die Summenformeln mit `__dmul_rn` statt `__dadd_rn` → `test_4` rot.
 """
 import random
 import struct

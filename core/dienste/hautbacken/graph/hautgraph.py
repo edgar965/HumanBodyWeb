@@ -10,15 +10,15 @@ und Modus einmal (`ctx` merkt sich die Ergebnisse). Modus `(0, 0)` ist die Mitte
 rechnen ihn gesondert.
 """
 
-import warp as wp
+import torch
 
 from ..closure.hautclosure import GELESEN
+from ..hautbackenkernbau import Hautbackenkernbau
 from .hautgraphfehler import Hautgraphfehler
 from .hauttextur import Hauttextur
 from .hautumwandlung import Hautumwandlung
 from .hautwert import Hautwert
 from .knoten.hautknotenfabrik import Hautknotenfabrik
-from .knoten.hautknotenkoordinate import _uv_koordinate
 
 __all__ = ['Hautgraph']
 
@@ -100,7 +100,8 @@ class Hautgraph:
                 ctx._merk[schluessel] = ctx.konstante('v', (0.0, 0.0, 0.0))
             else:
                 aus = Hautwert.leer('v', ctx.n, self.geraet)
-                wp.launch(_uv_koordinate, dim=ctx.n, inputs=[uv[0], uv[1], uv[2], modus[0], float(modus[1]), aus.daten], device=self.geraet)
+                with torch.cuda.device(self.geraet):
+                    Hautbackenkernbau.rufen('hb_uv_koordinate', ctx.n, uv[0], uv[1], uv[2], int(modus[0]), float(modus[1]), aus.daten)
                 ctx._merk[schluessel] = aus
         return ctx._merk[schluessel]
 

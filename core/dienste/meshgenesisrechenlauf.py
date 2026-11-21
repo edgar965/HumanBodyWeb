@@ -110,17 +110,19 @@ class Meshgenesisrechenlauf:
             return None
         return wahl if isinstance(wahl, dict) and wahl.get('art') == 'reglerki' and wahl.get('lauf') else None
 
-    def genesis_zuerst(self):
-        """Ob der Test „Genesis zuerst“ rechnet (`einstellung.json` → `genesis_zuerst`)."""
+    def genesis_zuerst(self, schalter='genesis_zuerst'):
+        """Ob der Test „Genesis zuerst“ rechnet (`einstellung.json` → `genesis_zuerst`; `schalter='genesis_zuerst_mesh_regler'`: mit Mesh-Reglern, Versuch 21.11.2026)."""
         try:
-            return bool(json.loads((self.test / 'einstellung.json').read_text(encoding='utf-8')).get('genesis_zuerst'))
+            return bool(json.loads((self.test / 'einstellung.json').read_text(encoding='utf-8')).get(schalter))
         except (OSError, ValueError):
             return False
 
     def schritte(self):
         """Die Schritte dieses Tests: `SCHRITTE`, mit `FORM_REGLERKI`, wenn der Test die Regler-KI wählt, und mit den Schritten von `GENESIS_ZUERST`, wenn er „Genesis zuerst“ rechnet."""
         schritte = self.SCHRITTE if self.form_ki() is None else tuple(self.FORM_REGLERKI if s[0] == 'form' else s for s in self.SCHRITTE)
-        return Meshgenesisrechengenesiszuerst.einreihen(schritte) if self.genesis_zuerst() else schritte
+        if not self.genesis_zuerst():
+            return schritte
+        return Meshgenesisrechengenesiszuerst.einreihen(schritte, mesh_regler=self.genesis_zuerst('genesis_zuerst_mesh_regler'))
 
     def mia_apose(self):
         """Ob die jüngste A-Pose der Vorstufe von MIA stammt (`apose.npz` → `weg` = 'mia'); dieselbe Kette wie `Kleiderzerlegung.kette`, die auch die Regler-KI liest."""

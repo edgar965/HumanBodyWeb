@@ -8,7 +8,7 @@ Hier wird aus dem Original gebacken. Der Körper wird dafür in die Ruhelage der
 mit der Hand auf der Hüfte hing die Hüfte sonst an der Hand), die Figur selbst (Regler + Eigenmorph, Stufe 1) liegt je Kachel als OBJ daneben. Womit gebacken wird, wählt die Einstellung
 Charakter → Backen (`Blendimportbackenwahl`, gelesen, wenn der Schritt beginnt):
 
-    lokal    `Blendimporthautlokal`: auf der GPU im Speicher (NVIDIA Warp), ohne Blender; die Nacharbeit rechnet auf denselben Feldern, jede Datei wird einmal geschrieben.
+    lokal    `Blendimporthautlokal`: auf der GPU im Speicher (eigene CUDA-Kerne, bis 21.11.2026 NVIDIA Warp), ohne Blender; die Nacharbeit rechnet auf denselben Feldern, jede Datei wird einmal geschrieben.
     blender  `blendbacken.py`: Cycles „Selected to Active" auf der GPU; die Bilder gehen über die Platte, die rohen Karten bleiben in `arbeit/` (`farbe_roh_<k>.jpg`,
              `normalen_roh_<k>.png`, `rauheit_roh_<k>.jpg`) — Grenze, Saum und Fehlstellen lassen sich so ohne neues Backen (17 Minuten) ändern.
 
@@ -59,15 +59,13 @@ class Blendimporthaut:
 
     @staticmethod
     def gpu_geraet():
-        """Das Warp-Gerät für die Nacharbeit (`core/dienste/hautnach`) — `None` ohne CUDA-GPU: dann rechnen die CPU-Fassungen."""
-        try:
-            import warp as wp
+        """Das Gerät für die Nacharbeit (`core/dienste/hautnach`, eigene CUDA-Kerne; bis 21.11.2026 Warp) — `None` ohne CUDA-Karte: dann rechnen die CPU-Fassungen."""
+        import torch
 
-            wp.init()
-            return 'cuda:0' if wp.get_cuda_device_count() else None
-        except Exception as fehler:  # noqa: BLE001 — ohne Warp bleibt die CPU
-            logger.warning('Blender-Import: Warp nicht nutzbar (%s) — die Nacharbeit rechnet auf der CPU', fehler)
-            return None
+        if torch.cuda.is_available():
+            return 'cuda:0'
+        logger.warning('Blender-Import: keine CUDA-Karte — die Nacharbeit rechnet auf der CPU')
+        return None
 
     @property
     def normalen_flach(self):
@@ -163,7 +161,7 @@ class Blendimporthaut:
         """Backt und arbeitet nach, alles im Speicher; je Kachel werden die drei Dateien einmal geschrieben. `{kachel: Anteil getroffener Texel in %}`."""
         from PIL import Image
 
-        from .blendimporthautlokal import Blendimporthautlokal      # erst hier: zieht Warp und die GPU-Rechnung herein
+        from .blendimporthautlokal import Blendimporthautlokal      # erst hier: zieht die CUDA-Kerne und die GPU-Rechnung herein
         from .hautbacken.graph import Hautgraphfehler
 
         Image.MAX_IMAGE_PIXELS = None

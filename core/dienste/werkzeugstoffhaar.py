@@ -29,8 +29,8 @@ class Werkzeugstoffhaar:
              "lagen = haar.lauf(24)    # Liste der Schlüssellagen (M, 3), eine je Bild; haar.bericht()")),
          [(S + 'haarsimulation.py', 'Haarsimulation'), (S + 'haarnetz.py', 'HaarNetz'), (S + 'haarbiegung.py', 'Haarbiegung'), (S + 'haardivergenz.py', 'Haardivergenz')],
          'punkte (M, 3) aller Strähnen hintereinander, die Wurzel jeder Strähne zuerst, laengen (S,) mit mindestens 2 Punkten. Die Vorgabe-Schwerkraft der Klasse ist (0, 0, −9,81) (Blenders Z '
-         'unten); die Pipeline-Netze sind Y oben, dort (0, −9,81, 0) angeben. Mit koerper bricht der Aufbau ohne CUDA-Motor ab (RuntimeError mit dem Grund), mit rechner=\'numpy\' und Körper '
-         'ist es ein ValueError; ohne Körper läuft der Host. Divergiert die Rechnung (Lagen nicht endlich), wirft bild() Haardivergenz; eine endliche, aber absurde Lage zeigt weg_max_mm im '
+         'unten); die Pipeline-Netze sind Y oben, dort (0, −9,81, 0) angeben. Ohne CUDA bricht der Aufbau ab (RuntimeError); rechner nur auto, kerne oder torch, jeder andere '
+         'Wert (auch der frühere Host-Rechner numpy) ist seit dem 21.11.2026 ein ValueError — einen Host-Weg gibt es nicht. Divergiert die Rechnung (Lagen nicht endlich), wirft bild() Haardivergenz; eine endliche, aber absurde Lage zeigt weg_max_mm im '
          'Bericht von Haarauftrag. Gemessen (README, 02.10.2026): 32.315 Strähnen, 13 Bilder, ohne Kollision 0,001 mm im Mittel und 1,42 mm im Größten; Zeit Blender 193 s (57 s Simulation), '
          'Solver 1,2 s; 4.000 Strähnen mit Kopfkollision Blender 69 s, Solver 0,5 s. Mit Kopfkollision ist Blender selbst chaotisch (Wurzeln im Kontaktrand von 31 mm): Blender gegen '
          'Blender 13,4 mm, Solver gegen Blender 13,4 mm. Hime Cut (2.292 Strähnen): bei 3 mm Rand explodieren in Blender 6 von 30 gestörten Läufen, im Solver 7 von 28, bei 2 mm keiner. '

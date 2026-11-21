@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Hautwert — der Wert an einer Buchse für einen Stapel von Texeln: Art + ein Feld auf der GPU.
+"""Hautwert — der Wert an einer Buchse für einen Stapel von Texeln: Art + ein Feld auf der Karte.
 
-Arten wie im Export (`blendmaterialknoten.py`): `f` Zahl (`wp.array` float), `c` Farbe, `v` Vektor (`wp.array` vec3). Ganze Zahlen und Schalter rechnet der Graph als `f`.
+Arten wie im Export (`blendmaterialknoten.py`): `f` Zahl (float32 `(n,)`), `c` Farbe, `v` Vektor (float32 `(n, 3)`). Ganze Zahlen und Schalter rechnet der Graph als `f`.
+Bis 21.11.2026 `wp.array` (float bzw. vec3); seitdem torch-Tensoren für die eigenen CUDA-Kerne (`Hautbackenkernbau`).
 """
 
-import warp as wp
+import torch
 
 __all__ = ['Hautwert']
 
@@ -16,9 +17,9 @@ class Hautwert:
         self.art, self.daten = art, daten
 
     @staticmethod
-    def dtype(art):
-        return wp.float32 if art == 'f' else wp.vec3
+    def form(art, n):
+        return (n,) if art == 'f' else (n, 3)
 
     @classmethod
     def leer(cls, art, n, geraet):
-        return cls(art, wp.zeros(n, dtype=cls.dtype(art), device=geraet))
+        return cls(art, torch.zeros(cls.form(art, n), dtype=torch.float32, device=geraet))

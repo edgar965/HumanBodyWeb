@@ -71,6 +71,7 @@ Seit 03.11.2026 abends (Edgar: „mach im job ein UI das entweder eines oder meh
 import json
 import logging
 
+from .fotogenesiskleiderregeln import Fotogenesiskleiderregeln
 from .hautkilaufwahl import Hautkilaufwahl
 
 logger = logging.getLogger('core')
@@ -198,7 +199,7 @@ class Fotogenesispshuman:
         """Schreibt die Wahl in die job.json (mischend). `ValueError` bei unbekanntem Feld."""
         if job.get('art') != 'foto':
             raise ValueError('Nur Tests aus echten Fotos haben eine PSHuman-Wahl')
-        fremd = sorted(set(rumpf) - set(cls.VORGABE) - set(cls.ZAHLEN) - set(cls.TEXTE))
+        fremd = sorted(set(rumpf) - set(cls.VORGABE) - set(cls.ZAHLEN) - set(cls.TEXTE) - {Fotogenesiskleiderregeln.FELD})
         if fremd:
             raise ValueError('Unbekannte Felder %s' % (fremd,))
         if 'haar_welle' in rumpf and rumpf['haar_welle'] not in dict(cls.HAAR_WELLEN):
@@ -225,7 +226,7 @@ class Fotogenesispshuman:
         info = json.loads(datei.read_text(encoding='utf-8'))
         # 'weg' der ersten Fassung (03.11.2026, Combo-Box) fällt weg; die Bildplätze ('eingabe',
         # `Fotogenesispshumaneingabe`) bleiben
-        behalten = set(cls.VORGABE) | set(cls.ZAHLEN) | set(cls.TEXTE) | {'eingabe'}
+        behalten = set(cls.VORGABE) | set(cls.ZAHLEN) | set(cls.TEXTE) | {'eingabe', Fotogenesiskleiderregeln.FELD}
         neu_wahl = {k: bool(rumpf[k]) for k in cls.VORGABE if k in rumpf}
         for zahl in cls.ZAHLEN:
             if zahl in rumpf:
@@ -234,6 +235,11 @@ class Fotogenesispshuman:
             if text in rumpf:
                 neu_wahl[text] = rumpf[text]
         alt = {k: v for k, v in (info.get(cls.FELD) or {}).items() if k in behalten}
+        if Fotogenesiskleiderregeln.FELD in rumpf:                      # 21.11.2026: Wahl der Kleidungsregeln am Job, `null` nimmt sie zurück (wie Einstellungen)
+            regeln = Fotogenesiskleiderregeln.mischen(Fotogenesiskleiderregeln.lesen(info), rumpf[Fotogenesiskleiderregeln.FELD])
+            alt.pop(Fotogenesiskleiderregeln.FELD, None)
+            if regeln:
+                neu_wahl[Fotogenesiskleiderregeln.FELD] = regeln
         info[cls.FELD] = dict(alt, **neu_wahl)
         neu = datei.with_name('job.json.neu')
         neu.write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding='utf-8')

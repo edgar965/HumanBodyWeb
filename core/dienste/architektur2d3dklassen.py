@@ -123,10 +123,11 @@ class Architektur2d3dklassen:
             (D + 'stoffsolverdrapierung.py', 'Stoffsolverdrapierung'),
             (D + 'haardynamik.py', 'Haardynamik'), (D + 'haarstraehnen.py', 'Haarstraehnen'),
             (G + 'kleidmorphe.py', 'G9kleidmorphe'), (G + 'haarzusatz.py', 'G9haarzusatz')]),
-        # Der Stoffsolver (02.10.2026, `Stoffsolver/README.md`): Blenders Cloth und Haar-Dynamik als Warp-Löser, ein eigenes Paket.
-        ('Stoffsolver', 'Blenders Cloth als Python/Warp-Paket (Einstieg Drapierauftrag, Ablauf Stoffsimulation)', [
+        # Der Stoffsolver (02.10.2026, `Stoffsolver/README.md`): Blenders Cloth und Haar-Dynamik, ein eigenes Paket. Seit 19.11.2026 torch und Kernmotor
+        # (CUDA-DLL `stoff_cu`), der Warp-Löser ist am 21.11.2026 gelöscht (Phase 4, Edgar: „Phase 4: Mach“).
+        ('Stoffsolver', 'Blenders Cloth als Python-Paket: torch und Kernmotor (Einstieg Drapierauftrag, Ablauf Stoffsimulation)', [
             (S + 'drapierauftrag.py', 'Drapierauftrag'), (S + 'stoffsimulation.py', 'Stoffsimulation'),
-            (S + 'kollisionsablauf.py', 'Kollisionsablauf'), (S + 'warpmotor.py', 'WarpMotor'),
+            (S + 'kollisionsablauf.py', 'Kollisionsablauf'), (S + 'kernmotor.py', 'Kernmotor'),
             (S + 'implizitesverfahren.py', 'ImplizitesVerfahren'), (S + 'haarsimulation.py', 'Haarsimulation'),
             (S + 'haarauftrag.py', 'Haarauftrag'), (S + 'stoffoptionen.py', 'Stoffoptionen'),
             (S + 'auftragsoptionen.py', 'Auftragsoptionen')]),
@@ -136,7 +137,7 @@ class Architektur2d3dklassen:
             (S + 'polygonflaechen.py', 'Polygonflaechen'), (S + 'polygonbiegung.py', 'Polygonbiegung'),
             (S + 'linearbiegung.py', 'Linearbiegung'), (S + 'ruhegestalt.py', 'Ruhegestalt'),
             (S + 'federnachfuehrung.py', 'Federnachfuehrung'), (S + 'federverlauf.py', 'Federverlauf'),
-            (S + 'stoffmaterial.py', 'StoffMaterial'), (S + 'schrittzahl.py', 'Schrittzahl'), (S + 'geraeteruhe.py', 'Geraeteruhe'),
+            (S + 'stoffmaterial.py', 'StoffMaterial'), (S + 'schrittzahl.py', 'Schrittzahl'),
             (S + 'aussenkraefte.py', 'Aussenkraefte'), (S + 'federsteifigkeit.py', 'Federsteifigkeit'),
             (S + 'federgewichte.py', 'Federgewichte'), (S + 'schrumpfen.py', 'Schrumpfen'),
             (S + 'innenfedern.py', 'Innenfedern'), (S + 'naehte.py', 'Naehte'), (S + 'zielfedern.py', 'Zielfedern'),
@@ -145,12 +146,11 @@ class Architektur2d3dklassen:
             (S + 'feldtextur.py', 'Feldtextur'), (S + 'windfelder.py', 'Windfelder'),
             (S + 'feldtexbild.py', 'Feldtexbild'), (S + 'feldtexfarbband.py', 'Feldtexfarbband'), (S + 'feldtexzufall.py', 'Feldtexzufall'),
             (S + 'feldtexknotenbaum.py', 'Feldtexknotenbaum'), (S + 'feldbahn.py', 'Feldbahn'),
-            (S + 'windkraftbewegt.py', 'Windkraftbewegt'), (S + 'warpfeldbewegung.py', 'Warpfeldbewegung'),
+            (S + 'windkraftbewegt.py', 'Windkraftbewegt'),
             (S + 'choiko.py', 'Choiko'), (S + 'kubischfedern.py', 'Kubischfedern'),
             (S + 'hydrostatik.py', 'Hydrostatik'), (S + 'druckgruppe.py', 'Druckgruppe')]),
         ('Stoffsolver: Kollision', 'mehrere Körper, Qualität, bewegter Körper im GPU-Graph', [
-            (S + 'kollisionseinstellungen.py', 'Kollisionseinstellungen'), (S + 'koerperantwort.py', 'Koerperantwort'),
-            (S + 'warpkoerpersatz.py', 'WarpKoerpersatz'), (S + 'warppinbewegung.py', 'WarpPinbewegung')]),
+            (S + 'kollisionseinstellungen.py', 'Kollisionseinstellungen'), (S + 'koerperantwort.py', 'Koerperantwort')]),
         ('Stoffsolver: Haar', 'Dynamik, Kontinuum, Pins, Gewichte, Kopf, Erzeugen (Dreiecke bis Vielecke), Kämmen, Kinder, Effektoren, Kurven, Texturen', [
             (S + 'haarnetz.py', 'HaarNetz'), (S + 'haarnetzgewicht.py', 'HaarNetzGewicht'), (S + 'haargewicht.py', 'Haargewicht'),
             (S + 'haarkontinuum.py', 'Haarkontinuum'), (S + 'haarzufall.py', 'Haarzufall'),

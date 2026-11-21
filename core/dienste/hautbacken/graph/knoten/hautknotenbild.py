@@ -2,22 +2,17 @@
 """Hautknotenbild — der Knoten „Image Texture" (Projektion FLAT). Übernommen aus `intern/cycles/kernel/svm/image.h` (`svm_node_tex_image`) und der Übersetzung in
 `scene/shader_nodes.cpp` (`ImageTextureNode::compile`: Flags `COMPRESS_AS_SRGB`, `ALPHA_UNASSOCIATE` nur wenn der Alpha-Ausgang gelesen wird); Blender-Quelltext vom
 10.10.2026. Ohne verbundenen Vektor liest der Knoten die Standard-UV (Cycles fügt dafür einen „Texture Coordinate"-Knoten ein, `LINK_TEXTURE_UV`).
+Kern `hb_bild_trennen` (bis 21.11.2026 Warp hier); das Abtasten selbst in `Hauttextur`.
 """
 
-import warp as wp
+import torch
 
+from ...hautbackenkernbau import Hautbackenkernbau
 from ..hauttextur import ERWEITERUNG, INTERPOLATION
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten
 
 __all__ = ['Hautknotenbild']
-
-
-@wp.kernel
-def _trennen(r: wp.array(dtype=wp.vec4), farbe: wp.array(dtype=wp.vec3), alpha: wp.array(dtype=wp.float32)):
-    i = wp.tid()
-    farbe[i] = wp.vec3(r[i][0], r[i][1], r[i][2])
-    alpha[i] = r[i][3]
 
 
 class Hautknotenbild(Hautknoten):
@@ -52,8 +47,8 @@ class Hautknotenbild(Hautknoten):
             vektor = graph.standard_uv(ctx, modus)
         else:
             vektor = self.ein(graph, ctx, modus, 'Vector', 'v')
-        roh = wp.zeros(ctx.n, dtype=wp.vec4, device=g)
+        roh = torch.zeros((ctx.n, 4), dtype=torch.float32, device=g)
         textur.abtasten(vektor.daten, self.eig['interpolation'], self.eig['extension'], 'Alpha' in graph.genutzt(self.schluessel), roh)
         farbe, alpha = Hautwert.leer('c', ctx.n, g), Hautwert.leer('f', ctx.n, g)
-        wp.launch(_trennen, dim=ctx.n, inputs=[roh, farbe.daten, alpha.daten], device=g)
+        Hautbackenkernbau.lauf('hb_bild_trennen', ctx.n, roh, farbe.daten, alpha.daten)
         return {'Color': farbe, 'Alpha': alpha}

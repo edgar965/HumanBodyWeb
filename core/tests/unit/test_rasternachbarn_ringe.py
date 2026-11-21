@@ -4,7 +4,7 @@ Wartepunkt). Davor (12.11.2026) offene Zeilen in torch über Ringe (2, 4, 8) und
 `_wegwerf/rasterkern_probe.py` (120 Fälle gleich, 18.11.2026).
 
 Bezug hier: die volle Abstandsmatrix in derselben Formel ((dx² + dy²) + dz², float64), kleinste Zeile zuerst. Braucht die Grafikkarte (sonst übersprungen). Nicht gelaufen — läuft nur auf Ansage.
-Sabotage: in `rasterkernwarp.einfuegen` `i < oi[t, k - 1]` durch `i > oi[t, k - 1]` ersetzen → `test_2` rot; `RMAX = 0` und im Kern die Vollsuche weglassen → `test_3` rot
+Sabotage: in `einfuegen` (`Genesis9/g9kerne_cu/g9kerne.cu`, bis 21.11.2026 `rasterkernwarp.einfuegen`) `i < oi[k - 1]` durch `i > oi[k - 1]` ersetzen → `test_2` rot; `RMAX = 0` und im Kern die Vollsuche weglassen → `test_3` rot
 (Anfragen weit außerhalb).
 """
 import unittest

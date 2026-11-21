@@ -4,7 +4,8 @@ Pipelines“ und „mach nochmal eine klare Tabelle und Erklärungen … zu den 
 
 Liest `meshgenesis/kleidregeln.json` (der Katalog, den auch die Kette liest: `meshgenesis/meshgenesis_kleidregeln.py`) und `meshgenesis/kleidmethoden.json` (die Übersicht). Die Wahl der
 Regeln liegt in `AppSettings.ui_prefs` unter `kleider_regel_<Kennung>` = '1' / '0' (wie die übrigen Schalter der Seite); ohne Eintrag gilt die Voreinstellung `wie_bisher`.
-STAND: gespeichert wird die Wahl; die Kette liest sie noch nicht, die Schalter ändern kein Ergebnis (Konzept Abschnitt 10, Stufe 1 von 5).
+STAND (21.11.2026): `Kleidregelnaufloesung` schreibt die Wahl bei jedem Start einer Rechnung in `einstellung.json` des Tests; der Schritt „kleidregeln“ der Kette
+(`meshgenesis/meshgenesis_kleidstufe.py`) setzt `fetzen`, `rand_glatt` und `rock` in allen drei Wegen durch (Konzept Abschnitt 10, Stufen 2 bis 4). Die anderen Schalter ändern kein Ergebnis.
 """
 
 import json

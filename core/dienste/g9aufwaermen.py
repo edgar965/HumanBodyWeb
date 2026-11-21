@@ -102,8 +102,10 @@ class G9aufwaermen:
         from ..api.g9garderobe import G9garderobeapi
         aus += [('reglergliederung', G9reglergliederung.bereiche),
                 ('garderobe-katalog', lambda: G9garderobeapi._katalog(None)),
-                # Die Kerne der Haut-Maske auf der Karte laden (18.11.2026, `hautkarterechnung.py`): sonst die erste Maske nach dem Start mit dem Laden der Warp-Module
-                ('hautkarte', lambda: __import__('core.dienste.hautkarterechnung', fromlist=['Hautkarterechnung']))]
+                # Die Kerne der Haut-Maske auf der Karte laden (18.11.2026, `hautkarterechnung.py`): sonst die erste Maske nach dem Start mit dem Laden der Kerne
+                # (bis 21.11.2026 Warp-Module; seitdem die DLL von `Hautkartekernbau`, die der Import allein nicht lädt)
+                ('hautkarte', lambda: (__import__('core.dienste.hautkarterechnung', fromlist=['Hautkarterechnung']),
+                                       __import__('core.dienste.hautkartekernbau', fromlist=['Hautkartekernbau']).Hautkartekernbau.dll()))]
         return aus
 
     @classmethod

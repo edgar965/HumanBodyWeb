@@ -2,8 +2,8 @@
 
 Echte Regler-Dateien (`Filmregler.schreiben`, wie der Render) in `ProjektTemp/pruefungen` (`Pruefablage`), geladen über den Weg des Servers (`Exportleistekettenlauf.kettenregler`).
 Geprüft: unberührte Regler → kein Zeichen (der Render spielt die Ablage der Seite); ein Wind-Regler → Zeichen für beide Schritte, gleich bei gleichen Werten; „Wind auf Bart“ nur für
-„haar“; Anlauf in Bilder der Bewegung; Wind mit Y oben; `stoff.anker` und `stoff.zeitskala` als Faktor auf die Werte der Kette. Läuft nur auf Ansage; nicht gelaufen beim Schreiben
-(20.11.2026). Sabotage (von Hand): in `zeichen` immer '' zurückgeben → „Wind ändert das Zeichen“ rot; in `wind` `(x, z, -y)` durch `(x, y, z)` ersetzen → „Neigung nach oben“ rot.
+„haar“; Anlauf in Bilder der Bewegung; Wind mit Y oben; `stoff.anker` und `stoff.zeitskala` als Faktor auf die Werte der Kette; seit 21.11.2026 `kette.*` und `wind.ketten` im
+Zeichen von „stoff“ und als Argumente der Kettenbahn (`kette`). Läuft nur auf Ansage; nicht gelaufen beim Schreiben (20.11.2026, Ergänzung 21.11.2026). Sabotage (von Hand): in `zeichen` immer '' zurückgeben → „Wind ändert das Zeichen“ rot; in `wind` `(x, z, -y)` durch `(x, y, z)` ersetzen → „Neigung nach oben“ rot.
 """
 import os
 import unittest
@@ -69,6 +69,26 @@ class KettenreglerTest(unittest.TestCase):
         self.assertAlmostEqual(a['material_felder']['zeitskala'], 2.0 * z0)
         self.assertEqual(a['schwerkraft'], (0.0, -9.81 * 0.5, 0.0))
         self.assertNotIn('wind', a)                                                # kein Wind-Regler geändert: windstill wie die Kette
+
+    def test_kettenregler_rechnen_den_stoff_neu(self):
+        u"""21.11.2026 (Edgar „Regler verdrahten“): die Kette liegt im Schritt „stoff“ — `kette.*` und `wind.ketten` ändern dessen Zeichen, nicht das von „haar“."""
+        with Pruefablage.ordner() as ordner:
+            for name, werte in (('zug.json', {'kette.zug': 50.0}), ('wind.json', {'wind.ketten': 1.0})):
+                r = self._regler(ordner, name, werte)
+                self.assertNotEqual(r.zeichen('stoff'), '', name)
+                self.assertEqual(r.zeichen('haar'), '', name)
+
+    def test_kette_argumente_und_wind_mit_y_oben(self):
+        with Pruefablage.ordner() as ordner:
+            r = self._regler(ordner, 'kette.json', {'kette.zug': 50.0, 'kette.dicke': 0.006, 'wind.ketten': 1.0, 'wind.richtung': 90.0, 'wind.neigung': 30.0})
+            a = r.kette(60.0, 15)
+            leer = self._regler(ordner, 'leer.json', {}).kette(60.0, 15)
+        self.assertEqual(a['material_felder'], {'zug': 50.0})
+        self.assertEqual(a['dicke'], 0.006)
+        self.assertNotIn('schwerkraft', a)
+        richtung = [float(x) for x in a['wind'].felder[0].richtung]
+        self.assertAlmostEqual(richtung[1], 0.5, places=3)                         # von unten: Y ist oben
+        self.assertEqual(leer, {})                                                 # unberührt: auch kein Wind (Katalog 2 × 0,3)
 
 
 if __name__ == '__main__':

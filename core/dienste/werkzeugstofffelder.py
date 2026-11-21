@@ -65,8 +65,7 @@ class Werkzeugstofffelder:
          '\n'.join((
              '{"art": "wind", …, "bewegung": {"datei": "<npz mit matrizen (K, 4, 4) [, punkte, dreiecke, normalen]>"}}',
              "# matrizen = object_to_world des Feldobjekts je gerechnetes Bild (Eintrag 0 = Bild wind_startbild); bei oberflaeche/punkte dazu das Netz im Objektraum (V, 3) oder (K, V, 3)")),
-         [(S + 'feldbahnauftrag.py', 'Feldbahnauftrag'), (S + 'feldbahn.py', 'Feldbahn'), (S + 'windkraftbewegt.py', 'Windkraftbewegt'),
-          (S + 'warpfeldbewegung.py', 'Warpfeldbewegung')],
+         [(S + 'feldbahnauftrag.py', 'Feldbahnauftrag'), (S + 'feldbahn.py', 'Feldbahn'), (S + 'windkraftbewegt.py', 'Windkraftbewegt')],
          'Ort, Richtung, Matrix und Netz des Felds im Auftrag gelten dann nur für Bild 0 und werden von der Bahn überschrieben. Blender nimmt die Lage je Bild ohne Zwischenwerte (ein halbes '
          'Bild Versatz: 1,7 mm). Die Skalierung eines Empty wirkt nicht (0,0000 mm), die Geschwindigkeit des Feldobjekts wirkt bei Stoff nicht. Gemessen: 14 Fälle (Wind, Punktkraft, '
          'Luftwiderstand, Magnet, Wirbel, Textur, Oberfläche und Punkte; verschoben, gedreht, skaliert, per Shape Key verformt) 0,0001–0,02 mm im Mittel; mit festem Feld liegt der Solver '

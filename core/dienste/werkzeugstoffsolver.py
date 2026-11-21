@@ -15,10 +15,10 @@ class Werkzeugstoffsolver:
     KENNUNG = 'stoffsolver'
     TITEL = 'Stoffsolver: Einstiege, Aufträge und Gerät'
     EINLEITUNG = (
-        'Der Stoffsolver (A:\\3DTools\\Stoffsolver) ist Blenders Cloth-, Haar- und UV-Code als eigenes Python/Warp-Paket ohne Bezug zu Genesis: Punkte (N, 3) und Dreiecke (T, 3) '
+        'Der Stoffsolver (A:\\3DTools\\Stoffsolver) ist Blenders Cloth-, Haar- und UV-Code als eigenes Python-Paket (torch und Kernmotor, CUDA) ohne Bezug zu Genesis: Punkte (N, 3) und Dreiecke (T, 3) '
         'hinein, Punkte an derselben Nummer zurück. Aus der Pipeline erreichbar sind genau zwei Rezeptzeilen — kleid_drapieren mit motor=\'stoffsolver\' und haar_dynamik; alles '
         'andere (Material, Felder, Haar erzeugen, UV, Texturen) nur per Auftrag oder direktem Python-Aufruf. Reihenfolge: 1. Rezeptzeile oder Auftrag wählen, 2. der Prozess läuft in '
-        'python14 mit Warp auf der CUDA-GPU, 3. Bericht und Ergebnis lesen. Ohne CUDA-GPU lehnen Pipeline-Motor und Haar-Dynamik ab; Blender (Gruppe „Schleifen über Blender“) ist '
+        'python14 mit torch und dem Kernmotor auf der CUDA-GPU, 3. Bericht und Ergebnis lesen. Ohne CUDA-GPU lehnen Pipeline-Motor und Haar-Dynamik ab; Blender (Gruppe „Schleifen über Blender“) ist '
         'dann der Weg — nur nach Ansage von Edgar.')
     # (Werkzeug, Wofür, Art, Aufruf, Klassen, Hinweis)
     ZEILEN = [
@@ -117,28 +117,27 @@ class Werkzeugstoffsolver:
              '# häufig: "koerper": "<k.npz>", "bilder": 24, "schwerkraft": [0, -9.81, 0], "material": "vorgabe", "dicke": 0.02, "rechner": "warp", "haarargumente": {"abstand": 0.0034}')),
          [(S + 'haarauftrag.py', 'Haarauftrag'), (S + 'haarsimulation.py', 'Haarsimulation')],
          's.npz: punkte (M, 3) aller Strähnen hintereinander, die WURZEL JEDER STRÄHNE ZUERST; laengen (S,) Punkte je Strähne (mindestens 2); optional normalen (S, 3), die Flächennormale '
-         'der Kopfhaut an der Wurzel. k.npz (optional): punkte (N, 3), dreiecke (T, 3), der Kollisionskörper (Kopf oder ganzer Körper); die Haarkollision gibt es nur auf dem Gerät. '
+         'der Kopfhaut an der Wurzel. k.npz (optional): punkte (N, 3), dreiecke (T, 3), der Kollisionskörper (Kopf oder ganzer Körper); die Haarkollision rechnet auf der Karte (Kernmotor oder torch). '
          'Weitere Schlüssel: material (vorgabe|baumwolle|seide|jeans|leder|gummi; vorgabe sind 5 Zeitschritte je Bild, nicht die Qualität 6 des Stoffs), material_felder, dicke (0,02 m), '
          'rechner, haarargumente {kontinuum, biegung_zufall, zufall_seed, haarnummern, abstand, kontinuum_zellen, pin_steifigkeit …}: JSON-fähige Argumente von Haarsimulation; ein Schlüssel, '
          'der schon ein eigener Schlüssel ist, wirft ValueError. Bericht: punkte, straehnen, bilder, weg_mittel_mm, weg_max_mm, wurzel_weg_max_mm (muss 0 sein), solver, dazu der Bericht '
-         'von Haarsimulation, import_s und lauf_s. Mit Körper und ohne CUDA-Motor bricht der Aufbau ab (RuntimeError), mit rechner=\'numpy\' und Körper ist es ein ValueError. '
+         'von Haarsimulation, import_s und lauf_s. Ohne CUDA bricht der Aufbau ab (RuntimeError); rechner nur auto, kerne oder torch, jeder andere Wert (auch der frühere '
+         'Host-Rechner numpy) ist seit dem 21.11.2026 ein ValueError. '
          'Stand: gegen Blender 5.2.2 gemessen (Gruppe „Stoffsolver: Haar“).'),
-        ('Gerät und Rechenweg (rechner, Warp, CUDA)',
-         'Prüfen, ob der Solver auf der GPU rechnen kann, und den Rechenweg wählen: Gerät (Warp, CUDA-Graph), Host (NumPy, Referenz) oder automatisch.',
+        # 21.11.2026 (Phase 4, Edgar: „Phase 4: Mach“): Warp ist gelöscht — die Zeile beschrieb `Warpumgebung` und den `WarpMotor`.
+        ('Rechenweg (rechner: Kernmotor oder torch)',
+         'Den Rechenweg wählen: Kernmotor (CUDA-Kerne der DLL stoff_cu) oder torch auf der Karte.',
          'python',
          '\n'.join((
-             "from Stoffsolver.warpumgebung import Warpumgebung",
-             "Warpumgebung.verfuegbar()      # Warp importierbar und initialisiert?",
-             "Warpumgebung.geraet('auto')    # 'cuda:0' mit GPU, sonst 'cpu'; None, wenn Warp fehlt",
-             "Warpumgebung.fehler()          # der Grund, wenn Warp fehlt",
-             "# überall: rechner='auto' | 'warp' | 'numpy'    (im Auftrag: \"rechner\": \"warp\")")),
-         [(S + 'warpumgebung.py', 'Warpumgebung'), (S + 'warpmotor.py', 'WarpMotor'), (S + 'stoffsimulation.py', 'Stoffsimulation'), (S + 'haarsimulation.py', 'Haarsimulation')],
-         'rechner=\'auto\': Gerät, wenn Warp und eine CUDA-GPU da sind, sonst Host (NumPy, float64). \'warp\': Gerät oder Fehler (RuntimeError: der Gerätemotor braucht eine CUDA-GPU) — so '
-         'stellen Stoffsolverdrapierung und Haardynamik es ein, deshalb lehnen sie ohne GPU ab. \'numpy\': Host erzwingen (die Referenz der Tests). Der Host ist keine Alternative: Hose, 12 Bilder '
-         '462 s gegen 10,1 s in Blender (README, 02.10.2026, blender_roundtrip.py --host). Das Gerät rechnet in float32 wie Blender, ein ganzer Zeitschritt ist ein CUDA-Graph (WarpMotor); '
-         'zwei Läufe sind bitgleich (README). Die Haarkollision gibt es nur auf dem Gerät. Warp 1.17.0 in python14, GPU dieses Rechners RTX PRO 4500 Blackwell (README Messungen; CLAUDE.md). '
-         'Der Kernel-Cache liegt in Stoffsolver/_warp_cache/ (nicht im Systemordner, nicht in git); der erste Lauf nach einer Änderung an Warp-Kernen übersetzt neu und dauert länger. '
-         'Stand: Gerät gegen Blender gemessen, Host als Referenz der Tests.'),
+             "Stoffsimulation(..., rechner='auto')    # Kernmotor, wenn er alles kann, was das Stück braucht; sonst torch (Grund in sim.motor_fehler)",
+             "Stoffsimulation(..., rechner='kerne')   # Kernmotor erzwingen, ValueError mit dem fehlenden Teil",
+             "Stoffsimulation(..., rechner='torch')   # torch erzwingen (float64), die Referenz der Vergleiche; der frühere Name 'numpy' ist ein Fehler",
+             "Kernmotor.fehlt(sim, cg, kollision, biegung)   # was die Kerne nicht können, oder None")),
+         [(S + 'kernmotor.py', 'Kernmotor'), (S + 'stoffsimulation.py', 'Stoffsimulation'), (S + 'haarsimulation.py', 'Haarsimulation')],
+         'rechner=\'warp\' ist seit dem 19.11.2026 ein Fehler, die Warp-Module sind seit dem 21.11.2026 gelöscht; einen Host-Weg gibt es seit dem 21.11.2026 nicht '
+         '(ohne CUDA RuntimeError, Edgar: „die physik sollte gar nicht auf CPU laufen können“). Den Kernen fehlen (Kernmotor.fehlt): cg=\'schnell\', kollision=\'schnell\', '
+         'Innendruck, Druckgruppe, Hydrostatik, Wind mit Abfall bzw. andere Feldarten, Vielecksbiegung und Federnachführung — dann rechnet torch. Gemessen Hose, 12 Bilder: Kerne 0,29 s, '
+         'Warp (vor dem Löschen) 0,50 s, torch 7,8–8,2 s (stoffbahn.py, kernmotor.py). Haar und Wind ohne Abfall laufen ebenfalls auf den Kernen (Haarmotor, Kernwind).'),
         ('Auftragsschlüssel über Drapierauftrag hinaus (Auftragsoptionen)',
          'Die Schlüssel der auftrag.json, die die Bausteine des Ausbaus einschalten, und ihre Übersetzung in Stoffoptionen, Nähte, Materialfelder und Körperbewegung.',
          'python',

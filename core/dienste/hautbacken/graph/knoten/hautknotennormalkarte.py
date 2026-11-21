@@ -7,63 +7,16 @@
                     (`Mesh::add_undisplaced`), also nur bei echter Verschiebung (`Geometry::has_true_displacement`) — die lehnt `Hautgraph` ab. Ohne sie fehlt das Attribut,
                     und „Original" rechnet wie „Displaced": die geglättete, normierte Eckennormale (`triangle_smooth_normal_unnormalized_object_space`), Stärke im Tangentenraum.
     Objekt/Welt     die Farbe selbst, normiert (die Quelle hat keine Objekttransformation); BLENDER_*: y und z umgekehrt; die Stärke wird am Ende linear gemischt
-Ein flaches Dreieck (kein `SHADER_SMOOTH_NORMAL`) nimmt die Flächennormale. Bei Rückseite werden Normale und Ergebnis umgekehrt.
+
+Ein flaches Dreieck (kein `SHADER_SMOOTH_NORMAL`) nimmt die Flächennormale. Bei Rückseite werden Normale und Ergebnis umgekehrt. Kerne `hb_normalkarte`, `hb_normalkarte_fest`
+(bis 21.11.2026 Warp hier).
 """
 
-import warp as wp
-
-from ...hautfunktionen import safe_normalize3
+from ...hautbackenkernbau import Hautbackenkernbau
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten
 
 __all__ = ['Hautknotennormalkarte']
-
-
-@wp.kernel
-def _normalkarte(farbe: wp.array(dtype=wp.vec3), staerke: wp.array(dtype=wp.float32), tang: wp.array(dtype=wp.vec3), vorz: wp.array(dtype=wp.float32),
-                 normale: wp.array(dtype=wp.vec3), ng: wp.array(dtype=wp.vec3), glatt: wp.array(dtype=wp.int32), n_shader: wp.array(dtype=wp.vec3),
-                 rueck: wp.array(dtype=wp.int32), dx_umkehren: int, aus: wp.array(dtype=wp.vec3)):
-    """`svm_node_normal_map`, Tangentenraum. `normale`: die geglättete, normierte Normale; ein flaches Dreieck nimmt `sd->Ng` (bei Rückseite zurückgedreht)."""
-    i = wp.tid()
-    c = farbe[i]
-    c = wp.vec3(2.0 * (c[0] - 0.5), 2.0 * (c[1] - 0.5), 2.0 * (c[2] - 0.5))
-    if dx_umkehren > 0:
-        c = wp.vec3(c[0], -c[1], c[2])
-    s = staerke[i]
-    n = normale[i]
-    if glatt[i] == 0:
-        n = ng[i]
-        if rueck[i] != 0:
-            n = -n
-    c = wp.vec3(c[0] * s, c[1] * s, (1.0 - wp.clamp(s, 0.0, 1.0)) + wp.clamp(s, 0.0, 1.0) * c[2])      # mix(1, z, saturatef(strength))
-    b = vorz[i] * wp.cross(n, tang[i])
-    r = safe_normalize3(c[0] * tang[i] + c[1] * b + c[2] * n)
-    if rueck[i] != 0:
-        r = -r
-    if (r[0] == 0.0 and r[1] == 0.0 and r[2] == 0.0) or wp.isnan(r[0]) or wp.isnan(r[1]) or wp.isnan(r[2]):
-        r = n_shader[i]
-    aus[i] = r
-
-
-@wp.kernel
-def _normalkarte_fest(farbe: wp.array(dtype=wp.vec3), staerke: wp.array(dtype=wp.float32), n_shader: wp.array(dtype=wp.vec3), rueck: wp.array(dtype=wp.int32),
-                      blender: int, aus: wp.array(dtype=wp.vec3)):
-    """Objekt-/Weltraum: `N = color` (BLENDER_*: y und z umgekehrt), normiert, bei Rückseite negiert, dann die lineare Stärke."""
-    i = wp.tid()
-    c = farbe[i]
-    c = wp.vec3(2.0 * (c[0] - 0.5), 2.0 * (c[1] - 0.5), 2.0 * (c[2] - 0.5))
-    if blender > 0:
-        c = wp.vec3(c[0], -c[1], -c[2])
-    r = safe_normalize3(c)
-    if rueck[i] != 0:
-        r = -r
-    s = staerke[i]
-    if s != 1.0:
-        s = wp.max(s, 0.0)
-        r = safe_normalize3(n_shader[i] + (r - n_shader[i]) * s)
-    if r[0] == 0.0 and r[1] == 0.0 and r[2] == 0.0:
-        r = n_shader[i]
-    aus[i] = r
 
 
 class Hautknotennormalkarte(Hautknoten):
@@ -84,12 +37,12 @@ class Hautknotennormalkarte(Hautknoten):
         aus = Hautwert.leer('v', ctx.n, g)
         raum = self.eig['space']
         if raum != 'TANGENT':
-            wp.launch(_normalkarte_fest, dim=ctx.n, inputs=[farbe.daten, staerke.daten, n_shader, rueck, int(raum.startswith('BLENDER')), aus.daten], device=g)
+            Hautbackenkernbau.lauf('hb_normalkarte_fest', ctx.n, farbe.daten, staerke.daten, n_shader, rueck, int(raum.startswith('BLENDER')), aus.daten)
             return {'Normal': aus}
         tangente = ctx.tangente(self.eig.get('uv_map') or '')
         if tangente is None:
             return {'Normal': Hautwert('v', n_shader)}                # `!is_attribute_found(attr)`: unveränderte Normale
         ng = ctx.geometrie()[0]
-        wp.launch(_normalkarte, dim=ctx.n, inputs=[farbe.daten, staerke.daten, tangente[0], tangente[1], ctx.normale_geglaettet(), ng, ctx.glatt(), n_shader, rueck,
-                                                   int(self.eig.get('convention') == 'DIRECTX'), aus.daten], device=g)
+        Hautbackenkernbau.lauf('hb_normalkarte', ctx.n, farbe.daten, staerke.daten, tangente[0], tangente[1], ctx.normale_geglaettet(), ng, ctx.glatt(), n_shader, rueck,
+                               int(self.eig.get('convention') == 'DIRECTX'), aus.daten)
         return {'Normal': aus}

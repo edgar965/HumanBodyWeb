@@ -87,7 +87,7 @@ class Blendervergleichkleider:
          "m.kleid_drapieren('g9_base_shirt', bilder=24, motor='stoffsolver')   # Morph eigen.drapiert; Python: Drapierauftrag.rechnen(stueck_punkte, "
          "stueck_dreiecke, koerper_punkte, koerper_dreiecke, bilder=24)",
          [('HumanBodyWeb/core/dienste/stoffsolverdrapierung.py', 'Stoffsolverdrapierung'), ('Stoffsolver/drapierauftrag.py', 'Drapierauftrag'),
-          ('Stoffsolver/stoffsimulation.py', 'Stoffsimulation'), ('Stoffsolver/warpmotor.py', 'WarpMotor')],
+          ('Stoffsolver/stoffsimulation.py', 'Stoffsimulation'), ('Stoffsolver/kernmotor.py', 'Kernmotor')],
          'Modifier CLOTH (`settings`: Masse, Steifigkeiten, Quality, Druck, Nähfedern) mit COLLISION am Körper',
          "c = stueck.modifiers.new('Stoff', 'CLOTH'); c.settings.quality = 6; scene.frame_set(f)   # wie effekte/blender/engine2d3dkleider/drapieren.py",
          'gemessen',

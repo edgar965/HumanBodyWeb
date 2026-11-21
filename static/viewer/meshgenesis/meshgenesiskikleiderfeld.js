@@ -11,8 +11,9 @@ import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 import { Meshfighautstueck } from '../meshfigur/meshfighautstueck.js';
 
 export class Meshgenesiskikleiderfeld {
-    // z (12.11.2026, „Genesis zuerst“): Stück der Garderobe, Server `Meshgenesistestkikleider`; e (20.11.2026): Methode „Eigen“, an das Netzstück gepasst
-    static WEGE = new Set(['k', 's', 'h', 'f', 'g', 'z', 'e']);
+    // z (12.11.2026, „Genesis zuerst“): Stück der Garderobe, Server `Meshgenesistestkikleider`; e (20.11.2026): Methode „Eigen“, an das Netzstück gepasst;
+    // p (21.11.2026): Methode „Passend“, das passendste Stück der Kleiderbibliothek aus mehreren Kandidaten
+    static WEGE = new Set(['k', 's', 'h', 'f', 'g', 'z', 'e', 'p']);
     /** = `Kleiderverdeckung.TIEFE_KOSTUEM_M` auf dem Server (ProjektTemp/_wegwerf/meshgenesis_kleider_verdeckung.py) */
     static STOFF_TIEFE_M = 0.040;
     // Methoden umbenannt (19.11.2026, Edgar: „Methode: Kleiderbibliothek (ehemals Garderobe) und Drapieren“) — z ist die Kleiderbibliothek, f das Drapieren

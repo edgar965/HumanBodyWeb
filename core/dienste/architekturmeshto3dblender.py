@@ -66,7 +66,7 @@ class Architekturmeshto3dblender:
         ('surface_shader_average_normal, Principled BSDF', 'Die gebackene Normale ist das gewichtete Mittel der Closure-Normalen: Sheen → Coat → Metall → Transmission → Glanz → Untergrund/Diffus, mit den '
                                                           'Albedo-Tabellen von Cycles (cycles_tabellen.npz, 63 KB) und der Energieerhaltung (GGX und Glas).', 'hautbacken/closure/, graph/hautglanz.py',
          '49 Zoo-Materialien backt Blender mit „Bump Map Correction"; Mittel Normalen ≤ 0,05'),
-        ('integrator.cpp, surface_shader.h', 'Beim Backen wird die Transparent-Closure zur Holdout-Closure und zählt nicht in den Mittelwert.', 'Kommentar und Verhalten in hautclosurekernel.py',
+        ('integrator.cpp, surface_shader.h', 'Beim Backen wird die Transparent-Closure zur Holdout-Closure und zählt nicht in den Mittelwert.', 'Kommentar und Verhalten in hautbacken/hautbackenkerne_cu/hautclosurekern.cuh (bis 21.11.2026 hautclosurekernel.py, Warp)',
          'ohne Principled gemessen (transparent_probe.py, Blender 5.2.2 CPU), 11.10.2026'),
         ('ImageTextureNode::image_params, OpenImageIO', 'Farbraum, Alpha-Modus, Quelle des Bildes; 8- und 16-Bit-Bilder bleiben Ganzzahlen.', 'hautbackenbild.py, blendmaterialbild.py (in Blender)',
          'Farbraum-Umrechnung im Zoo gegen Blender gemessen, nicht aus dem Quelltext gefolgert'),

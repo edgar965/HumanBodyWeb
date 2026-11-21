@@ -7,6 +7,7 @@
  */
 import { Meshgenesisflaechennetz } from './meshgenesisflaechennetz.js';
 import { Meshgenesistestkleidname } from './meshgenesistestkleidname.js';
+import { Meshgenesistestkleidregeln } from './meshgenesistestkleidregeln.js';
 import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
@@ -128,7 +129,7 @@ export class Meshgenesistestkleider {
         const td = document.createElement('td');
         for (const w of wege) {
             const zeile = document.createElement('div');
-            zeile.textContent = this._beschreibung(st, w);
+            Meshgenesistestkleidregeln.setzen(zeile, this._beschreibung(st, w), st[w]);
             if (w === 'a' && st.a?.kandidaten) zeile.title = `nächste: ${st.a.kandidaten.slice(1).map(k => `${k.kennung} ${de(k.ueberdeckung, 2)}`).join(' · ')}`;
             if (w === 'h' && st.h?.kandidaten) zeile.title = `nächste: ${st.h.kandidaten.slice(1).map(k => `${k.kennung} ${de(k.abstand, 2)}`).join(' · ')}`;
             td.append(zeile);

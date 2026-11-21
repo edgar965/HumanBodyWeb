@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Der Knotengraph-Auswerter des lokalen Backers: dieselben Rechenwege wie Cycles (Blender-Quelltext), auf der GPU mit NVIDIA Warp. Siehe `Hautgraph` und `Hautbackengraph`."""
+"""Der Knotengraph-Auswerter des lokalen Backers: dieselben Rechenwege wie Cycles (Blender-Quelltext), auf der GPU mit eigenen CUDA-Kernen (`Hautbackenkernbau`, bis 21.11.2026 NVIDIA Warp). Siehe `Hautgraph` und `Hautbackengraph`."""
 
 from .hautbackengraph import Hautbackengraph
 from .hautgraph import Hautgraph

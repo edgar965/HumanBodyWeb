@@ -113,7 +113,7 @@ class Werkzeugstofffedern:
              '# im Auftrag: "selbstkontakt": true, "abstand": 0.004, "dicke": 0.004, "selbstabstand": 0.003, "kollision_qualitaet": 2, "impulse_clamp": 0, "self_impulse_clamp": 0,',
              '#   "gruppen": "<npz mit ohne_koerperkontakt, ohne_selbstkontakt>"')),
          [(S + 'kollisionsablauf.py', 'Kollisionsablauf'), (S + 'kollisionseinstellungen.py', 'Kollisionseinstellungen'), (S + 'kollisionskoerper.py', 'Kollisionskoerper'),
-          (S + 'koerperantwort.py', 'Koerperantwort'), (S + 'geraeteruhe.py', 'Geraeteruhe')],
+          (S + 'koerperantwort.py', 'Koerperantwort')],
          'Dreieck gegen Dreieck wie cloth_bvh_collision (collision.cc): Mindestabstand (Abstand + Dicke) · 8/9 zum Körper und 2 · Selbstabstand · 8/9 zwischen Stoffteilen, '
          'Impulskonstanten, Culling, Reibung; die Paarlisten werden einmal je Schritt gebaut. collision_quality = Runden je Schritt (Vorgabe 2). Der GPU-Motor rechnet Ruhelängen und '
          '-winkel wie Blender in float32 (Geraeteruhe). Gemessen: gleich bis auf impulse_clamp 0,04 und self_impulse_clamp 0,02 (dort ist Blender selbst chaotisch); Selbstkollision am Oberteil '
@@ -128,8 +128,7 @@ class Werkzeugstofffedern:
              "sim.koerper_bewegen(punkte_neu, nr=0)    # einmal je Bild vor sim.bild(); nr 0 = Hauptkörper",
              '# im Auftrag: "koerper_weitere": [{"datei": "<npz>", "dicke": 0.02, "reibung": 5.0, "culling": true, "use_normal": false, "klammer": 0}],',
              '#   "bewegung": "<npz mit lagen (B, M, 3)>"')),
-         [(S + 'kollisionskoerper.py', 'Kollisionskoerper'), (S + 'koerperantwort.py', 'Koerperantwort'), (S + 'warpkoerpersatz.py', 'WarpKoerpersatz'),
-          (S + 'stoffoptionen.py', 'Stoffoptionen')],
+         [(S + 'kollisionskoerper.py', 'Kollisionskoerper'), (S + 'koerperantwort.py', 'Koerperantwort'), (S + 'stoffoptionen.py', 'Stoffoptionen')],
          'Blender kollidiert mit allen Objekten mit Collision-Modifier, jedes mit eigener Dicke, Reibung und Culling; die Impulse mehrerer Körper wirken je Achse mit dem größten Betrag zusammen '
          '(Impulssammler), nicht addiert. Dicke: Kollisionskoerper 0,02 wie Blender (Kugel 29 → 1,5 mm); der Drapierauftrag nennt 0,004 selbst. Die Körperdreiecke müssen nach außen zeigen: '
          'aussen_pruefen dreht um, wenn das Volumen negativ ist (Blender dreht nichts um; ein Lauf mit der Innenseite nach außen ließ das Tuch hindurchfallen). Weitere Körper nur mit '

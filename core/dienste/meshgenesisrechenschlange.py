@@ -18,6 +18,7 @@ from core.atomic_write import AtomarSchreiber
 
 from .auftragsarbeiter import Auftragsarbeiter
 from .kennungsstamm import Kennungsstamm
+from .kleidregelnaufloesung import Kleidregelnaufloesung
 from .meshgenesisrechenlauf import Meshgenesisrechenlauf
 from .meshgenesistest import Meshgenesistest
 
@@ -64,6 +65,7 @@ class Meshgenesisrechenschlange:
     def starten(cls, kennung, ab=None):
         """Einreihen und den Arbeitsprozess starten, falls keiner läuft. `ab`: wie `Meshgenesisrechenlauf.vorbereiten`, dort auch der `ValueError`. → Stand des Laufs."""
         stand = Meshgenesisrechenlauf(kennung).vorbereiten('wartet', ab=ab)
+        Kleidregelnaufloesung.schreiben(kennung)                        # 21.11.2026: die Wahl der Kleidungsregeln gilt ab diesem Start (die Kette liest nur `einstellung.json`)
         cls._einreihen(kennung)
         return stand
 

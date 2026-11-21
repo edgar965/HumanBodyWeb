@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Hautclosure — die gebackene Normale an Texeln, an denen sie vom `N` des Graphen abweicht (Glanz-Korrektur `hautglanzkernel`, Coat): das gewichtete Mittel aller Closure-Normalen des
+"""Hautclosure — die gebackene Normale an Texeln, an denen sie vom `N` des Graphen abweicht (Glanz-Korrektur `hb_korrektur_noetig`, Coat): das gewichtete Mittel aller Closure-Normalen des
 Principled BSDF. Alpha ändert die Richtung nicht (`hautalpha`: unter 0,5 entfällt die Normale ganz).
 
     closure = Hautclosure('cuda:0')
@@ -7,8 +7,8 @@ Principled BSDF. Alpha ändert die Richtung nicht (`hautalpha`: unter 0,5 entfä
     normale = closure.mittel(graph, ctx, normale_roh)     # (n,) vec3: die Normale, die Cycles bäckt
 
 `spec` ist der Export des Graphen (`principled`: Quelle je Eingang des ersten Principled BSDF, `principled_eig`: Verteilung); `ctx` der Kontext der betroffenen Texel (`Hautkontext`, nur diese
-Texel), `normale_roh` die Normale, die der Graph am Normal-Eingang liefert. Die Eingänge werden mit denselben Knoten ausgewertet wie Base Color und Roughness. Die Rechnung steht in
-`hautclosurekernel.py`; die Tabellen (`cycles_tabellen.npz`) sind die von Cycles (`HERKUNFT.txt`).
+Texel), `normale_roh` die Normale, die der Graph am Normal-Eingang liefert. Die Eingänge werden mit denselben Knoten ausgewertet wie Base Color und Roughness. Die Rechnung steht im
+Kern `hb_normale_mittel` (`hautbackenkerne_cu/hautclosurekern.cuh`; bis 21.11.2026 Warp in `hautclosurekernel.py`); die Tabellen (`cycles_tabellen.npz`) sind die von Cycles (`HERKUNFT.txt`).
 Gerechnet auch: Transmission (nicht dünnwandig) und eine verbundene Coat-Normale.
 Nicht gerechnet (der Grund steht im Bericht des Imports, die Normale bleibt ohne Korrektur): Thin Wall, Dünnfilm.
 """
@@ -18,11 +18,12 @@ from pathlib import Path
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
 from KoerperKI_alle.npztorch import Npztorch
-import warp as wp
 
-from .hautclosurekernel import CUTOFF, normale_mittel
+from ..hautbackenkernbau import Hautbackenkernbau
 
 __all__ = ['Hautclosure']
+
+CUTOFF = 1.0e-5          # CLOSURE_WEIGHT_CUTOFF (kernel/types.h), wie im Kern
 
 #: Eingänge des Principled BSDF, die das Modell liest, und ihre Art im Auswerter (f Zahl, c Farbe, v Vektor).
 EINGAENGE = (('Base Color', 'c'), ('Metallic', 'f'), ('Roughness', 'f'), ('IOR', 'f'), ('Specular IOR Level', 'f'), ('Specular Tint', 'c'), ('Anisotropic', 'f'),
@@ -37,9 +38,9 @@ class Hautclosure:
     TABELLEN = Path(__file__).with_name('cycles_tabellen.npz')
 
     def __init__(self, geraet='cuda:0'):
-        self.geraet = geraet
+        self.geraet = torch.device(geraet)
         daten = Npztorch.lesen(self.TABELLEN)
-        self.tabellen = {k: wp.array(Torchfeld.feld(daten[k], dtype=torch.float32), dtype=wp.float32, device=geraet)
+        self.tabellen = {k: Torchfeld.feld(daten[k], dtype=torch.float32).to(self.geraet).reshape(-1).contiguous()
                          for k in ('ggx_E', 'ggx_Eavg', 'ggx_gen_schlick_ior_s', 'sheen_ltc', 'ggx_glass_E', 'ggx_glass_Eavg', 'ggx_glass_inv_E', 'ggx_glass_inv_Eavg')}
 
     @staticmethod
@@ -95,14 +96,16 @@ class Hautclosure:
         lack_normale = graph.spec['principled'].get('Coat Normal', {})
         verbunden = 'von' in lack_normale
         coat_n = graph.quelle(lack_normale, ctx, MITTE, 'v').daten if verbunden else n_glatt          # unverbunden: `sd->N` (der Kern nimmt `n_glatt` selbst)
-        aus = wp.zeros(n, dtype=wp.vec3, device=g)
+        aus = torch.zeros((n, 3), dtype=torch.float32, device=g)
         t = self.tabellen
-        wp.launch(normale_mittel, dim=n, inputs=[normale_roh, ng, n_glatt, rueck,
-                                                 werte['Base Color'], werte['Metallic'], werte['Roughness'], werte['IOR'], werte['Specular IOR Level'], werte['Specular Tint'],
-                                                 werte['Anisotropic'], werte['Sheen Weight'], werte['Sheen Roughness'], werte['Sheen Tint'], werte['Coat Weight'], werte['Coat Roughness'],
-                                                 werte['Coat IOR'], werte['Coat Tint'], coat_n, int(verbunden), werte['Transmission Weight'],
-                                                 werte['Subsurface Weight'], werte['Subsurface Radius'], werte['Subsurface Scale'],
-                                                 int(eig.get('distribution') == 'MULTI_GGX'), int(tang_gueltig), int(bool(graph.spec.get('bump_korrektur', True))),
-                                                 t['ggx_E'], t['ggx_Eavg'], t['ggx_gen_schlick_ior_s'], t['sheen_ltc'],
-                                                 t['ggx_glass_E'], t['ggx_glass_Eavg'], t['ggx_glass_inv_E'], t['ggx_glass_inv_Eavg'], aus], device=g)
+        w = {k: v.contiguous() for k, v in werte.items()}
+        with torch.cuda.device(g):
+            Hautbackenkernbau.rufen('hb_normale_mittel', n, normale_roh.contiguous(), ng, n_glatt, rueck,
+                                    w['Base Color'], w['Metallic'], w['Roughness'], w['IOR'], w['Specular IOR Level'], w['Specular Tint'],
+                                    w['Anisotropic'], w['Sheen Weight'], w['Sheen Roughness'], w['Sheen Tint'], w['Coat Weight'], w['Coat Roughness'],
+                                    w['Coat IOR'], w['Coat Tint'], coat_n.contiguous(), int(verbunden), w['Transmission Weight'],
+                                    w['Subsurface Weight'], w['Subsurface Radius'], w['Subsurface Scale'],
+                                    int(eig.get('distribution') == 'MULTI_GGX'), int(tang_gueltig), int(bool(graph.spec.get('bump_korrektur', True))),
+                                    t['ggx_E'], t['ggx_Eavg'], t['ggx_gen_schlick_ior_s'], t['sheen_ltc'],
+                                    t['ggx_glass_E'], t['ggx_glass_Eavg'], t['ggx_glass_inv_E'], t['ggx_glass_inv_Eavg'], aus)
         return aus

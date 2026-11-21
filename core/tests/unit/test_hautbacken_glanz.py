@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""`hautglanzkernel.korrektur_noetig` — wo Cycles beim Backen der Normalen die Normale der Glanz-Closures verändert (`ensure_valid_specular_reflection`, `kernel/closure/bsdf_util.h`).
+"""`hb_korrektur_noetig` (bis 21.11.2026 Warp `hautglanzkernel.korrektur_noetig`, seitdem `hautbackenkerne_cu/hautbackenkern.cuh`) — wo Cycles beim Backen der Normalen die
+Normale der Glanz-Closures verändert (`ensure_valid_specular_reflection`, `kernel/closure/bsdf_util.h`).
 
 Die Bedingung (Blender-Quelltext v5.2.2): `R = 2·(N·I)·N − I`, `dot(Ng, R) < min(0,9·dot(I, Ng), 0,01)` — beim Backen ist `I = wi` die geglättete Normale (`init_from_bake.h`: `ray.D = −N`),
 also bei glatter Fläche `I = Ng`. Dann gilt `2·cos²θ − 1 < 0,01` für den Winkel θ zwischen N und Ng, das heißt θ > 44,7° (arccos(√0,505) = 44,71°). Die Rechnung ist von Hand nachprüfbar,
@@ -10,22 +11,20 @@ Sabotage-Gegenprobe (11.10.2026): `hautglanzkernel.py` Schwelle `min(0.9·Iz, 0.
 
 import math
 
-import numpy as np
-import warp as wp
+import torch
 from django.test import SimpleTestCase
 
-from core.dienste.hautbacken.graph import hautglanzkernel as glanz
+from core.dienste.hautbacken.hautbackenkernbau import Hautbackenkernbau
 
 GERAET = 'cuda:0'
 
 
 def _lauf(n, ng, n_glatt, rueck):
-    wp.init()
     k = len(n)
-    aus = wp.zeros(k, dtype=wp.int32, device=GERAET)
-    vec = lambda a: wp.array(np.asarray(a, dtype=np.float32), dtype=wp.vec3, device=GERAET)       # noqa: E731
-    wp.launch(glanz.korrektur_noetig, dim=k, inputs=[vec(n), vec(ng), vec(n_glatt), wp.array(np.asarray(rueck, dtype=np.int32), dtype=wp.int32, device=GERAET), aus], device=GERAET)
-    return aus.numpy()
+    aus = torch.zeros(k, dtype=torch.int32, device=GERAET)
+    vec = lambda a: torch.as_tensor(a, dtype=torch.float32, device=GERAET).reshape(-1, 3).contiguous()       # noqa: E731
+    Hautbackenkernbau.lauf('hb_korrektur_noetig', k, vec(n), vec(ng), vec(n_glatt), torch.as_tensor(rueck, dtype=torch.int32, device=GERAET).contiguous(), aus)
+    return aus.cpu().numpy()
 
 
 def _geneigt(grad):
