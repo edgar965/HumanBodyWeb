@@ -25,6 +25,8 @@ __all__ = ['Meshgenesistestfaelle']
 
 class Meshgenesistestfaelle:
     DATEI = 'testfaelle.json'
+    #: Wege der Kleidermethoden mit eigener Prüfung, in der Reihenfolge der Seite (Drapieren, Eigen, Passend)
+    METHODEN = ('f', 'e', 'p')
 
     @classmethod
     def _lesen(cls, datei):
@@ -52,6 +54,11 @@ class Meshgenesistestfaelle:
         lauf = ((Meshgenesistestkikleider.lesen(kleider) or {}).get('kostuem') or {}).get('lauf')
         if d and lauf and d.get('lauf') != lauf:
             d['stuecke_lauf'] = lauf
+        # 22.11.2026 (Paket K2/K6 von Edgar: „volle Kostüm-Prüfung“ für Drapieren und Passend): die Prüfung der Methoden liegt daneben (`Kostuempruefung.datei_name`), die Karte zeigt sie
+        # unter der Tabelle der Kleiderbibliothek
+        je_weg = {w: m for w in cls.METHODEN if (m := cls._lesen(kleider / 'k' / ('testfaelle_%s.json' % w)))}
+        if je_weg:
+            d = dict(d or {}, je_weg=je_weg)
         return d
 
     @classmethod

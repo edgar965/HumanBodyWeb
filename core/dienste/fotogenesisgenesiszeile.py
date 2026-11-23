@@ -56,15 +56,31 @@ class Fotogenesisgenesiszeile:
             'ergebnis': f'/api/meshgenesis/test/{t}/' if fertig else None,
             'figur': f'/api/meshgenesis/test/{t}/' if form else None,
             'testfaelle': f'/api/meshgenesis/test/{t}/testfaelle/{Meshgenesistest.geschlecht(ordner, {})}/' if fertig else None,
+            # Kleiderliste der Figur gleich mit den Testdaten holen (23.11.2026, Edgar: „das soll in 2 s gehen“; `Fotogenesistestfigur`): sie wartete sonst auf die Testdaten
+            'kleider': f'/api/meshgenesis/test/{t}/kleider/{Meshgenesistest.geschlecht(ordner, {})}/' if fertig else None,
             'stand': Meshgenesistestgeschlechtstand.text(ordner, Meshgenesistest.geschlecht(ordner, {})) if ordner is not None else None,
             'lauf': cls._lauftext(stand),
             'hinweise': {
                 'meshgenesis': ohne if ordner is None else f'Einpassung im Test {t} noch nicht gerechnet.',
                 # 13.11.2026, Edgar: „es erscheint gar keines, weil es evtl. keines gibt?? dann mach hinweis, dass es fehlt!!“ — vorher nur „Test …: offen.“
-                'ergebnis': ohne if ordner is None else cls._lauftext(stand) or (f'Genesis-Ergebnis fehlt: Der Mesh-Genesis-Test {t} hat noch kein Ergebnis '
-                                                                                 f'(Stand: {stand.get("status") or "nicht gerechnet"}).'),
+                'ergebnis': f'Keine Figur vorhanden: {ohne}' if ordner is None else cls._ohne_ergebnis(t, stand),
             },
         }
+
+    @staticmethod
+    def _ohne_ergebnis(t, stand):
+        """Text des Felds „Genesis-Ergebnis“, solange der Test kein Ergebnis hat (22.11.2026, Edgar: „wenn keine figur vorhanden ist, dann soll das auch so drin
+        stehen!“). Vorher stand während eines Laufs der Satz von `_lauftext` („Gezeigt ist der Stand bis dahin“), obwohl das Feld nichts zeigt."""
+        status = stand.get('status')
+        if status == 'laeuft':
+            schritte, nr = stand.get('schritte') or [], stand.get('schritt') or 0
+            titel = schritte[nr - 1].get('text', '') if 0 < nr <= len(schritte) else ''
+            return (f'Keine Figur vorhanden: Der Mesh-Genesis-Test {t} wird gerade gerechnet, Schritt {nr} von {len(schritte)}{f": {titel}" if titel else ""}. '
+                    'Die Figur erscheint nach dem Neuladen, sobald der Lauf ein Ergebnis geschrieben hat.')
+        if status == 'fehler':
+            schritt = next((s for s in stand.get('schritte') or [] if s.get('status') == 'fehler'), {})
+            return f'Keine Figur vorhanden: Der letzte Lauf des Mesh-Genesis-Tests {t} brach im Schritt „{schritt.get("text") or "?"}“ ab, bevor es ein Ergebnis gab.'
+        return f'Keine Figur vorhanden: Der Mesh-Genesis-Test {t} hat noch kein Ergebnis (Stand: {status or "nicht gerechnet"}).'
 
     @staticmethod
     def _lauftext(stand):

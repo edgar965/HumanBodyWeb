@@ -148,8 +148,8 @@ export class Meshgenesismeshanpassung {
         g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
         g.setAttribute('uv', new THREE.BufferAttribute(daten.uv, 2));
         g.setIndex(new THREE.BufferAttribute(daten.uv_dreiecke, 1));
-        g.userData.gemeinsam = true;
-        this.hautMaterialien = gruppen.map((gruppe, i) => {
+        g.userData.gemeinsam = true;    // die Bilder in EINER Anfrage (23.11.2026): einzeln belegten sie fünf von sechs Verbindungen, das Körpernetz der Figur daneben wartete 109–255 ms
+        Genesis9texturen.vorladen(gruppen.filter(gruppe => gruppe.albedo).map(gruppe => ({ pfad: gruppe.albedo, srgb: true }))); this.hautMaterialien = gruppen.map((gruppe, i) => {
             g.addGroup(gruppe.index_ab, gruppe.index_anzahl, i);
             const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
             m.userData.gemeinsam = true;

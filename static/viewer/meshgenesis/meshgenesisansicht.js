@@ -119,8 +119,31 @@ export class Meshgenesisansicht {
         }
         this._geplant ||= requestAnimationFrame(() => {
             this._geplant = 0;
-            this.zeichnenJetzt();
+            if (!this._shaderWarten()) this.zeichnenJetzt();
         });
+    }
+
+    /**
+     * Neue Shader erst bauen lassen, das Bild kommt danach (`Meshgenesiszeichenflaeche.vorbereiten`, 22.11.2026) — nur hier im gebündelten Zeichnen; `zeichnenJetzt` zeichnet sofort
+     * (`seitenbilder()` liest das Bild gleich danach). → true, wenn gewartet wird.
+     */
+    _shaderWarten() {
+        if (this._shaderWartet) return true;
+        let warten = null;
+        try {
+            // `neueNetze` merkt sich jedes Netz sofort: nach dem Warten ist es bekannt, gezeichnet wird also spätestens im nächsten Bild — nie im Kreis
+            this._gesehen ??= new WeakSet();
+            if (Meshgenesiszeichenflaeche.neueNetze(this.szene, this._gesehen)) warten = Meshgenesiszeichenflaeche.vorbereiten(r => this._malen(r));
+        } catch (fehler) {
+            console.warn('Meshgenesisansicht: Shader nicht vorab gebaut —', fehler);
+        }
+        if (!warten) return false;
+        this._shaderWartet = true;
+        warten.then(() => {
+            this._shaderWartet = false;
+            this.zeichnen();
+        });
+        return true;
     }
 
     zeichnenJetzt() {

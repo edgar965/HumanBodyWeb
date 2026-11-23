@@ -10,6 +10,8 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 const de = n => Number(n).toLocaleString('de-DE');
 const BEDINGUNG = { 0: 'muss 0 sein, sonst keine Freigabe', 1: 'muss 0 sein', 2: 'darf nicht mehr werden als vorher', 3: 'wird nur berichtet' };
 const NETZ = { deckung: 'Schnitt (wo Stoff liegt)', form: 'Form (Höhe über der Haut)' };
+// 22.11.2026 (Paket K2/K6 von Edgar: „volle Kostüm-Prüfung“ für Drapieren und Passend): die Prüfung je Kleidermethode (`je_weg`, Server `Meshgenesistestfaelle.METHODEN`)
+const METHODE = { f: 'Drapieren', e: 'Eigen', p: 'Passend' };
 const KURZ = 90;
 
 function el(tag, attribute = {}, ...kinder) {
@@ -53,6 +55,20 @@ export class Meshgenesistestfaelle {
     }
 
     _messung(d) {
+        const methoden = this._methoden(d);
+        if (!d.tests) return el('div', { class: 'meshgenesis-testfaelle-messung' }, methoden);
+        const titel = d.je_weg ? el('h3', {}, 'Methode Kleiderbibliothek') : null;
+        return el('div', {}, titel, this._eine(d), methoden);
+    }
+
+    /** Die Prüfung je Kleidermethode unter der Tabelle der Kleiderbibliothek (je eine Überschrift und dieselben Tabellen). */
+    _methoden(d) {
+        const teile = Object.entries(d.je_weg || {}).map(([w, m]) => el('div', { class: 'meshgenesis-testfaelle-methode' },
+            el('h3', {}, `Methode ${METHODE[w] || w}`), this._eine(m)));
+        return teile.length ? el('div', {}, ...teile) : null;
+    }
+
+    _eine(d) {
         const a = d.abnahme || {};
         const rolle = d.rolle === 'Training' ? 'Trainingsjob' : 'Testjob';
         const zeit = d.gerechnet ? d.gerechnet.replace('T', ' ').slice(0, 16) : '?';

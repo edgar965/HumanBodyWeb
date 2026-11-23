@@ -107,8 +107,11 @@ export class Serverabruf extends ServerabrufBasis {
      * Listen, die beim Laden langsam sind — höchstens `NEBEN_GLEICHZEITIG` zugleich (18.11.2026). Chrome hält je Host sechs Verbindungen; gemessen nach einem
      * Neustart des Servers: Garderobe 10 s, Regler 10 s, Posen 5 s, Kleiderbibliothek 4,9 s, GarmentCode-Zustand 5,4 s, Kategorien 2,6 s gleichzeitig — die
      * Anatomie (Server 0,11 s) kam erst nach 4,9 s beim Browser an, das volle Körpernetz erst nach 15,9 s: Die Netze standen in Chromes Schlange.
+     * Dazu (23.11.2026, Foto-Genesis-Testseite, Edgar: „das soll in 2 s gehen“) die Karten der Abnahme und der Testfälle: 13 Abrufe (bei Tests aus Fotos meist 404) belegten
+     * 0,97–1,9 s die Verbindungen, der Käfig der Figur wurde um 0,83 s angefordert und erst um 1,92 s gesendet (Server 0,14 s). Ebenso (Edgar: „alles schneller, max 2. s“) Exportleiste, Standardanimation,
+     * Weitverdeckung und Jobstand: zehn Abrufe ab 0,63 s, das Körpernetz der Figur stand 196 ms in Chromes Schlange (0,95 → 1,14 s).
      */
-    static NEBENLISTEN = /\/genesis9-figur\/garderobe\/(kategorien\/)?$|\/genesis9-figur\/(regler|posen)\/$|\/garment\/library\/$|\/garmentcode\/zustand\/$|\/charmorph-assets\/$|\/cloth\/regions\/$/;
+    static NEBENLISTEN = /\/genesis9-figur\/garderobe\/(kategorien\/)?$|\/genesis9-figur\/(regler|posen)\/$|\/garment\/library\/$|\/garmentcode\/zustand\/$|\/charmorph-assets\/$|\/cloth\/regions\/$|\/api\/fotogenesis\/[^/]+\/abnahme\/|\/testfaelle\/[^/]+\/$|\/api\/exportleiste\/|\/standardanimation\/$|\/weitverdeckung\/$|\/job-stand\/$/;
     static NEBEN_GLEICHZEITIG = 2;
     static _neben = 0;
     static _nebenSchlange = [];
@@ -129,8 +132,10 @@ export class Serverabruf extends ServerabrufBasis {
     /** Ein GET endet beim Verlassen der Seite (`Seitenabbruch`); was schreibt, läuft durch — es ginge sonst in Chromes Schlange verloren. */
     static async json(adresse, wahl = undefined) {
         if (!Serverabruf._lesend(wahl)) return Serverabruf._geloggt('GET', adresse, () => super.json(adresse, wahl));
+        // Eine Nebenliste geht mit niedriger Priorität: Chrome legt dann die Netze zuerst auf die sechs Verbindungen (23.11.2026, `NEBENLISTEN`)
+        const mit = Serverabruf.NEBENLISTEN.test(String(adresse).split('?')[0]) && !wahl?.priority ? { ...wahl, priority: 'low' } : wahl;
         return Serverabruf._geloggt('GET', adresse, () => Serverabruf._nebenbei(adresse,
-            () => Seitenabbruch.mit(signal => super.json(adresse, { ...wahl, signal: Seitenabbruch.verbunden(wahl?.signal, signal) }))));
+            () => Seitenabbruch.mit(signal => super.json(adresse, { ...mit, signal: Seitenabbruch.verbunden(mit?.signal, signal) }))));
     }
 
     static async text(adresse, wahl = undefined) {

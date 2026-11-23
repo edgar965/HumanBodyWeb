@@ -8,6 +8,7 @@
  * liest dieselbe Entscheidung aus der Maske des Stücks (dort steht dann die ganze Anatomie). Ausgeblendet zählt das Stück in der Hautverdeckung nicht mehr (`Hautverdeckung.zaehlt`):
  * die Haut darunter bekommt kein Loch; wer `anwenden` ruft, plant die Hautverdeckung neu, wenn sich etwas geändert hat.
  */
+import { Anatomiehaut } from '../gemeinsam/anatomiehaut.js';
 import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 
 export class Meshgenesisanatomiehuelle {
@@ -21,9 +22,12 @@ export class Meshgenesisanatomiehuelle {
         return (liste?.stuecke || []).some(st => st.wahl && st.wahl !== 'aus' && st[st.wahl]?.traegt_anatomie === true);
     }
 
-    /** `anwenden`, dann die Hautverdeckung planen — mit `nurGeaendert` nur, wenn sich eine Sichtbarkeit geändert hat (neue Stufe der Figur). */
+    /** `anwenden`, dann die Hautverdeckung planen — mit `nurGeaendert` nur, wenn sich eine Sichtbarkeit geändert hat (neue Stufe der Figur). Ein wieder sichtbares Stück folgt danach
+     *  der Haut (`Anatomiehaut.nachziehen`: verborgen rechnet es nicht mit, seit 23.11.2026). */
     static planen(modell, nurGeaendert = false) {
-        if (Meshgenesisanatomiehuelle.anwenden(modell) || !nurGeaendert) Hautverdeckung.planen(modell);
+        const geaendert = Meshgenesisanatomiehuelle.anwenden(modell);
+        if (geaendert || !nurGeaendert) Hautverdeckung.planen(modell);
+        if (geaendert) Anatomiehaut.nachziehen(modell);
     }
 
     /** Sichtbarkeit der Anatomie-Stücke setzen (`modell.anatomieGetragen()`: Kleider an und ein Stück trägt sie, `Meshgenesisfigurbewegung`); → true, wenn sich eine geändert hat. */

@@ -60,7 +60,7 @@ export class Fotogenesisgenesiszeile {
             Meshgenesisflaechennetz.nachLaden = () => { vorher?.(); neu(); };
             // in der A-Pose, wenn das Feld „PSHuman“ sie zeigt (10.11.2026, Edgar: „damit man das besser vergleichen kann“; `pshuman_port14/pshuman_apose.py`). Wo das Netz in der A-Pose
             // zerreißt (verwachsene Glieder, Robe mit Stab), zeigen beide Felder die Haltung des Fotos — sonst wären sie nicht vergleichbar
-            ergebnis = new Fotogenesistestfigur({ kennung: g.test, adresse: g.ergebnis, apose: seite.daten.pshuman?.art === 'pshuman_apose' });
+            ergebnis = new Fotogenesistestfigur({ kennung: g.test, adresse: g.ergebnis, kleider: g.kleider, apose: seite.daten.pshuman?.art === 'pshuman_apose' });
             ergebnis.beiAenderung = neu;          // Bilder, Masken und die feinere Stufe des Genesis9Modell (19.11.2026)
         }
         this.eintraege = [['genesis-meshgenesis', g.meshgenesis ? new Fotogenesisanpassungsfigur(g.meshgenesis, neu) : null, g.hinweise.meshgenesis, this.leiste],
@@ -72,6 +72,8 @@ export class Fotogenesisgenesiszeile {
         // die Einpassung ist die Form der Zeile 1 ohne Haut und Stücke der KI, das Ergebnis die Figur der Mesh-Genesis-Testseite
         this.exportfiguren = [Fotogenesisgenesiszeile._leisten(feld('genesis-meshgenesis'), this.eintraege[0].ansicht, g.figur, true),
                               Fotogenesisgenesiszeile._leisten(feld('genesis-ergebnis'), this.eintraege[1].ansicht, g.ergebnis, false)];
+        // die Leiste spielt die Stücke der gewählten Methode, mit deren Stoff (22.11.2026, Paket K2: „Drapieren ← Bibliothek: Stoff über die Animation“)
+        if (this.kleidermethode) this.kleidermethode.bewegt = this.exportfiguren[1];
         seite.fotos.gross.addEventListener('load', () => this.kameras());
         for (const e of this.eintraege) e.figur?.bereit.then(() => this.zeigen(true));
         // Testfälle des Tests wie auf der Mesh-Genesis-Testseite (06.11.2026, Edgar: „mach den besten code den wir haben in beiden pipelines“)
@@ -109,7 +111,7 @@ export class Fotogenesisgenesiszeile {
             ansicht.zeilenart = leiste?.art ?? null;
             // ohne Auftrag (null) zeigt das Feld nur den Text
             if (!figur) ansicht.zeigen(null, hinweis);
-            else if (figur instanceof Fotogenesistestfigur) ansicht.zeigen(figur.probe ? figur.auftrag(st.quelle, z.modus, z.kleider, z.rig) : null, figur.fehler || 'Figur wird gebaut …');
+            else if (figur instanceof Fotogenesistestfigur) ansicht.zeigen(figur.probe ? figur.auftrag(st.quelle, z.modus, z.kleider, z.rig) : null, figur.fehler || figur.ladetext);
             else ansicht.zeigen({ modus: z.modus, kleider: z.kleider });
         }
         if (neuStellen) this.kameras();

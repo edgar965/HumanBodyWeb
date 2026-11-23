@@ -48,47 +48,64 @@ class Fotogenesisfotojobs:
     def ordner():
         return Path(settings.OBJECTS_ROOT) / '_Foto_3D'
 
+    #: Schon gemeldete fehlende Fotos (23.11.2026): die Jobliste wird alle 3 s neu gelesen (`Fotogenesisjobs.FRISCH_S`), und jede Runde schrieb dieselbe Warnung — in core.log.1
+    #: (21.–23.11.2026) 29.510 von 31.913 Zeilen für fünf Jobs, das Log rotierte nach 1,5 Tagen; je Runde kosteten die 55 Meldungen 30 ms (cProfile, `_wegwerf/ladezeit/fotojobs_profil.py`)
+    _gemeldet = set()
+
     @classmethod
     def alle(cls):
-        jobs = []
+        return [cls.ausbauen(eck, info) for eck, info in cls.eckdaten()]
+
+    @classmethod
+    def eckdaten(cls):
+        """`[(eck, info)]` je gültigem Job: die Eckdaten (`id`, `name`, `name_vorgabe`, `art`, `fotos`, `ordner`) reichen für Adresse und Gültigkeit
+        (`Fotogenesisjobs.job` baut dann nur den gesuchten Job aus), `ausbauen(eck, info)` macht den ganzen Job daraus."""
+        alle = []
         for datei in sorted(cls.ordner().glob('*/job.json')):
             try:
                 info = json.loads(datei.read_text(encoding='utf-8'))
             except (OSError, ValueError) as fehler:
                 logger.warning('Fotogenesisfotojobs: %s nicht lesbar (%s)', datei, fehler)
                 continue
-            job = cls._job(datei.parent.name, info)
-            if job:
-                jobs.append(job)
-        return jobs
+            eck = cls._eckdaten(datei.parent.name, info)
+            if eck:
+                alle.append((eck, info))
+        return alle
 
     @classmethod
-    def _job(cls, ordnername, info):
+    def _eckdaten(cls, ordnername, info):
         fotos = []
         for i, f in enumerate(info.get('fotos') or []):
             pfad = Path(str(f.get('datei') or ''))
             if pfad.suffix.lower() not in cls.BILDENDUNGEN or not pfad.is_file():
-                logger.warning('Fotogenesisfotojobs: %s — Foto %s fehlt', ordnername, pfad)
+                if (ordnername, str(pfad)) not in cls._gemeldet:
+                    cls._gemeldet.add((ordnername, str(pfad)))
+                    logger.warning('Fotogenesisfotojobs: %s — Foto %s fehlt', ordnername, pfad)
                 continue
             winkel = f.get('winkel')
             # Freigestellt auf weißem Grund (24.10.2026, `VideoToBVH/wrappers/_run_fotogenesis_freistellen.py`, BiRefNet wie 2D3D Kleider) — die Seite zeigt dann diese Fassung.
             frei = cls.ordner() / ordnername / 'freigestellt' / ('%d.png' % i)
-            fotos.append({'name': f.get('name') or 'Bild %d' % (i + 1), 'pfad': frei if frei.is_file() else pfad, 'original': pfad, 'frei': frei.is_file(),
+            ist_frei = frei.is_file()
+            fotos.append({'name': f.get('name') or 'Bild %d' % (i + 1), 'pfad': frei if ist_frei else pfad, 'original': pfad, 'frei': ist_frei,
                           'winkel': int(winkel) % 360 if isinstance(winkel, (int, float)) else None})
         if not fotos:
             return None
-        test = str(info['meshgenesis_test']) if info.get('meshgenesis_test') else None
         # eigener Name (Stift auf der Testseite, 24.10.2026) aus name.json über dem der job.json — wie Mesh-Genesis (`Meshgenesisname`)
         vorgabe = str(info.get('name') or ordnername)
         name = Meshgenesisname.lesen(cls.ordner() / ordnername) or vorgabe
-        return {'id': ordnername.lower(), 'name': name, 'name_vorgabe': vorgabe, 'art': 'foto', 'figur': '', 'fotos': fotos, 'paar': None, 'ordner': cls.ordner() / ordnername,
+        return {'id': ordnername.lower(), 'name': name, 'name_vorgabe': vorgabe, 'art': 'foto', 'fotos': fotos, 'ordner': cls.ordner() / ordnername}
+
+    @classmethod
+    def ausbauen(cls, eck, info):
+        """Der ganze Job zu seinen Eckdaten (`eckdaten`)."""
+        ordner, fotos = eck['ordner'], eck['fotos']
+        test = str(info['meshgenesis_test']) if info.get('meshgenesis_test') else None
+        return {'id': eck['id'], 'name': eck['name'], 'name_vorgabe': eck['name_vorgabe'], 'art': 'foto', 'figur': '', 'fotos': fotos, 'paar': None, 'ordner': ordner,
                 'test': test, 'wahrheit': False, 'netze': cls.netze([(n.get('art'), Path(str(n.get('datei') or ''))) for n in info.get('netze') or []]),
-                'hinweis': str(info.get('hinweis') or ''), 'kopf': cls.kopf(cls.ordner() / ordnername), 'koerpergroesse_m': Fotogenesiskoerpergroesse.lesen(info), 'geschlecht': Fotogenesisgeschlecht.lesen(info),
+                'hinweis': str(info.get('hinweis') or ''), 'kopf': cls.kopf(ordner), 'koerpergroesse_m': Fotogenesiskoerpergroesse.lesen(info), 'geschlecht': Fotogenesisgeschlecht.lesen(info),
                 'normalen': Fotogenesisnormalen.lesen(info),  # Combo-Boxen „Normalen“, „Textur“ (03.11.)
                 'textur': Fotogenesistextur.lesen(info), 'form': Fotogenesisform.lesen(info),
-                'pshuman': dict(Fotogenesispshuman.lesen(info),
-                                gerechnet=Fotogenesispshuman.gerechnet(cls.ordner() / ordnername),
-                                eingabe=Fotogenesispshumaneingabe.lesen(cls.ordner() / ordnername, info, fotos))}
+                'pshuman': dict(Fotogenesispshuman.lesen(info), gerechnet=Fotogenesispshuman.gerechnet(ordner), eingabe=Fotogenesispshumaneingabe.lesen(ordner, info, fotos))}
 
     @staticmethod
     def kopf(ordner):

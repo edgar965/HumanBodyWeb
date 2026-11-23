@@ -16,7 +16,9 @@ export class Nutzerruhe {
     /** Ereignisse, die „die Hand ist an der Szene" heißen. */
     static EREIGNISSE = ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'touchmove'];
 
-    static _letzte = performance.now();
+    /** Zeit der letzten Eingabe — vor der ersten keine (23.11.2026, Edgar: „fixe auch das: Feinere Netzstufe …“): bis dahin galt das Laden des Moduls als Eingabe, und die feine Stufe
+     *  wartete nach jedem Laden 1,5 s, obwohl niemand die Figur bewegte (Foto-Genesis: Netz da nach 1,6 s, gebaut erst ab ~2 s; der Bau selbst 44 ms). */
+    static _letzte = -Infinity;
     static _gedrueckt = 0;
     static _hoert = false;
 

@@ -137,25 +137,38 @@ export class Anatomiedurchstich {
         return { lo: lo.map(w => w - rand), hi: hi.map(w => w + rand) };
     }
 
-    /** Gitter über die Stoffdreiecke, die den Kasten berühren: `{lo, n, zellen: Map(zelle → [Dreieck]), ecken: [[a, b, c]...]} ` oder null. */
+    /**
+     * Gitter über die Stoffdreiecke, die den Kasten berühren: `{lo, n, zellen: Map(zelle → [Dreieck]), dreiecke: [[9 Zahlen]...]}` oder null.
+     * Ohne Hilfsfelder je Dreieck (21.11.2026, Ladezeit /foto-genesis/test/zauberer_kleidungsregeln_kopie_48/): vorher acht kleine Felder samt Pfeilfunktionen
+     * je Dreieck — 315.558 Dreiecke 5,6 s unter Last, jetzt 0,22 s; Ergebnis von `lagen` bitgleich (vier Stoffproben samt Gegenprobe im Tab). Ein Dreieck mit
+     * einer Ecke ohne Lage (Index jenseits der Punkte → NaN) kam nie in eine Zelle; es wird gleich übersprungen und hält nur das Gitter am Leben wie vorher.
+     */
     static _gitter(stoffe, kasten) {
         const z = Anatomiedurchstich.ZELLE, n = [0, 1, 2].map(k => Math.max(1, Math.ceil((kasten.hi[k] - kasten.lo[k]) / z)));
+        const lx = kasten.lo[0], ly = kasten.lo[1], lz = kasten.lo[2], hx = kasten.hi[0], hy = kasten.hi[1], hz = kasten.hi[2];
+        const n0 = n[0] - 1, n1 = n[1] - 1, n2 = n[2] - 1;
         const zellen = new Map(), dreiecke = [];
+        let ohneLage = 0;
         for (const { pos, index } of stoffe) {
             for (let k = 0; k + 2 < index.length; k += 3) {
-                const p = [index[k], index[k + 1], index[k + 2]].map(i => [pos[3 * i], pos[3 * i + 1], pos[3 * i + 2]]);
-                const lo = [0, 1, 2].map(c => Math.min(p[0][c], p[1][c], p[2][c])), hi = [0, 1, 2].map(c => Math.max(p[0][c], p[1][c], p[2][c]));
-                if ([0, 1, 2].some(c => hi[c] < kasten.lo[c] || lo[c] > kasten.hi[c])) continue;
-                const nr = dreiecke.push(p.flat()) - 1;
-                const von = [0, 1, 2].map(c => Math.max(0, Math.floor((lo[c] - kasten.lo[c]) / z))), bis = [0, 1, 2].map(c => Math.min(n[c] - 1, Math.floor((hi[c] - kasten.lo[c]) / z)));
-                for (let x = von[0]; x <= bis[0]; x++) for (let y = von[1]; y <= bis[1]; y++) for (let w = von[2]; w <= bis[2]; w++) {
+                const a = 3 * index[k], b = 3 * index[k + 1], c = 3 * index[k + 2];
+                const ax = pos[a], ay = pos[a + 1], az = pos[a + 2], bx = pos[b], by = pos[b + 1], bz = pos[b + 2], cx = pos[c], cy = pos[c + 1], cz = pos[c + 2];
+                const x0 = Math.min(ax, bx, cx), y0 = Math.min(ay, by, cy), z0 = Math.min(az, bz, cz);
+                const x1 = Math.max(ax, bx, cx), y1 = Math.max(ay, by, cy), z1 = Math.max(az, bz, cz);
+                if (!(x0 <= x1 && y0 <= y1 && z0 <= z1)) { ohneLage++; continue; }
+                if (x1 < lx || x0 > hx || y1 < ly || y0 > hy || z1 < lz || z0 > hz) continue;
+                const nr = dreiecke.push([ax, ay, az, bx, by, bz, cx, cy, cz]) - 1;
+                const vx = Math.max(0, Math.floor((x0 - lx) / z)), vy = Math.max(0, Math.floor((y0 - ly) / z)), vz = Math.max(0, Math.floor((z0 - lz) / z));
+                const bisx = Math.min(n0, Math.floor((x1 - lx) / z)), bisy = Math.min(n1, Math.floor((y1 - ly) / z)), bisz = Math.min(n2, Math.floor((z1 - lz) / z));
+                for (let x = vx; x <= bisx; x++) for (let y = vy; y <= bisy; y++) for (let w = vz; w <= bisz; w++) {
                     const zelle = (x * n[1] + y) * n[2] + w;
-                    if (!zellen.has(zelle)) zellen.set(zelle, []);
-                    zellen.get(zelle).push(nr);
+                    const liste = zellen.get(zelle);
+                    if (liste) liste.push(nr);
+                    else zellen.set(zelle, [nr]);
                 }
             }
         }
-        return dreiecke.length ? { lo: kasten.lo, n, zellen, dreiecke, marke: new Int32Array(dreiecke.length), stempel: 0 } : null;
+        return (dreiecke.length || ohneLage) ? { lo: kasten.lo, n, zellen, dreiecke, marke: new Int32Array(dreiecke.length), stempel: 0 } : null;
     }
 
     /** Kreuzt die Strecke vom Punkt zum Ziel `anker` ein Stoffdreieck? Gelaufen wird in halben Zellen durch das Gitter. */

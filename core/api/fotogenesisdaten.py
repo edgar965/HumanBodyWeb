@@ -12,8 +12,9 @@ from pathlib import Path
 from django.http import FileResponse, Http404
 from django.views.decorators.http import require_GET
 
-from ..dienste.fotogenesisjobs import Fotogenesisjobs
 from ..dienste.architekturfotogenesiskette import Architekturfotogenesiskette
+from ..dienste.fotogenesisjobs import Fotogenesisjobs
+from ..dienste.netzpackung import Netzpackung
 
 __all__ = ['Fotogenesisdatenendpunkte']
 
@@ -59,4 +60,5 @@ class Fotogenesisdatenendpunkte:
         netz = next((n for n in gefunden['netze'] if n['art'] == art), None) if gefunden else None
         if netz is None:
             raise Http404('Kein Netz %s in %s' % (art, job))
-        return FileResponse(open(netz['pfad'], 'rb'), content_type='model/gltf-binary')
+        # zstd-gepackt, einmal je Stand der Datei (23.11.2026, `Netzpackung`: PSHuman-GLB 63,3 → 38,8 MB)
+        return Netzpackung.datei(request, netz['pfad'], 'model/gltf-binary')

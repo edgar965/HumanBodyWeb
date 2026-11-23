@@ -108,8 +108,10 @@ export class Meshgenesisfigurbewegung {
         const rahmen = Meshgenesisbewegungsfigur.rahmen(modell, q.knochen, q.ruhezentren);
         this._abbildung = rahmen.abbildung; this.rahmenMm = rahmen.rest_mm;
         this._kleiderBinden();
+        // Frisur und Bart decken keine Haut (`Meshgenesiskikleiderfeld.deckt`, `Hautverdeckung.zaehlt` übergeht sie): ihre Ruhelage ohne Kopie (22.11.2026, Zauberer: Haar 26 MB, Bart 18 MB)
         modell.hautStuecke = Meshgenesiskikleiderfeld.hautStuecke({
-            stuecke: (q.stuecke || []).map(st => ({ id: st.id, art: st.art, kostuem: st.kostuem, ruhe: Meshgenesisbewegungskleid.ruhe(st.netz, this._abbildung), dreiecke: st.netz.dreiecke })),
+            stuecke: (q.stuecke || []).map(st => ({ id: st.id, art: st.art, kostuem: st.kostuem, dreiecke: st.netz.dreiecke,
+                ruhe: Meshgenesiskikleiderfeld.deckt(st) ? Meshgenesisbewegungskleid.ruhe(st.netz, this._abbildung) : st.netz.ruhe })),
         });
         this._kleiderAn = true;
         modell.anatomieGetragen = () => !!q.anatomieGetragen && this._kleiderAn;          // die Quelle sagt, ob ein Stück die Anatomie trägt (Regel des Servers, `Meshgenesisanatomiehuelle.getragen`)

@@ -32,6 +32,15 @@ export class Fotogenesiskamera {
             // Ein Rig (`nurAnsicht`, Knopf „Rig“) ist keine Figur — seine Kugeln sind Instanzen einer Einheitskugel um den Ursprung und blähten die Hülle sonst auf 1 m auf
             if (!o.isMesh || !lage || o.userData.nurAnsicht) return;
             const schritt = Math.max(1, Math.floor(lage.count / Fotogenesiskamera.PROBEN));
+            // Netze mit fester Haltung (Haar und Bart auf der Karte gehäutet, `Meshgenesiskartenhaut.proben`, 22.11.2026): dieselben Proben, einmal je Netz gerechnet
+            const proben = o.userData.huellproben?.(schritt);
+            if (proben) {
+                for (let i = 0; i < proben.length; i += 3) {
+                    p.set(proben[i], proben[i + 1], proben[i + 2]).applyMatrix4(o.matrixWorld).applyQuaternion(umkehr);
+                    if (p.y >= ab) box.expandByPoint(p);
+                }
+                return;
+            }
             for (let i = 0; i < lage.count; i += schritt) {
                 o.getVertexPosition(i, p);
                 p.applyMatrix4(o.matrixWorld).applyQuaternion(umkehr);

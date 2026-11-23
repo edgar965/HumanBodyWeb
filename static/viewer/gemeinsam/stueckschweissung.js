@@ -17,6 +17,8 @@
  * Stoffpunkt (10,5 mm). Jetzt wird jede Kante über `ZIEL_M` halbiert, je Dreieck nach der Zahl seiner geteilten Kanten in zwei, drei oder vier
  * (die Mitte gehört der Kante, beide Nachbarn teilen sie — keine T-Stellen), bis keine länger ist, höchstens `STUFEN_MAX` mal.
  */
+import { Anatomiehash } from './anatomiehash.js';
+
 export class Stueckschweissung {
 
     /** Ab so vielen Punkten je Dreieck teilen die Flächen keine Punkte (Cyborg Suit 2,43; ein gewöhnliches Netz um 0,5). */
@@ -32,9 +34,32 @@ export class Stueckschweissung {
     static STUFEN_MAX = 6;
     static DREIECKE_MAX = 400000;
 
+    /**
+     * Das zuletzt gerechnete Netz je Punktfeld (22.11.2026, Ladezeit /foto-genesis/test/zauberer_kleidungsregeln_kopie_48/): `Hautverdeckung.stoffe` ruft `netz` je Maske dreimal
+     * (vor dem Abruf, zum Vergleich danach, in `anwenden`), und die Maske läuft beim Laden mehrmals — die Robe wurde jedes Mal 22.665 → 318.567 Dreiecke geteilt (im Profil 412 ms).
+     * Schlüssel ist der INHALT (`Anatomiehash.feld` über Punkte und Dreiecke mit zwei Startwerten wie `Hautmaskenvorrat.schluessel`, wenige ms): `Fotogenesistestfigur._hautStuecke`
+     * legt die Punkte bei jedem Aufruf neu an. Die Felder des Ergebnisses ändert niemand (`Hautarbeit._kopien` schickt Kopien in den Worker). Höchstens `VORRAT` Netze, das älteste geht.
+     */
+    static VORRAT = 8;
+    static _vorrat = new Map();
+
     /** `{punkte, dreiecke}` für die Maske — dieselben Felder, wenn nichts zu tun ist. */
     static netz(punkte, dreiecke, ersatz = false) {
         if (ersatz || !dreiecke?.length) return { punkte, dreiecke };
+        const z = Stueckschweissung, kennung = [Anatomiehash.SEED_A, Anatomiehash.SEED_B].map(s => Anatomiehash.feld(Anatomiehash.feld(s, punkte), dreiecke)).join(':');
+        let netz = z._vorrat.get(kennung);
+        if (netz) {
+            z._vorrat.delete(kennung);                  // zuletzt benutzt ans Ende
+        } else {
+            netz = z._rechnen(punkte, dreiecke);
+            if (netz.punkte === punkte && netz.dreiecke === dreiecke) return { punkte, dreiecke };     // nichts zu tun: die Eingabe selbst, nichts zu merken
+            while (z._vorrat.size >= z.VORRAT) z._vorrat.delete(z._vorrat.keys().next().value);
+        }
+        z._vorrat.set(kennung, netz);
+        return { ...netz };
+    }
+
+    static _rechnen(punkte, dreiecke) {
         let netz = { punkte, dreiecke };
         if (punkte.length / 3 > Stueckschweissung.VERHAELTNIS * dreiecke.length / 3) netz = Stueckschweissung.schweissen(punkte, dreiecke);
         if (Stueckschweissung.mittlereKante(netz.punkte, netz.dreiecke) <= Stueckschweissung.GROB_M) return netz;

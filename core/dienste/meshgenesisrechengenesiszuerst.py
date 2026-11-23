@@ -35,12 +35,21 @@ class Meshgenesisrechengenesiszuerst:
         # 20.11.2026 (Edgar: „mach doch einen dritten Modus für die Kleider - "Eigen" neben Drapieren und Bibliothek und rechne das auch für jeden Job aus“): drittes Ergebnis, Weg e
         'eigen': ('eigen', 'Eigene Kleider: je Kleidungsstück ein eigenes Stück, an das Stück aus dem Netz gepasst (drittes Ergebnis neben Kleiderbibliothek und Drapieren, Genesis zuerst)',
                   ['-u', 'meshgenesis_eigen_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
+        # 22.11.2026 (Paket K6 von Edgar: „Passend in die Kette und in die Kostüm-Prüfung“): viertes Ergebnis, Weg p (`meshgenesis_passend_lauf.py`, bis dahin nur von Hand)
+        'passend': ('passend', 'Kleider „Passend“: je Kleidungsstück das passendste Stück der Kleiderbibliothek aus mehreren Kandidaten, an das Netzstück gepasst (viertes Ergebnis, Genesis zuerst)',
+                    ['-u', 'meshgenesis_passend_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
         # 21.11.2026 (Edgar: „mach weiter mit dem Plan“, Konzept `2026-11-21_bibliothek-anpassen-konzept.md` Abschnitt 10): die gewählten Kleidungsregeln auf die Kleidungsstücke aller drei
         # Wege (Fetzen weg, glatter Rand, Rock an beiden Beinen), vor Prüfung und Stoff; Wahl: Einstellungen → Kleider, am Job `kleider_regeln` (`Kleidregelnaufloesung`)
-        'kleidregeln': ('kleidregeln', 'Kleidungsregeln auf Kleiderbibliothek, Eigen und Drapieren (Löcher schließen, Fetzen weg, glatter Rand, Saum, Rock — wie gewählt, Genesis zuerst)',
+        'kleidregeln': ('kleidregeln', 'Kleidungsregeln auf Kleiderbibliothek, Drapieren, Eigen und Passend (Löcher schließen, Fetzen weg, glatter Rand, Saum, Rock — wie gewählt, Genesis zuerst)',
                         ['-u', 'meshgenesis_kleidregeln_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
         'pruefung': ('pruefung', 'Prüfung der Stücke der Kleiderbibliothek: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
                                                                                                   '--nur-pruefen', '--weg', 'z']),
+        # 22.11.2026 (Paket K2/K6 von Edgar: „volle Kostüm-Prüfung“ für Drapieren und Passend): dieselbe Prüfung mit der Kleidung des Wegs, Haar, Hut, Schuhe und Requisiten aus der
+        # Kleiderbibliothek (wie die Seite), Tabelle `k/testfaelle_<weg>.json` (`Kostuempruefung.datei_name`); ohne Stücke des Wegs meldet der Schritt den Test als gescheitert und geht weiter
+        'pruefung_f': ('pruefung_f', 'Prüfung der Stücke von Drapieren: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
+                                                                                              '--nur-pruefen', '--weg', 'f']),
+        'pruefung_p': ('pruefung_p', 'Prüfung der Stücke von Passend: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
+                                                                                            '--nur-pruefen', '--weg', 'p']),
         # 19.11.2026 abends (Edgar: „Ja“ auf „Soll der Stoff ein fester Job-Schritt nach Weg z werden?“): die Stücke von Weg z (auch die aus den Bausteinen) über die Animation der Seite als
         # Stoff (Stoffsolver mit Kernmotor); die Seite zeigt sie dann mit Falten statt als zweite Haut. Gemessen gk_anzug + gk_mieder (goldprinzessin_mesh_genesis_64): 5 + 9 s Simulation
         'stoff': ('stoff', 'Kleider der Kleiderbibliothek als Stoff über die Animation der Seite (Genesis zuerst)', ['-u', 'meshgenesis_kleiderstoff_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
@@ -50,7 +59,7 @@ class Meshgenesisrechengenesiszuerst:
     }
     #: Schritte, die nach einem Schritt der alten Kette dazukommen (in dieser Reihenfolge). „stoff“ und „haar“ als letzte: ein Fehler dort hält keinen anderen Schritt auf, die Seite zeigt
     #: dann gehäutet bzw. ihre Pendel
-    NACH = {'zeile1': ('proportionen',), 'kleider': ('garderobe', 'bausteine', 'drapieren', 'eigen', 'kleidregeln'), 'pruefung': ('stoff', 'haar')}
+    NACH = {'zeile1': ('proportionen',), 'kleider': ('garderobe', 'bausteine', 'drapieren', 'eigen', 'passend', 'kleidregeln'), 'pruefung': ('pruefung_f', 'pruefung_p', 'stoff', 'haar')}
     #: Versuch 21.11.2026 (Edgar: „ja, teste Genesis zuerst mit Mesh-Reglern an edgar_fotos“): mit `genesis_zuerst_mesh_regler` in `einstellung.json` behält die Figur den freien
     #: Versatz der Einpassung als Mesh-Regler (Form wie das Netz, `abgleich.mittel_mm` 0 statt 15,1 an edgar_fotos), die Kleiderwege bleiben die von „Genesis zuerst“.
     #: `meshgenesis_zeile1figur.py` liest dieselbe Einstellung (ein Arbeitsprozess mit älterer Schrittliste rechnet so trotzdem das Gewählte).

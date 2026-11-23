@@ -1,0 +1,109 @@
+/* Hilfe -> Kleidung -> Fitting: Überblick und Verlauf der Methoden (22.11.2026).
+ * Eigene Datei statt Zuwachs in `hilfe_kleidung.css` (über 300 Zeilen). Dunkles Thema der Doku-Seiten
+ * (`dokuseite.css`, Text #e0e0e0); die Urteile in Farben mit genug Abstand zum Grund.
+ */
+
+/* `dokuseite.css` setzt h3 größer als h2 (28 gegen 22,4 px, im Chrome gemessen) — hier ist h2 die Gruppe, h3 der Abschnitt darin */
+.doku-seite h2.fit-gruppe {
+    font-size: 1.7rem;
+    margin-top: 2.2rem;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(128, 138, 152, 0.35);
+}
+
+.doku-seite h3.fit-unter {
+    font-size: 1.1rem;
+    margin: 1.1rem 0 0.4rem;
+    opacity: 0.9;
+}
+
+.doku-seite table.fit-ueberblick td,
+.doku-seite table.fit-verlauf td {
+    vertical-align: top;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.doku-seite table.fit-ueberblick td:nth-child(1) { width: 11%; }
+.doku-seite table.fit-ueberblick td:nth-child(2) { width: 22%; }
+.doku-seite table.fit-ueberblick td:nth-child(3) { width: 10%; }
+.doku-seite table.fit-ueberblick td:nth-child(4) { width: 14%; }
+.doku-seite table.fit-ueberblick td:nth-child(5) { width: 23%; }
+
+.doku-seite table.fit-verlauf td.fit-schritt { width: 16%; }
+
+/* Konzeptteil (`kleidung_fitting_konzept.html`, 22.11.2026) */
+.doku-seite table.fit-zwei td,
+.doku-seite table.fit-moeglich td,
+.doku-seite table.fit-haut td,
+.doku-seite table.fit-uebernehmen td {
+    vertical-align: top;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.doku-seite table.fit-zwei td:nth-child(1) { width: 35%; }
+.doku-seite table.fit-drei td { vertical-align: top; font-size: 0.9em; line-height: 1.4; }
+.doku-seite table.fit-drei td:nth-child(1) { width: 14%; }
+.doku-seite table.fit-drei td:nth-child(3) { width: 30%; }
+.doku-seite table.fit-moeglich td:nth-child(1) { width: 16%; }
+.doku-seite table.fit-haut td:nth-child(1) { width: 11%; }
+.doku-seite table.fit-haut td:nth-child(2) { width: 32%; }
+.doku-seite table.fit-haut td:nth-child(3) { width: 30%; }
+.doku-seite table.fit-uebernehmen td:nth-child(1) { width: 13%; }
+.doku-seite table.fit-uebernehmen td:nth-child(2) { width: 12%; }
+.doku-seite table.fit-uebernehmen td:nth-child(3) { width: 22%; }
+.doku-seite table.fit-uebernehmen td:nth-child(5) { width: 15%; }
+
+.doku-seite tr.fit-empfohlen td { background: rgba(115, 218, 202, 0.07); }
+
+.doku-seite ol.fit-liste { padding-left: 1.4em; }
+
+.doku-seite .fit-klein {
+    font-size: 0.85em;
+    opacity: 0.78;
+}
+
+.doku-seite .fit-hinweis {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.doku-seite ul.fit-liste {
+    margin: 0;
+    padding-left: 1.1em;
+}
+
+.doku-seite ul.fit-liste li { margin-bottom: 4px; }
+
+.doku-seite .fit-zeit,
+.doku-seite .fit-zeitmarke {
+    font-variant-numeric: tabular-nums;
+    color: #7dcfff;
+}
+
+.doku-seite .fit-zeitmarke {
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.doku-seite td.fit-ohne {
+    opacity: 0.4;
+    text-align: center;
+}
+
+.doku-seite .fit-urteil {
+    display: inline-block;
+    min-width: 3.2em;
+    padding: 0 5px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: 700;
+    text-align: center;
+    color: #10131a;
+}
+
+.doku-seite .fit-urteil.fit-rot { background: #ff7b8f; }
+.doku-seite .fit-urteil.fit-gruen { background: #73daca; }
+.doku-seite .fit-urteil.fit-gelb { background: #e0af68; }
+.doku-seite .fit-urteil.fit-offen { background: #8a93a6; }

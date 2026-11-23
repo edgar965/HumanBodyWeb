@@ -6,6 +6,7 @@
  * Nur die Figur, ohne das Mesh und ohne das Anatomie-Stück; wie dort um den tiefsten Punkt des Meshs auf den Boden gestellt.
  */
 import * as THREE from 'three';
+import { Genesis9texturen } from '../gemeinsam/genesis9texturen.js';
 import { Meshgenesismeshanpassung } from '../meshgenesis/meshgenesismeshanpassung.js';
 import { Meshgenesislinienzeichner as LZ } from '../meshgenesis/meshgenesislinienzeichner.js';
 import { Fotogenesisanpassungsaugen } from './fotogenesisanpassungsaugen.js';
@@ -34,6 +35,9 @@ export class Fotogenesisanpassungsfigur {
             if (!a.ok) throw new Error(a.status === 404 ? 'Noch nicht gerechnet.' : `HTTP ${a.status}`);
             const { kopf, daten } = LZ.paket(await a.arrayBuffer());
             const z = Meshgenesismeshanpassung.prototype;
+            // Haut und Augen in EINER Bildanfrage (23.11.2026, Edgar: „alles schneller, max 2. s“): einzeln belegten die sechs Bilder die Verbindungen des Browsers, das Körpernetz der
+            // Figur im Feld daneben stand dahinter 109–255 ms in der Schlange (`_haut` lädt dann aus dem Vorrat)
+            Genesis9texturen.vorladen([...(kopf.textur ?? []), ...(kopf.augen ?? [])].filter(g => g.albedo).map(g => ({ pfad: g.albedo, srgb: true })));
             this.figur = Meshgenesismeshanpassung._geometrie(daten.figur, daten.figur_dreiecke);
             this.figurHaut = daten.uv && kopf.textur ? z._haut.call(this, daten, kopf.textur) : null;
             // die Augäpfel (19.11.2026, Edgar: „bau Augen in Zeile 1 ein“ — das Körpernetz allein hat leere Augenhöhlen)

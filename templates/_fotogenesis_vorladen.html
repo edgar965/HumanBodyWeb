@@ -1,0 +1,7 @@
+{% comment %}Die Daten der Genesis-Figur gleich mit der Seite anfragen (23.11.2026, Edgar: „alles schneller, max 2. s“): `Fotogenesistestfigur` holte Testdaten und Kleiderliste erst, wenn das
+Skriptbündel lief (gemessen ab 486 ms, das HTML war nach 298 ms da), und die Figur wartet auf die Testdaten; Feld 1 (`Fotogenesisanpassungsfigur`) ebenso. `fetch` übernimmt die vorgeladene
+Antwort (Chrome, auch bei `no-store`: der zweite Abruf kam nach 2 ms ohne Server). Nur Adressen, die die Seite sicher holt (`Fotogenesisgenesiszeile`), und genau so geschrieben wie dort —
+sonst holt der Browser doppelt und warnt über ungenutztes Vorladen. `crossorigin`: dieselbe Anmeldeart wie `fetch` (same-origin).{% endcomment %}
+{% with g=daten.genesiszeile %}{% if g.ergebnis %}<link rel="preload" href="{{ g.ergebnis }}" as="fetch" crossorigin>
+{% if g.kleider %}<link rel="preload" href="{{ g.kleider }}" as="fetch" crossorigin>{% endif %}{% endif %}
+{% if g.meshgenesis %}<link rel="preload" href="{{ g.meshgenesis }}?netz=0" as="fetch" crossorigin>{% endif %}{% endwith %}

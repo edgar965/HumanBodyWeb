@@ -3,6 +3,7 @@ import { Meshgenesisexportquelle } from '../meshgenesis/meshgenesisexportquelle.
 import { Meshgenesisfigurbewegung } from '../meshgenesis/meshgenesisfigurbewegung.js';
 import { Meshgenesisflaechennetz } from '../meshgenesis/meshgenesisflaechennetz.js';
 import { Meshgenesiskikleiderfeld } from '../meshgenesis/meshgenesiskikleiderfeld.js';
+import { Fotogenesistestfigur } from './fotogenesistestfigur.js';
 
 /**
  * Fotogenesisexportfigur — die Figur eines Foto-Genesis-Tests für die Exportleiste (31.10.2026, Server `Fotogenesisexportquelle`).
@@ -20,9 +21,22 @@ export class Fotogenesisexportfigur {
     constructor(adresse, feld = null, { nackt = false } = {}) {
         this.adresse = adresse;
         this.nackt = nackt;
+        this.methode = 'bibliothek';
         const ohneFeld = { neuZeigen() {}, zeichnen() {} };
         this.bewegung = new Meshgenesisfigurbewegung(feld ?? ohneFeld, () => this._quelle());
         this.export = new Meshgenesisexportquelle(() => this.bewegung);
+    }
+
+    /**
+     * Methode der Kleider wie die stehende Figur des Felds (`Fotogenesiskleidermethode`, Regel `Fotogenesistestfigur.wegWahl`): die bewegte Figur wird beim nächsten Abspielen mit den
+     * Stücken dieser Methode neu gebaut, ihr Stoff kommt unter deren Weg (`Meshgenesisstoffkleid.holen` mit der Adresse des Stücks). Seit 22.11.2026 (Paket K2, Edgar über websites-5e:
+     * „Drapieren ← Bibliothek: Stoff über die Animation“): vorher spielte die Leiste bei „Drapieren“ die Kleiderbibliothek (Serverlog: nur `z/…/stoff/` abgerufen). Der Export nimmt
+     * dieselbe Figur, also auch die Methode.
+     */
+    methodeSetzen(methode) {
+        if (methode === this.methode) return;
+        this.methode = methode;
+        this.bewegung.verwerfen();
     }
 
     bvh() {
@@ -52,14 +66,15 @@ export class Fotogenesisexportfigur {
         }
         const liste = await fetch(`${this.adresse}kleider/${g}/`).then(a => (a.ok ? a.json() : null)).catch(() => null);
         this._liste = liste;
-        const stuecke = [];
+        const stuecke = [], wahl = Fotogenesistestfigur.wegWahl(this.methode);
         for (const st of liste?.stuecke ?? []) {
-            const adresse = st.art !== 'haut' && st.wahl !== 'aus' ? st[st.wahl]?.netz : null;
+            const weg = wahl(st);
+            const adresse = st.art !== 'haut' && weg && weg !== 'aus' ? st[weg]?.netz : null;
             if (!adresse) continue;
             const netz = await Meshgenesisflaechennetz.holen(null, adresse).catch(fehler => { console.warn(`Fotogenesisexportfigur: ${st.id} nicht geladen (${fehler.message})`); return null; });
-            if (netz) stuecke.push({ id: st.id, art: st.art, netz, kostuem: Meshgenesiskikleiderfeld.kostuem(st[st.wahl]), adresse });     // `adresse`: Stoff je Bewegung (`Meshgenesisstoffkleid`)
+            if (netz) stuecke.push({ id: st.id, art: st.art, netz, kostuem: Meshgenesiskikleiderfeld.kostuem(st[weg]), adresse });     // `adresse`: Stoff je Bewegung (`Meshgenesisstoffkleid`)
         }
-        return { schluessel: `${this.adresse}|${g}`, figur: d.figur_genesis, stuecke, knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren, ohneKnochen: [],
+        return { schluessel: `${this.adresse}|${g}|${this.methode}`, figur: d.figur_genesis, stuecke, knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren, ohneKnochen: [],
                  anatomieGetragen: Meshgenesisanatomiehuelle.getragen(liste), zeile1: d.zeile1_form || null };
     }
 }

@@ -33,6 +33,13 @@ class Meshgenesistesteigenstueck:
     NACHRECHNEN_MM = 3.0
     #: Kante des gebackenen Bildes für Stücke nur mit Punktfarben (`_gebacken`)
     BACKEN_KANTE = 2048
+    #: Abwicklung für das Backen der Punktfarben: Projektion je Insel (Blenders Smart UV Project) statt LSCM (22.11.2026, Edgar: „die 513 s der Eigen-Stücke in der Garderobe
+    #: angehen“). Gemessen an den Eigen-Stücken der Zauberer-Kopie _60 (`ProjektTemp/_wegwerf/eigenzeit/abwicklung_probe.txt`, je Stück zwei Läufe, Karte geteilt): Hut 171/242 s
+    #: → 37,5/36,8 s, Speer 84,5/81,2 → 28,8/26,3 s, Tasche 53,3 → 24,4 s; gleiche Inseln, belegter Anteil 0,173 → 0,169 (Hut), Texeldichte p5/p50/p95 1851/2053/2169 →
+    #: 1832/2039/2150 Texel je Meter, Streuung p95/p5 1,17 bei beiden. Für Punktfarben (2,5 mm Abstand, ein Texel ≈ 0,5 mm) zählt nur eine gleichmäßige Dichte, keine Winkeltreue.
+    #: Dazu ohne Aufstellen der Inseln beim Packen (`rotation='keine'`; `Uvdrehung.aufstellen` kostete 15,7 von 34,9 s am Hut, 854 Inseln, `abw_teile_probe.py`): Hut 39,1/38,8 →
+    #: 20,1/15,0 s, Speer 29,2/33,1 → 17,1/16,8 s; Texeldichte p50 2039 → 1802 bzw. 1718 → 1449 Texel je Meter (ein Texel ≈ 0,55 statt 0,49 mm, immer noch fünf je Punktabstand).
+    ABWICKLUNG = {'verfahren': 'projektion', 'rotation': 'keine'}
 
     def __init__(self, stueck_ordner, stueck, regler, praefix, rig_namen, gewichte=None):
         """`stueck_ordner`: `kleider_<g>/b/<id>` (mit `anzeige/`); `stueck`: Eintrag aus `stuecke.json`; `regler`: Stellung der vorhergesagten Figur; `praefix`: Anfang des Stücknamens
@@ -56,6 +63,7 @@ class Meshgenesistesteigenstueck:
         with Npztorch.lesen(self.ordner / 'anzeige' / 'netz.npz') as z:                # seit 31.10.2026 gebacken (`_gebacken`): ein früher einfarbig geschriebenes Stück passt nicht mehr
             if 'punktfarbe' in z.files and not Torchfeld.ptp(z['uv'], axis=0).any():
                 h.update(b'gebacken %d' % self.BACKEN_KANTE)
+                h.update(json.dumps(self.ABWICKLUNG, sort_keys=True).encode('ascii'))      # seit 22.11.2026 (`ABWICKLUNG`): ein mit LSCM gebackenes Stück gilt nicht als gemerkt
         return '%d:%s' % (self.FASSUNG, h.hexdigest()[:16])
 
     def holen(self):
@@ -79,7 +87,7 @@ class Meshgenesistesteigenstueck:
         return bilanz
 
     def _gebacken(self, arbeit, kennung, punkte, dreiecke, farben):
-        """Ein Stück nur mit Punktfarben (uint8 sRGB je Punkt, UV überall 0 — die Stücke aus den Fotos von Foto-Genesis, 31.10.2026) bekommt eine Abwicklung (`Uvabwicklung`, LSCM) und ein
+        """Ein Stück nur mit Punktfarben (uint8 sRGB je Punkt, UV überall 0 — die Stücke aus den Fotos von Foto-Genesis, 31.10.2026) bekommt eine Abwicklung (`Uvabwicklung`, Verfahren `ABWICKLUNG`) und ein
         gebackenes Bild (`Texturbacker.farbe_je_punkt`, Kante `BACKEN_KANTE`), beides aus dem Stoffsolver; sonst trüge das Genesis-Stück nur eine Farbe. Gemessen am Haar von EdgarTrip
         (`ProjektTemp/_wegwerf/exportleiste/abwicklung_probe.py`): 24.846 Dreiecke, 706 Inseln, 6,2 s Abwicklung, 3,3 s Backen. → (Bild, UV je Ecke (3T, 2), v nach oben wie OBJ,
         Mittel des Bilds für das Icon — `G9stueckicon.mittel` aus dem Bild im Speicher, 19.11.2026, Edgar: „mach die gebackene PNG-Farbe auch direkt“)."""
@@ -87,7 +95,7 @@ class Meshgenesistesteigenstueck:
         from KoerperKI_alle.pngtorch import Pngtorch
         from Stoffsolver.texturbacker import Texturbacker
         from Stoffsolver.uvabwicklung import Uvabwicklung
-        erg = Uvabwicklung(punkte, dreiecke).rechnen()
+        erg = Uvabwicklung(punkte, dreiecke, **self.ABWICKLUNG).rechnen()
         bild = arbeit / ('%s_farbe.png' % kennung)
         gebacken = torch.as_tensor(Texturbacker(punkte, dreiecke, erg.uv, groesse=self.BACKEN_KANTE).farbe_je_punkt(farben), device='cuda')
         Pngtorch.schreiben(gebacken, bild)       # 19.11.2026: statt `Texturbacker.als_png` (PIL 550–710 ms, Pngtorch 70–150 ms, dieselben Pixel, `pngtorch_probe.py`)

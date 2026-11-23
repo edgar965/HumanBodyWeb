@@ -92,20 +92,23 @@ export class Meshgenesisflaechen {
         return roh;
     }
 
-    /** Farbe je Punkt aus dem Teil seines Dreiecks (Teile teilen keine Punkte) — sRGB in den linearen Raum, den three.js erwartet. */
+    /**
+     * Farbe je Punkt aus dem Teil seines Dreiecks (Teile teilen keine Punkte) — sRGB in den linearen Raum, den three.js erwartet. Als Float16 (22.11.2026, Ladezeit des Zauberers, wie die
+     * Punktfarbe in `Meshgenesisflaechennetz`): halb so viel Speicher, je Wert höchstens 2⁻¹⁰ relativ daneben (`toHalfFloat` schneidet ab).
+     */
     static farben(kopf, dreiecke, etikett) {
-        const farben = kopf.teilfarben.map(([r, g, b]) => new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace));
-        const farbe = new Float32Array(kopf.punkte * 3);
+        const farben = kopf.teilfarben.map(([r, g, b]) => new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace).toArray().map(w => THREE.DataUtils.toHalfFloat(w)));
+        const attribut = new THREE.Float16BufferAttribute(kopf.punkte * 3, 3), farbe = attribut.array;
         for (let i = 0; i < etikett.length; i++) {
             const c = farben[etikett[i]];
             for (let k = 0; k < 3; k++) {
                 const o = dreiecke[i * 3 + k] * 3;
-                farbe[o] = c.r;
-                farbe[o + 1] = c.g;
-                farbe[o + 2] = c.b;
+                farbe[o] = c[0];
+                farbe[o + 1] = c[1];
+                farbe[o + 2] = c[2];
             }
         }
-        return new THREE.BufferAttribute(farbe, 3);
+        return attribut;
     }
 
     /** @param {{kopf, haut, lage: Float32Array, dreiecke, etikett, aussen, knochen?, gewicht?, farbe?: THREE.BufferAttribute}} roh — `farbe` geteilt, wenn mehrere Bilder dieselbe Verbindung haben (Animation) */

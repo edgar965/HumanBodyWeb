@@ -40,6 +40,8 @@ class Fotogenesisjobs:
     #: `job.json`/`name.json` oder Ausblendliste (Schlüssel `_stand`) baut sofort neu. Was nicht im Schlüssel steht (PSHuman fertig, Kopf-Ergebnis, Netze), zeigt sich nach FRISCH_S.
     FRISCH_S = 3.0
     _ablage = None          # (Stand, Zeit, Jobs)
+    _index = None           # (Stand, Zeit, [(Eckdaten mit Adresse, Bauer)]) für `job`
+    _einzeln = {}           # Kennung → (Stand, Zeit, Job)
     _sperre = threading.Lock()
 
     @staticmethod
@@ -65,7 +67,7 @@ class Fotogenesisjobs:
     def vergessen(cls):
         """Die Ablage verwerfen (Tests, Löschen)."""
         with cls._sperre:
-            cls._ablage = None
+            cls._ablage, cls._index, cls._einzeln = None, None, {}
 
     @classmethod
     def _stand(cls):
@@ -86,13 +88,28 @@ class Fotogenesisjobs:
 
     @classmethod
     def _alle_lesen(cls):
-        jobs = []
-        wurzel = cls.ordner()
+        return [dict(bauen(), adresse=eck['adresse']) for eck, bauen in cls._eintraege()]
+
+    @classmethod
+    def _eintraege(cls):
+        """`[(eck, bauen)]` in der Reihenfolge der Liste — Exporte, dann Foto-Jobs. `eck`: die Eckdaten (`id`, `name`, bei Foto-Jobs `name_vorgabe`) mit der `adresse`
+        aus `Fotogenesisadresse.vergeben`; `bauen()` liefert den ganzen Job ohne Adresse."""
+        eintraege, wurzel, paare = [], cls.ordner(), {}
+
+        def paare_lesen():          # alle paar.json erst, wenn ein Export ausgebaut wird
+            if 'p' not in paare:
+                paare['p'] = cls._paare()
+            return paare['p']
         if wurzel.is_dir():
-            paare, weg = cls._paare(), Fotogenesispapierkorb.ausgeblendet()
-            jobs = [j for j in (cls._job(o, paare) for o in sorted(p for p in wurzel.iterdir() if p.is_dir())) if j and j['id'] not in weg]
-        bekannt = {j['id'] for j in jobs}
-        return Fotogenesisadresse.vergeben(jobs + [j for j in Fotogenesisfotojobs.alle() if j['id'] not in bekannt])
+            weg = Fotogenesispapierkorb.ausgeblendet()
+            for o in sorted(p for p in wurzel.iterdir() if p.is_dir()):
+                gefunden = cls._export(o)
+                if gefunden and o.name.lower() not in weg:
+                    eintraege.append(({'id': o.name.lower(), 'name': o.name}, lambda o=o, g=gefunden: cls._ausbauen(o, *g, paare_lesen())))
+        bekannt = {eck['id'] for eck, _ in eintraege}
+        eintraege += [(eck, lambda eck=eck, info=info: Fotogenesisfotojobs.ausbauen(eck, info)) for eck, info in Fotogenesisfotojobs.eckdaten() if eck['id'] not in bekannt]
+        Fotogenesisadresse.vergeben([eck for eck, _ in eintraege])
+        return eintraege
 
     @classmethod
     def exporte(cls):
@@ -104,21 +121,42 @@ class Fotogenesisjobs:
 
     @classmethod
     def job(cls, kennung):
-        """Der Job zu seiner Kennung oder zu seiner Adresse (`Fotogenesisadresse`), sonst `None`."""
+        """Der Job zu seiner Kennung oder zu seiner Adresse (`Fotogenesisadresse`), sonst `None`. Ohne frische Liste wird nur DIESER Job ausgebaut, die übrigen nur bis zu
+        ihren Eckdaten (Adresse, Gültigkeit) — gleich frisch wie die Liste (Schlüssel `_stand`, FRISCH_S). 23.11.2026, Edgar: „alles schneller, max 2. s“: Jeder Seitenaufruf nach
+        mehr als FRISCH_S baute alle 40 Jobs neu, 91–96 ms allein (`_wegwerf/ladezeit/fotojobs_profil.py`), im Seitenaufbau 170 ms vor dem ersten Byte der Seite (py-spy,
+        `seite_spy4.txt`); mit frischer Liste kam die Seite nach 129–141 statt rund 300 ms, die Figur 0,3 s früher. Dazu kopiert `job` nur noch den einen Job, nicht alle (12,5 ms)."""
         gesucht = str(kennung).lower()
-        return next((j for j in cls.alle() if gesucht in (j['id'], j['adresse'])), None)
+        with cls._sperre:
+            stand, jetzt = cls._stand(), time.monotonic()
+            a = cls._ablage
+            if a is not None and a[0] == stand and jetzt - a[1] <= cls.FRISCH_S:
+                return copy.deepcopy(next((j for j in a[2] if gesucht in (j['id'], j['adresse'])), None))
+            i = cls._index
+            if i is None or i[0] != stand or jetzt - i[1] > cls.FRISCH_S:
+                i = cls._index = (stand, jetzt, cls._eintraege())
+            eck, bauen = next(((e, b) for e, b in i[2] if gesucht in (e['id'], e['adresse'])), (None, None))
+            if eck is None:
+                return None
+            j = cls._einzeln.get(eck['id'])
+            if j is None or j[0] != stand or jetzt - j[1] > cls.FRISCH_S:
+                j = cls._einzeln[eck['id']] = (stand, jetzt, dict(bauen(), adresse=eck['adresse']))
+            return copy.deepcopy(j[2])
 
     @classmethod
-    def _job(cls, ordner, paare):
-        """Ein Ordner ist ein Job, wenn ein Stamm alle vier Fotos und seine JSON hat; sonst `None` (kein Job, kein Fehler)."""
+    def _export(cls, ordner):
+        """Ein Ordner ist ein Job, wenn ein Stamm alle vier Fotos und seine JSON hat: dann `(Beschreibung, Fotos)`, sonst `None` (kein Job, kein Fehler)."""
         for beschreibung in sorted(ordner.glob('*.json')):
             stamm = beschreibung.stem
             fotos = [{'name': a, 'pfad': ordner / ('%s_%s.jpg' % (stamm, a)), 'winkel': w} for a, w in cls.ANSICHTEN]
             if all(f['pfad'].is_file() for f in fotos):
-                paar = paare.get(beschreibung.resolve())
-                return {'id': ordner.name.lower(), 'name': ordner.name, 'art': 'export', 'figur': cls._figurname(beschreibung), 'fotos': fotos, 'paar': paar,
-                        'test': None, 'wahrheit': True, 'netze': cls._netze(ordner, paar), 'hinweis': '', 'koerpergroesse_m': None}
+                return beschreibung, fotos
         return None
+
+    @classmethod
+    def _ausbauen(cls, ordner, beschreibung, fotos, paare):
+        paar = paare.get(beschreibung.resolve())
+        return {'id': ordner.name.lower(), 'name': ordner.name, 'art': 'export', 'figur': cls._figurname(beschreibung), 'fotos': fotos, 'paar': paar,
+                'test': None, 'wahrheit': True, 'netze': cls._netze(ordner, paar), 'hinweis': '', 'koerpergroesse_m': None}
 
     @staticmethod
     def _figurname(beschreibung):

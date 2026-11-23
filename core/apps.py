@@ -20,6 +20,9 @@ class CoreConfig(AppConfig):
         """
         if 'runserver' not in sys.argv:
             return
+        # Der Autoreloader prüft nur Projektdateien (23.11.2026, `projektreloader.py`)
+        from core.dienste.projektreloader import Projektreloader
+        Projektreloader.einsetzen()
         from core.dienste.startaufraeumen import Startaufraeumen
         aufraeumen = Startaufraeumen()
         aufraeumen.zwischendateien()

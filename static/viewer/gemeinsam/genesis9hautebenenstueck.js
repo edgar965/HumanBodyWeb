@@ -1,6 +1,7 @@
 import { Anatomiehaut } from './anatomiehaut.js';
 import { Anatomielage } from './anatomielage.js';
 import { Dreiecksabstand } from './dreiecksabstand.js';
+import { Hautstellengitter } from './hautstellengitter.js';
 import { Strahldreieck } from './strahldreieck.js';
 
 /**
@@ -86,12 +87,12 @@ export class Genesis9hautebenenstueck {
             }
         }
         if (!ecken.length) return null;
-        const gitter = Genesis9hautebenenstueck._gitter(hp, ecken);
+        const gitter = Genesis9hautebenenstueck._gitter(hp, ecken), vor = Genesis9hautebenenstueck._vorauswahl(hp, ecken);
         vorbild.map?.updateMatrix?.();
         const e = vorbild.map?.matrix?.elements || [1, 0, 0, 0, 1, 0, 0, 0, 1];
         const aus = new Float32Array((stueck.length / 3) * 2), ab = new Float64Array(3);
         for (let i = 0, j = 0; i < stueck.length; i += 3, j += 2) {
-            const t = Genesis9hautebenenstueck._stelle(stueck, normalen, i, hp, ecken, gitter, ab);
+            const t = Genesis9hautebenenstueck._stelle(stueck, normalen, i, hp, ecken, gitter, ab, vor);
             const a = ecken[3 * t], b = ecken[3 * t + 1], c = ecken[3 * t + 2], w1 = 1 - ab[1] - ab[2];
             const u = w1 * huv[2 * a] + ab[1] * huv[2 * b] + ab[2] * huv[2 * c];
             const v = w1 * huv[2 * a + 1] + ab[1] * huv[2 * b + 1] + ab[2] * huv[2 * c + 1];
@@ -117,28 +118,95 @@ export class Genesis9hautebenenstueck {
         return gitter;
     }
 
-    /** Das Hautdreieck unter dem Stückpunkt `i` (Nummer; Gewichte von b und c in `ab[1]`, `ab[2]`) — Kandidaten aus den Zellen ringsum (3 × 3 × 3), ohne Treffer alle. */
-    static _stelle(stueck, normalen, i, hp, ecken, gitter, ab) {
-        const x = stueck[i], y = stueck[i + 1], z = stueck[i + 2], Z = Genesis9hautebenenstueck.ZELLE_M;
+    /**
+     * Für die Vorauswahl in `_stelle` je Dreieck: `kaesten` `[x0, y0, z0, x1, y1, z1]`, je Achse um 2 · `Strahldreieck.RAND` · Ausdehnung größer, und `kugeln`
+     * `[Mitte xyz, Radius]` um den Schwerpunkt, Radius × (1 + 4 · RAND). Ein Strahltreffer darf so weit neben dem Dreieck liegen (Gewichte ab −RAND, zwei davon
+     * negativ) — Kasten und Kugel enthalten also jeden Treffer und jeden nächsten Punkt; `mitten` (der Schwerpunkt liegt im Dreieck) gibt eine obere Schranke.
+     */
+    static _vorauswahl(hp, ecken) {
+        const T = ecken.length / 3, kaesten = new Float64Array(6 * T), kugeln = new Float64Array(4 * T), r = Strahldreieck.RAND;
+        for (let t = 0; t < T; t++) {
+            const a = 3 * ecken[3 * t], b = 3 * ecken[3 * t + 1], c = 3 * ecken[3 * t + 2];
+            for (let d = 0; d < 3; d++) {
+                const lo = Math.min(hp[a + d], hp[b + d], hp[c + d]), hi = Math.max(hp[a + d], hp[b + d], hp[c + d]), mehr = 2 * r * (hi - lo) + 1e-9;
+                kaesten[6 * t + d] = lo - mehr;
+                kaesten[6 * t + 3 + d] = hi + mehr;
+                kugeln[4 * t + d] = (hp[a + d] + hp[b + d] + hp[c + d]) / 3;
+            }
+            let rad = 0;
+            for (const e of [a, b, c]) rad = Math.max(rad, Math.hypot(hp[e] - kugeln[4 * t], hp[e + 1] - kugeln[4 * t + 1], hp[e + 2] - kugeln[4 * t + 2]));
+            kugeln[4 * t + 3] = rad * (1 + 4 * r) + 1e-9;
+        }
+        return { kaesten, kugeln, gitter: T ? new Hautstellengitter(kaesten, Genesis9hautebenenstueck.ZELLE_M) : null };
+    }
+
+    /** Abstand² vom Punkt zum Kasten des Dreiecks `t` (`_kaesten`) — keine Stelle des Dreiecks liegt näher. */
+    static _kastenAbstand2(k, t, x, y, z) {
+        const o = 6 * t;
+        const dx = Math.max(k[o] - x, 0, x - k[o + 3]), dy = Math.max(k[o + 1] - y, 0, y - k[o + 4]), dz = Math.max(k[o + 2] - z, 0, z - k[o + 5]);
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    /** Spielraum der Vorauswahl gegen Rundung: übersprungen wird erst, wenn der Kasten um diesen Faktor (Abstand²) weiter liegt. */
+    static GENAU = 1 + 1e-9;
+
+    /**
+     * Das Hautdreieck unter dem Stückpunkt `i` (Nummer; Gewichte von b und c in `ab[1]`, `ab[2]`) — Kandidaten aus den Zellen ringsum (3 × 3 × 3), ohne Treffer alle.
+     *
+     * VORAUSWAHL ÜBER DIE KÄSTEN (21.11.2026, Ladezeit /foto-genesis/test/zauberer_kleidungsregeln_kopie_48/, Edgar: „ladezeit ewig! fixe"): Am Glied von „Daz
+     * Anatomie Mann" (Zauberer) lagen 3.798 von 6.979 Stückpunkten mehr als eine Zelle vor der Haut — jeder prüfte alle 3.668 Hautdreiecke, zweimal (28 Mio.
+     * Prüfungen, 5,1 s auf dem Hauptfaden, im Tab gemessen; im Profil der längste Block beim Laden, 6,2 s). Jetzt wird ein Dreieck übersprungen, dessen Kasten
+     * (`_vorauswahl`) weiter liegt als der beste nächste Punkt bisher (höchstens der Abstand zur nächsten Dreiecksmitte), bzw. dessen Kugel die Strahlgerade verfehlt
+     * oder jenseits der Strahlgrenze liegt: kein Punkt und kein Treffer des Dreiecks kann dann gewinnen. Fern der Haut (keine Zelle ringsum hat ein Dreieck) kommen
+     * die Kandidaten aus `Hautstellengitter` (Würfel um die Schranke, Zellen entlang der Strahlstrecke), aufsteigend wie beim Durchlauf über alle. Reihenfolge und
+     * Vergleiche bleiben, wie sie waren — dasselbe Dreieck, dieselben Gewichte (im Tab bitgleich gegen die alte Fassung, 13.958 Werte, mit Gegenproben).
+     * @param vor  `_vorauswahl(hp, ecken)` oder null (dann ohne Vorauswahl)
+     */
+    static _stelle(stueck, normalen, i, hp, ecken, gitter, ab, vor = null) {
+        const x = stueck[i], y = stueck[i + 1], z = stueck[i + 2], Z = Genesis9hautebenenstueck.ZELLE_M, G = Genesis9hautebenenstueck.GENAU;
         const kand = new Set(), cx = Math.floor(x / Z), cy = Math.floor(y / Z), cz = Math.floor(z / Z);
         for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
             for (const t of gitter.get(`${cx + dx},${cy + dy},${cz + dz}`) || []) kand.add(t);
         }
-        const liste = kand.size ? [...kand] : Array.from({ length: ecken.length / 3 }, (_, t) => t), hilf = new Float64Array(3);
-        const ecke = (t, k) => 3 * ecken[3 * t + k];
+        const ka = vor?.kaesten, ku = vor?.kugeln, fern = !kand.size && vor?.gitter, hilf = new Float64Array(3);
+        let liste = kand.size ? [...kand] : null, anzahl = liste ? liste.length : ecken.length / 3;
+        let schranke = Infinity;                                       // Abstand² zur nächsten Dreiecksmitte: so weit liegt der nächste Punkt höchstens
+        if (fern) {                                                    // fern der Haut: nur die Dreiecke in der Kugel, die den nächsten sicher enthält (`Hautstellengitter`)
+            schranke = fern.schranke(x, y, z, (t) => {
+                const a = 3 * ecken[3 * t], b = 3 * ecken[3 * t + 1], c = 3 * ecken[3 * t + 2];
+                return Dreiecksabstand.naechster(x, y, z, hp[a], hp[a + 1], hp[a + 2], hp[b], hp[b + 1], hp[b + 2], hp[c], hp[c + 1], hp[c + 2], hilf)[0];
+            });
+            anzahl = fern.kugel(x, y, z, Math.sqrt(schranke * G + 1e-18) * G + 1e-12, ka);
+            liste = fern.liste;
+        } else if (ku) {
+            for (let j = 0; j < anzahl; j++) {
+                const o = 4 * (liste ? liste[j] : j), dx = ku[o] - x, dy = ku[o + 1] - y, dz = ku[o + 2] - z, d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 < schranke) schranke = d2;
+            }
+        }
         let bt = -1, beste = Infinity;
-        for (const t of liste) {
-            const a = ecke(t, 0), b = ecke(t, 1), c = ecke(t, 2);
+        for (let j = 0; j < anzahl; j++) {
+            const t = liste ? liste[j] : j;
+            if (ka && Genesis9hautebenenstueck._kastenAbstand2(ka, t, x, y, z) > (beste < schranke ? beste : schranke) * G + 1e-18) continue;
+            const a = 3 * ecken[3 * t], b = 3 * ecken[3 * t + 1], c = 3 * ecken[3 * t + 2];
             Dreiecksabstand.naechster(x, y, z, hp[a], hp[a + 1], hp[a + 2], hp[b], hp[b + 1], hp[b + 2], hp[c], hp[c + 1], hp[c + 2], hilf);
             if (hilf[0] < beste) { beste = hilf[0]; bt = t; ab[1] = hilf[1]; ab[2] = hilf[2]; }
         }
         // Lieber der Strahl: der nächste Punkt einer Fläche aus Facetten hängt an Kanten und Ecken (Nachbarpunkte bekämen dieselbe Stelle), der Strahl geht stetig.
         const nx = normalen?.[i] || 0, ny = normalen?.[i + 1] || 0, nz = normalen?.[i + 2] || 0, nl = Math.hypot(nx, ny, nz);
         if (!(nl > 1e-9)) return bt;
+        const mx = nx / nl, my = ny / nl, mz = nz / nl;
         let grenze = Genesis9hautebenenstueck.STRAHL_FAKTOR * Math.sqrt(beste) + 0.001;
-        for (const t of liste) {
-            const a = ecke(t, 0), b = ecke(t, 1), c = ecke(t, 2);
-            if (Strahldreieck.trifft(x, y, z, nx / nl, ny / nl, nz / nl, hp[a], hp[a + 1], hp[a + 2], hp[b], hp[b + 1], hp[b + 2], hp[c], hp[c + 1], hp[c + 2], hilf)
+        if (fern) anzahl = fern.strecke(x, y, z, mx, my, mz, grenze * G + 1e-12);     // nur die Zellen entlang der Strahlstrecke; `liste` ist dieselbe Ablage
+        for (let j = 0; j < anzahl; j++) {
+            const t = liste ? liste[j] : j;
+            if (ku) {
+                const o = 4 * t, dx = ku[o] - x, dy = ku[o + 1] - y, dz = ku[o + 2] - z, s = dx * mx + dy * my + dz * mz, rad = ku[o + 3];
+                if (dx * dx + dy * dy + dz * dz - s * s > rad * rad * G + 1e-14) continue;    // die Gerade verfehlt die Kugel
+                if (Math.abs(s) - rad > grenze * G + 1e-12) continue;                         // jeder Treffer läge jenseits der Grenze
+            }
+            const a = 3 * ecken[3 * t], b = 3 * ecken[3 * t + 1], c = 3 * ecken[3 * t + 2];
+            if (Strahldreieck.trifft(x, y, z, mx, my, mz, hp[a], hp[a + 1], hp[a + 2], hp[b], hp[b + 1], hp[b + 2], hp[c], hp[c + 1], hp[c + 2], hilf)
                 && hilf[0] < grenze) { grenze = hilf[0]; bt = t; ab[1] = hilf[1]; ab[2] = hilf[2]; }
         }
         return bt;

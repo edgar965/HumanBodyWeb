@@ -48,10 +48,11 @@ export class Anatomiehaut {
     /** Höchstens so viele Warterunden (die Bilder eines neuen Körpers kommen in Wellen). */
     static RUNDEN = 6;
 
-    /** Die Stücke der Figur mit Hauttiefe (starre Anatomie): `[{kennung, netz}]`. */
+    /** Die sichtbaren Stücke der Figur mit Hauttiefe (starre Anatomie): `[{kennung, netz}]`. Ein verborgenes (getragen, `Meshgenesisanatomiehuelle`) zieht erst nach, wenn es wieder
+     *  sichtbar wird (23.11.2026: Hautton, Karten und Hautebenen kosteten auf Foto-Genesis ~0,6 s Hauptfaden für ein Stück unter der Hose). */
     static stuecke(inst) {
         return Object.entries(inst?.clothMeshes || {})
-            .filter(([, netz]) => netz?.userData?.hautTiefe > 0)
+            .filter(([, netz]) => netz?.userData?.hautTiefe > 0 && netz.visible !== false)
             .map(([schluessel, netz]) => ({ kennung: String(schluessel).split('/')[0], netz }));
     }
 

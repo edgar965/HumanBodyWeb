@@ -29,6 +29,49 @@ export class Meshgenesiszeichenflaeche {
     }
 
     /**
+     * Shader bauen lassen, ohne zu zeichnen (22.11.2026, Ladezeit /foto-genesis/test/zauberer_kleidungsregeln_kopie_48/: das erste Bild des Ergebnisfelds hielt den Hauptfaden 0,6–1,1 s,
+     * im Profil davon `onFirstUse`/`getProgramInfoLog` 300–470 ms — three wartet beim ersten Gebrauch, bis der Treiber das Programm gebunden hat). `malen` läuft einmal mit einem
+     * `render`, das nur `compile` ruft — derselbe Zustand wie beim Zeichnen (Tone-Mapping von `Studiolicht`, Lichter) —, dann wird gewartet, bis jedes Programm fertig ist
+     * (`KHR_parallel_shader_compile`, wie `WebGLRenderer.compileAsync`). Das Ersatzmaterial (`overrideMaterial`) übergeht `compile`; es baut beim Zeichnen wie bisher.
+     * @returns {Promise|null} null ohne `KHR_parallel_shader_compile` (dann wird wie bisher gleich gezeichnet)
+     */
+    static vorbereiten(malen) {
+        const r = Meshgenesiszeichenflaeche.renderer();
+        if (!r.extensions.get('KHR_parallel_shader_compile')) return null;
+        const offen = new Set(), zeichnen = r.render;
+        r.render = (szene, kamera) => { for (const m of r.compile(szene, kamera)) offen.add(m); };
+        try {
+            malen(r);
+        } finally {
+            r.render = zeichnen;
+        }
+        return new Promise(fertig => {
+            const pruefen = () => {
+                for (const m of offen) if (r.properties.get(m).currentProgram?.isReady() !== false) offen.delete(m);
+                if (offen.size) setTimeout(pruefen, 10);
+                else fertig();
+            };
+            pruefen();
+        });
+    }
+
+    /**
+     * Steht in `szene` ein sichtbares Netz, das dieses Feld noch nie gezeichnet hat (`gesehen`, WeakSet je Feld)? Nicht „Material ohne Programm“: die Materialien teilen sich die Felder
+     * (`Meshgenesisgemeinsam`), ein `SkinnedMesh` braucht aber ein anderes Programm als ein `Mesh` mit demselben Material (gesehen 22.11.2026: so griff das Vorbauen nicht). Merkt sich
+     * die Netze gleich mit. Nicht auch Materialien, die ihr Programm wechseln (versucht 23.11.2026 mit `material.version`): seit die Bilder je Aufgabe einzeln kommen (`Texturweg`),
+     * ändert sich dauernd eines, und das Feld zeichnete 1,8 s lang gar nicht, weil es immer wieder auf das Vorbauen wartete.
+     */
+    static neueNetze(szene, gesehen) {
+        let neu = false;
+        szene.traverseVisible(o => {
+            if (!o.material || gesehen.has(o)) return;
+            gesehen.add(o);
+            neu = true;
+        });
+        return neu;
+    }
+
+    /**
      * Ein Bild für ein Feld.
      * @param {HTMLCanvasElement} leinwand die 2D-Leinwand des Felds @param {number} breite @param {number} hoehe Größe des Felds in CSS-Pixeln
      * @param {number} grund Farbe des Grunds @param {(r: THREE.WebGLRenderer) => void} malen zeichnet die Durchgänge des Felds (Ausschnitt und Grund sind gesetzt)

@@ -6,6 +6,7 @@ import { Kleidervorschau } from './kleidervorschau.js';
 import { Genesis9kennungumzug } from './genesis9kennungumzug.js';
 import { Zeichenstand } from './zeichenstand.js';
 import { Genesis9vorrat } from './genesis9vorrat.js';
+import { Genesis9materialabruf } from './genesis9materialabruf.js';
 
 /**
  * Genesis9aufbau — die Figur in zwei Zügen: Käfig sofort, volle Stufe nach.
@@ -54,7 +55,7 @@ export class Genesis9aufbau {
     static async progressiv(inst) {
         // Eine Anzeige: der Server legt sie dauerhaft ab (`Genesis9vorrat`). Folgt eine feinere Stufe, ist der Käfig eine Vorschau — nur er darf nach einer
         // Code-Änderung noch mit altem Code gerechnet kommen (17.11.2026).
-        await Genesis9vorrat.laden(inst, () => Genesis9aufbau.alles(inst, Genesis9aufbau.GROB), Netzstufenstand.wahl !== 'grob');
+        await Genesis9vorrat.laden(inst, () => Genesis9aufbau.alles(inst, Genesis9aufbau.GROB, Netzstufenstand.wahl !== 'grob'), Netzstufenstand.wahl !== 'grob');
         // Die Figur steht in der groben Stufe da; die Anzeige sagt es und dass die gewählte nachkommt (`Netzstufenstand`).
         Netzstufenstand.melden(inst, 'grob', Netzstufenstand.wahl !== 'grob');
         // Die gewählte Stufe stückweise und erst nach Ruhe nachholen (`Genesis9haeppchen`, Edgar 09.10.2026).
@@ -84,10 +85,12 @@ export class Genesis9aufbau {
      * `Promise.all` den KÖRPER mit, die Figur blieb ganz aus der Szene. Nur der
      * Körper bleibt fatal; ein Stück, das scheitert, wird gemeldet und fehlt.
      */
-    static async alles(inst, stufen) {
+    static async alles(inst, stufen, feinVorab = false) {
         Zeichenstand.beobachten(inst);                  // was noch fehlt, steht ab jetzt in der Anzeige rechts unten („⏳ … lädt noch: …")
         const vorher = Kleidervorschau.merken(inst);    // der Körper vor diesem Zug: die Stücke folgen ihm, bis der Server ihre genaue Lage liefert
         const koerper = inst.koerperAufbauen(stufen);   // zählt `_lauf` hoch, bevor die Stücke ihn lesen
+        // Der erste Zug fragt den Körper der gewählten Stufe gleich nach dem Käfig an (`Genesis9materialabruf.vorab`, 23.11.2026); gebaut wird er weiter danach (`Genesis9haeppchen`)
+        if (feinVorab && inst.constructor.ADRESSE) Genesis9materialabruf.vorab(inst, `${inst.constructor.ADRESSE}${encodeURIComponent(inst.figur)}/netz/`, true);
         Kleidervorschau.begleiten(inst, vorher, koerper);
         // ohne Kaskade: alle kommen ohnehin. Eine alte Kennung (`mb_…` vor dem 18.10.2026) erst auf die neue umstellen.
         const stuecke = inst.getragen().map(kennung => Genesis9kennungumzug.kennung(inst, kennung)

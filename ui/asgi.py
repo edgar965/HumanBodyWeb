@@ -1,14 +1,23 @@
 import os
+import sys
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.sessions import CookieMiddleware
 from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
-from django.core.asgi import get_asgi_application
 from djangobase.statik_kopfzeilen import StatikKopfzeilen
+
+from ui.asgiabbruch import Asgiabbruch
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ui.settings')
 
-django_asgi_app = get_asgi_application()
+# GIL-Umschaltung alle 0,5 statt 5 ms (23.11.2026, Edgar: „alles schneller, max 2. s“): Jede Ansicht läuft in eigenem Faden; nach jedem Dateizugriff
+# wartet sie bis zum nächsten Umschalten, solange ein rechnender Faden die GIL hält. Gemessen an /foto-genesis/test/iphone_mit_lidar_dycheck_space_out/:
+# Kleiderliste warm 44–50 ms, im Seitenaufbau 481–619 ms bis zum ersten Byte; Standardanimation 22–62 → 656–722 ms (`_wegwerf/ladezeit/anim_probe.py`).
+sys.setswitchinterval(0.0005)
+
+# Wie get_asgi_application(), nur hält eine abgebrochene Anfrage nicht mehr den ganzen Server an
+# (22.11.2026, `Asgiabbruch`)
+django_asgi_app = Asgiabbruch.anwendung()
 
 from core import routing  # noqa: E402
 from core.logging_utils import Zeitstempelausgabe  # noqa: E402

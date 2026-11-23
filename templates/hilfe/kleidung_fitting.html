@@ -1,117 +1,89 @@
 {% extends "dokuseite.html" %}
 {% load fassung %}
 {% comment %}
-Hilfe -> Kleidung -> Fitting: warum Haut durch Kleidung kam, wie andere es
-loesen, die vier Schichten des Konzepts und der Stand der Umsetzung.
+Hilfe -> Kleidung -> Fitting: die Methoden für Kleider, Haar, Bart und Haut nebeneinander — Überblick (Ablauf, Dauer,
+Gemeinsames, Qualität, Offenes) und Verlauf (eine Zeile je vergleichbarem Schritt, eine Spalte je Methode, mit Zeit).
 
-Edgar, 21.09.2026 (mit Bild aus dem BVH Studio): „Mach ein besseres Konzept,
-da wir dieses Problem schon 20 Mal hatten … schau nach wie andere das
-machen" — „schreibe die Erkenntnis in die Seite Hilfe - Kleidung - Fitting".
-
-Alle Zahlen und Zustaende kommen aus `kleidung.fitting.Kleidungsfitting`.
+Edgar, 22.11.2026: „überarbeite die Seite … Mach eine Tabelle mit den 4 Kleidermethoden … Die gleiche Tabelle für Haar,
+Bart, Haut“ und „einen möglichst genauen Verlauf in der Tabelle, mit gemeinsamen Zeilen was vergleichbar ist, mit
+Erklärungen, zeiten des Schrittes“. Alle Inhalte kommen aus `meshgenesis/kleidmethoden.json` über
+`kleidung.fitting.Kleidungsfitting`.
 {% endcomment %}
 
 {% block title %}Kleidung — Fitting{% endblock %}
-{% block topbar_title %}Kleidung — Fitting: Haut, die nicht durchkommt{% endblock %}
+{% block topbar_title %}Kleidung — Fitting: die Methoden im Vergleich{% endblock %}
 
 {% block extra_head %}{{ block.super }}
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_fitting.css' %}">
 {% endblock %}
 
 {% block doku_inhalt %}
 <div class="doku-seite kleidung-breit">
 
-  <h1>Fitting: Warum Haut durch Kleidung kam — und was dagegen gilt</h1>
+  <h1>Fitting: Kleider, Haar, Bart und Haut — welche Methode wie arbeitet</h1>
 
   <p>
-    Ein Kleidungsstück sitzt in Ruhe sauber, und in der Animation stehen Flecken Haut
-    heraus. Das Problem kam in zehn Tagen sechsmal zurück, jedes Mal auf einer anderen
-    Seite oder Figurart. Diese Seite hält fest, <strong>warum</strong>, wie andere
-    Systeme es lösen, und welches Konzept hier gilt. Das Konzeptpapier:
-    <code>Docu/konzepte/2026-09-21_kleidung-ohne-durchschimmern-konzept.md</code>.
+    Je Kleidungszeile eines Jobs entsteht ein Stück auf mehreren Wegen; die Knöpfe über dem Genesis-Ergebnis
+    (<em>Kleiderbibliothek / Drapieren / Eigen / Passend</em>) wählen, welcher gezeigt wird. Haar und Bart wählt der Job mit
+    den Schaltern <code>haar_methode</code> und <code>bart_methode</code>, die Haut mit der Textur-Engine. Eingabe aller Wege ist
+    das Stück aus dem Foto-Netz (Kostüm-Weg <code>k</code>).
+  </p>
+  <p class="fit-hinweis">
+    Weiter unten: <a href="#konzept-drapieren">Drapieren für Haar, Bart und Haut</a> ·
+    <a href="#konzept-haut">Gesamtkonzept Haut</a> · <a href="#konzept-uebernehmen">was eine Methode von der anderen übernehmen kann</a>.
+  </p>
+  <p class="fit-hinweis">
+    Stand {{ stand }}. {{ messung }} Zeiten in Sekunden auf der RTX PRO 4500; „—“ heißt: diesen Schritt hat die Methode nicht.
+    Was nicht gemessen ist, steht so da.
   </p>
 
-  <h2>Was gemessen ist</h2>
-  <p>
-    Die Kollision hebt jedes Stück in Ruhe {{ kollision_mm }} mm über die Haut. Ohne
-    Korrektur je Bild stehen enge Oberteile im Stand zu
-    {{ stand_prozent.0 }}–{{ stand_prozent.1 }} % im Körper, jede Hose im Sitzen zu
-    {{ sitzen_prozent }} % (Genesis 9, 20.09.2026). {{ kollision_mm }} mm Luft sind
-    gegen {{ sitzen_prozent }} % nichts — das ist kein Gewichte-Problem.
-  </p>
+  {% for g in gruppen %}
+  <h2 id="{{ g.kennung }}" class="fit-gruppe">{{ g.name }}</h2>
+  <p>{{ g.text }}</p>
 
-  <h2>Die Vorfälle</h2>
-  <table class="doku">
-    <thead><tr><th>Datum</th><th>Fix</th><th>Reichweite</th></tr></thead>
+  <h3 class="fit-unter">Überblick</h3>
+  <table class="doku fit-ueberblick">
+    <thead><tr><th>Methode</th><th>Wie sie läuft</th><th>Dauer</th><th>Gemeinsam mit</th><th>Qualität</th><th>Offen</th></tr></thead>
     <tbody>
-      {% for datum, fix, reichweite in vorfaelle %}
-      <tr><td>{{ datum }}</td><td>{{ fix }}</td><td>{{ reichweite }}</td></tr>
+      {% for m in g.methoden %}
+      <tr>
+        <td><strong>{{ m.name }}</strong><br><span class="fit-klein">Weg {{ m.weg }} · {{ m.wahl }}</span></td>
+        <td>{{ m.ablauf }}</td>
+        <td class="fit-zeit">{{ m.dauer }}</td>
+        <td>{{ m.aehnlich }}</td>
+        <td><ul class="fit-liste">{% for q in m.qualitaet %}<li><span class="fit-urteil fit-{{ q.urteil }}">{{ q.name }}</span> {{ q.text }}</li>{% endfor %}</ul></td>
+        <td><ul class="fit-liste">{% for o in m.offen %}<li>{{ o }}</li>{% endfor %}</ul></td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <h2>Drei Ursachen, die in jedem Vorfall wiederkamen</h2>
-  <ol class="stufen-liste">
-    {% for titel, text in ursachen %}
-    <li><strong>{{ titel }}.</strong> {{ text }}</li>
-    {% endfor %}
-  </ol>
+  {% if g.verlauf %}
+  <h3 class="fit-unter">Verlauf Schritt für Schritt</h3>
+  <table class="doku fit-verlauf">
+    <thead><tr><th>Schritt</th>{% for m in g.methoden %}<th>{{ m.name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for z in g.verlauf %}
+      <tr>
+        <td class="fit-schritt"><strong>{{ z.schritt }}</strong>{% if z.erklaerung %}<br><span class="fit-klein">{{ z.erklaerung }}</span>{% endif %}</td>
+        {% for c in z.zellen %}
+        <td class="{% if c.text == '—' %}fit-ohne{% endif %}">{{ c.text }}{% if c.zeit %}<br><span class="fit-zeitmarke">{{ c.zeit }}</span>{% endif %}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% endfor %}
 
-  <h2>Wie andere es machen</h2>
-  <p>
-    Alle Systeme, die Kleidung auf posierte Figuren legen, kombinieren dieselben
-    Schichten — keines verlässt sich auf Gewichte allein. Was niemand macht:
-    Kleidung mit übertragenen Gewichten in Ruhe 3 mm anheben und hoffen.
+  {% include "hilfe/kleidung_fitting_konzept.html" %}
+  <p class="fit-hinweis">Konzeptpapier mit allen Quellen: <code>{{ konzept }}</code> (Stand {{ k.stand }}).</p>
+
+  <p class="fit-hinweis">
+    Bis 21.11.2026 stand hier „Warum Haut durch Kleidung kam“ (Maske, Oberflächenbindung, Kapseln, Abnahme):
+    {% for f in frueher %}<code>{{ f }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}.
   </p>
-  <table class="doku">
-    <thead><tr><th>Schicht</th><th>System</th><th>Weg</th><th>Quelle</th></tr></thead>
-    <tbody>
-      {% for schicht, system, weg, quelle in andere %}
-      <tr><td>{{ schicht }}</td><td>{{ system }}</td><td>{{ weg }}</td>
-          <td><a href="{{ quelle }}" target="_blank" rel="noopener">Quelle</a></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <h2>Das Konzept: vier Schichten, eine Klasse</h2>
-  <p>
-    Eine Klasse (<code>gemeinsam/kleidungsbindung.js</code>) entscheidet je Stück aus
-    dem Ruheabstand, welche Schicht welcher Punkt bekommt — für HumanBody, Genesis 9,
-    MakeHuman und UMA gleich. Seiten rufen nichts mehr selbst.
-  </p>
-  <ol class="stufen-liste">
-    {% for titel, text in schichten %}
-    <li><strong>{{ titel }}.</strong> {{ text }}</li>
-    {% endfor %}
-  </ol>
-
-  <h2>Abnahme: Bilder, nicht Perzentile</h2>
-  <p>{{ abnahme }}</p>
-
-  <h2>Stand der Umsetzung</h2>
-  <table class="doku">
-    <thead><tr><th>Schritt</th><th>Stand</th><th>Gemessen</th></tr></thead>
-    <tbody>
-      {% for schritt, zustand, messung in stand %}
-      <tr><td>{{ schritt }}</td><td>{{ zustand }}</td><td>{{ messung }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <h2>Was ausdrücklich nicht vorgeschlagen wird</h2>
-  <ul class="doku-liste">
-    {% for titel, text in nicht %}<li><strong>{{ titel }}:</strong> {{ text }}</li>{% endfor %}
-  </ul>
-
-  <h2>Quellen</h2>
-  <table class="doku">
-    <thead><tr><th>Was</th><th>Adresse</th></tr></thead>
-    <tbody>
-      {% for name, adresse in quellen %}
-      <tr><td>{{ name }}</td><td><a href="{{ adresse }}" target="_blank" rel="noopener"><code>{{ adresse }}</code></a></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
 
 </div>
 {% endblock %}

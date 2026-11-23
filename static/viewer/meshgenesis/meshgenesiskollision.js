@@ -110,13 +110,15 @@ transformed = kollisionStart + kollisionSchub * (kollisionDeckel / max(length(ko
 
     /** Die Punkte des Stücks in der Haltung der KI (Float32Array 3 × N): dieselbe Häutung wie der Shader, mit den Matrizen aus `haltung`. */
     static stand(geo, matrizen) {
-        const p = geo.getAttribute('position').array, si = geo.getAttribute('skinIndex').array, sw = geo.getAttribute('skinWeight').array;
+        const p = geo.getAttribute('position').array, si = geo.getAttribute('skinIndex').array, gewichte = geo.getAttribute('skinWeight'), sw = gewichte.array;
+        // normierte Ganzzahlgewichte wie der Shader (22.11.2026: die Uint8-Gewichte des Pakets, `Meshgenesisbewegungskleid._vier`)
+        const teiler = gewichte.normalized && !(sw instanceof Float32Array) ? 2 ** (8 * sw.BYTES_PER_ELEMENT) - 1 : 1;
         const aus = new Float32Array(p.length);
         for (let n = 0, n3 = 0, n4 = 0; n3 < p.length; n++, n3 += 3, n4 += 4) {
             const x = p[n3], y = p[n3 + 1], z = p[n3 + 2];
             let ax = 0, ay = 0, az = 0;
             for (let k = 0; k < 4; k++) {
-                const w = sw[n4 + k];
+                const w = sw[n4 + k] / teiler;
                 if (w <= 0) continue;
                 const m = matrizen.get(si[n4 + k]);
                 if (!m) {

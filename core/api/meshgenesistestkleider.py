@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.meshgenesistestkleider import Meshgenesistestkleider
+from ..dienste.netzpackung import Netzpackung
 
 __all__ = ['Meshgenesistestkleiderendpunkte']
 
@@ -66,10 +67,14 @@ class Meshgenesistestkleiderendpunkte:
     @staticmethod
     @require_GET
     def netz(request, kennung, geschlecht, weg, stueck):
-        paket = Meshgenesistestkleider.paket(kennung, geschlecht, weg, stueck, stufe=1 if request.GET.get('stufe') == '1' else 0)
-        if paket is None:
+        stufe = 1 if request.GET.get('stufe') == '1' else 0
+        # Stufe 0 zstd-gepackt, einmal je Stand gebaut (23.11.2026, `Netzpackung`: Haar 110,9 → 38,5 MB, vorher bei jedem Abruf neu gebaut)
+        modell = Meshgenesistestkleider.stueck_ordner(kennung, geschlecht, weg, stueck) if stufe == 0 else None
+        antwort = Netzpackung.flaechennetz(request, modell) if modell else None
+        paket = None if antwort else Meshgenesistestkleider.paket(kennung, geschlecht, weg, stueck, stufe=stufe)
+        if antwort is None and paket is None:
             raise Http404('Kein Stück %s/%s für Test %s (%s)' % (weg, stueck, kennung, geschlecht))
-        return HttpResponse(paket, content_type='application/octet-stream')
+        return antwort or HttpResponse(paket, content_type='application/octet-stream')
 
     @staticmethod
     @require_GET

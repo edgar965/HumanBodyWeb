@@ -198,6 +198,9 @@ export class Genesis9kleidung {
             netz.userData.hautTiefe = (daten.hautTiefeMm || 0) / 1000;   // so tief hinter der Haut es sie noch verdeckt (Scham aus der .blend), m; 0 = Vorgabe
             Bauart.eintragen(netz, daten);                               // starr | anliegend | lose und wie tief die Haut darunter nachgibt (12.11.2026)
             if (Kleidersichtbarkeit.istKoerperteil(netz)) netz.visible = true;       // die Scham ist keine Kleidung: „Kleider aus" gilt für sie nicht
+            // … außer ein getragenes Stück trägt sie (`inst.anatomieGetragen`, Mesh-/Foto-Genesis, `Meshgenesisanatomiehuelle`): auch das neu gebaute Stück der feineren Stufe bleibt
+            // verborgen (23.11.2026: auf Foto-Genesis stand es danach sichtbar in der Hose, und Naht, Hautton und Hautebenen rechneten ~0,6 s für ein verdecktes Stück)
+            if (netz.userData.hautTiefe > 0 && !netz.userData.ersetzt.length && inst.anatomieGetragen?.() === true) Object.assign(netz, { visible: false }).userData.anatomieHuelle = true;
             netz.userData.hautLoch = daten.hautLoch?.dreiecke?.length ? daten.hautLoch : null;   // verschweißt: die Haut-Dreiecke, die entfallen (`stueckloch.js`)
             // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;
             // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden — DORT

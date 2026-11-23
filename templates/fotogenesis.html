@@ -8,7 +8,7 @@ Filter (z.B. Textur, Kleider) so wie bei den Mesh3d-AI Jobs“. Vier Felder: Fot
 Perspektive des Fotos gerendert), darunter der Vergleich aus allen Perspektiven. Seite: `static/viewer/fotogenesis/fotogenesisseite.js`; Daten: `Fotogenesisseitendaten` (als JSON unten), Jobs: `Fotogenesisjobs`.
 Die Genesis-Figur baut derselbe Code wie auf der Mesh-Genesis-Jobseite — darum dieselben Angaben im Kopf (Worker der Haut, schnelle Anzeige, Weg der Bilder).
 {% endcomment %}
-{% block extra_head %}
+{% block extra_head %}{% include "_fotogenesis_vorladen.html" %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/fotogenesis.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/meshgenesistestfaelle.css' %}">

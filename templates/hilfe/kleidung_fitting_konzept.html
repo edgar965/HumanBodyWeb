@@ -1,0 +1,90 @@
+{% comment %}
+Hilfe -> Kleidung -> Fitting, Konzeptteil (eingebunden in `kleidung_fitting.html`): Drapieren für Haar, Bart und Haut,
+Gesamtkonzept Haut, was jede Methode von einer anderen übernehmen kann.
+
+Edgar, 22.11.2026: „mach das Konzept Drapieren für Haar, Bart, Haut, sowie das Gesamtkonzept Haut und wie wir drapieren,
+eigen usw. verbessern (was jeweils eine Methode von der anderen übernehmen kann) in die Hilfeseite“. Alle Inhalte kommen
+aus `Assets/kleidung/fitting_konzept.json` über `kleidung.fittingkonzept.Kleidungsfittingkonzept` (Kontext `k`).
+{% endcomment %}
+
+<h2 id="konzept-drapieren" class="fit-gruppe">Konzept: Drapieren auch für Haar, Bart und Haut</h2>
+<p>{{ k.drapieren.einleitung }}</p>
+
+<h3 class="fit-unter">1. Was „Drapieren“ bei den Kleidern ist</h3>
+<table class="doku fit-drei">
+  <thead><tr><th>Stufe</th><th>Kleider (Drapieren, Weg f)</th><th>Datei</th></tr></thead>
+  <tbody>{% for st, kl, da in k.drapieren.kleider_stufen %}<tr><td><strong>{{ st }}</strong></td><td>{{ kl }}</td><td><code>{{ da }}</code></td></tr>{% endfor %}</tbody>
+</table>
+<p>{{ k.drapieren.kleider_vorteil }}</p>
+
+<h3 class="fit-unter">2. Ist-Zustand Haar und Bart</h3>
+<p>{{ k.drapieren.ist }}</p>
+<ul class="fit-liste">{% for q in k.drapieren.befund %}<li><span class="fit-urteil fit-{{ q.urteil }}">{{ q.name }}</span> {{ q.text }}</li>{% endfor %}</ul>
+<p class="fit-hinweis">{{ k.drapieren.befund_quelle }}</p>
+<p>{{ k.drapieren.vorhanden }}</p>
+
+<h3 class="fit-unter">3. Haar und Bart drapieren: was dem Drapieren der Kleider entspricht</h3>
+<table class="doku fit-zwei">
+  <thead><tr><th>Kleider (Drapieren)</th><th>Haar und Bart drapieren</th></tr></thead>
+  <tbody>{% for kl, ha in k.drapieren.entsprechung %}<tr><td>{{ kl }}</td><td>{{ ha }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3 class="fit-unter">Möglichkeiten</h3>
+<table class="doku fit-moeglich">
+  <thead><tr><th>Möglichkeit</th><th>Wie</th><th>Für</th><th>Gegen</th></tr></thead>
+  <tbody>
+    {% for m in k.drapieren.moeglichkeiten %}
+    <tr{% if m.empfohlen %} class="fit-empfohlen"{% endif %}><td><strong>{{ m.name }}</strong>{% if m.empfohlen %}<br><span class="fit-urteil fit-gruen">empfohlen</span>{% endif %}</td><td>{{ m.wie }}</td><td>{{ m.fuer }}</td><td>{{ m.gegen }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p><strong>Empfehlung:</strong> {{ k.drapieren.empfehlung }}</p>
+<p><strong>Bart:</strong> {{ k.drapieren.bart }}</p>
+
+<h3 class="fit-unter">4. Haut „drapieren“?</h3>
+<table class="doku fit-haut">
+  <thead><tr><th>Teil</th><th>Heute</th><th>Physikalisch</th><th>Urteil</th></tr></thead>
+  <tbody>{% for teil, heute, physik, urteil in k.drapieren.haut_tabelle %}<tr><td><strong>{{ teil }}</strong></td><td>{{ heute }}</td><td>{{ physik }}</td><td>{{ urteil }}</td></tr>{% endfor %}</tbody>
+</table>
+<p>{{ k.drapieren.haut }}</p>
+
+<h3 class="fit-unter">5. Schuhe, Kopfbedeckung, Requisiten</h3>
+<p>{{ k.drapieren.sonst }}</p>
+
+<h3 class="fit-unter">6. Stufen</h3>
+<ol class="fit-liste">{% for s in k.drapieren.stufen %}<li>{{ s }}</li>{% endfor %}</ol>
+<p class="fit-hinweis">{{ k.drapieren.aufwand }} Nicht gemessen: {{ k.drapieren.nicht_gemessen }}</p>
+<h3 class="fit-unter">7. Offene Entscheidungen (Edgar)</h3>
+<ul class="fit-liste">{% for e in k.drapieren.entscheidungen %}<li>{{ e }}</li>{% endfor %}</ul>
+
+<h2 id="konzept-haut" class="fit-gruppe">Gesamtkonzept Haut</h2>
+<p>{{ k.haut.einleitung }}</p>
+<table class="doku fit-haut">
+  <thead><tr><th>Aufgabe</th><th>Heute</th><th>Befund</th><th>Ziel</th></tr></thead>
+  <tbody>
+    {% for a in k.haut.aufgaben %}
+    <tr>
+      <td><strong>{{ a.aufgabe }}</strong></td>
+      <td>{{ a.heute }}</td>
+      <td><ul class="fit-liste">{% for q in a.befund %}<li><span class="fit-urteil fit-{{ q.urteil }}">{{ q.name }}</span> {{ q.text }}</li>{% endfor %}</ul></td>
+      <td>{{ a.ziel }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<h3 class="fit-unter">Stufen</h3>
+<ol class="fit-liste">{% for s in k.haut.stufen %}<li>{{ s }}</li>{% endfor %}</ol>
+
+<h2 id="konzept-uebernehmen" class="fit-gruppe">Was eine Methode von der anderen übernehmen kann</h2>
+<p>{{ k.uebernehmen_einleitung }}</p>
+{% for g in k.uebernehmen %}
+<h3 class="fit-unter">{{ g.gruppe }}</h3>
+<table class="doku fit-uebernehmen">
+  <thead><tr><th>Methode</th><th>übernimmt von</th><th>Was</th><th>Woran man den Nutzen sieht</th><th>Stand</th></tr></thead>
+  <tbody>
+    {% for z in g.zeilen %}
+    <tr><td><strong>{{ z.nach }}</strong></td><td>{{ z.von }}</td><td>{{ z.was }}</td><td>{{ z.beleg }}</td><td><span class="fit-urteil fit-{{ z.urteil }}">{{ z.urteil_name }}</span> {{ z.stand }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}

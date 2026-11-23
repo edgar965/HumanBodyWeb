@@ -36,10 +36,15 @@ export class Fotogenesistestfigur {
         this.kleider = null;
         this.fehler = '';
         this.text = '';
+        // Text des Felds, solange die Figur lädt — sagt, was gerade passiert (22.11.2026, Edgar: „wenn keine figur vorhanden ist, dann soll das auch so drin stehen!
+        // nicht "Figur wird gebaut …"“): erst die Daten des Tests; „wird geladen“ erst, wenn der Server sagt, dass es eine Figur gibt
+        this.ladetext = 'Daten des Mesh-Genesis-Tests werden geladen …';
         // Ein Bild, eine Maske oder die feinere Netzstufe kommt nach: `nachgeladen` (Vergleich der Seite, `Fotogenesisseite`) und `beiAenderung` (Feld neu zeichnen, `Fotogenesisgenesiszeile`)
         this.nachgeladen = null;
         this.beiAenderung = null;
         this.bereit = this._bauen();
+        // Die Kleiderliste gleich mit den Testdaten (23.11.2026, Edgar: „das soll in 2 s gehen“): an iphone_mit_lidar wartete sie 1 s auf die Testdaten und die Stücke dann auf sie
+        this._listeVorab = test.kleider ? fetch(test.kleider).then(a => (a.ok ? a.json() : null)).catch(() => null) : null;
     }
 
     async _bauen() {
@@ -47,7 +52,12 @@ export class Fotogenesistestfigur {
             const antwort = await fetch(this.test.adresse);
             const daten = await antwort.json();
             if (!antwort.ok) throw new Error(daten.error || `HTTP ${antwort.status}`);
-            if (!daten.figur_genesis) throw new Error('der Test hat keine Genesis-Figur');
+            if (!daten.figur_genesis) {
+                this.fehler = `Keine Figur vorhanden: Der Mesh-Genesis-Test ${this.test.kennung} hat noch keine Genesis-Figur.`;
+                return;
+            }
+            this.ladetext = 'Genesis-Figur wird vom Server geladen …';
+            this.beiAenderung?.();
             // A-Pose (10.11.2026, Edgar: „mach doch das pshuman mesh und die genesis ausgabe in allen jobs auf die A-Pose, damit man das besser vergleichen kann“): die Ruhelage von Genesis 9 —
             // Körper, Kleider und Rig in derselben Haltung
             if (this.test.apose) Object.assign(daten, { dreh: daten.dreh.map(() => [0, 0, 0, 1]), ausgabe: daten.ruhezentren.map(p => [...p]) });
@@ -55,9 +65,12 @@ export class Fotogenesistestfigur {
             // `Meshgenesishaltungwahl`) — Körper (`drehung_genesis`), Stücke und Rig in derselben Haltung
             else if (daten.ausgabe_stand && daten.dreh_stand) Object.assign(daten, { ausgabe: daten.ausgabe_stand, dreh: daten.dreh_stand });
             const geschlecht = daten.info?.geschlecht || String(daten.figur_netz).split('/').filter(Boolean).pop();
-            // Körper und Stücke zugleich (08.11.2026, Ladezeit)
-            this._kleiderQuelle = { liste: `${this.test.adresse}kleider/${geschlecht}/`, dreh: daten.dreh, rig: daten.ausgabe, ruhezentren: daten.ruhezentren };
-            const kleiderAbruf = Meshgenesiskikleiderfeld.laden(this._kleiderQuelle)
+            // Körper und Stücke zugleich (08.11.2026, Ladezeit). Die Frisur wartet nicht: sie verdeckt keine Haut und kommt nach (23.11.2026, `Meshgenesiskikleiderfeld.laden`,
+            // Edgar: „das soll in 2 s gehen“ — an iphone_mit_lidar stand die Figur 2,5 s länger leer, bis das Haar mit 108 MB da war)
+            this._kleiderQuelle = { liste: `${this.test.adresse}kleider/${geschlecht}/`, dreh: daten.dreh, rig: daten.ausgabe, ruhezentren: daten.ruhezentren,
+                                    nachzug: ki => this._nachgekommen(ki) };
+            const vorab = this.test.kleider === this._kleiderQuelle.liste ? this._listeVorab : null;       // nur dieselbe Liste (Geschlecht der Seite = der Testdaten)
+            const kleiderAbruf = (async () => Meshgenesiskikleiderfeld.laden({ ...this._kleiderQuelle, daten: (await vorab) ?? undefined }))()
                 .catch(fehler => { console.warn(`Fotogenesistestfigur: Kleider nicht geladen (${fehler.message})`); return null; });
             const ohneWinkel = !this.test.apose && !daten.drehung_genesis;
             const figur = { ...daten.figur_genesis, pose: '', drehung: this.test.apose ? null : (daten.drehung_genesis || null) };
@@ -75,14 +88,33 @@ export class Fotogenesistestfigur {
             this._textKopf = this.test.eigen ? `Genesis-Modell dieses Jobs (<Job>/figur/, ${daten.info?.name ?? ''}) in der Haltung aus den Fotos`
                 : `Ausgabe des Mesh-Genesis-Tests ${this.test.kennung} (${daten.info?.name ?? ''}) ${this.test.apose ? 'in der A-Pose' : ohneWinkel ? 'in der Ruhelage (Winkel der Haltung fehlen)' : daten.haltung === 'stand' ? 'in der Haltung aus dem Netz, Füße flach (Fußregel)' : 'in der Haltung aus dem Netz'}`;
             this._textSetzen();
+            performance.mark(`fotogenesis-figur:${this.test.kennung}`);     // Ladezeit ab Navigationsbeginn lesbar (23.11.2026, `performance.getEntriesByType('mark')`)
             this._wachen();
+            // Die feinere Stufe zeigen, sobald sie steht (23.11.2026, Edgar: „fixe auch das: Feinere Netzstufe …“): die Wache bemerkte sie bis zu WACHE_MS später
+            Promise.resolve(modell.fein).then(() => {
+                if (this.modell !== modell) return;
+                performance.mark(`fotogenesis-fein:${this.test.kennung}`);
+                this._ausrichten();
+                this.beiAenderung?.();
+                this.nachgeladen?.();
+            }).catch(() => {});
             // Alle Stufen bis zur Einstellung dauerhaft ablegen lassen, wie in Charakter nach dem Laden
             Genesis9vorrat.fuellen(modell).catch(f => console.warn(`Genesis9vorrat: ${f.message}`));
         } catch (fehler) {
             // „fehlt“ ausdrücklich (13.11.2026, Edgar: „dann mach hinweis, dass es fehlt!!“)
             this.fehler = `Genesis-Ergebnis fehlt: Figur des Tests ${this.test.kennung} nicht geladen (${fehler.message}).`;
+            this.ladetext = '';
             console.warn(`Fotogenesistestfigur: ${this.fehler}`);
         }
+    }
+
+    /** Ein Stück ist nachgekommen (Frisur, `Meshgenesiskikleiderfeld.laden`): Text und Feld neu, wenn es zum gezeigten Satz gehört — ein anderer Satz zeigt es beim Umschalten. */
+    _nachgekommen(ki) {
+        if (ki !== this.kleider || !this._textKopf) return;          // noch nicht gezeigt: der erste Text und das erste Bild haben es schon
+        performance.mark(`fotogenesis-nachzug:${this.test.kennung}`);
+        this._textSetzen();
+        this.beiAenderung?.();
+        this.nachgeladen?.();
     }
 
     /** Text des Felds: Figur und Stücke. `Meshgenesiskikleiderfeld` beschriftet Weg k als „aus dem Netz geschnitten“ — bei der eigenen Figur sind sie aus den Fotos (`Fotoschale`). */
@@ -98,17 +130,32 @@ export class Fotogenesistestfigur {
      * 'passend' (21.11.2026, Edgar: „baue kandidatenwahl als extra Methode“) nur die passendsten Stücke der Kleiderbibliothek aus mehreren Kandidaten (Weg p), sonst wie 'eigen'.
      * → {gezeigt, versucht} (Zeilen mit Netz der Methode / Zeilen, für die sie gerechnet wurde) oder null.
      */
+    /** Weg je Methode der Kleider (`methodeSetzen`). */
+    static WEG = { bibliothek: null, drapieren: 'f', gemischt: 'f', eigen: 'e', passend: 'p' };
+
+    /**
+     * Je Zeile der Kleiderliste der Weg, den die Methode zeigt, oder null (Zeile fehlt; fällt in `Meshgenesiskikleiderfeld.laden` heraus). EINE Regel für die stehende Figur und die
+     * Abspielfigur des Felds (`Fotogenesisexportfigur.methodeSetzen`, seit 22.11.2026, Paket K2: „Drapieren ← Bibliothek: Stoff über die Animation“ — vorher spielte die Leiste immer die
+     * Kleiderbibliothek, auch bei „Drapieren“).
+     * „drapieren“ nur die drapierten Stücke, „gemischt“ drapiert, wo es eins gibt, sonst die Kleiderbibliothek (19.11.2026, Edgar: „sehe ich nicht, welches was ist,
+     * mach einen dritten Button der mir entweder das eine oder das andere zeigt“).
+     * „eigen“ wechselt nur die Kleidung (Weg e baut nur sie); Haar, Bart, Hut, Requisiten, Schuhe bleiben wie in der Kleiderbibliothek — sonst stand edgar kahl da (Chrome, 20.11.2026).
+     * „drapieren“ ebenso (22.11.2026, Edgar: „ja, zeig die übrigen Zeilen auch bei Drapieren“ — vorher stand der Zauberer ohne Bart, Hut und Stab da, am Hals Haut).
+     */
+    static wegWahl(methode) {
+        const w = Fotogenesistestfigur.WEG[methode] ?? 'f';
+        if (methode === 'bibliothek') return st => st.wahl;
+        if (methode === 'gemischt') return st => (st.f?.netz ? 'f' : st.wahl);
+        return st => (st[w]?.netz ? w : Fotogenesistestfigur.KLEIDUNG.has(st.art) ? null : st.wahl);
+    }
+
     async methodeSetzen(methode) {
         await this.bereit;
         if (!this.modell || !this._kleiderQuelle) return null;
         this._saetze ??= { bibliothek: this.kleider };
-        const w = methode === 'eigen' ? 'e' : methode === 'passend' ? 'p' : 'f';
+        const w = Fotogenesistestfigur.WEG[methode] ?? 'f';
         if (!(methode in this._saetze)) {
-            // „drapieren“ nur die drapierten Stücke, „gemischt“ drapiert, wo es eins gibt, sonst die Kleiderbibliothek (19.11.2026, Edgar: „sehe ich nicht, welches was ist,
-            // mach einen dritten Button der mir entweder das eine oder das andere zeigt“) — null fällt in `Meshgenesiskikleiderfeld.laden` heraus
-            // „eigen“ wechselt nur die Kleidung (Weg e baut nur sie); Haar, Bart, Hut, Requisiten, Schuhe bleiben wie in der Kleiderbibliothek — sonst stand edgar kahl da (Chrome, 20.11.2026)
-            const weg = methode === 'gemischt' ? st => (st.f?.netz ? 'f' : st.wahl)
-                : methode === 'eigen' || methode === 'passend' ? st => (st[w]?.netz ? w : Fotogenesistestfigur.KLEIDUNG.has(st.art) ? null : st.wahl) : st => (st[w]?.netz ? w : null);
+            const weg = Fotogenesistestfigur.wegWahl(methode);
             this._saetze[methode] = await Meshgenesiskikleiderfeld.laden({ ...this._kleiderQuelle, daten: this._saetze.bibliothek?.liste, weg })
                 .catch(fehler => { console.warn(`Fotogenesistestfigur: Methode ${methode} nicht geladen (${fehler.message})`); return undefined; });
             if (this._saetze[methode] === undefined) { delete this._saetze[methode]; return null; }
@@ -149,9 +196,11 @@ export class Fotogenesistestfigur {
         if (!ki) return;
         this.figur.updateMatrixWorld(true);
         const umkehr = this.modell.group.matrixWorld.clone().invert(), v = new THREE.Vector3();
+        // Ein Stück, das keine Haut verdeckt (Frisur, Bart), zählt in der Maske nicht — es behält seine Ruhelage aus dem Paket, ohne Kopie (21.11.2026, Ladezeit
+        // /foto-genesis/test/zauberer_kleidungsregeln_kopie_48/: Haar 2,19 Mio. und Bart 1,5 Mio. Punkte kosteten 44 MB und je Bau 3,7 Mio. Matrixprodukte für nichts)
         const gestellt = { ...ki, stuecke: ki.stuecke.map(st => {
             const lage = st.mesh?.geometry?.getAttribute('position');
-            if (!lage) return st;
+            if (!lage || !Meshgenesiskikleiderfeld.deckt(st)) return st;
             const ruhe = new Float32Array(lage.count * 3);
             for (let p = 0; p < lage.count; p++) {
                 v.fromBufferAttribute(lage, p).applyMatrix4(umkehr);
@@ -200,7 +249,7 @@ export class Fotogenesistestfigur {
     /** Zeichner von `Meshgenesisansicht`: `d` aus `auftrag` — Kleider (mit Haar) ein/aus, Ansichtsart als Ersatzmaterial, Rig (Knopf „Rig“) darüber. */
     zeichnen(inhalt, _art, d) {
         if (!this.figur || !this.modell) {
-            inhalt.userData.hinweis = this.fehler || 'Figur des Tests wird gebaut …';
+            inhalt.userData.hinweis = this.fehler || this.ladetext;
             return;
         }
         // Schalter „Kleider“: ausgeblendet zeigt die Figur die Haut darunter wieder (die Maske rechnet ohne die Stücke neu)

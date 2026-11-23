@@ -57,9 +57,10 @@ export class Genesis9materialabruf {
      * @returns {Promise<{daten: object, stellung: string, stufe: string, material: string, neu: boolean}>}  `neu`: noch abzulegen (`merken`)
      */
     static async holen(inst, adresse, nutzlast) {
-        const vorab = inst._vorabKoerper;
+        const schluessel = JSON.stringify([adresse, nutzlast]), vorab = [inst._vorabKoerper, inst._vorabFein].find(v => v?.schluessel === schluessel);
         inst._vorabKoerper = null;
-        if (vorab && vorab.schluessel === JSON.stringify([adresse, nutzlast])) return vorab.versprechen;
+        if (inst._vorabFein && (vorab === inst._vorabFein || inst._vorabFein.adresse === adresse)) inst._vorabFein = null;     // genommen oder überholt (anderer Rumpf)
+        if (vorab) return vorab.versprechen;
         return Genesis9materialabruf._holen(inst, adresse, nutzlast);
     }
 
@@ -68,11 +69,15 @@ export class Genesis9materialabruf {
      * fragte ihn erst nach dem letzten Stück an — gemessen an Luna (/Charakter/, Server warm) nach 2,28 s, das Stück war nach 1,18 s da. Gebaut wird weiter zuletzt und auf
      * Ruhe; `holen` nimmt die Anfrage nur, solange Adresse und Rumpf dieselben sind (sonst kam ein Reglerzug dazwischen, die Antwort gehörte zur alten Stellung).
      */
-    static vorab(inst, adresse) {
-        const nutzlast = Genesis9materialabruf.nutzlast(inst);
-        const versprechen = Genesis9materialabruf._holen(inst, adresse, nutzlast);
-        versprechen.catch(() => {});        // stumm gewollt: den Fehler bekommt, wer die Antwort nimmt (`holen`); ohne Abnehmer zählt er nicht
-        inst._vorabKoerper = { schluessel: JSON.stringify([adresse, nutzlast]), versprechen };
+    static vorab(inst, adresse, fein = false) {
+        const nutzlast = Genesis9materialabruf.nutzlast(inst), schluessel = JSON.stringify([adresse, nutzlast]);
+        // `fein` (23.11.2026, Edgar: „fixe auch das: Feinere Netzstufe …“): die gewählte Stufe schon mit dem Käfig angefragt (`Genesis9aufbau.alles`, eigener Platz — der Käfig
+        // räumt `_vorabKoerper`); `Genesis9haeppchen` nimmt dann diese Anfrage statt einer neuen. Foto-Genesis: das feine Netz kam erst 0,6–1,0 s nach dem Käfig an.
+        const da = inst._vorabFein?.schluessel === schluessel ? inst._vorabFein : null;
+        const eintrag = da ?? { schluessel, adresse, versprechen: Genesis9materialabruf._holen(inst, adresse, nutzlast) };
+        eintrag.versprechen.catch(() => {});        // stumm gewollt: den Fehler bekommt, wer die Antwort nimmt (`holen`); ohne Abnehmer zählt er nicht
+        if (fein) inst._vorabFein = eintrag;
+        else inst._vorabKoerper = eintrag;
     }
 
     static async _holen(inst, adresse, nutzlast) {

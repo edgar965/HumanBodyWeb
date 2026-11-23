@@ -104,15 +104,17 @@ class Werkzeugkleidunghilfe:
          'Löser (Newton, Stoffsolver) kamen nach dieser Seite dazu und stehen in Hilfe → Architektur → 2D3D.'),
 
         ('Hilfe → Kleidung → Fitting',
-         'Warum Haut durch Kleidung kam, wie andere es lösen und die vier Schichten (Maske, Oberflächenbindung, Kapseln, '
-         'Abnahme) mit Stand und Messwerten.',
+         'Die Methoden für Kleider (Kleiderbibliothek, Eigen, Drapieren, Passend), Haar, Bart, Haut und die übrigen Stücke '
+         'nebeneinander: Ablauf, Dauer, Gemeinsames, Qualität (rote Prüfungen), Offenes und der Verlauf Schritt für Schritt mit '
+         'Zeiten; dazu das Konzept „Drapieren für Haar, Bart, Haut“.',
          'seite',
          '/hilfe/kleidung/fitting/   (Menü Hilfe → Kleidung → Fitting)',
          [(A + 'hilfe_fitting.py', 'KleidungFitting'), (K + 'fitting.py', 'Kleidungsfitting')],
-         'Abschnitte (Kleidungsfitting): vorfaelle, ursachen, andere, schichten, abnahme, stand, nicht, quellen; KOLLISION_MM '
-         'steht in der Klasse. Anlass Edgar 21.09.2026: „Mach ein besseres Konzept, da wir dieses Problem schon 20 Mal '
-         'hatten“. Die Abnahme rechnet der Befehl manage.py durchschimmern_probe (Gruppe „Bau ohne Browser“) — NICHT '
-         'nebenbei starten. Konzept: Docu/konzepte/2026-09-21_kleidung-ohne-durchschimmern-konzept.md.'),
+         'Seit 22.11.2026 (Edgar: „überarbeite die Seite … Mach eine Tabelle mit den 4 Kleidermethoden“). Inhalt aus '
+         'meshgenesis/kleidmethoden.json — derselbe Katalog wie Einstellungen → Kleider; Kleidungsfitting bereitet ihn auf '
+         '(gruppen(), kopf()). Die frühere Seite (vier Schichten gegen Haut durch Kleidung, 21.09.2026) steht in '
+         'Docu/konzepte/2026-09-21_kleidung-ohne-durchschimmern-konzept.md; ihre Abnahme rechnet weiter manage.py '
+         'durchschimmern_probe — NICHT nebenbei starten.'),
     ]
 
     # Klassenmodell: (von, 'ruft', nach, womit)
@@ -130,5 +132,5 @@ class Werkzeugkleidunghilfe:
         ('KleidungNeu', 'ruft', 'Vergleich', 'Vergleich: Stammdaten der fünf Welten und des Stufenplans'),
         ('KleidungPhysik', 'ruft', 'Kleiderphysik', 'Kleiderphysik.bestand(), kandidaten(), messaufbau(), messung()'),
         ('KleidungFitting', 'ruft', 'Kleidungsfitting',
-         'vorfaelle(), ursachen(), andere(), schichten(), abnahme(), stand(), nicht(), quellen()'),
+         'gruppen(), kopf(): Methoden und Verlauf aus meshgenesis/kleidmethoden.json'),
     ]

@@ -6,7 +6,7 @@
     5  ohne `neck1` oder `head` bleibt die Haut, wie sie ist
     6  `punkte`: ohne Rinne dasselbe Objekt
     7  `punkte`: die Rinne ist danach zu, Kinn und Hals bleiben, die Eingabe bleibt unverändert
-Sabotage (von Hand): in `haut` den Vergleich `oben > unten` umdrehen → Fall 1 und 2 rot; in `_mischen` `teil` durch 0 ersetzen → Fall 2 rot; `RAND_M` auf 1 m → Fall 3 rot;
+Sabotage (von Hand): in `haut` den Vergleich `oben > unten` umdrehen → Fall 1 und 2 rot; in `G9halsfaltemischung.mischen` `teil` durch 0 ersetzen → Fall 2 rot; `RAND_M` auf 1 m → Fall 3 rot;
 in `_rinne` `t < RINNE_M` durch `t < 0` ersetzen → Fall 7 rot; `RINGE` auf 40 → Fall 7 rot (Kinn wandert).
 """
 import unittest

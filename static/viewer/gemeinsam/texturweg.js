@@ -21,7 +21,7 @@ export class Texturweg {
     static art = Texturweg._meta?.content || '';
     static kante = Number(Texturweg._meta?.dataset?.kante) || 1024;
     static rueckfall = Texturweg._meta?.dataset?.rueckfall ?? 'klein';
-    /** Weg B: `(textur) => void` lädt EIN Bild auf die Karte — gesetzt von `anmelden`. */
+    /** `(textur) => void` lädt EIN Bild auf die Karte — gesetzt von `anmelden` (seit 23.11.2026 auf jedem Weg, vorher nur B). */
     static hochladen = null;
     static _reihe = [];
     static _laeuft = false;
@@ -50,18 +50,20 @@ export class Texturweg {
             console.warn(`Texturweg: S3TC fehlt in diesem Browser — Bilder kommen ${Texturweg.rueckfall === 'klein' ? 'verkleinert (Weg A)' : 'in voller Größe wie bisher'} statt komprimiert.`);
             Texturweg.art = Texturweg.rueckfall;
         }
-        if (Texturweg.art === 'verteilt') Texturweg.hochladen = textur => renderer.initTexture(textur);
+        // Hochgeladen wird auf JEDEM Weg je Aufgabe ein Bild, nicht mehr im Zeichnen (23.11.2026, Edgar: „fixe die F5-Lücke“): auf Foto-Genesis lud das erste Zeichnen nach den
+        // Kleiderbildern 18 Bilder 2048² hoch, 447/200/247 ms lange Bilder — ein F5 in dieser Zeit wartete auf sie (unload der alten Seite bei 586–955 statt ~200 ms)
+        Texturweg.hochladen = textur => renderer.initTexture(textur);
         if (Texturweg.art === 'uastc') {
             Genesis9texturbasis.einrichten(renderer).catch(fehler => console.warn(`Texturweg: KTX2-Lader nicht geladen (${fehler.message}) — die Bilder kommen als S3TC-Block`));
         }
     }
 
     /**
-     * Ein angekommenes Bild einsetzen: `setzen()` hängt es an die Textur. Weg B reiht ein — je Aufgabe des Browsers EIN Bild, gleich danach auf der Karte; das nächste Zeichnen
-     * findet nichts mehr hochzuladen. Sonst sofort (die Karte lädt beim nächsten Zeichnen, wie bisher). Das Versprechen löst sich, wenn das Bild an der Textur hängt.
+     * Ein angekommenes Bild einsetzen: `setzen()` hängt es an die Textur. Mit angemeldetem Renderer (jeder Weg) reiht es ein — je Aufgabe des Browsers EIN Bild, gleich danach auf der
+     * Karte; das nächste Zeichnen findet nichts mehr hochzuladen. Ohne Renderer sofort (die Karte lädt beim nächsten Zeichnen). Das Versprechen löst sich, wenn das Bild an der Textur hängt.
      */
     static einreihen(textur, setzen) {
-        if (Texturweg.art !== 'verteilt' || !Texturweg.hochladen) {
+        if (!Texturweg.hochladen) {
             setzen();
             return Promise.resolve();
         }

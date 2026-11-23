@@ -8,9 +8,15 @@
  */
 export class Meshoptionenhilfe {
 
-    /** Zahl deutsch (Komma, echtes Minus). */
+    /**
+     * Zahl deutsch (Komma, echtes Minus). EIN Formatierer für alle Aufrufe (21.11.2026, Ladezeit /foto-genesis/test/zauberer_kleidungsregeln_kopie_48/):
+     * `toLocaleString('de-DE', {…})` baut bei jedem Aufruf einen neuen `Intl.NumberFormat` — frische Seite 0,13–1,2 ms je Aufruf, die Exportleisten rufen es
+     * 1.550-mal (380 Regler mit Hilfe); beim Laden der Seite ein Block von 5,1 s im Hauptfaden (JS-Self-Profiler). Mit einem Formatierer 1.550 Aufrufe in 3 ms,
+     * dieselben Texte.
+     */
     static zahl(x) {
-        return Number(x).toLocaleString('de-DE', { maximumFractionDigits: 6 }).replace('-', '−');
+        Meshoptionenhilfe._format ??= new Intl.NumberFormat('de-DE', { maximumFractionDigits: 6 });
+        return Meshoptionenhilfe._format.format(Number(x)).replace('-', '−');
     }
 
     static einheit(feld) {

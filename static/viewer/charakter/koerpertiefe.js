@@ -59,13 +59,15 @@ export class Koerpertiefe {
         const zeilen = Koerpertiefe.yZeilen(netz);
         const a = netz.geometry.attributes;
         const pos = a.position.array, si = a.skinIndex.array, sw = a.skinWeight.array;
+        // normierte Ganzzahlgewichte (22.11.2026: Mesh-Genesis bindet Stücke mit den Uint8-Gewichten des Pakets, `Meshgenesisbewegungskleid._vier`) — die Karte liest w / 255
+        const teiler = a.skinWeight.normalized && !(sw instanceof Float32Array) ? 2 ** (8 * sw.BYTES_PER_ELEMENT) - 1 : 1;
         const anzahl = a.position.count;
         let tiefste = Infinity;
         for (let p = 0; p < anzahl; p++) {
             const x = pos[3 * p], y = pos[3 * p + 1], z = pos[3 * p + 2];
             let yy = 0;
             for (let k = 0; k < 4; k++) {
-                const w = sw[4 * p + k];
+                const w = sw[4 * p + k] / teiler;
                 if (w === 0) continue;
                 const b = si[4 * p + k] * 4;
                 yy += w * (zeilen[b] * x + zeilen[b + 1] * y + zeilen[b + 2] * z + zeilen[b + 3]);

@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { Meshgenesisausrichtung } from './meshgenesisausrichtung.js';
 import { Meshgenesisflaechennetz } from './meshgenesisflaechennetz.js';
 import { Meshgenesishaeutung } from './meshgenesishaeutung.js';
+import { Meshgenesiskartenhaut } from './meshgenesiskartenhaut.js';
 import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 import { Meshfighautstueck } from '../meshfigur/meshfighautstueck.js';
 
@@ -20,7 +21,11 @@ export class Meshgenesiskikleiderfeld {
     static TEXT = { k: 'aus dem Netz geschnitten', s: 'GarmentCode-Schnitt', f: 'Drapieren', g: 'Schicht aus der KI', h: 'Frisur der Kleiderbibliothek', z: 'Kleiderbibliothek', e: 'Eigen' };
 
     /** → {gruppe, rig, namen: [Text je Stück], stuecke, liste} oder null (keine KI-Kleider gewählt). `ki.weg(st)`: welcher Weg je Zeile (Vorgabe: der wirksame `st.wahl`;
-     *  `Fotogenesistestfigur` nimmt für die Methode „Drapieren“ f, wo es ein Netz hat). `ki.daten`: eine schon geholte Liste (dann kein zweiter Abruf). */
+     *  `Fotogenesistestfigur` nimmt für die Methode „Drapieren“ f, wo es ein Netz hat). `ki.daten`: eine schon geholte Liste (dann kein zweiter Abruf).
+     *  `ki.nachzug(ergebnis)`: Stücke, die keine Haut verdecken (Frisur ohne Kostüm, `deckt`), werden nicht abgewartet — sie kommen an ihrer Stelle der Liste in `gruppe`,
+     *  `namen` und `stuecke` nach, danach dieser Ruf (Feld neu zeichnen); `ergebnis.nachzug` ist das Versprechen darauf. 23.11.2026 (Edgar: „das soll in 2 s gehen“, „das laden
+     *  soll genau so gehen wie bei "Charakter" Seite“ — dort steht die Figur zuerst grob, dann kommt der Rest): an iphone_mit_lidar wartete die Figur 2,5 s auf das Haar (108 MB),
+     *  Körper und übrige Stücke lagen schon da. Ohne `nachzug` wie bisher: alle Stücke abwarten. */
     static async laden(ki) {
         let daten = ki.daten;
         if (!daten) {
@@ -35,26 +40,44 @@ export class Meshgenesiskikleiderfeld {
         // Alle Stücke zugleich holen (08.11.2026, Edgar: „alle modelle sollen innerhalb von max. 5 s angezeigt werden“): vorher wartete jedes Stück auf das vorige — im Log der Seite
         // „Zauberer Alle Textur“ lagen zwischen zwei Stücken 35–75 s, weil nach jeder Textur die Seite neu rechnete (`Fotogenesisseite.nachgeladen`). Gebaut wird weiter in der Reihenfolge der Liste.
         const wahl = (daten.stuecke || []).map(st => ({ st, w: wegVon(st) })).filter(({ st, w }) => st.quelle === 'ki' && Meshgenesiskikleiderfeld.WEGE.has(w) && st[w]?.netz);
-        const netze = await Promise.all(wahl.map(({ st, w }) => Meshgenesisflaechennetz.holen(null, st[w].netz)
-            .catch(fehler => { console.warn('Meshgenesiskikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message); return null; })));
-        for (const [i, { st, w }] of wahl.entries()) {
-            const netz = netze[i];
-            if (!netz) continue;
+        const abrufe = wahl.map(({ st, w }) => Meshgenesisflaechennetz.holen(null, st[w].netz)
+            .catch(fehler => { console.warn('Meshgenesiskikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message); return null; }));
+        const spaeter = wahl.map(({ st }) => !!ki.nachzug && !Meshgenesiskikleiderfeld.deckt(st));
+        const ergebnis = { gruppe, rig: ki.rig, namen, stuecke, kleiderAn: true, liste: daten };
+        const platz = [];                                  // Listennummern der eingebauten Stücke, aufsteigend: dort steht ein nachkommendes in gruppe/namen/stuecke
+        const einbauen = (i, netz) => {
+            const { st, w } = wahl[i];
+            if (!netz) return false;
             try {
-                const mesh = Meshgenesistestnetzbau.mesh(netz, matrizen);
+                // Was keine Haut verdeckt (Frisur, Bart), häutet die Grafikkarte (`Meshgenesiskartenhaut`, 21.11.2026): seine Punkte liest auf der CPU niemand. Die deckenden Stücke bleiben auf
+                // der CPU gehäutet — `Fotogenesistestfigur._hautStuecke` rechnet aus ihren gezeigten Punkten die Maske der Haut, Punkt für Punkt wie bisher.
+                const mesh = (!Meshgenesiskikleiderfeld.deckt(st) && Meshgenesiskartenhaut.mesh(netz, matrizen)) || Meshgenesistestnetzbau.mesh(netz, matrizen);
                 mesh.userData.art = st.art;
+                mesh.visible = ergebnis.kleiderAn;          // ein nachkommendes Stück folgt dem Schalter „Kleider“
+                const stelle = platz.filter(j => j < i).length;
+                platz.splice(stelle, 0, i);
                 gruppe.add(mesh);
-                namen.push(`${st.name} (${Meshgenesiskikleiderfeld.TEXT[w]})`);
+                gruppe.children.splice(gruppe.children.length - 1, 1);
+                gruppe.children.splice(stelle, 0, mesh);
+                namen.splice(stelle, 0, `${st.name} (${Meshgenesiskikleiderfeld.TEXT[w]})`);
                 const kostuem = Meshgenesiskikleiderfeld.kostuem(st[w]);
                 // `netz`: die Animation bindet das Stück an das Skelett der Figur (`Meshgenesisbewegungskleid`); `mesh`: das gezeigte, gehäutete Stück (`Fotogenesistestfigur._hautStuecke`)
-                stuecke.push({ id: st.id, art: st.art, weg: w, ruhe: netz.ruhe, dreiecke: netz.dreiecke, netz, kostuem, mesh, adresse: st[w].netz });
+                stuecke.splice(stelle, 0, { id: st.id, art: st.art, weg: w, ruhe: netz.ruhe, dreiecke: netz.dreiecke, netz, kostuem, mesh, adresse: st[w].netz });
+                return true;
             } catch (fehler) {
                 console.warn('Meshgenesiskikleiderfeld: %s nicht geladen (%s)', st.id, fehler.message);
+                return false;
             }
-        }
-        if (!gruppe.children.length) return null;
+        };
+        const netze = await Promise.all(abrufe.map((abruf, i) => (spaeter[i] ? null : abruf)));
+        for (const i of wahl.keys()) if (!spaeter[i]) einbauen(i, netze[i]);
+        if (spaeter.some(Boolean)) {
+            ergebnis.nachzug = Promise.all(abrufe.map(async (abruf, i) => {
+                if (spaeter[i] && einbauen(i, await abruf)) ki.nachzug(ergebnis);
+            }));
+        } else if (!gruppe.children.length) return null;
         gruppe.userData.meshgenesisFremd = true;          // das Feld gibt die Gruppe beim Leeren nicht frei
-        return { gruppe, rig: ki.rig, namen, stuecke, kleiderAn: true, liste: daten };
+        return ergebnis;
     }
 
     /**
@@ -71,6 +94,14 @@ export class Meshgenesiskikleiderfeld {
         return !!(e?.kostuem || e?.uebertrag?.art === 'rueckhaeutung');
     }
 
+    /**
+     * Verdeckt das Stück Haut (`userData.art` 'kleidung')? Haar nur als Kostümstück (die Haarschale aus dem Eingang); eine Frisur oder ein Bart zählt in `Hautverdeckung.zaehlt` nicht —
+     * dann braucht `Fotogenesistestfigur._hautStuecke` keine eigene Kopie seiner Lage (21.11.2026: Haar 26 MB, Bart 18 MB am Zauberer).
+     */
+    static deckt(st) {
+        return !(st.art === 'haar' && !st.kostuem);
+    }
+
     static hautStuecke(ki) {
         const aus = {};
         for (const st of ki?.stuecke || []) {
@@ -84,7 +115,7 @@ export class Meshgenesiskikleiderfeld {
             geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
             geo.setIndex(new THREE.BufferAttribute(dreiecke, 1));
             const netz = new THREE.Mesh(geo);
-            netz.userData.art = st.art === 'haar' && !st.kostuem ? 'haar' : 'kleidung';
+            netz.userData.art = Meshgenesiskikleiderfeld.deckt(st) ? 'kleidung' : 'haar';
             netz.userData.haar = st.art === 'haar';
             if (st.kostuem) netz.userData.stoffTiefe = Meshgenesiskikleiderfeld.STOFF_TIEFE_M;
             aus[`ki_${st.id}`] = netz;

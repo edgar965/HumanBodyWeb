@@ -57,11 +57,12 @@ export class Meshgenesisstoffkleid {
 
     /** → true, wenn der Film zum Stück passt (gleiche Punktzahl). */
     static anbringen(mesh, film, abbildung) {
-        const pos = mesh.geometry.getAttribute('position');
+        let pos = mesh.geometry.getAttribute('position');
         if (pos.count !== film.punkte) {
             console.warn(`Meshgenesisstoffkleid: ${mesh.name} hat ${pos.count} Punkte, der Stoff ${film.punkte} — bleibt gehäutet`);
             return false;
         }
+        pos = Meshgenesisstoffkleid._eigen(mesh.geometry);
         const q = abbildung?.quaternion && !abbildung.quaternion.equals(new THREE.Quaternion()) ? abbildung.quaternion : null;
         const ecken = [], spalten = [];
         for (let j = 0; j < film.index.length; j++) if (film.index[j] >= 0) { ecken.push(j); spalten.push(film.index[j]); }
@@ -70,6 +71,27 @@ export class Meshgenesisstoffkleid {
         mesh.userData.stoff = s;
         for (const r of mesh.userData.kollision?.u.kollisionR.value || []) r.set(0, 0);
         return true;
+    }
+
+    /**
+     * Lage und Normalen, in die `stellen` schreibt, als eigene Float32-Felder (22.11.2026): `Meshgenesisbewegungskleid.binden` gibt ohne Abbildung die Ruhelage und die Int8-Normalen des
+     * Pakets selbst (`lageGeteilt`) — sie gehören auch dem stillen Stück. → das Attribut `position`.
+     */
+    static _eigen(geo) {
+        if (geo.userData.lageGeteilt) {
+            geo.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(geo.getAttribute('position').array), 3));
+            geo.userData.lageGeteilt = false;
+        }
+        const n = geo.getAttribute('normal');
+        if (n && !(n.array instanceof Float32Array)) {
+            const aus = new Float32Array(n.count * 3);
+            for (let i = 0; i < n.count; i++) {
+                const x = n.getX(i), y = n.getY(i), z = n.getZ(i), l = Math.hypot(x, y, z) || 1;
+                aus[3 * i] = x / l; aus[3 * i + 1] = y / l; aus[3 * i + 2] = z / l;
+            }
+            geo.setAttribute('normal', new THREE.BufferAttribute(aus, 3));
+        }
+        return geo.getAttribute('position');
     }
 
     static abnehmen(mesh) {
