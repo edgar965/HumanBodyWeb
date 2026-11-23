@@ -27,6 +27,10 @@ class Texturquelle:
     #: seit 19.11.2026 auch das Augenbild des Gesichts aus dem Foto (`Fotogesicht.AUGEN`).
     FIGUR_FOTOGENESIS = re.compile(r'^/api/fotogenesis/(?P<job>[-a-zA-Z0-9_]+)/figur/(?P<g>maennlich|weiblich)/bild/(?P<name>10\d\d\.jpg|gesicht_augen\.jpg)$')
 
+    #: Hautkachel und Augenbild der Figur eines Mesh-Genesis-Tests (`Meshgenesistestgenesisfigur.adresse`, 23.11.2026: „Als Modell speichern“ nimmt die Haut der Seite mit) —
+    #: dieselbe Auflösung wie `Meshgenesistestendpunkte.figurbild`, nur Kacheln `10??.jpg` und das Augenbild.
+    FIGUR_MESHGENESIS = re.compile(r'^/api/meshgenesis/test/(?P<test>[-a-zA-Z0-9_]+)/figur/(?P<g>maennlich|weiblich)/bild/(?P<name>10\d\d\.jpg|gesicht_augen\.jpg)$')
+
     @classmethod
     def pfad(cls, adresse):
         """Die Datei hinter einer Auftragsadresse (`Path`) — oder None."""
@@ -34,6 +38,13 @@ class Texturquelle:
         if figur:
             from ..dienste.fotogenesisfigur import Fotogenesisfigur
             return Fotogenesisfigur.figurbild(figur['job'], figur['g'], figur['name'])
+        test = cls.FIGUR_MESHGENESIS.match(str(adresse or '').split('?')[0])
+        if test:
+            from ..dienste.fotogesicht import Fotogesicht
+            from ..dienste.meshgenesistest import Meshgenesistest
+            from ..dienste.meshgenesistesthaut import Meshgenesistesthaut
+            p = Meshgenesistest.pfad(test['test'])
+            return (Fotogesicht.bild(p, test['g'], test['name']) or Meshgenesistesthaut.bild(test['test'], test['g'], test['name'])) if p is not None else None
         treffer = cls.MUSTER.match(str(adresse or '').split('?')[0])
         if not treffer:
             return None

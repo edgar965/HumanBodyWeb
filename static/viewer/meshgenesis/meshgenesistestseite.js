@@ -198,7 +198,7 @@ export class Meshgenesistestseite {
         // Die Kleider gehören zur vorhergesagten Figur dieses Geschlechts (`kleider_<g>/`): mit derselben Haltung gehäutet.
         if (this.kleider && this.daten.figur_netz) {
             if (this.kleider.geschlecht === this.daten.info.geschlecht) await this.kleider.neuHaeuten(this.matrizen);
-            else await this.kleider.laden(this.daten.info.geschlecht, this.matrizen, `${this.daten.info.name} Mesh-Genesis`);
+            else await this.kleider.laden(this.daten.info.geschlecht, this.matrizen);
         }
     }
 

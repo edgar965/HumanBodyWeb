@@ -76,7 +76,7 @@ export class Texturweg {
     static async _abarbeiten() {
         Texturweg._laeuft = true;
         while (Texturweg._reihe.length) {
-            await Texturweg._naechsteAufgabe();
+            await Texturweg.naechsteAufgabe();
             const { textur, setzen, fertig } = Texturweg._reihe.shift();
             setzen();
             try { Texturweg.hochladen(textur); } catch (fehler) { console.warn(`Texturweg: Hochladen gescheitert (${fehler.message}) — das nächste Zeichnen lädt es`); }
@@ -85,8 +85,8 @@ export class Texturweg {
         Texturweg._laeuft = false;
     }
 
-    /** Eine neue Aufgabe des Browsers — über einen MessageChannel, nicht `setTimeout`: ein verdeckter Tab drosselt Zeitgeber auf 1 s und mehr. */
-    static _naechsteAufgabe() {
+    /** Eine neue Aufgabe des Browsers — über einen MessageChannel, nicht `setTimeout`: ein verdeckter Tab drosselt Zeitgeber auf 1 s und mehr (auch `Meshgenesiszeichenflaeche`, `Meshgenesiskikleiderfeld`). */
+    static naechsteAufgabe() {
         return new Promise(weiter => {
             const kanal = new MessageChannel();
             kanal.port1.onmessage = () => { kanal.port1.close(); weiter(); };

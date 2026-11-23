@@ -10,6 +10,7 @@
     (`modell` entfällt, wenn der Bereich sein eigenes Modell hat — `Exportleistequelle.EIGENES_MODELL`, 2D3D Kleider)
     POST /api/exportleiste/<bereich>/<kennung>/einstellungen/   {optionen: {renderqualitaet: {…}, …}} → {optionen}
     GET  /api/exportleiste/<bereich>/<kennung>/datei/<name>     Video oder Bogen eines Render-Laufs (nur aus `ergebnis/`, nur .mp4/.png)
+    GET|POST /api/exportleiste/<bereich>/<kennung>/modell/     „Als Modell speichern“: Stand (+ `vorgabe` des Namens) / starten mit `{name}` — EIN Weg für alle Bereiche (23.11.2026)
 """
 
 import json
@@ -17,7 +18,7 @@ import logging
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import FileResponse, Http404, JsonResponse
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from ..dienste.exportleiste import Exportleiste
 from ..dienste.exportleistebereiche import Exportleistebereiche
@@ -143,6 +144,22 @@ class Exportleisteendpunkte:
         except ValueError:
             return JsonResponse({'error': 'Kein JSON'}, status=400)
         return JsonResponse({'optionen': leiste.optionen_speichern((rumpf or {}).get('optionen') if isinstance(rumpf, dict) else {})})
+
+    @staticmethod
+    @require_http_methods(['GET', 'POST'])
+    def modell(request, bereich, kennung):
+        """„Als Modell speichern“ — der eine Weg für jede Seite mit Exportleiste (`Exportleistequelle.modell_stand` / `modell_speichern`, 23.11.2026)."""
+        quelle = Exportleisteendpunkte._leiste(bereich, kennung).quelle
+        if request.method == 'GET':
+            return JsonResponse(dict(quelle.modell_stand(), vorgabe=quelle.modellname()))
+        try:
+            rumpf = json.loads(request.body or b'{}')
+        except ValueError:
+            rumpf = {}
+        rumpf = rumpf if isinstance(rumpf, dict) else {}
+        methoden = rumpf.get('methoden')
+        antwort, status = quelle.modell_speichern(str(rumpf.get('name') or '').strip(), [str(m) for m in methoden] if isinstance(methoden, list) else None)
+        return JsonResponse(antwort, status=status)
 
     @staticmethod
     @require_GET

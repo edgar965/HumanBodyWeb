@@ -22,7 +22,6 @@ __all__ = ['Fotogenesismodell']
 class Fotogenesismodell(Meshgenesistestmodell):
     BEFEHL = 'fotogenesis_modell'
     HERKUNFT = 'foto-genesis'
-    STUECKE = 'ki.json'
 
     @classmethod
     def geschlecht(cls, kennung):
@@ -43,6 +42,6 @@ class Fotogenesismodell(Meshgenesistestmodell):
         return Fotogenesisfigur.kleider(kennung, geschlecht)
 
     @classmethod
-    def kacheln(cls, kennung, geschlecht):
-        p = Fotogenesisfigur.ordner(kennung)
-        return (Fotogenesisfigur._kacheln(kennung, p, geschlecht) or None) if p is not None else None
+    def figur_der_seite(cls, kennung, geschlecht, form):
+        """Die Figur der Jobseite (`Fotogenesisfigur.genesisfigur`: Kacheln der Haut aus den Fotos, Gesicht aus dem Frontfoto) — 23.11.2026, vorher nur die Kacheln."""
+        return Fotogenesisfigur.genesisfigur(kennung, Fotogenesisfigur.ordner(kennung), geschlecht, (form.get('figur') or {}).get('regler') or {})

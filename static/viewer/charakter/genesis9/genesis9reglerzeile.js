@@ -65,7 +65,8 @@ export class Genesis9reglerzeile {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         const { wert, gesteuert } = Genesis9reglerzeile.wert(inst, regler);
-        const kennung = `${praefix}${regler.name}`;
+        // Ein Regler im Abschnitt seiner Herkunft steht zum zweiten Mal da (`zweitplatz`, `G9reglerherkunft`, 23.11.2026): eigene Id, derselbe `data-regler` — `nachziehen` gleicht beide an.
+        const kennung = `${praefix}${regler.zweitplatz ? 'zw-' : ''}${regler.name}`;
         // `hinweis`: ein Sammelregler (Alter, `G9alter`) sagt, was er stellt; ein gemessener Platz, warum er dort steht (`G9reglerplatz`).
         const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : (regler.hinweis || regler.name);
         const { unten, oben } = Genesis9reglerzeile.bereich(regler, wert);

@@ -131,9 +131,9 @@ export class Meshgenesisansicht {
         if (this._shaderWartet) return true;
         let warten = null;
         try {
-            // `neueNetze` merkt sich jedes Netz sofort: nach dem Warten ist es bekannt, gezeichnet wird also spätestens im nächsten Bild — nie im Kreis
-            this._gesehen ??= new WeakSet();
-            if (Meshgenesiszeichenflaeche.neueNetze(this.szene, this._gesehen)) warten = Meshgenesiszeichenflaeche.vorbereiten(r => this._malen(r));
+            // neue Netze und geänderte Materialien (`zuBauen` merkt sich Netz und gebaute Fassung): nach dem Warten ist beides bekannt, gezeichnet wird spätestens im nächsten Bild — nie im Kreis
+            const offen = Meshgenesiszeichenflaeche.zuBauen(this.szene, this._gesehen ??= new WeakSet());
+            if (offen.size) warten = Meshgenesiszeichenflaeche.vorbereiten(r => this._malen(r), offen, offen.neu ? Infinity : (this._wartetSeit ??= performance.now()) + Meshgenesiszeichenflaeche.FRIST_MS);
         } catch (fehler) {
             console.warn('Meshgenesisansicht: Shader nicht vorab gebaut —', fehler);
         }
@@ -151,6 +151,7 @@ export class Meshgenesisansicht {
             cancelAnimationFrame(this._geplant);
             this._geplant = 0;
         }
+        this._wartetSeit = null;          // die Frist für geänderte Materialien beginnt mit dem nächsten Warten neu (`_shaderWarten`)
         Meshgenesiszeichenflaeche.zeichnen(this.leinwand, Math.max(this.feld.clientWidth, 2), Math.max(this.feld.clientHeight, 2), this.grund, r => {
             const zurueck = this.hauttausch?.();          // „Haut angleichen“: die Hautbilder nur für diesen Durchgang getauscht (`Fotogenesishautangleich._tauschen`)
             try {

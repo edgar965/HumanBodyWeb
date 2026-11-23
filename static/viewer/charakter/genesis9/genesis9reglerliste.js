@@ -68,7 +68,7 @@ export class Genesis9reglerliste {
     /** Die Werkzeugzeile: Suchfeld, „nur geänderte", „Seiten koppeln". */
     werkzeuge(kopf) {
         kopf.innerHTML = `
-            <input type="search" class="hb-dehnt g9-reglersuche" placeholder="Regler suchen … (Name, z. B. Nase, HB_, Neck)">
+            <input type="search" class="hb-dehnt g9-reglersuche" placeholder="Regler suchen … (Name, z. B. Nase, HB, Neck)">
             <label class="g9-reglerschalter" title="Nur Regler zeigen, die nicht auf ihrem Ausgangswert stehen">
                 <input type="checkbox" data-schalter="geaendert"> nur geänderte</label>
             <label class="g9-reglerschalter" title="Ein Zug an einem linken Regler stellt den rechten mit (Left/Right im Namen) — und umgekehrt">

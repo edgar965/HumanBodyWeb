@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _sameSubMesh, getSelectableSubMeshes } from './teilnetz_auswahl.js';
+import { Genesis9kleidung } from '../gemeinsam/genesis9kleidung.js';
 
 /**
  * Getragenliste — die Liste „Objekte" im Eigenschaften-Reiter: jedes
@@ -19,12 +20,29 @@ export class Getragenliste {
         const list = document.getElementById('prop-equipped-list');
         if (!list) return;
         list.innerHTML = '';
-        const targets = inst ? getSelectableSubMeshes(inst.id) : [];
+        const targets = inst ? getSelectableSubMeshes(inst.id).filter(t => !Getragenliste._genital(inst, t)) : [];
         if (targets.length === 0) {
             list.innerHTML = Getragenliste.LEER;
             return;
         }
         for (const t of targets) list.appendChild(Getragenliste._zeile(inst, t));
+    }
+
+    /**
+     * Ein Genital-Stück einer Genesis-Figur („Daz Anatomie Frau|Mann“, MakeHuman, eigene Scham) steht schon im Bereich „Genitalien“ (`Genesis9genitalien`,
+     * Stücke mit `anatomie` aus der Garderobe) — hier nicht noch einmal (23.11.2026, Edgar: „mach diesen eintrag weg, den gibt es doppelt“). Bei einer
+     * HumanBody-Figur gibt es diesen Bereich nicht, dort bleibt die Zeile. Ohne Katalog zählt die Kennung `daz_anatomie_*`; der Katalog kommt nach und
+     * füllt die Liste neu.
+     */
+    static _genital(inst, t) {
+        if (t.type !== 'cloth' || inst.quelle !== 'genesis9') return false;
+        const kennung = String(t.key).split('/')[0];
+        const katalog = Genesis9kleidung._stuecke;
+        if (!katalog) {
+            Genesis9kleidung.stuecke().then(liste => { if (liste.length && state.characters.get(inst.id) === inst) Getragenliste.fuellen(inst); });
+            return kennung.startsWith('daz_anatomie_');
+        }
+        return Boolean(katalog.find(s => s.id === kennung)?.anatomie);
     }
 
     static _zeile(inst, t) {

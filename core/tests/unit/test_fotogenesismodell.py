@@ -61,7 +61,9 @@ class FotogenesismodellTest(SimpleTestCase):
         self.assertIsNone(Texturquelle.pfad('/api/fotogenesis/kunstjob/figur/maennlich/bild/m1.jpg'))          # nur Kacheln 10??.jpg
         self.assertIsNone(Texturquelle.pfad('/api/fotogenesis/anderer/figur/maennlich/bild/1001.jpg'))
 
-    def test_starten_verlangt_die_stuecke(self):
+    def test_starten_verlangt_die_figur(self):
+        # 23.11.2026: gebraucht wird die Figur (`form_<g>/modell.json`), nicht eine bestimmte Stückdatei — die Stücke sind, was `liste` zeigt (Edgar 1: nur KI-Stücke)
+        (self.figur / 'form_maennlich' / 'modell.json').unlink()
         antwort, status = Fotogenesismodell.starten('kunstjob', 'maennlich', 'Probe')
         self.assertEqual(status, 404)
         self.assertIn('error', antwort)

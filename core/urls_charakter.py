@@ -37,6 +37,7 @@ from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
 from .api.g9anatomiekartenapi import G9anatomiekartenapi
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
+from .api.g9garderobenamen import G9garderobenamenapi
 from .api.g9bauartapi import G9bauartapi
 from .api.g9garderobepflege import G9garderobepflegeapi
 from .api.g9posenapi import G9posenapi
@@ -198,6 +199,7 @@ CHARAKTER = [
          name='g9_figur_posen'),
     path('api/character/genesis9-figur/garderobe/', G9garderobeapi.garderobe,
          name='g9_figur_garderobe'),
+    path('api/character/genesis9-figur/garderobe/namen/', G9garderobenamenapi.namen, name='g9_figur_garderobe_namen'),
     # Eigenes Stück aus einem OBJ (Hilfe → Kleidung → Vergleich, 25.09.2026).
     path('api/character/eigenstueck/bauen/', Eigenstueckapi.bauen, name='eigenstueck_bauen'),
     path('api/character/eigenstueck/<str:kennung>/<str:datei>/', Eigenstueckapi.bild,

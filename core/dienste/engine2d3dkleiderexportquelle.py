@@ -71,6 +71,22 @@ class Engine2d3dKleiderexportquelle(Exportleistequelle):
             return 'Der Auftrag rechnet gerade — exportieren und rendern, wenn er fertig ist'
         return None
 
+    def modellname(self):
+        return self.job.modell or '%s 2D3D Kleider' % self.name()          # wie bis 23.11.2026 die Seite (`Engine2d3dKleiderseite`)
+
+    def modell_stand(self):
+        """2D3D Kleider schreibt das Modell sofort, ohne eigenen Prozess (`Auftragmodell`)."""
+        from .auftragmodell import Auftragmodell
+        self.job.refresh_from_db()
+        return Auftragmodell.stand(self.job)
+
+    def modell_speichern(self, name, methoden=None):
+        """`methoden` gibt es hier nicht (2D3D Kleider kennt nur seine Stücke) — angenommen, damit alle Quellen dieselbe Unterschrift haben."""
+        from .auftragmodell import Auftragmodell
+        from .engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
+        self.job.refresh_from_db()
+        return Auftragmodell.speichern(self.job, Engine2d3dKleiderspeichern, name)
+
     def modell(self):
         from .engine2d3dkleideranimexport import Engine2d3dKleideranimexport
         pfad, _runde, _art = Engine2d3dKleideranimexport(self.job).quelle()

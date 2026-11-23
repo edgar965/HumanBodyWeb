@@ -8,7 +8,6 @@ import { Meshfigurbuehne } from '../meshfigur/meshfigurbuehne.js';
 import { Meshfigurfrisur } from '../meshfigur/meshfigurfrisur.js';
 import { Meshfigurhaar } from '../meshfigur/meshfigurhaar.js';
 import { Meshfigurkleidung } from '../meshfigur/meshfigurkleidung.js';
-import { Meshfigurspeicher } from '../meshfigur/meshfigurspeicher.js';
 import { Engine2d3dKleideranimation } from './engine2d3dkleideranimation.js';
 import { Engine2d3dKleiderfilmansicht } from './engine2d3dkleiderfilmansicht.js';
 import { Engine2d3dKleiderbuehnenmodell } from './engine2d3dkleiderbuehnenmodell.js';
@@ -105,9 +104,7 @@ export class Engine2d3dKleiderseite {
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
         document.getElementById('laufband-anhalten').addEventListener('click', () => this.anhalten());
         document.addEventListener('visibilitychange', () => { if (!document.hidden) this.aktualisieren(); });
-        // Der Vorschlag für „Als Genesis-Figur speichern": `Meshfigurspeicher` schriebe „<Name> Mesh".
-        const modellname = document.getElementById('exportleiste-modell-name');
-        if (modellname && !modellname.value) modellname.value = this.zustand.modell || `${this.zustand.name} 2D3D Kleider`;
+        // Den Vorschlag für den Modellnamen („<Name> 2D3D Kleider“) gibt seit 23.11.2026 der Server (`Engine2d3dKleiderexportquelle.modellname`, `Exportleistemodell`).
         this.einstellungen = new Engine2d3dKleidereinstellungen(this);
         this.meshkarte = new Engine2d3dKleidermeshkarte(this);
         this.fotos = new Engine2d3dKleiderfotos(this);
@@ -131,7 +128,7 @@ export class Engine2d3dKleiderseite {
         this.haar = new Meshfigurhaar(this);
         this.kleidung = new Meshfigurkleidung(this);
         this.frisur = new Meshfigurfrisur();
-        this.speicher = new Meshfigurspeicher(this, Meshfigurspeicher.EXPORTLEISTE);     // „Modell speichern" steht seit 31.10.2026 in der Exportleiste
+        // „Modell speichern“ steht in der Exportleiste und gehört ihr (`Exportleistemodell`, 23.11.2026, Edgar: „eine einzige Speicherart!“)
         this.systemspeicher = new Engine2d3dKleidersystemspeichern(this);
         this.zeigen();
         this.verfolgen();
@@ -255,7 +252,6 @@ export class Engine2d3dKleiderseite {
         this.netzansicht.zeigen(z);
         this.film.zeigen(z);
         this.animation.zeigen(z);
-        this.speicher.zeigen(z);
         this.systemspeicher.zeigen(z);
     }
 

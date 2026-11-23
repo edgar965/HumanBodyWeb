@@ -25,6 +25,10 @@ class Meshgenesisanpassungexportquelle(Meshgenesistestexportquelle):
         """Ohne Stücke nichts wegzuschieben."""
         return None
 
+    def modellbau(self):
+        """Die Einpassung ohne KI ist kein Modell der Bibliothek (Hinweis in `fotogenesis_genesiszeile.html`) — gespeichert wird das Ergebnis (Feld 3)."""
+        return None
+
     def kacheln(self):
         """Ohne die Haut der KI: der Render nimmt die Daz-Haut der Grundfigur, wie das Feld."""
         return {}

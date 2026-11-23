@@ -2,7 +2,8 @@
 Exportleiste (31.10.2026, Edgar: „baue die ganze Exportleiste auf mit Physik usw." — Vorbild die rechte Spalte von „2D3D Kleider" —, „mach das als wiederverwendbares Modul").
 Aufruf: {% include "_exportleiste.html" with bereich="meshgenesistest" kennung=test.kennung %} und auf der Seite `Exportleiste.starten(document.getElementById('exportleiste'), quelle)`
 (`static/viewer/exportleiste/exportleiste.js`; die Quelle gibt die Figur der Seite). Server: `core/api/exportleiste.py`, Bereiche in `Exportleistebereiche`.
-„Modell speichern" bindet die Seite selbst (Felder `exportleiste-modell-*`): Was ein gespeichertes Modell ist, weiß nur der Bereich.
+„Modell speichern" bindet die Leiste selbst (`exportleistemodell.js`, eine Adresse `…/modell/` für alle Seiten, 23.11.2026, Edgar: „eine einzige Speicherart!“); was ein Modell ist, sagt der
+Bereich auf dem Server (`Exportleistequelle.modellbau`).
 CSS: `css/exportleiste.css`. `ohne_speichern=1`: ohne „Modell speichern“ (BVH Studio: die Figur ist schon ein gespeichertes Modell, 20.11.2026).
 {% endcomment %}
 <div class="exportleiste" id="exportleiste" data-adresse="/api/exportleiste/{{ bereich }}/{{ kennung }}/">
@@ -11,6 +12,11 @@ CSS: `css/exportleiste.css`. `ohne_speichern=1`: ohne „Modell speichern“ (BV
         <h4>Modell speichern <small class="hb-hinweis">— die Figur in die Modellbibliothek (Charakter hinzufügen → Genesis 9)</small></h4>
         <label class="exportleiste-zeile"><span>Modellname</span>
             <input type="text" id="exportleiste-modell-name" maxlength="80" autocomplete="off" spellcheck="false"></label>
+        {% comment %}Häkchen je Methode der Kleider (23.11.2026, Edgar: „Toggles welche Kleider (Bibliothek usw)“) — `Exportleistemodell` füllt sie aus `…/modell/` (`angebot`);
+        Haut, Haar, Bart, Schuhe, Hut und Requisiten gehen immer mit. Ohne Angebot (2D3D Kleider) bleibt die Zeile verborgen.{% endcomment %}
+        <div class="exportleiste-zeile hb-versteckt" id="exportleiste-modell-methoden"
+             title="Welche Kleidung ins Modell geht. Haut, Haar, Bart, Schuhe, Hut und Requisiten gehen immer mit. Zwei Haken heißt: beide Stücke einer Zeile, übereinander.">
+            <span>Kleider</span><span class="exportleiste-haken" id="exportleiste-modell-haken"></span></div>
         <div class="exportleiste-knoepfe">
             <button type="button" class="btn btn-primary btn-sm" id="exportleiste-modell-speichern" disabled><i class="fas fa-save"></i> {{ speichern_text|default:"Als Modell speichern" }}</button>
         </div>

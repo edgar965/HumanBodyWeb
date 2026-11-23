@@ -7,6 +7,9 @@
 .exportleiste-zeile input[type="text"] { flex: 1 1 14em; min-width: 0; }
 .exportleiste-zeile input[type="number"] { width: 6em; }
 .exportleiste-wahlen label { display: flex; align-items: center; gap: 5px; }
+/* Häkchen je Methode der Kleider unter „Modell speichern“ (23.11.2026, `Exportleistemodell._hakenBauen`) */
+.exportleiste-haken { display: flex; gap: 4px 12px; flex-wrap: wrap; }
+.exportleiste-haken-eintrag { display: flex; align-items: center; gap: 4px; white-space: nowrap; color: inherit; }
 .exportleiste-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
 .exportleiste-reglertitel { margin: 6px 0 2px; font-size: 0.9rem; }
 

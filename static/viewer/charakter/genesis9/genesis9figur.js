@@ -40,6 +40,7 @@ export class Genesis9Figur extends Genesis9Modell {
             // eines Modells aus „Mesh to 3D", und der Auftrag erkannte sein Modell nicht wieder.
             fototextur: { ...this.fototextur },
             herkunft: this.herkunft,
+            haarnetze: this.haarnetze,   // Haar und Bart der Haar-Engine (23.11.2026, `Genesis9haarnetze`): ohne sie verlöre „Modell speichern“ das Haar eines Modells aus Mesh-/Foto-Genesis
         };
     }
 

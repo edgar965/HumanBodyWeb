@@ -13,6 +13,6 @@ gezeichnet von `Fotogenesisgenesiszeile`, folgt der Leiste oben.{% endcomment %}
     {% include "_fotogenesis_weitverdeckung.html" with adresse=weitverdeckung_adresse %}{% endif %}
     {# Abspielleiste und Export wie auf der Mesh-Genesis-Testseite (Bereich meshgenesistest, dieselbe Figur wie dort) #}
     {% if g.ergebnis %}{% include "_meshgenesis_figurbewegung.html" with adresse=bewegung_adresse %}
-    {% include "_exportleiste.html" with bereich="meshgenesistest" kennung=g.test speichern_hinweis="Als Modell speichern: auf der Mesh-Genesis-Testseite („Übernehmen und als Modell speichern“)." %}{% endif %}
+    {% include "_exportleiste.html" with bereich="meshgenesistest" kennung=g.test speichern_hinweis="Speichert die Figur des Mesh-Genesis-Tests mit seiner Kleiderwahl (Karte „Kleider und Bestandteile“ der Testseite) als Genesis-Modell." %}{% endif %}
 </section>
 {% endwith %}

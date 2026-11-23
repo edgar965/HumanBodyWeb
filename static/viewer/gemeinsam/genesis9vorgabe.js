@@ -27,5 +27,8 @@ export class Genesis9vorgabe {
         if (!modell.ausdruck) modell.ausdruck = eintrag.ausdruck || '';
         if (leer(modell.kleidung)) modell.kleidung = { ...(eintrag.kleidung || {}) };
         if (leer(modell.fototextur)) modell.fototextur = { ...(eintrag.fototextur || {}) };
+        // Haut-Korrekturen und Haar/Bart der Haar-Engine (23.11.2026): Mesh-/Foto-Genesis speichern beide, ohne diese Zeilen kamen sie beim Laden nie an
+        if (leer(modell.hautausgleich)) modell.hautausgleich = { ...(eintrag.hautausgleich || {}) };
+        if (!modell.haarnetze && eintrag.haarnetze) modell.haarnetze = eintrag.haarnetze;
     }
 }

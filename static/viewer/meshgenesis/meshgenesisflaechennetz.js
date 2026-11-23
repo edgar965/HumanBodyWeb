@@ -7,8 +7,8 @@
  */
 import * as THREE from 'three';
 import { Pufferabruf } from '../gemeinsam/pufferabruf.js';
-import { Texturweg } from '../gemeinsam/texturweg.js';
 import { Meshgenesisanatomie } from './meshgenesisanatomie.js';
+import { Meshgenesisbildvorrat } from './meshgenesisbildvorrat.js';
 import { Meshgenesisumgebung } from './meshgenesisumgebung.js';
 
 export class Meshgenesisflaechennetz {
@@ -183,18 +183,11 @@ export class Meshgenesisflaechennetz {
 
     /**
      * Ein Bild des Jobs als Textur, gleich zurück, das Bild kommt nach (`nachLaden`). 22.11.2026 (Ladezeit des Zauberers): Mit `TextureLoader` dekodierte Chrome die JPEGs erst beim
-     * Hochladen auf die Karte, im Hauptfaden (Profil: 633 ms `texSubImage2D` im ersten Zeichnen; Robe 852 KB, Hut 412 KB, vier Requisiten). Jetzt wie `Genesis9texturen`: `createImageBitmap`
-     * außerhalb des Hauptfadens, `imageOrientation: 'flipY'` statt Threes `flipY` (gilt für Bitmaps nicht), ohne Vormultiplikation und ohne Farbumrechnung — so lud three das `<img>`
-     * hoch (`premultiplyAlpha` aus, `UNPACK_COLORSPACE_CONVERSION_WEBGL` = NONE).
+     * Hochladen auf die Karte, im Hauptfaden (Profil: 633 ms `texSubImage2D` im ersten Zeichnen). Seit 23.11.2026 über `Meshgenesisbildvorrat`: außerhalb des Hauptfadens dekodiert, je
+     * Aufgabe ein Bild auf die Karte, und gleiche Bilder (die Hose der Kleiderbibliothek: 13 × dasselbe 2048²) nur einmal.
      */
     static textur(adresse) {
-        const textur = new THREE.Texture();
-        textur.flipY = false;
-        Meshgenesisflaechennetz._bildlader ??= new THREE.ImageBitmapLoader().setOptions({ imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-        // auf die Karte je Aufgabe EIN Bild, nicht alle im nächsten Zeichnen (`Texturweg.einreihen`, 23.11.2026: 18 Kleiderbilder 2048² hielten ein Bild 447 ms an)
-        Meshgenesisflaechennetz._bildlader.load(adresse, bild => Texturweg.einreihen(textur, () => { textur.image = bild; textur.needsUpdate = true; })
-            .then(() => Meshgenesisflaechennetz.nachLaden?.()), undefined, () => {});
-        return textur;
+        return Meshgenesisbildvorrat.textur(adresse, () => Meshgenesisflaechennetz.nachLaden?.());
     }
 
     /** Die Materialien in der Reihenfolge des Pakets, dazu am Ende eines mit der Farbe je Punkt (für Material −1). */

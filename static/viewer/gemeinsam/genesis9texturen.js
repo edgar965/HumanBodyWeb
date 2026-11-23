@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { Genesis9texturbasis } from './genesis9texturbasis.js';
 import { Genesis9texturblock } from './genesis9texturblock.js';
+import { Genesis9texturzaehler } from './genesis9texturzaehler.js';
+import { Pufferabruf } from './pufferabruf.js';
 import { Seitenabbruch } from './seitenabbruch.js';
 import { Texturweg } from './texturweg.js';
 
@@ -22,9 +24,9 @@ import { Texturweg } from './texturweg.js';
  *
  * Jetzt: ein Vorrat je Adresse. Ein zweites Netz mit demselben Bild bekommt
  * dasselbe `THREE.Texture`-Objekt — schon dekodiert, schon auf der GPU. Das
- * Bild wird mit `createImageBitmap` außerhalb des Hauptfadens dekodiert
- * (`ImageBitmapLoader`, `imageOrientation: 'flipY'` ersetzt Threes `flipY`,
- * das für Bitmaps nicht gilt). Farbraum und Verwendung hängen an der Datei:
+ * Bild wird mit `createImageBitmap` im Worker dekodiert (`Pufferabruf.bild`, seit
+ * 23.11.2026 — vorher im Hauptfaden, dort rechnete Chrome Spiegeln und Umrechnen;
+ * `imageOrientation: 'flipY'` ersetzt Threes `flipY`, das für Bitmaps nicht gilt). Farbraum und Verwendung hängen an der Datei:
  * eine Albedo ist immer sRGB, eine Normalenkarte immer linear, darum darf
  * der Vorrat sie teilen.
  *
@@ -38,7 +40,6 @@ export class Genesis9texturen {
     static BUENDEL = '/api/character/genesis9-figur/texturbuendel/';
     /** Adresse -> {textur, fertig: Promise<THREE.Texture|null>} */
     static _vorrat = new Map();
-    static _lader = null;
 
     /** Die Adresse eines Bibliothekspfads — eine eigene Adresse (`/api/…`, die Fotokacheln eines
      *  gespeicherten Modells, `Genesis9fototextur`) geht unverändert durch. `srgb`: Farbbild — nur bei UASTC Teil der Adresse (`Texturweg.abfrage`). */
@@ -162,13 +163,16 @@ export class Genesis9texturen {
                 return Genesis9texturen._laden(`${adresse.split('?')[0]}?format=bc`);
             });
         }
-        return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
+        // im Worker (`Pufferabruf.bild`, 23.11.2026): Spiegeln und Umrechnen beim Auflösen kosteten im Hauptfaden 6–13 ms je 2048²-Bild, unsichtbar für LoAF und Profiler
+        return Pufferabruf.bild(blob, Genesis9texturen.OPTIONEN);
     }
 
-    /** Eine Adresse einzeln laden: Block und UASTC über `fetch` (der `ImageBitmapLoader` kennt sie nicht), sonst wie bisher. */
+    /** Wie bis 23.11.2026 der `ImageBitmapLoader`: `imageOrientation: 'flipY'` ersetzt Threes `flipY`, ohne Vormultiplikation. */
+    static OPTIONEN = { imageOrientation: 'flipY', premultiplyAlpha: 'none' };
+
+    /** Eine Adresse einzeln laden — jedes Format über `fetch`, das Bild im Worker (`_bitmap`; bis 23.11.2026 Bilder über threes `ImageBitmapLoader` im Hauptfaden). */
     static _laden(adresse) {
-        if (!adresse.includes('format=bc') && !adresse.includes('format=uastc')) return Genesis9texturen.lader().loadAsync(adresse);
-        return fetch(adresse).then(antwort => {
+        return fetch(adresse, { credentials: 'same-origin' }).then(antwort => {
             if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
             return antwort.blob();
         }).then(blob => Genesis9texturen._bitmap(blob, adresse));
@@ -212,28 +216,16 @@ export class Genesis9texturen {
         };
         if (eintrag.textur.image) anwenden(eintrag.textur);
         else {
-            Genesis9texturen._zaehlen(material, 1);
-            eintrag.fertig.then(textur => { Genesis9texturen._zaehlen(material, -1); anwenden(textur); });
+            // die Bilder eines Materials setzen gemeinsam ein — ein Programmwechsel statt einer je Bild (23.11.2026, `Genesis9texturzaehler`)
+            Genesis9texturzaehler.unterwegs(material);
+            eintrag.fertig.then(textur => Genesis9texturzaehler.angekommen(material, () => anwenden(textur)));
         }
         return eintrag.textur;
     }
 
-    /**
-     * Material → Zahl der Bilder, die `holen` ihm noch einsetzt (19.10.2026). Das Material zeigt nicht, ob ein Bild unterwegs ist (`map` steht erst im
-     * Rückruf): `Anatomiehaut` maß den Hautton am Körper ohne Karte — die Farbe vor den Bildern — und hielt die Scham für fertig; `Zeichenstand`
-     * meldet „Texturen". Eine WeakMap, nicht `userData`: ein Klon des Materials (`Material.clone`, Weichgewebe) bekäme den Zähler mit und nie zurück.
-     */
-    static _offen = new WeakMap();
-
-    static _zaehlen(material, schritt) {
-        if (!material) return;
-        const n = (Genesis9texturen._offen.get(material) || 0) + schritt;
-        if (n > 0) Genesis9texturen._offen.set(material, n); else Genesis9texturen._offen.delete(material);
-    }
-
-    /** Wie viele Bilder `holen` diesem Material noch einsetzt. */
+    /** Wie viele Bilder `holen` diesem Material noch einsetzt (`Genesis9texturzaehler`). */
     static offen(material) {
-        return Genesis9texturen._offen.get(material) || 0;
+        return Genesis9texturzaehler.offen(material);
     }
 
     /** Der Vorratseintrag einer Datei — beim ersten Mal wird geladen. */
@@ -249,14 +241,6 @@ export class Genesis9texturen {
         eintrag = { textur, fertig };
         Genesis9texturen._vorrat.set(adresse, eintrag);
         return eintrag;
-    }
-
-    static lader() {
-        if (!Genesis9texturen._lader) {
-            Genesis9texturen._lader = new THREE.ImageBitmapLoader();
-            Genesis9texturen._lader.setOptions({ imageOrientation: 'flipY', premultiplyAlpha: 'none' });
-        }
-        return Genesis9texturen._lader;
     }
 
     /** Für Proben: wie viele Bilder liegen im Vorrat, wie viele sind fertig. */

@@ -56,6 +56,7 @@ from .daten.kennungskonverter import Kennungskonverter
 from .urls_charakter import CHARAKTER
 from .urls_hautausgleich import HAUTAUSGLEICH
 from .urls_standardmodelle import STANDARDMODELLE
+from .urls_g9modell import G9MODELL
 from .urls_exportleiste import EXPORTLEISTE
 
 register_converter(Kennungskonverter, 'kennung')
@@ -280,9 +281,8 @@ urlpatterns = [
     path('api/umapython/textur/<str:rasse>/<str:slot>/<str:art>/', Umatextur.bild, name='umapython_textur'),
 ]
 
-# Die Charakter- und SMPL-Routen stehen in `urls_charakter.py` —
-# 74 Eintraege, die zusammengehoeren (30.08.2026).
-urlpatterns += CHARAKTER
+# Charakter und SMPL in `urls_charakter.py` (74 Einträge, 30.08.2026); MB-Lab-Vorlagen und Haarnetze gespeicherter Modelle in `urls_g9modell.py` (23.11.2026).
+urlpatterns += CHARAKTER + G9MODELL
 urlpatterns += STANDARDMODELLE      # Standard-Modelle umbenennen/ausblenden (16.11.2026)
 urlpatterns += HAUTAUSGLEICH        # Hautausgleich: Gleichmäßigkeit, Symmetrie, Schatten, Retusche (18.11.2026)
 

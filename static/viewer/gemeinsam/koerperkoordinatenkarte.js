@@ -1,4 +1,5 @@
 import { Protokoll } from './protokoll.js';
+import { Pufferabruf } from './pufferabruf.js';
 
 /**
  * Koerperkoordinatenkarte — die Karte „wo auf dem Körper liegt dieser Texel“ für die eigenen Stücke (Stufe K2a, 25.10.2026), einmal je Seite geholt.
@@ -48,7 +49,7 @@ export class Koerperkoordinatenkarte {
         if (!kacheln.length || !seite || !stufe || hoehe.length !== 2 || laengen.length !== 3 || anteil.length !== 2) {
             throw new Error('Körperkoordinaten: Kopfzeilen fehlen (X-Kacheln, X-Seite, X-Stufe, X-Hoehe, X-Anteil, X-Laengen)');
         }
-        const bild = await createImageBitmap(await antwort.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+        const bild = await Pufferabruf.bild(await antwort.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });     // im Worker (23.11.2026, `Pufferabruf.bild`)
         if (bild.width !== 2 * seite || bild.height !== kacheln.length * seite) {
             throw new Error(`Körperkoordinaten: Bild ${bild.width} × ${bild.height}, erwartet ${2 * seite} × ${kacheln.length * seite}`);
         }

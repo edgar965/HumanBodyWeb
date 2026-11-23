@@ -129,14 +129,21 @@ class Meshgenesistest:
         figur = next(iter(da), None)
         return figur, ('Für „%s“ ist keine Figur gerechnet (dieser Test kennt nur %s) — der Test muss neu gerechnet werden.' % (cls.GESCHLECHTER[geschlecht], ', '.join(da) or 'keine')) if figur else ''
 
+    @staticmethod
+    def form_da(p, info, geschlecht):
+        """Ob `form` eine Figur liefert — dieselben Prüfungen, ohne `modell.json` und `form.npz` zu lesen (die Liste, `Meshgenesistestliste`, 23.11.2026)."""
+        fig = p / ('form_%s' % geschlecht)
+        return (isinstance((info.get('form') or {}).get(geschlecht), dict) and Npztorch.da(p / ('ergebnis_Form_%s.npz' % geschlecht))
+                and (fig / 'kinematik.json').is_file() and Npztorch.da(fig / 'anzeige' / 'netz.npz'))
+
     @classmethod
     def form(cls, p, info, geschlecht):
         """Die vorhergesagte Figur dieses Geschlechts, wenn gebaut und angepasst — `{ordner (relativ zu meshgenesis/), datei, kinematik, rest_mm, hoehe_m, regler}` — sonst `None`."""
-        f = (info.get('form') or {}).get(geschlecht)
+        if not cls.form_da(p, info, geschlecht):
+            return None
+        f = info['form'][geschlecht]
         fig = p / ('form_%s' % geschlecht)
         datei = p / ('ergebnis_Form_%s.npz' % geschlecht)
-        if not isinstance(f, dict) or not Npztorch.da(datei) or not (fig / 'kinematik.json').is_file() or not Npztorch.da(fig / 'anzeige' / 'netz.npz'):
-            return None
         try:
             regler = json.loads((fig / 'modell.json').read_text(encoding='utf-8'))['figur']['regler']
         except (OSError, ValueError, KeyError):
@@ -166,40 +173,11 @@ class Meshgenesistest:
         info['name'] = Meshgenesisname.lesen(p) or info.get('name') or p.name
         return info
 
-    @classmethod
-    def alle(cls, mit_tripo=False):
-        """Die Tests mit ihrem Stand (`test.json`), nach Name; ein unlesbarer steht mit Fehler in der Liste statt zu fehlen. `figur`/`geschlecht` sind die eingestellten.
-        `mit_tripo`: auch die Tripo-Jobs (Ordner mit `ziel/`), markiert mit `tripo` — nur für die Übersicht des Reiters „Test“."""
-        if not cls.ordner().is_dir():
-            return []
-        aus = []
-        weg = Meshgenesisaposewahl.gewaehlt()
-        for p in sorted(cls.ordner().iterdir()):
-            # beiseitegelegte Stände (`<kennung>_beiseite_<Zeit>`) tragen die Kennung des Originals in `test.json` — sie stünden als Doppel in der Liste
-            if '_beiseite_' in p.name:
-                continue
-            if not (p / 'test.json').is_file():
-                # angelegt, noch nicht gerechnet (`anlage.json`) — steht in der Liste, damit man ihn öffnen und „Rechnen“ drücken kann
-                if (p / 'anlage.json').is_file():
-                    aus.append(dict(cls.anlage(p), tripo=False))
-                continue
-            # Trainingspaare (Ziel unter `ziel/`) sind seit 19.10.2026 Trainingsdaten, keine Tests (Edgar: „die sollst du als nächstes trainieren, lösche sie aus den Testläufen“);
-            # ihr Ordner bleibt (MIA-Grundhaltung des Tripo-Netzes = Eingang der Trainingswolke), die Seite `/mesh-genesis/test/<paar>/` bleibt über die Adresse erreichbar.
-            # In der Übersicht stehen sie seit 23.10.2026 wieder (Edgar: „Ich sehe die anderen Jobs nicht in der Übersicht“ — die Kostüm-Ergebnisse liegen auf ihren Testseiten).
-            tripo = (p / 'ziel' / 'ziel.json').is_file()
-            if tripo and not mit_tripo:
-                continue
-            e = cls.endung(p, weg)
-            try:
-                info = cls._mit_name(p, json.loads((p / ('test%s.json' % e)).read_text(encoding='utf-8')))
-                info['geschlecht'] = cls.geschlecht(p, info)
-                info['figur'] = 'Form (vorhergesagt)' if cls.form(p, info, info['geschlecht']) else cls.wahl(p, info, info['geschlecht'], e)[0]
-            except (OSError, ValueError) as fehler:
-                info = {'kennung': p.name, 'name': p.name, 'fehler': str(fehler)}
-            info['fertig'] = bool(info.get('figur')) and Npztorch.da(p / ('vorschau%s.glb' % e))
-            info['tripo'] = tripo
-            aus.append(info)
-        return sorted(aus, key=lambda i: str(i.get('name', '')).lower())
+    @staticmethod
+    def alle(mit_tripo=False):
+        """Die Tests mit ihrem Stand (`Meshgenesistestliste.alle`, dort auch einzelne: `eintraege`)."""
+        from .meshgenesistestliste import Meshgenesistestliste
+        return Meshgenesistestliste.alle(mit_tripo)
 
     @classmethod
     def daten(cls, kennung):
@@ -220,8 +198,6 @@ class Meshgenesistest:
                                    'andere_methode': bool(methode) and weg != 'aus' and methode != weg}
         geschlecht = cls.geschlecht(p, info)
         form = cls.form(p, info, geschlecht)
-        from .meshgenesisergebnisfigur import Meshgenesisergebnisfigur
-        from .meshgenesistesthaut import Meshgenesistesthaut
         if form:
             figur, hinweis, job, datei, kin_datei = 'Form', '', None, form['datei'], form['kinematik']
         else:
@@ -247,8 +223,7 @@ class Meshgenesistest:
         skala = hoehe / info['vorschau_hoehe_m'] if hoehe and info.get('vorschau_hoehe_m') else 1.0
         rest = form['rest_mm'] if form else cls.figuren(p, info, endung).get(figur, info.get('ik_rest_mm'))
         info.update({'figur': figur, 'geschlecht': geschlecht, 'hoehe_m': hoehe, 'ik_rest_mm': rest, 'geschlecht_stand': Meshgenesistestgeschlechtstand.text(p, geschlecht)})
-        from .fotogesicht import Fotogesicht
-        from .meshgenesistesthautkorrektur import Meshgenesistesthautkorrektur
+        from .meshgenesistestgenesisfigur import Meshgenesistestgenesisfigur
         from .meshgenesisgenesishaltung import Meshgenesisgenesishaltung
         from .meshgenesishaltungwahl import Meshgenesishaltungwahl
         f_rig, f_dreh, haltung = Meshgenesishaltungwahl.felder(e)
@@ -259,9 +234,8 @@ class Meshgenesistest:
             # Die Figur als Genesis-Modell (22.10.2026, Animation der Ausgabe wie Mesh-3D): dieselbe wie im Ergebnis der Jobseite eines Tripo-Jobs (`Meshgenesisergebnisfigur`).
             # Seit 31.10.2026 mit der Haut der KI als `fototextur` (`Meshgenesistesthaut.kacheln`) — sonst trug sie die Katalog-Haut, anders als das Standbild.
             # Seit 19.11.2026 dazu das Gesicht aus dem Frontfoto (Augenbild, Brauenfarbe, Mimik; `Fotogesicht`), seit 20.11.2026 die Haut-Korrekturen (`Meshgenesistesthautkorrektur`).
-            'figur_genesis': Meshgenesistesthautkorrektur.figur(Fotogesicht.figur(
-                dict(Meshgenesisergebnisfigur._figur(geschlecht, form['regler']), fototextur=Meshgenesistesthaut.kacheln(kennung, geschlecht)),
-                p, geschlecht, lambda name: '/api/meshgenesis/test/%s/figur/%s/bild/%s' % (kennung, geschlecht, name)), kennung, geschlecht) if form else None,
+            # Seit 23.11.2026 aus `Meshgenesistestgenesisfigur` — dieselbe Angabe nimmt „Als Modell speichern“ (`Meshgenesistestmodell.figur_der_seite`).
+            'figur_genesis': Meshgenesistestgenesisfigur.fuer(kennung, geschlecht, form['regler']) if form else None,
             # Die Haltung dazu als Daz-Winkel (19.11.2026): das Genesis-Ergebnis der Foto-Genesis-Seite baut
             # die Figur damit als Genesis9Modell (`Meshgenesisgenesishaltung`)
             # Haltung (`Meshgenesishaltungwahl`, 19.11.2026 abends): `ausgabe`/`dreh` bleiben die des Fotos (die Figur liegt über dem Fotonetz),

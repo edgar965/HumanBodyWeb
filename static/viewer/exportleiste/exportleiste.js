@@ -2,6 +2,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshpfadliste } from '../mesh/meshpfadliste.js';
 import { Exportleisteexport } from './exportleisteexport.js';
 import { Exportleistefigur } from './exportleistefigur.js';
+import { Exportleistemodell } from './exportleistemodell.js';
 import { Exportleisteregler } from './exportleisteregler.js';
 import { Exportleisterender } from './exportleisterender.js';
 
@@ -42,6 +43,7 @@ export class Exportleiste {
         this.export = new Exportleisteexport(this);
         this.render = new Exportleisterender(this);
         this.regler = new Exportleisteregler(this);
+        this.modell = new Exportleistemodell(this);          // „Als Modell speichern“ — ein Weg für jede Seite (23.11.2026)
         this.pfade = wurzel.querySelector('#exportleiste-pfade');
         this._vorschlag = null;
         this._laedt = false;
@@ -70,6 +72,7 @@ export class Exportleiste {
             this.export.melden(`Exportleiste nicht geladen: ${fehler.daten?.error || fehler.message}`, true);
         } finally {
             this._laedt = false;
+            this.modell.zeigen();
         }
     }
 

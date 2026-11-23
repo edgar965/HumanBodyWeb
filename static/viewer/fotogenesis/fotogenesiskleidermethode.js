@@ -14,6 +14,7 @@
  * Der Hinweis sagt, wie viele Stücke drapiert, eigen bzw. passend sind.
  */
 import { Fotogenesisschalterleiste } from './fotogenesisschalterleiste.js';
+import { Exportleistemodell } from '../exportleiste/exportleistemodell.js';
 
 export class Fotogenesiskleidermethode extends Fotogenesisschalterleiste {
     /** Leiste über dem Feld `feld` (Behälter wird davor eingefügt) für die Figur `figur` (`Fotogenesistestfigur`); `neu()` zeichnet das Feld neu. */
@@ -43,6 +44,8 @@ export class Fotogenesiskleidermethode extends Fotogenesisschalterleiste {
 
     async _wechseln() {
         const methode = this.methode;
+        // „Als Modell speichern“ der Exportleiste hakt dieselbe Methode vor (23.11.2026, `Exportleistemodell.METHODE`)
+        document.dispatchEvent(new CustomEvent(Exportleistemodell.METHODE, { detail: methode }));
         const name = { eigen: 'Eigen', passend: 'Passend' }[methode] ?? 'Drapieren';
         const eigenschaft = { eigen: 'eigen', passend: 'passend' }[methode] ?? 'drapiert';
         this.hinweis.textContent = methode === 'bibliothek' ? '' : `${name} wird geladen …`;

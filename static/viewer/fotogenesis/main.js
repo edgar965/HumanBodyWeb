@@ -25,7 +25,6 @@ import { Fotogenesisweitverdeckung } from './fotogenesisweitverdeckung.js';
 import { Exportleiste } from '../exportleiste/exportleiste.js';
 import { Fotogenesisbewegung } from './fotogenesisbewegung.js';
 import { Fotogenesisexportfigur } from './fotogenesisexportfigur.js';
-import { Fotogenesismodellspeichern } from './fotogenesismodellspeichern.js';
 import { Fotogenesisgriffel } from './fotogenesisgriffel.js';
 
 const start = document.getElementById('fotogenesis-start')?.dataset ?? {};
@@ -49,10 +48,10 @@ if (daten.genesiszeile?.ergebnis) Fotogenesishautangleich.binden(element('fotoge
 // Haut-Korrekturen aus „Charakter" (20.11.2026) an derselben Figur
 if (daten.genesiszeile?.ergebnis) Fotogenesishautkorrektur.binden(element('fotogenesis-hautkorrektur'), () => seite.genesiszeile?.hautort);
 if (daten.genesiszeile?.ergebnis) Fotogenesisweitverdeckung.binden(element('fotogenesis-weitverdeckung'));         // Haut unter weiten Stücken (08.11.2026)
+// „Als Modell speichern“ bindet jede Exportleiste selbst (`Exportleistemodell`, 23.11.2026, Edgar: „eine einzige Speicherart!“)
 if (daten.test?.eigen) {
     const figur = new Fotogenesisexportfigur(daten.test.adresse, seite.genesisfeld);
     const genesiskarte = document.querySelector('[data-feld="genesis"]').closest('section');          // in der dritten Zeile tragen auch Feld 1 und 3 eine Exportleiste (04.11.2026)
     Exportleiste.starten(genesiskarte.querySelector('.exportleiste'), figur);
     Fotogenesisbewegung.leisten(seite, figur);
-    Fotogenesismodellspeichern.binden(daten.test.adresse, `${start.jobname ?? ''} Foto-Genesis`, genesiskarte);
 }

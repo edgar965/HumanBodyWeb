@@ -7,7 +7,6 @@
  * `daten.genesiszeile`. Die Felder folgen der Ansichtsart der Seite, drehen mit den übrigen (`Meshgenesisansicht.koppeln` in `Fotogenesisseite`) und stehen so groß wie die Person im
  * Foto (`Fotogenesisseite._rand`). Template `fotogenesis_genesiszeile.html`.
  */
-import * as THREE from 'three';
 import { Exportleiste } from '../exportleiste/exportleiste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshgenesisfigurbewegungsleiste } from '../meshgenesis/meshgenesisfigurbewegungsleiste.js';
@@ -117,16 +116,8 @@ export class Fotogenesisgenesiszeile {
         if (neuStellen) this.kameras();
     }
 
-    kameras(versuch = 0) {
-        const s = this.seite;
-        if (s.winkel === null) return;
-        const eins = new THREE.Quaternion();
-        let offen = false;
-        for (const a of this.felder) offen = !Fotogenesiskamera.feldStellen(a, s.winkel, eins, s._rand(a), s.kopf) || offen;
-        // solange eine Figur noch lädt, ist ihre Hülle leer: nachfassen
-        if (offen && versuch < 40) {
-            clearTimeout(this._uhr);
-            this._uhr = setTimeout(() => this.kameras(versuch + 1), 250);
-        }
+    /** Kameras auf die Perspektive des Fotos; solange eine Figur noch lädt, ist ihre Hülle leer: nachfassen (`Fotogenesiskamera.felderStellen`). */
+    kameras() {
+        Fotogenesiskamera.felderStellen(this, this.seite, this.felder);
     }
 }

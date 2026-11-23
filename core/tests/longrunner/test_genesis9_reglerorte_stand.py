@@ -48,7 +48,11 @@ class ReglerorteStandTest(SimpleTestCase):
         from Genesis9.reglerplan import G9reglerplan
         cls.roh = G9reglerplan.bereiche()
         cls.orte = G9reglerorte.holen()
-        cls.neu = G9reglergliederung.bereiche()
+        alle = G9reglergliederung.bereiche()
+        # Die Abschnitte je Herkunft (23.11.2026, `G9reglerherkunft`) zeigen jeden fremden Regler ein zweites Mal — Edgar: „auch wenn sie doppelt sind“. „Genau einmal“
+        # gilt für den Genesis-Teil; die Abschnitte prüft `test_5_herkunft_vollstaendig`.
+        cls.neu = [b for b in alle if not b.get('herkunftsabschnitt')]
+        cls.herkunft = [b for b in alle if b.get('herkunftsabschnitt')]
 
     def test_1_jeder_regler_gemessen(self):
         fehlt = [r['name'] for b in self.roh if b['schluessel'] not in G9reglergliederung.FEST for r in b['regler']
@@ -77,3 +81,21 @@ class ReglerorteStandTest(SimpleTestCase):
                 if not r.get('gruppe') and e.get('mm', 1.0) < G9reglerorte.WIRKUNG_MM and e.get('dreht', 0.0) <= 0.1:
                     ohne.append((b['schluessel'], r['name']))
         self.assertEqual(ohne[:20], [], '%d Regler ohne Wirkung direkt im Bereich' % len(ohne))
+
+    def test_5_herkunft_vollstaendig(self):
+        """Jeder Regler einer fremden Herkunft steht in ihrem Abschnitt, jeder genau einmal, mit `zweitplatz` (23.11.2026, `G9reglerherkunft`). Geschrieben, nicht gelaufen.
+        Sabotage: in `G9reglerherkunft.abschnitte` die Regler fester Bereiche (`p` None) überspringen → `mh:macro_Alter_*` fehlen, rot."""
+        from Genesis9.reglerherkunft import G9reglerherkunft
+        from Genesis9.reglerplatz import G9reglerplatz
+        abschnitt = {f: s for f, s, _n in G9reglerherkunft.ABSCHNITTE}
+        soll = {}
+        for b in self.roh:
+            for r in b['regler']:
+                f = G9reglerplatz.familie(r['name'])
+                if f in abschnitt:
+                    soll.setdefault(abschnitt[f], set()).add(r['name'])
+        ist = {b['schluessel']: [r['name'] for r in b['regler']] for b in self.herkunft}
+        for schluessel, namen in soll.items():
+            self.assertEqual(set(ist.get(schluessel, [])), namen, schluessel)
+            self.assertEqual(len(ist[schluessel]), len(namen), '%s: doppelt im Abschnitt' % schluessel)
+        self.assertTrue(all(r.get('zweitplatz') for b in self.herkunft for r in b['regler']))

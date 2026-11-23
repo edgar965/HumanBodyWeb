@@ -50,13 +50,21 @@ export class Fotogenesisnetz {
     }
 
     /** Die Datei im Worker holen (23.11.2026, `Pufferabruf`: 60 MB kamen im Seitenaufbau nach 1,1–3,5 s statt 0,6 s), dann wie `GLTFLoader.load` zerlegen. Die Bilder hat der Worker schon dekodiert
-     *  (PNG 4096², 331–367 ms); der Loader bekommt sie über seinen eigenen `loadImageSource` mit einem Lader, der das fertige Bitmap gibt — ohne Bitmap sein `ImageBitmapLoader`, dieselben Optionen. */
+     *  (PNG 4096², 331–367 ms); der Loader bekommt sie über seinen eigenen `loadImageSource` mit einem Lader, der das fertige Bitmap gibt — ohne Bitmap sein `ImageBitmapLoader`, dieselben Optionen.
+     *  Hat der Worker auch die Pufferansichten geschnitten (`Pufferabruf.glbTeile`, 24.11.2026), bekommt der Loader das gelesene JSON und die fertigen Ansichten: sonst kopierte er im Hauptfaden
+     *  den BIN-Block (60 MB) und daraus jede Ansicht — Parsen des PSHuman-GLB 47–52 → 1,3–2,2 ms, Lage, UV und Index im Tab gleich. Nicht bei Draco/Meshopt (sie lesen den rohen Puffer). */
     static _einzeln(adresse, fortschritt) {
-        return Pufferabruf.holen(adresse, fortschritt, { bilder: true }).then(puffer => new Promise((fertig, fehler) => new GLTFLoader().register(parser => {
-            const bilder = Pufferabruf.glbBilder.get(puffer) ?? {}, eigen = parser.loadImageSource.bind(parser);
-            parser.loadImageSource = (i, lader) => eigen(i, bilder[i] ? { isImageBitmapLoader: true, load: (_a, gut) => gut(bilder[i]) } : lader);
-            return { name: 'fotogenesis_bilder' };
-        }).parse(puffer, LoaderUtils.extractUrlBase(new URL(adresse, location.href).href), gltf => fertig(gltf.scene), fehler)));
+        return Pufferabruf.holen(adresse, fortschritt, { bilder: true }).then(puffer => new Promise((fertig, fehler) => {
+            const bilder = Pufferabruf.glbBilder.get(puffer) ?? {}, teile = Pufferabruf.glbTeile.get(puffer);
+            const fertigGeschnitten = !!teile && (teile.json.images || []).every((b, i) => b.bufferView === undefined || bilder[i])
+                && !(teile.json.extensionsUsed || []).some(e => /draco|meshopt/i.test(e));
+            new GLTFLoader().register(parser => {
+                const eigen = parser.loadImageSource.bind(parser);
+                parser.loadImageSource = (i, lader) => eigen(i, bilder[i] ? { isImageBitmapLoader: true, load: (_a, gut) => gut(bilder[i]) } : lader);
+                if (fertigGeschnitten) parser.loadBufferView = i => Promise.resolve(teile.ansichten[i] ?? new ArrayBuffer(0));      // null: ein Bild (schon dekodiert)
+                return { name: 'fotogenesis_bilder' };
+            }).parse(fertigGeschnitten ? teile.json : puffer, LoaderUtils.extractUrlBase(new URL(adresse, location.href).href), gltf => fertig(gltf.scene), fehler);
+        }));
     }
 
     _laden(netz) {

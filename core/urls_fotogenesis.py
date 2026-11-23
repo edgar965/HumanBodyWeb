@@ -80,7 +80,7 @@ FOTOGENESIS = [
     path('api/fotogenesis/<slug:job>/figur/', Fotogenesisfigurendpunkte.daten, name='fotogenesis_figur'),
     path('api/fotogenesis/<slug:job>/standardanimation/', Fotogenesisstandardanimationendpunkte.job, name='fotogenesis_standardanimation'),
     path('api/fotogenesis/<slug:job>/figur/kleider/<str:geschlecht>/', Fotogenesisfigurendpunkte.kleider, name='fotogenesis_figur_kleider'),
-    path('api/fotogenesis/<slug:job>/figur/modell/', Fotogenesisfigurendpunkte.modell, name='fotogenesis_figur_modell'),
+    # „Als Modell speichern“: seit 23.11.2026 nur über die Exportleiste (`/api/exportleiste/fotogenesis/<job>/modell/`, Edgar: „eine einzige Speicherart!“)
     path('api/fotogenesis/<slug:job>/figur/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/netz/', Fotogenesisfigurendpunkte.kleidnetz, name='fotogenesis_figur_kleidnetz'),
     path('api/fotogenesis/<slug:job>/figur/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/bild/<str:name>', Fotogenesisfigurendpunkte.kleidbild, name='fotogenesis_figur_kleidbild'),
     path('api/fotogenesis/<slug:job>/figur/<str:geschlecht>/netz/', Fotogenesisfigurendpunkte.figurnetz, name='fotogenesis_figur_netz'),

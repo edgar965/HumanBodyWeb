@@ -16,6 +16,7 @@ from .meshgenesislaufzeit import Meshgenesislaufzeit
 from .meshgenesisrechendatum import Meshgenesisrechendatum
 from .meshgenesistabelle import Meshgenesistabelle
 from .meshgenesistest import Meshgenesistest
+from .meshgenesistestliste import Meshgenesistestliste
 
 __all__ = ['Meshgenesistesttabelle']
 
@@ -43,7 +44,8 @@ class Meshgenesistesttabelle:
     def tabelle(self):
         # Tests der Foto-Genesis-Jobs gehören zur Jobseite, nicht in diese Liste (06.11.2026, `Meshgenesisjobtest`).
         job = Meshgenesisjobtest.kennungen()
-        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(t) for t in Meshgenesistest.alle(mit_tripo=True) if t['kennung'] not in job],
+        # die ausgenommenen gar nicht erst lesen (23.11.2026, `Meshgenesistestliste`: 22 von 219 Zeilen, 240–260 ms)
+        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': [self.zeile(t) for t in Meshgenesistestliste.alle(mit_tripo=True, ohne=job)],
                 'klasse': 'auftragstabelle meshgenesistabelle', 'leer': 'Noch kein Test gerechnet.'}
 
     @staticmethod

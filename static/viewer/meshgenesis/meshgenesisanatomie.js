@@ -34,16 +34,18 @@ export class Meshgenesisanatomie {
         // Trainingspaare (19.10.2026, Edgar: „die textur der Scham ist falsch, fangen wir wieder von vorne an mit dieser Textur??“): das Netz kommt aus dem GLB-Export der
         // Charakter-Seite, das Stück trägt dort schon die Karte, die `Anatomiebacken` auf der Charakter-Seite gerechnet hat — nicht noch einmal backen.
         if (netz.kopf.anatomie_fertig) return false;
-        const stueck = [], stueckMaterial = new Set(), haut = new Map();
+        // `teile` ist die Liste ALLER Teile, auch an Haar und Kleidern: ohne Dreieck des Stücks bliebe `stueck` leer → false — vorher erst nach der Schleife über alle Dreiecke, mit einem
+        // Feld je Dreieck (24.11.2026, Edgar „fixe“, iphone_mit_lidar_dycheck_space_out: Haar 2,1 Mio. Punkte, 22–50 ms synchron im Bau des Netzes)
+        if (!netz.etikett.includes(anatomie)) return false;
+        const stueck = [], stueckMaterial = new Set(), haut = new Map(), d = netz.dreiecke;
         for (let t = 0; t < netz.material.length; t++) {
             const m = netz.material[t], e = netz.etikett[t];
-            const ecken = [netz.dreiecke[3 * t], netz.dreiecke[3 * t + 1], netz.dreiecke[3 * t + 2]];
             if (e === anatomie) {
-                stueck.push(...ecken);
+                stueck.push(d[3 * t], d[3 * t + 1], d[3 * t + 2]);
                 if (m >= 0) stueckMaterial.add(m);
             } else if (e === koerper && m >= 0 && materialien[m]?.map) {
                 if (!haut.has(m)) haut.set(m, []);
-                haut.get(m).push(...ecken);
+                haut.get(m).push(d[3 * t], d[3 * t + 1], d[3 * t + 2]);
             }
         }
         if (!stueck.length || !haut.size || !stueckMaterial.size) return false;

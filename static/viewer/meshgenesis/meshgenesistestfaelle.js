@@ -52,6 +52,21 @@ export class Meshgenesistestfaelle {
             return;
         }
         this.inhalt.replaceChildren(...liste.map(d => this._messung(d)));
+        requestAnimationFrame(() => this._ruhen());
+    }
+
+    /**
+     * Außerhalb des Fensters überspringt der Browser die Karte bei jedem Layout (24.11.2026, Edgar „fixe“ — lange Bilder beim Laden der Foto-Genesis-Testseite): ein volles Layout der
+     * Seite kostete im Chrome 83–92 ms, davon ~35 ms diese Karte (iphone_mit_lidar_dycheck_space_out: 6 Tabellen, 1.608 Zellen, 21.598 px hoch); mit `content-visibility` auf den Teilen
+     * unterhalb des Fensters 26 ms. Chrome erzwingt nach dem Laden selbst ein volles Layout (`AIPageContentAgent`, ETW-Spur: 140 ms). Platzhalter ist die gemessene Höhe — die Seite
+     * springt nicht. Nicht bei Inhalt, der seitlich übersteht (die Containment-Regel schnitte ihn ab).
+     */
+    _ruhen() {
+        const k = this.karte;
+        if (!k.isConnected || k.scrollWidth > k.clientWidth + 1) return;
+        const cs = getComputedStyle(k);
+        k.style.containIntrinsicHeight = `auto ${k.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)}px`;
+        k.style.contentVisibility = 'auto';
     }
 
     _messung(d) {

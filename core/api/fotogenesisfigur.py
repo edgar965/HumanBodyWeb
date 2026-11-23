@@ -7,12 +7,10 @@ GET /api/fotogenesis/<job>/figur/<geschlecht>/bild/<name>                 Bild d
 GET /api/fotogenesis/<job>/figur/kleider/<geschlecht>/                    Stücke aus den Fotos
 GET /api/fotogenesis/<job>/figur/kleid/<geschlecht>/<weg>/<id>/netz/      ein Stück als Anzeigenetz
 GET /api/fotogenesis/<job>/figur/kleid/<geschlecht>/<weg>/<id>/bild/<n>   seine Textur
-GET|POST /api/fotogenesis/<job>/figur/modell/                             Stand von „Als Modell speichern“ / starten mit `{name}` (`Fotogenesismodell`, 31.10.2026)
+„Als Modell speichern“ (`Fotogenesismodell`) läuft seit 23.11.2026 nur über die Exportleiste: `GET|POST /api/exportleiste/fotogenesis/<job>/modell/`.
 """
-import json
-
 from django.http import Http404, HttpResponse, JsonResponse
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_GET
 
 from ..dienste.fotogenesisfigur import Fotogenesisfigur
 from ..dienste.auftragsdatei import Auftragsdatei
@@ -44,22 +42,6 @@ class Fotogenesisfigurendpunkte:
         if pfad is None:
             raise Http404('Kein Bild %s für Job %s (%s)' % (name, job, geschlecht))
         return Auftragsdatei.antwort(request, pfad)
-
-    @staticmethod
-    @require_http_methods(['GET', 'POST'])
-    def modell(request, job):
-        from ..dienste.fotogenesismodell import Fotogenesismodell
-        geschlecht = Fotogenesismodell.geschlecht(job)
-        if geschlecht is None:
-            return JsonResponse({'error': 'Job %s hat keine gebaute Figur' % job}, status=404)
-        if request.method == 'GET':
-            return JsonResponse(dict(Fotogenesismodell.stand(job, geschlecht) or {'status': 'nie'}, geschlecht=geschlecht))
-        try:
-            rumpf = json.loads(request.body or b'{}')
-        except ValueError:
-            rumpf = {}
-        antwort, status = Fotogenesismodell.starten(job, geschlecht, str((rumpf if isinstance(rumpf, dict) else {}).get('name') or '').strip())
-        return JsonResponse(antwort, status=status)
 
     @staticmethod
     @require_GET

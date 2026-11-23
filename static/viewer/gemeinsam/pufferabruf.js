@@ -15,8 +15,10 @@ export class Pufferabruf {
     /** Code des Workers: liest den Rumpf stückweise (Fortschritt höchstens alle 100 ms), setzt ihn zusammen und gibt den Puffer ab. */
     static CODE = `
 const melden = (id, geladen, gesamt) => postMessage({ id, geladen, gesamt });
-// Eingebettete Bilder eines GLB gleich hier dekodieren, mit den Optionen von threes ImageBitmapLoader (den nimmt der GLTFLoader) — {Bildnummer: ImageBitmap} oder null
-const glbBilder = async ganz => {
+// Eingebettete Bilder eines GLB gleich hier dekodieren, mit den Optionen von threes ImageBitmapLoader (den nimmt der GLTFLoader), und die übrigen Pufferansichten herausschneiden:
+// der GLTFLoader kopierte im Hauptfaden den ganzen BIN-Block und daraus jede Ansicht (PSHuman 60 MB, Parsen 47–52 ms; mit JSON und fertigen Ansichten 1,3–2,2 ms, 24.11.2026)
+// — {bilder: {Bildnummer: ImageBitmap}, ansichten: [ArrayBuffer oder null für Bild und fremde Puffer], json} oder null
+const glbTeile = async ganz => {
     const dv = new DataView(ganz.buffer);
     if (ganz.byteLength < 28 || dv.getUint32(0, true) !== 0x46546C67) return null;
     const jl = dv.getUint32(12, true), json = JSON.parse(new TextDecoder().decode(ganz.subarray(20, 20 + jl))), bin = 28 + jl, bilder = {};
@@ -27,7 +29,10 @@ const glbBilder = async ganz => {
         const ab = bin + (v.byteOffset || 0);
         bilder[i] = await createImageBitmap(new Blob([ganz.subarray(ab, ab + v.byteLength)], { type: b.mimeType }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
     }
-    return bilder;
+    const bildAnsicht = new Set((json.images || []).map(b => b.bufferView));
+    const ansichten = (json.bufferViews || []).map((v, i) => bildAnsicht.has(i) || (v.buffer ?? 0) !== 0 ? null
+        : ganz.slice(bin + (v.byteOffset || 0), bin + (v.byteOffset || 0) + v.byteLength).buffer);
+    return { bilder, ansichten, json };
 };
 // Antworten mit ETag (Server \`Netzpackung\`) bleiben im CacheStorage, höchstens GRENZE Bytes, die ältesten fallen weg; nachgefragt wird jedes Mal, 304 = unverändert
 const KASTEN = 'pufferabruf-1', GRENZE = 1536 * 1048576;
@@ -54,7 +59,18 @@ const lesen = async (id, antwort) => {
     for (const t of teile) { ganz.set(t, ab); ab += t.byteLength; }
     return ganz;
 };
-onmessage = async ({ data: { id, adresse, bilder: mitBildern } }) => {
+// Ein einzelnes Bild (23.11.2026, \`Pufferabruf.bild\`): createImageBitmap HIER, mit den Optionen des Aufrufers — Spiegeln (flipY) und Vormultiplikation rechnet Chrome beim Auflösen
+// im Faden des Aufrufers; im Hauptfaden waren das die unbeschrifteten 5–13-ms-Aufgaben beim Laden (ETW + CPU-Abtastung: 233 von 255 Proben in ImageBitmap::ImageBitmap)
+const bildLesen = async (id, blob, optionen) => {
+    try {
+        const bitmap = await createImageBitmap(blob, optionen || {});
+        postMessage({ id, bitmap }, [bitmap]);
+    } catch (fehler) {
+        postMessage({ id, fehler: String(fehler?.message ?? fehler) });
+    }
+};
+onmessage = async ({ data: { id, adresse, bilder: mitBildern, blob, optionen } }) => {
+    if (blob) { bildLesen(id, blob, optionen); return; }
     try {
         const k = await caches.open(KASTEN).catch(() => null), alt = k ? await k.match(adresse) : null, marke = alt?.headers.get('ETag');
         const antwort = await fetch(adresse, { credentials: 'same-origin', headers: marke ? { 'If-None-Match': marke } : {} });
@@ -64,8 +80,8 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern } }) => {
         const neu = kasten ? null : antwort.headers.get('ETag');
         // \`new Response\` kopiert die Bytes sofort — der Puffer darf danach in den Hauptfaden
         if (k && neu) k.put(adresse, new Response(ganz, { headers: { ETag: neu, 'X-Bytes': String(ganz.byteLength) } })).then(() => aufraeumen(k)).catch(() => {});
-        const bilder = mitBildern ? await glbBilder(ganz).catch(() => null) : null;
-        postMessage({ id, status: 200, puffer: ganz.buffer, bilder, kasten }, [ganz.buffer, ...Object.values(bilder || {})]);
+        const glb = mitBildern ? await glbTeile(ganz).catch(() => null) : null;
+        postMessage({ id, status: 200, puffer: ganz.buffer, glb, kasten }, [ganz.buffer, ...Object.values(glb?.bilder || {}), ...(glb?.ansichten || []).filter(Boolean)]);
     } catch (fehler) {
         postMessage({ id, fehler: String(fehler?.message ?? fehler) });
     }
@@ -77,11 +93,14 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern } }) => {
     static ausgefallen = false;
     /** Puffer eines GLB → {Bildnummer: ImageBitmap}, im Worker dekodiert (`holen(…, {bilder: true})`, `Fotogenesisnetz`); fehlt ohne Worker. */
     static glbBilder = new WeakMap();
+    /** Puffer eines GLB → {json, ansichten}: das gelesene JSON und jede Pufferansicht als eigener Puffer (Bilder: null), im Worker geschnitten; fehlt ohne Worker. */
+    static glbTeile = new WeakMap();
 
     /**
      * @param {string} adresse  relativ zur Seite oder absolut
      * @param {(f: {loaded: number, total: number}) => void} [fortschritt]  wie `onProgress` von three (`total` 0, wenn unbekannt)
-     * @param {{bilder?: boolean}} [wahl]  `bilder`: die eingebetteten Bilder eines GLB gleich im Worker dekodieren (23.11.2026: PSHuman-Textur 4096², 8,1 MB PNG, 331–367 ms) → `glbBilder`
+     * @param {{bilder?: boolean}} [wahl]  `bilder`: die eingebetteten Bilder eines GLB gleich im Worker dekodieren (23.11.2026: PSHuman-Textur 4096², 8,1 MB PNG, 331–367 ms) → `glbBilder`,
+     *   dazu JSON und Pufferansichten → `glbTeile` (24.11.2026)
      * @returns {Promise<ArrayBuffer>}
      */
     static holen(adresse, fortschritt, wahl = {}) {
@@ -95,18 +114,38 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern } }) => {
         });
     }
 
-    static _worker() {
-        if (Pufferabruf._arbeiter || Pufferabruf.ausgefallen) return Pufferabruf._arbeiter;
+    /**
+     * Ein Bild dekodieren wie `createImageBitmap(blob, optionen)`, aber im Worker: Chrome dekodiert zwar immer außerhalb, wendet die Optionen (`imageOrientation: 'flipY'`,
+     * `premultiplyAlpha: 'none'`) aber beim Auflösen im Faden des Aufrufers an — 2048² kostete dort 6–13 ms je Bild ohne jede Spur in LoAF oder Profiler (23.11.2026, ETW + WPR an
+     * /foto-genesis/test/iphone_mit_lidar_dycheck_space_out/: 30 leere Aufgaben, 270 ms; 233 von 255 CPU-Proben in `ImageBitmap::ImageBitmap → SkImage::readPixels`). Das Bitmap kommt
+     * ohne Kopie zurück. Ohne Worker im Hauptfaden wie bisher.
+     * @returns {Promise<ImageBitmap>}
+     */
+    static bild(blob, optionen = {}) {
+        const arbeiter = Pufferabruf._worker('_bildarbeiter');      // eigener Worker: die Umrechnung soll das Lesen großer Netze im ersten nicht aufhalten
+        if (!arbeiter) return createImageBitmap(blob, optionen);
+        const id = ++Pufferabruf._zaehler;
+        return new Promise((fertig, fehler) => {
+            Pufferabruf._offen.set(id, { fertig, fehler, blob, optionen });
+            arbeiter.postMessage({ id, blob, optionen });
+        });
+    }
+
+    static _bildarbeiter = null;
+
+    /** `feld`: `_arbeiter` (Abrufe) oder `_bildarbeiter` (Bilder) — derselbe Code, zwei Instanzen. */
+    static _worker(feld = '_arbeiter') {
+        if (Pufferabruf[feld] || Pufferabruf.ausgefallen) return Pufferabruf[feld];
         try {
-            const url = URL.createObjectURL(new Blob([Pufferabruf.CODE], { type: 'text/javascript' }));
-            const arbeiter = new Worker(url);
+            Pufferabruf._url ??= URL.createObjectURL(new Blob([Pufferabruf.CODE], { type: 'text/javascript' }));
+            const arbeiter = new Worker(Pufferabruf._url);
             arbeiter.onmessage = ({ data }) => Pufferabruf._angekommen(data);
             arbeiter.onerror = ereignis => Pufferabruf._ausfall(ereignis.message || 'Worker abgebrochen');
-            Pufferabruf._arbeiter = arbeiter;
+            Pufferabruf[feld] = arbeiter;
         } catch (fehler) {
             Pufferabruf._ausfall(fehler.message);
         }
-        return Pufferabruf._arbeiter;
+        return Pufferabruf[feld];
     }
 
     static _angekommen(d) {
@@ -117,8 +156,10 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern } }) => {
             return;
         }
         Pufferabruf._offen.delete(d.id);
+        if (d.bitmap) { offen.fertig(d.bitmap); return; }
+        if (offen.blob && d.fehler) { offen.fehler(new Error(d.fehler)); return; }
         // Marke: der Abruf im Worker steht nicht in der Zeitleiste der Seite (`performance.getEntriesByType('mark')`)
-        if (d.puffer && d.bilder) Pufferabruf.glbBilder.set(d.puffer, d.bilder);
+        if (d.puffer && d.glb) Pufferabruf.glbBilder.set(d.puffer, d.glb.bilder), Pufferabruf.glbTeile.set(d.puffer, d.glb);
         if (d.puffer) performance.mark(`pufferabruf:${offen.adresse}`, { detail: { bytes: d.puffer.byteLength, kasten: d.kasten } }), offen.fertig(d.puffer);
         else offen.fehler(Object.assign(new Error(d.fehler ?? `HTTP ${d.status}`), { status: d.status ?? 0 }));
     }
@@ -128,10 +169,11 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern } }) => {
         console.warn('Pufferabruf: Worker ausgefallen (%s) — Abrufe im Hauptfaden', grund);
         Pufferabruf.ausgefallen = true;
         Pufferabruf._arbeiter?.terminate();
-        Pufferabruf._arbeiter = null;
+        Pufferabruf._bildarbeiter?.terminate();
+        Pufferabruf._arbeiter = Pufferabruf._bildarbeiter = null;
         const offen = [...Pufferabruf._offen.values()];
         Pufferabruf._offen.clear();
-        for (const o of offen) Pufferabruf._direkt(o.adresse, o.fortschritt).then(o.fertig, o.fehler);
+        for (const o of offen) (o.blob ? createImageBitmap(o.blob, o.optionen) : Pufferabruf._direkt(o.adresse, o.fortschritt)).then(o.fertig, o.fehler);
     }
 
     static async _direkt(adresse, fortschritt) {

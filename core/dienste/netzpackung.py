@@ -33,7 +33,7 @@ __all__ = ['Netzpackung']
 def _fassung():
     """Inhalts-Hash der Module, die das Anzeigepaket bauen: ändert sich der Bau, ändert sich jeder Name."""
     h = hashlib.sha1(b'netzpackung 1')
-    for name in ('meshgenesisflaechennetz.py', 'meshgenesishautdetail.py'):
+    for name in ('meshgenesisflaechennetz.py', 'meshgenesishautdetail.py', 'meshgenesiskartenvorarbeit.py'):
         h.update((Path(__file__).parent / name).read_bytes())
     return h.hexdigest()[:12]
 

@@ -1,5 +1,6 @@
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
+import { Genesis9garderobenamen } from './genesis9garderobenamen.js';
 import { fn } from './registrierung.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
@@ -89,9 +90,8 @@ export class Genesis9kleidung {
 
     /** Den gemerkten Katalog verwerfen — nach Umbenennen oder Löschen im Kontextmenü (`Genesis9garderobepflege`) holt der nächste Aufruf ihn neu. */
     static vergessen() {
-        Genesis9kleidung._stuecke = null;
-        Genesis9kleidung._stueckeLauf = null;
-        Genesis9kleidung._namen = null;
+        Genesis9kleidung._stuecke = Genesis9kleidung._stueckeLauf = Genesis9kleidung._namen = null;
+        Genesis9garderobenamen.vergessen();
     }
 
     /** Ein gelöschtes Stück aus dem gemerkten Katalog nehmen, ohne ihn neu zu holen (`Genesis9garderobepflege.loeschen`, 18.10.2026).
@@ -103,27 +103,27 @@ export class Genesis9kleidung {
     }
 
     static _geloescht = new Set();
-
     static geloescht(kennung) {
         return Genesis9kleidung._geloescht.has(kennung);
     }
 
-    /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */
+    /** Der Name des Stücks — ohne Katalog erst aus der leichten Namensliste (23.11.2026, `Genesis9garderobenamen`), sonst aus dem Katalog, sonst die Kennung. */
     static async anzeigename(kennung) {
+        const leicht = Genesis9kleidung._namen || Genesis9kleidung._stueckeLauf ? null : await Genesis9garderobenamen.name(kennung);
+        if (leicht !== null) return leicht;
         if (!Genesis9kleidung._namen) {
             const stuecke = await Genesis9kleidung.stuecke();
             const namen = Object.fromEntries(stuecke.map((s) => [s.id, s.name || s.id]));
-            // Nur ein echter Katalog wird behalten (wie `stuecke`): Ein leerer nach einem Fehlschlag liesse
-            // jedes Schild bis zum nächsten Laden bei der Kennung.
+            // Nur ein echter Katalog wird behalten (wie `stuecke`): ein leerer nach einem Fehlschlag liesse jedes Schild bis zum nächsten Laden bei der Kennung.
             if (!stuecke.length) return namen[kennung] || kennung;
             Genesis9kleidung._namen = namen;
         }
         return Genesis9kleidung._namen[kennung] || kennung;
     }
 
-    /** Der Name, wenn der Katalog schon da ist — sonst null. Wartet nie. */
+    /** Der Name, wenn der Katalog oder die leichte Namensliste ihn schon hat — sonst null. Wartet nie. */
     static gemerkterName(kennung) {
-        return Genesis9kleidung._namen ? (Genesis9kleidung._namen[kennung] || kennung) : null;
+        return Genesis9kleidung._namen ? (Genesis9kleidung._namen[kennung] || kennung) : Genesis9garderobenamen.gemerkt(kennung);
     }
 
     /**

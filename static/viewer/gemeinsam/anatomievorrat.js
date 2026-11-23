@@ -3,6 +3,7 @@ import { Anatomietextur } from './anatomietextur.js';
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
 import { Genesis9vorrat } from './genesis9vorrat.js';
+import { Pufferabruf } from './pufferabruf.js';
 
 /**
  * Anatomievorrat — die gerechneten Karten des Anatomie-Stücks (`Anatomiebacken`) dauerhaft auf dem Server (19.10.2026, `core/dienste/g9anatomiekarten.py`).
@@ -70,7 +71,7 @@ export class Anatomievorrat {
             const karte = async (art, vorlage) => {
                 if (!vorlage || !meta.arten?.includes(art)) return null;
                 const blob = await (await fetch(`${Anatomievorrat.ADRESSE}${schluessel}/${art}.png`)).blob();
-                const bild = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+                const bild = await Pufferabruf.bild(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });     // im Worker (23.11.2026, `Pufferabruf.bild`)
                 return Anatomietextur.ausBild(vorlage, bild, breite, hoehe);
             };
             const [map, normalMap, roughnessMap] = await Promise.all([karte('farbe', vorlagen.farbe), karte('normal', vorlagen.normal), karte('rauheit', vorlagen.rauheit)]);

@@ -50,7 +50,7 @@ MESHGENESIS = [
     path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/stoff/', Meshgenesisteststoffendpunkt.stoff, name='meshgenesis_testkleidstoff'),
     # Haar und Bart in Bewegung (20.11.2026, Schritt „haar“, `Meshgenesistesthaar`)
     path('api/meshgenesis/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/haar/', Meshgenesisteststoffendpunkt.haar, name='meshgenesis_testkleidhaar'),
-    path('api/meshgenesis/test/<str:kennung>/modell/<str:geschlecht>/', Meshgenesistestkleiderendpunkte.modell, name='meshgenesis_testmodell'),
+    # „Übernehmen und als Modell speichern“: seit 23.11.2026 nur noch über die Exportleiste (`/api/exportleiste/meshgenesistest/<k>/modell/`, Edgar: „eine einzige Speicherart!“)
     # 22.10.2026: Testfälle der Kleider-KI (FEHLER von Prüfungen je Prio) — Testseite und Jobseite des Trainingsjobs (`Meshgenesistestfaelle`)
     path('api/meshgenesis/test/<str:kennung>/testfaelle/<str:geschlecht>/', Meshgenesistestfaelleendpunkte.test, name='meshgenesis_testfaelle'),
     # „Haut angleichen“ auf der Testseite (06.11.2026), dieselben Endpunkte wie am Job

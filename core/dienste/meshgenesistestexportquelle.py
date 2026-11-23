@@ -50,12 +50,26 @@ class Meshgenesistestexportquelle(Exportleistequelle):
     def arbeitsordner(self):
         return self.ordner / self.ORDNER
 
+    def _info(self):
+        try:
+            return json.loads((self.ordner / 'test.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return {}
+
+    def modellbau(self):
+        """Die Figur des Tests mit der Kleiderwahl der Karte „Kleider und Bestandteile“ (`Meshgenesistestmodell`) — auf der Testseite und in der Karte „Genesis-Ergebnis“ von Foto-Genesis."""
+        from .meshgenesistestmodell import Meshgenesistestmodell
+        return Meshgenesistestmodell
+
+    def modell_geschlecht(self):
+        return Meshgenesistest.geschlecht(self.ordner, self._info())
+
+    def modellname(self):
+        return '%s Mesh-Genesis' % self.name()          # wie bis 23.11.2026 die Testseite (`Meshgenesistestseite`)
+
     def kollision(self):
         """Kapseln des Kostüm-Wegs (`Meshgenesistest.kapseln`, dieselben wie die Seite) und die Kinematik der Figur, in deren Ruhe sie stehen (`Meshgenesistest.form`) — oder None."""
-        try:
-            info = json.loads((self.ordner / 'test.json').read_text(encoding='utf-8'))
-        except (OSError, ValueError):
-            info = {}
+        info = self._info()
         g = Meshgenesistest.geschlecht(self.ordner, info)
         kapseln, form = Meshgenesistest.kapseln(self.ordner, g), Meshgenesistest.form(self.ordner, info, g)
         if not kapseln or not form:

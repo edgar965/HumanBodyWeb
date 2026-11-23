@@ -15,12 +15,19 @@ export class Exportleisteregler {
         this.feld = leiste.wurzel.querySelector('#exportleiste-regler');
         this.meldung = leiste.wurzel.querySelector('#exportleiste-regler-meldung');
         this._gebaut = false;
+        this._gesperrt = false;
+        /** Behälter einer zugeklappten Gruppe → {katalog, werte}, bis sie das erste Mal aufgeht */
+        this._offen = new Map();
         this._uhr = null;
         this.feld.addEventListener('change', () => this._bald(0));
         this.feld.addEventListener('input', e => { if (e.target.matches('input[type="text"], input[type="number"]')) this._bald(); });
     }
 
-    /** Einmal bauen — danach gehören die Felder dem Nutzer (ein Neubau je Takt nähme ihm die Eingabe weg). */
+    /**
+     * Einmal bauen — danach gehören die Felder dem Nutzer (ein Neubau je Takt nähme ihm die Eingabe weg). Die Felder einer Gruppe entstehen erst, wenn sie aufgeht (24.11.2026,
+     * Edgar „fixe“ — Block ohne Skript beim Laden der Foto-Genesis-Testseite): Chrome-Spur über ETW, iphone_mit_lidar_dycheck_space_out — 240,6 ms tastete die Erweiterung
+     * „iCloud-Passwörter“ (Apples Formularerkennung, Metadaten je Eingabefeld) die Seite ab, 426 der 495 Felder standen in den zugeklappten Gruppen hier.
+     */
     zeigen(z) {
         if (this._gebaut || !z.katalog) return;
         for (const [gruppe, katalog] of Object.entries(z.katalog)) {
@@ -33,19 +40,33 @@ export class Exportleisteregler {
             behaelter.dataset.gruppe = gruppe;
             klappe.append(titel, behaelter);
             this.feld.appendChild(klappe);
-            // Hover-Hilfe und Wertebereich je Regler (19.11.2026, Edgar: „bei dem Render fenster mach eine Hilfe (Hover) und range … für jede einstellung“)
-            Meshoptionenformular.bauen(behaelter, katalog, (z.optionen || {})[gruppe] || {}, { hilfe: true });
+            this._offen.set(behaelter, { katalog, werte: (z.optionen || {})[gruppe] || {} });
+            klappe.addEventListener('toggle', () => { if (klappe.open) this._bauen(behaelter); });
         }
         this._gebaut = true;
     }
 
+    _bauen(behaelter) {
+        const offen = this._offen.get(behaelter);
+        if (!offen) return;
+        this._offen.delete(behaelter);
+        // Hover-Hilfe und Wertebereich je Regler (19.11.2026, Edgar: „bei dem Render fenster mach eine Hilfe (Hover) und range … für jede einstellung“)
+        Meshoptionenformular.bauen(behaelter, offen.katalog, offen.werte, { hilfe: true });
+        if (this._gesperrt) this.sperren(true);
+    }
+
     sperren(gesperrt) {
+        this._gesperrt = gesperrt;
         for (const eingabe of this.feld.querySelectorAll('input, select, textarea')) eingabe.disabled = gesperrt;
     }
 
+    /** Die Werte aller Gruppen; eine noch zugeklappte wird dafür gebaut — gelesen wird wie bisher aus den Feldern (Vorgaben und Umrechnung des Formulars). */
     optionen() {
         const aus = {};
-        for (const behaelter of this.feld.querySelectorAll('[data-gruppe]')) aus[behaelter.dataset.gruppe] = Meshoptionenformular.lesen(behaelter);
+        for (const behaelter of this.feld.querySelectorAll('[data-gruppe]')) {
+            this._bauen(behaelter);
+            aus[behaelter.dataset.gruppe] = Meshoptionenformular.lesen(behaelter);
+        }
         return aus;
     }
 

@@ -36,7 +36,8 @@ export class Kleidersichtbarkeit {
             if (netz) netz.visible = Kleidersichtbarkeit.istKoerperteil(netz) ? !netz.userData.ersatzGewichen : !!an;
         }
         // Eigene Stücke (Schale, Kragen, Rock; `userData.eigenkleid`, Stufe K5, 25.10.2026) stehen nicht in `clothMeshes`, sondern neben dem Körper
-        inst?.bodyMesh?.parent?.traverse((netz) => { if (netz.userData?.eigenkleid) netz.visible = !!an; });
+        // ebenso Haar und Bart der Haar-Engine eines gespeicherten Modells (`userData.haarnetz`, `Genesis9haarnetze`, 23.11.2026)
+        inst?.bodyMesh?.parent?.traverse((netz) => { if (netz.userData?.eigenkleid || netz.userData?.haarnetz) netz.visible = !!an; });
     }
 
     /**

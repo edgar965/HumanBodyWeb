@@ -18,6 +18,7 @@ class Command(BaseCommand):
         parser.add_argument('geschlecht', choices=('weiblich', 'maennlich'))
         parser.add_argument('name', help='Name des Modells')
         parser.add_argument('--ziel', default=None, help='Ordner für das Modell (Vorgabe: die Modelle der Szene)')
+        parser.add_argument('--methoden', default='', help='Methoden der Kleider, mit Komma: bibliothek, drapieren, eigen, passend (Vorgabe: bibliothek; `Meshgenesistestkleidmethoden`)')
 
     def handle(self, *args, **options):
         from core.dienste.meshgenesistestmodell import Meshgenesistestmodell
@@ -25,5 +26,5 @@ class Command(BaseCommand):
 
         if Meshgenesistestkleider.ordner(options['kennung'], options['geschlecht']) is None:
             raise CommandError('Kein Test %s' % options['kennung'])
-        name = Meshgenesistestmodell.ausfuehren(options['kennung'], options['geschlecht'], options['name'], options.get('ziel'))
+        name = Meshgenesistestmodell.ausfuehren(options['kennung'], options['geschlecht'], options['name'], options.get('ziel'), options.get('methoden'))
         self.stdout.write('Modell gespeichert: %s' % name)

@@ -10,6 +10,7 @@ import { Meshgenesishaeutung } from './meshgenesishaeutung.js';
 import { Meshgenesiskartenhaut } from './meshgenesiskartenhaut.js';
 import { Meshgenesistestnetzbau } from './meshgenesistestnetzbau.js';
 import { Meshfighautstueck } from '../meshfigur/meshfighautstueck.js';
+import { Texturweg } from '../gemeinsam/texturweg.js';
 
 export class Meshgenesiskikleiderfeld {
     // z (12.11.2026, „Genesis zuerst“): Stück der Garderobe, Server `Meshgenesistestkikleider`; e (20.11.2026): Methode „Eigen“, an das Netzstück gepasst;
@@ -70,10 +71,15 @@ export class Meshgenesiskikleiderfeld {
             }
         };
         const netze = await Promise.all(abrufe.map((abruf, i) => (spaeter[i] ? null : abruf)));
-        for (const i of wahl.keys()) if (!spaeter[i]) einbauen(i, netze[i]);
+        // je Stück eine Aufgabe (23.11.2026, Edgar: „löse das“): Oberteil, Hose und Schuhe zusammen hielten ein Bild 40–67 ms an (CPU-Häutung je Stück)
+        for (const i of wahl.keys()) if (!spaeter[i] && einbauen(i, netze[i])) await Texturweg.naechsteAufgabe();
         if (spaeter.some(Boolean)) {
+            // in einer eigenen Aufgabe: liegt das Stück schon da, baute es sonst im selben Bild wie die Figur (Haar 130 ms + Hülle 81 ms, 23.11.2026)
             ergebnis.nachzug = Promise.all(abrufe.map(async (abruf, i) => {
-                if (spaeter[i] && einbauen(i, await abruf)) ki.nachzug(ergebnis);
+                if (!spaeter[i]) return;
+                const netz = await abruf;
+                await Texturweg.naechsteAufgabe();
+                if (einbauen(i, netz)) ki.nachzug(ergebnis);
             }));
         } else if (!gruppe.children.length) return null;
         gruppe.userData.meshgenesisFremd = true;          // das Feld gibt die Gruppe beim Leeren nicht frei

@@ -45,3 +45,18 @@ class G9reglerapi:
             'brauenstile': G9brauen.stile(),
             'brauenfarben': G9brauen.farben_je_art(),
         })
+
+    @staticmethod
+    @require_GET
+    def mblab_vorlagen(request):
+        u"""MB-Labs Körpertypen und Phänotypen als `hb:`-Stellungen für die Auswahl „Preset“ im Abschnitt HumanBody (23.11.2026). Bis dahin standen sie als 112 Einträge
+        im Katalog „Charakter hinzufügen“ (`G9mblabvorlagen`, seit 23.11.2026 dort entfernt, Edgar: „diese MBLab kann man doch aus den Haupttypen per Toolbar auch
+        erzeugen“) — jetzt setzt ein Klick wie bei der HumanBody-Figur nur die `hb:`-Regler der Vorlage, die Grundfigur bleibt. Eigener Abruf erst bei Bedarf: der
+        Reglerplan jeder Ladung bleibt so klein wie vorher."""
+        from Genesis9.mblabvorlagen import G9mblabvorlagen
+        aus = []
+        for e in G9mblabvorlagen.eintraege():
+            gruppe, _, titel = str(e['anzeige']).partition(u' · ')
+            aus.append({'name': e['name'], 'gruppe': gruppe.replace(u'MB-Lab ', u'', 1), 'titel': titel or e['anzeige'], 'geschlecht': e['geschlecht'],
+                        'regler': {k: v for k, v in e['regler'].items() if k.startswith('hb:')}})
+        return JsonResponse({'vorlagen': aus})

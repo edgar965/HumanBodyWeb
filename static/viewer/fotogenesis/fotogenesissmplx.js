@@ -9,7 +9,6 @@
  * Seit 04.11.2026 (Edgar: „pshuman als zusätzliches Feld / View“) zeichnet dieselbe Klasse mit dem Schlüssel 'pshuman' auch PSHumans Endnetz (`daten.pshuman`, Felder
  * `[data-pshuman]`, Template `_fotogenesis_pshumanfeld.html`) — gleiche Kamera, gleiche Kopplung.
  */
-import * as THREE from 'three';
 import { Fotogenesisansicht } from './fotogenesisansicht.js';
 import { Fotogenesiskamera } from './fotogenesiskamera.js';
 import { Fotogenesisnetz } from './fotogenesisnetz.js';
@@ -47,16 +46,8 @@ export class Fotogenesissmplx {
         if (neuStellen) this.kameras();
     }
 
-    kameras(versuch = 0) {
-        const s = this.seite;
-        if (s.winkel === null) return;
-        const eins = new THREE.Quaternion();
-        let offen = false;
-        for (const a of this.felder) offen = !Fotogenesiskamera.feldStellen(a, s.winkel, eins, s._rand(a), s.kopf) || offen;
-        // ein Feld zeichnet erst, wenn es im Fenster steht — bis dahin ist seine Hülle leer: nachfassen
-        if (offen && versuch < 40) {
-            clearTimeout(this._uhr);
-            this._uhr = setTimeout(() => this.kameras(versuch + 1), 250);
-        }
+    /** Ein Feld zeichnet erst, wenn es im Fenster steht — bis dahin ist seine Hülle leer: nachfassen (`Fotogenesiskamera.felderStellen`). */
+    kameras() {
+        Fotogenesiskamera.felderStellen(this, this.seite, this.felder);
     }
 }

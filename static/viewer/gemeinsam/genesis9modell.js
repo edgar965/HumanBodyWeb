@@ -10,8 +10,9 @@ import { Genesis9hautebenen } from './genesis9hautebenen.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
 // Nebenwirkung des Imports: die Hautverdeckung hoert auf Stueck- und Skelettereignis —
 // damit bekommt JEDE Seite, die eine Genesis-9-Figur baut (Szene, Studio, Theatre,
-// Ergebnisseite), die Maske unter der Kleidung (21.09.2026, Konzept Fitting, Schicht 1).
+// Ergebnisseite), die Maske unter der Kleidung (21.09.2026, Konzept Fitting, Schicht 1); ebenso Haar und Bart der Haar-Engine eines gespeicherten Modells (23.11.2026).
 import './hautverdeckung.js';
+import './genesis9haarnetze.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9fototextur } from './genesis9fototextur.js';
 import { Genesis9vorgabe } from './genesis9vorgabe.js';
@@ -113,9 +114,8 @@ export class Genesis9Modell extends Modell {
         this.gcBereit = (daten.garmentcode || []).length
             ? new Promise(loesen => { this._gcFreigeben = loesen; })
             : null;
-        /** Fotokacheln eines gespeicherten Modells (`{1001: Adresse}`, `Genesis9fototextur`) und
-         *  woher es stammt (Auftrag) — beides geht mit „Modell speichern" wieder in die Datei. */
-        this.fototextur = { ...(daten.fototextur || {}) }; this.herkunft = daten.herkunft || null;
+        /** Fotokacheln (`{1001: Adresse}`, `Genesis9fototextur`), Herkunft (Auftrag) und Haar/Bart der Haar-Engine (`Genesis9haarnetze`) eines gespeicherten Modells — gehen mit „Modell speichern" wieder in die Datei. */
+        this.fototextur = { ...(daten.fototextur || {}) }; this.herkunft = daten.herkunft || null; this.haarnetze = daten.haarnetze || null;
         /** Die Anhänge: Schlüssel → Netz. */
         this.anhangNetze = {};
         /** Details des Reiters „Modell" (`Detailbedienung`) — bisher nur die Augentextur

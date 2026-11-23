@@ -7,7 +7,7 @@ Edgar, 17.10.2026: „mach alles was offen ist" (Tabelle 8 in `genesis9-alter.md
 2. Körpertypen und Phänotypen werden Katalogeinträge mit Grundfigur (Feminine bzw. Masculine = 1) und Standardhaut; die Anime-Basen (`an01`, `an02`) fehlen.
 3. Die Namen sind eindeutig und tragen Art, Geschlecht und Datei.
 4. Ohne den Ordner `tools/MB-Lab/data` gibt es keine Einträge, keinen Fehler.
-5. Der Katalog nimmt sie auf (`G9charaktere.liste`).
+5. Der Katalog nimmt sie seit 23.11.2026 NICHT mehr auf (`G9charaktere.liste`, Edgar: „… dann entferne sie“).
 
 Sabotage-Gegenprobe (nicht gefahren): in `regler` das `2.0 *` streichen → Fall 1 rot; die Anime-Prüfung in `_phaenotypen` entfernen → Fall 2 rot.
 """
@@ -91,7 +91,8 @@ class KatalogTest(SimpleTestCase):
             finally:
                 G9mblabvorlagen.vergessen()
 
-    def test_5_der_katalog_nimmt_sie_auf(self):
+    def test_5_der_katalog_nimmt_sie_nicht_auf(self):
+        # Seit 23.11.2026 (Edgar: „… dann entferne sie“) stehen die Vorlagen nicht mehr im Katalog; sie bleiben nur Würfelquelle der Formvarianten.
         probe = {'name': 'mblab_typ_w_probe', 'anzeige': 'Probe', 'geschlecht': 'weiblich', 'regler': {'hb:Torso_Mass': 0.5}, 'haut': G9charaktere.HAUT_W}
         G9charaktere.vergessen()
         try:
@@ -100,6 +101,6 @@ class KatalogTest(SimpleTestCase):
                     mock.patch.object(G9charaktere, '_aus_presets', return_value=[]), \
                     mock.patch.object(G9charaktere, '_aus_reglern', return_value=[]), \
                     mock.patch.object(G9charaktere, '_brauen'):
-                self.assertIn('mblab_typ_w_probe', G9charaktere.namen())
+                self.assertNotIn('mblab_typ_w_probe', G9charaktere.namen())
         finally:
             G9charaktere.vergessen()

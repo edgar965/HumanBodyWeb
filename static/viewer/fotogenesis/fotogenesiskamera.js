@@ -7,6 +7,7 @@
  * (`Meshgenesisgenesisfigur` richtet sie auf das Rig der Probe aus) — `Fotogenesisgenesis.rahmen` misst die Drehung dazwischen an der wahren Figur. Ohne Wahrheit: keine Drehung.
  */
 import * as THREE from 'three';
+import { Dqhautproben } from '../gemeinsam/dqhautproben.js';
 
 export class Fotogenesiskamera {
     /** Höchstens so viele Punkte je Netz für die Hülle (wie `Modellansichten.PROBEN`): jeder Punkt wird gehäutet. */
@@ -32,8 +33,9 @@ export class Fotogenesiskamera {
             // Ein Rig (`nurAnsicht`, Knopf „Rig“) ist keine Figur — seine Kugeln sind Instanzen einer Einheitskugel um den Ursprung und blähten die Hülle sonst auf 1 m auf
             if (!o.isMesh || !lage || o.userData.nurAnsicht) return;
             const schritt = Math.max(1, Math.floor(lage.count / Fotogenesiskamera.PROBEN));
-            // Netze mit fester Haltung (Haar und Bart auf der Karte gehäutet, `Meshgenesiskartenhaut.proben`, 22.11.2026): dieselben Proben, einmal je Netz gerechnet
-            const proben = o.userData.huellproben?.(schritt);
+            // Netze mit fester Haltung (Haar und Bart auf der Karte gehäutet, `Meshgenesiskartenhaut.proben`, 22.11.2026): dieselben Proben, einmal je Netz gerechnet. Die Genesis-Figur
+            // (`Dqhaut`) in einem Durchgang statt `getVertexPosition` je Punkt, dieselben Zahlen (23.11.2026, `Dqhautproben`: 79–121 ms je Aufruf beim Laden)
+            const proben = o.userData.huellproben?.(schritt) ?? (Dqhautproben.gilt(o) ? Dqhautproben.proben(o, schritt) : null);
             if (proben) {
                 for (let i = 0; i < proben.length; i += 3) {
                     p.set(proben[i], proben[i + 1], proben[i + 2]).applyMatrix4(o.matrixWorld).applyQuaternion(umkehr);
@@ -88,5 +90,18 @@ export class Fotogenesiskamera {
         ansicht.steuerung.update();
         ansicht.zeichnen();
         return true;
+    }
+
+    /**
+     * Die Felder einer Zeile auf den Winkel der Seite stellen (`Fotogenesisgenesiszeile`, `Fotogenesismeshzeile`). Ein leeres Feld (die Figur lädt noch, das Feld
+     * steht noch nicht im Fenster) wird bis zu 40-mal alle 250 ms nachgefasst — NUR die leeren (23.11.2026, Edgar: „alle offene punkte weiter“): jeder Versuch
+     * stellte alle Felder neu, an der Genesis-Zeile 108 ms je Versuch (Hülle gehäutet), solange eine Figur lud — lange Bilder beim Laden. `halter` trägt die Uhr.
+     */
+    static felderStellen(halter, seite, felder, versuch = 0) {
+        if (seite.winkel === null) return;
+        const eins = new THREE.Quaternion();
+        const offen = felder.filter(a => !Fotogenesiskamera.feldStellen(a, seite.winkel, eins, seite._rand(a), seite.kopf));
+        clearTimeout(halter._uhr);
+        if (offen.length && versuch < 40) halter._uhr = setTimeout(() => Fotogenesiskamera.felderStellen(halter, seite, offen, versuch + 1), 250);
     }
 }

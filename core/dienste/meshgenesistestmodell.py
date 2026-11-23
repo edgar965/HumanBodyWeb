@@ -8,6 +8,12 @@ Edgar: „Button zum übernehmen von Option a oder b in das End-Modell, mit spei
     „aus“ nichts.
 Gerechnet wird in einem eigenen Prozess (`manage.py meshgenesis_testmodell`): ein Stück aus dem Netz kostet Minuten (`G9gcfigurbau`). Stand in `kleider_<g>/modell_stand.json`, Ausgabe in `modell.log`.
 Ein gleichnamiges Modell, das nicht aus DIESEM Test und Geschlecht stammt, wird nie überschrieben — der Name bekommt dann eine Nummer.
+
+Seit 23.11.2026 (Edgar: „beim Speichern sollen zumindest Haare, Bart, Haut mitgehen, Toggles welche Kleider (Bibliothek usw)“):
+  * die Figur ist die der Seite (`figur_der_seite`: Haut der KI, Gesicht aus dem Foto, Haut-Korrekturen, Anatomie-Stück) — bis dahin trug das Modell die Grundhaut;
+  * die Kleidung je angehakter Methode (`Meshgenesistestkleidmethoden`: Kleiderbibliothek, Drapieren, Eigen, Passend), Haar, Bart, Schuhe, Hut, Requisiten immer;
+  * Eigen (e) und Passend (p) sind Stücke der Garderobe wie a/h/z — bis dahin fielen sie still weg;
+  * Haar und Bart der Haar-Engine gehen als das Anzeigenetz der Seite mit (`Modellhaarnetze`, `figur.haarnetze`), nicht als das Bibliotheksstück, nach dem die Engine gewählt hat.
 """
 
 import json
@@ -34,8 +40,6 @@ class Meshgenesistestmodell:
     STAND = 'modell_stand.json'
     LOG = 'modell.log'
     HERKUNFT = 'meshgenesis test'
-    #: Datei, ohne die der Ordner keine Stücke hat (Foto-Genesis: `ki.json`, `Fotogenesismodell`)
-    STUECKE = 'stuecke.json'
 
     # Die Quelle (31.10.2026, `Fotogenesismodell` überschreibt diese drei): Ordner der Stücke und des Stands, Form der Figur, Liste der Stücke mit Wahl.
     @classmethod
@@ -51,9 +55,16 @@ class Meshgenesistestmodell:
         return Meshgenesistestkleider.liste(kennung, geschlecht)
 
     @classmethod
-    def kacheln(cls, kennung, geschlecht):
-        """Fotohaut `{kachel: Adresse}`, wenn die Liste keine „Haut b“ trägt — hier keine."""
-        return None
+    def figur_der_seite(cls, kennung, geschlecht, form):
+        """Die Figur, wie Testseite und Ergebniskarte sie zeigen (`Meshgenesistestgenesisfigur`, dieselbe Angabe wie `figur_genesis`)."""
+        from .meshgenesistestgenesisfigur import Meshgenesistestgenesisfigur
+        return Meshgenesistestgenesisfigur.fuer(kennung, geschlecht, (form.get('figur') or {}).get('regler') or {})
+
+    @classmethod
+    def methoden(cls, kennung, geschlecht):
+        """Die Methoden der Kleider, die es für dieses Modell gibt (Häkchen der Exportleiste) — `[{wert, text, anzahl}]`."""
+        from .meshgenesistestkleidmethoden import Meshgenesistestkleidmethoden
+        return Meshgenesistestkleidmethoden.angebot(cls.liste(kennung, geschlecht))
 
     @classmethod
     def stand(cls, kennung, geschlecht):
@@ -85,19 +96,31 @@ class Meshgenesistestmodell:
         return re.sub(r'[^\w\s\-]', '', str(wunsch or ''), flags=re.UNICODE).strip()[:80]
 
     @classmethod
-    def starten(cls, kennung, geschlecht, name):
-        """(Antwort, HTTP-Status) — startet den Prozess; 409, wenn für diesen Test und dieses Geschlecht schon einer läuft."""
+    def starten(cls, kennung, geschlecht, name, methoden=None):
+        """(Antwort, HTTP-Status) — startet den Prozess; 409, wenn für diesen Test und dieses Geschlecht schon einer läuft. `methoden`: die angehakten Methoden der Kleider."""
         from .auftragsarbeiter import Auftragsarbeiter
+        from .meshgenesistestkleidmethoden import Meshgenesistestkleidmethoden
+        try:
+            methoden = Meshgenesistestkleidmethoden.pruefen(methoden)
+        except ValueError as fehler:
+            return {'error': str(fehler)}, 400
         ordner = cls.ordner(kennung, geschlecht)
-        if ordner is None or not (ordner / cls.STUECKE).is_file():
-            return {'error': 'Für Test %s (%s) sind keine Kleider gerechnet' % (kennung, geschlecht)}, 404
+        if ordner is None:
+            return {'error': 'Test %s (%s) unbekannt' % (kennung, geschlecht)}, 404
+        # Gebraucht wird nur die Figur; die Stücke sind, was `liste` zeigt — auch nur die der KI (`ki.json`) oder keine (23.11.2026: bis dahin verlangte die Prüfung `stuecke.json`
+        # der Wege a/b, Edgar 1 mit den KI-Stücken k/g bekam „Für Test edgar_1_mesh_genesis_4 (maennlich) sind keine Kleider gerechnet“)
+        try:
+            cls.form(kennung, geschlecht)
+        except (OSError, ValueError):
+            return {'error': 'Für %s (%s) ist die Figur noch nicht gerechnet (form_%s/modell.json fehlt)' % (kennung, geschlecht, geschlecht)}, 404
+        ordner.mkdir(parents=True, exist_ok=True)
         name = cls.name_saeubern(name)
         if not name:
             return {'error': 'Name fehlt'}, 400
         if (cls.stand(kennung, geschlecht) or {}).get('status') == 'laeuft':
             return {'error': 'Die Übernahme läuft schon', 'stand': cls.stand(kennung, geschlecht)}, 409
-        cls._schreiben(ordner, status='laeuft', name=name, meldung='startet', gestartet=time.strftime('%Y-%m-%dT%H:%M:%S'), modell=None, fehler=None)
-        befehl = [sys.executable, str(Path(settings.BASE_DIR) / 'manage.py'), cls.BEFEHL, kennung, geschlecht, name]
+        cls._schreiben(ordner, status='laeuft', name=name, meldung='startet', gestartet=time.strftime('%Y-%m-%dT%H:%M:%S'), modell=None, fehler=None, methoden=list(methoden))
+        befehl = [sys.executable, str(Path(settings.BASE_DIR) / 'manage.py'), cls.BEFEHL, kennung, geschlecht, name, '--methoden', Meshgenesistestkleidmethoden.befehl(methoden)]
         with open(ordner / cls.LOG, 'ab') as protokoll:
             prozess = Auftragsarbeiter._popen(befehl, protokoll)
         stand = cls._schreiben(ordner, pid=prozess.pid)
@@ -122,9 +145,10 @@ class Meshgenesistestmodell:
         return name
 
     @classmethod
-    def modelldaten(cls, name, kennung, geschlecht, form, kleidung, fototextur=None):
+    def modelldaten(cls, name, kennung, geschlecht, form, kleidung, fototextur=None, seite=None):
         """Das Modell als Wörterbuch (ohne Platte) — `form` = `modell.json` der vorhergesagten Figur, `kleidung` = `{stück: {farbe, …}}`,
-        `fototextur` = `{kachel: Adresse}` bei „Haut b“ (die Kacheln des Mesh-3D-Laufs, wie ein Modell aus „Mesh to 3D“ sie trägt — `Meshfigurspeichern.modelldaten`)."""
+        `fototextur` = `{kachel: Adresse}` bei „Haut b“ (die Kacheln des Mesh-3D-Laufs, wie ein Modell aus „Mesh to 3D“ sie trägt — `Meshfigurspeichern.modelldaten`),
+        `seite` = die Figur der Seite (`figur_der_seite`, 23.11.2026): Grundfigur, Regler (mit der Mimik des Fotos), Anatomie-Stück, Brauen, Haut der KI, Haut-Korrekturen."""
         from .blendimportmodell import Blendimportmodell
         # 'regler' (12.11.2026): die Regler des Stücks (Weg z, „Genesis zuerst“: Passform aus der Messung am Netzstück, `Garderoberegler`), sonst leer
         eintraege = {k: {'variante': '', 'stil': '', 'stile': {}, 'regler': dict(w.get('regler') or {}), 'farbe': w.get('farbe'), 'gruppenfarben': {}, 'griff': Blendimportmodell.griff(k),
@@ -135,56 +159,90 @@ class Meshgenesistestmodell:
                'figur': {'figur': figur.get('figur') or 'basis', 'regler': dict(figur.get('regler') or {}), 'haut': '', 'augen': '01', 'brauen': '', 'brauenstil': '', 'praesets': {},
                          'pose': '', 'ausdruck': '', 'kleidung': eintraege,
                          'herkunft': {'art': cls.HERKUNFT, 'test': kennung, 'geschlecht': geschlecht, 'form': form.get('quelle')}}}
+        if seite:
+            f = aus['figur']
+            f['figur'] = seite.get('figur') or f['figur']
+            f['regler'] = dict(seite.get('regler') or f['regler'])
+            f['kleidung'] = dict(seite.get('kleidung') or {}, **eintraege)          # das Anatomie-Stück der Seite, darüber die Kleidung
+            for feld in ('brauen', 'brauenstil'):
+                if seite.get(feld):
+                    f[feld] = seite[feld]
+            if seite.get('hautausgleich'):
+                f['hautausgleich'] = dict(seite['hautausgleich'])
+            if seite.get('fototextur'):
+                f['fototextur'] = dict(seite['fototextur'])
         if fototextur:
-            aus['figur']['fototextur'] = dict(fototextur)
+            # „Haut b“ (Kacheln des Mesh-3D-Laufs) ersetzt die Kacheln der Haut; das Augenbild des Fotos bleibt
+            augen = (aus['figur'].get('fototextur') or {}).get('augen')
+            aus['figur']['fototextur'] = dict(fototextur, **({'augen': augen} if augen and 'augen' not in fototextur else {}))
         return aus
 
+    #: Meldung je Weg, während das Modell entsteht (Methodennamen wie auf der Seite, Edgar 21.11.2026)
+    WEGTEXTE = {'a': 'Katalogstück', 'b': 'Stück aus dem Netz', 'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt', 'f': 'Drapieren', 'g': 'KI: Schicht',
+                'h': 'Frisur der Kleiderbibliothek', 'z': 'Kleiderbibliothek', 'e': 'Eigen', 'p': 'Passend'}
+    #: Wege, deren Stück schon in der Garderobe liegt (mit Kennung): a Katalog, h Frisur (20.10.2026), z Kleiderbibliothek (12.11.2026, Passform in `regler_stueck`),
+    #: e Eigen (eigenes Stück der Garderobe, `meshgenesis_eigen_lauf.py`), p Passend (Stück der Bibliothek mit Passform-Morph) — e und p seit 23.11.2026
+    GARDEROBE = ('a', 'h', 'z', 'e', 'p')
+
     @classmethod
-    def ausfuehren(cls, kennung, geschlecht, wunsch, ziel_ordner=None):
-        """Im Arbeitsprozess: Stücke sammeln (b → eigene Stücke), Modell schreiben. `ziel_ordner` nur für Probeläufe (sonst `HUMANBODY_MODELS_DIR`). Gibt den Namen."""
+    def _stueck(cls, ordner, st, wahl, form, name, kleidung, bericht, haarnetze):
+        """Ein Stück der Zeile `st` auf dem Weg `wahl` ins Modell (`kleidung`, `haarnetze`, `bericht`)."""
         from .meshgenesisrig import Meshgenesisrig
         from .meshgenesistesteigenstueck import Meshgenesistesteigenstueck
+        from .modellhaarnetze import Modellhaarnetze
+        cls._schreiben(ordner, meldung='%s: %s' % (st['name'], cls.WEGTEXTE.get(wahl, wahl)))
+        netz = Modellhaarnetze.stueck(ordner, st, wahl) if wahl in cls.GARDEROBE else None
+        if netz is not None:
+            # Haar und Bart der Haar-Engine: das Anzeigenetz der Seite (23.11.2026) — die Kennung wäre das Bibliotheksstück, nach dem die Engine gewählt hat
+            haarnetze.append(netz)
+            bericht.append({'id': st['id'], 'wahl': wahl, 'haarnetz': netz['quelle']})
+        elif wahl in cls.GARDEROBE:
+            kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe'), 'regler': st[wahl].get('regler_stueck') or {}}
+            bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': st[wahl]['kennung']})
+        elif wahl in Meshgenesistestkleidspeichern.EIGENE:
+            # b: Objekt des Mesh-3D-Laufs; k, s, f, g (KI): geschnitten, GarmentCode-Schnitt, Drapieren, Schicht — alle liegen als Anzeigenetz auf der Figur und werden eigene
+            # Genesis-Stücke (`Meshgenesistesteigenstueck` liest den Übertrag unter `b`). f und g fehlten hier bis 22.10.2026: Stücke aus dem Schichtkopf kamen nie ins Modell.
+            eigen = Meshgenesistesteigenstueck(ordner / wahl / st['id'], dict(st, b=st[wahl]), form['figur']['regler'], name, Meshgenesisrig.namen()).holen()
+            kleidung[eigen['stueck']] = {'farbe': None}
+            # Name und Kategorie in der Garderobe, wie in der Karte gewählt (`Meshgenesistestkleidspeichern`)
+            from Genesis9.garderobe import G9garderobe
+            sp = st.get('speichern') or {}
+            garderobe = Meshgenesistestkleidspeichern.anwenden(eigen['stueck'], {'name': sp.get('name'), 'kategorie': sp.get('kategorie')}, G9garderobe.eintrag(eigen['stueck']))
+            bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': eigen['stueck'], 'angezogen': eigen.get('angezogen'), 'gemerkt': bool(eigen.get('gemerkt')), 'garderobe': garderobe})
+
+    @classmethod
+    def ausfuehren(cls, kennung, geschlecht, wunsch, ziel_ordner=None, methoden=None):
+        """Im Arbeitsprozess: Stücke sammeln (b → eigene Stücke), Modell schreiben. `ziel_ordner` nur für Probeläufe (sonst `HUMANBODY_MODELS_DIR`). Gibt den Namen.
+        `methoden`: angehakte Methoden der Kleider (`Meshgenesistestkleidmethoden`, Vorgabe Kleiderbibliothek)."""
+        from .meshgenesistestkleidmethoden import Meshgenesistestkleidmethoden
         ordner = cls.ordner(kennung, geschlecht)
         try:
+            methoden = Meshgenesistestkleidmethoden.pruefen(methoden)
             form = cls.form(kennung, geschlecht)
             name = cls.freier_name(wunsch, kennung, geschlecht, ziel_ordner)
-            liste = cls.liste(kennung, geschlecht)
-            kleidung, bericht, fototextur = {}, [], None
+            liste = cls.liste(kennung, geschlecht) or {'stuecke': []}          # ohne Stückliste: die Figur ohne Kleider
+            kleidung, bericht, fototextur, haarnetze = {}, [], None, []
             for st in liste['stuecke']:
-                wahl = st['wahl']
                 if st.get('art') == 'haut':
                     # Die Haut ist kein Kleidungsstück: a = Haut der Figur (nichts zu tun), b = Kacheln des Mesh-3D-Laufs als Fotohaut (`meshgenesis_kleider_haut.py`).
-                    if wahl == 'b':
+                    if st['wahl'] == 'b':
                         fototextur = st['b'].get('adressen') or None
-                    bericht.append({'id': 'haut', 'wahl': wahl, 'kacheln': sorted(fototextur or {})})
+                    bericht.append({'id': 'haut', 'wahl': st['wahl'], 'kacheln': sorted(fototextur or {})})
                     continue
-                cls._schreiben(ordner, meldung='%s: %s' % (st['name'], {'a': 'Katalogstück', 'b': 'Stück aus dem Netz', 'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt',
-                                                                         'f': 'KI: Schnitt aus der Fläche', 'g': 'KI: Schicht', 'h': 'KI: Frisur der Garderobe',
-                                                                         'z': 'Garderobe (Genesis zuerst)', 'aus': 'aus'}.get(wahl, wahl)))
-                if wahl in ('a', 'h', 'z'):
-                    # a: Katalogstück; h (KI, 20.10.2026): die Frisur der Garderobe nach den Haarmaßen der KI; z (12.11.2026, „Genesis zuerst“): Stück der Garderobe mit seinen
-                    # Passform-Reglern (`regler_stueck`) — alle drei ein Stück der Garderobe mit Umfärbung
-                    kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe'), 'regler': st[wahl].get('regler_stueck') or {}}
-                    bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': st[wahl]['kennung']})
-                elif wahl in Meshgenesistestkleidspeichern.EIGENE:
-                    # b: Objekt des Mesh-3D-Laufs; k, s, f, g (KI): geschnitten, GarmentCode-Schnitt, Schnitt aus der Fläche, Schicht — alle liegen als Anzeigenetz auf der Figur und werden eigene
-                    # Genesis-Stücke (`Meshgenesistesteigenstueck` liest den Übertrag unter `b`). f und g fehlten hier bis 22.10.2026: Stücke aus dem Schichtkopf kamen nie ins Modell.
-                    eigen = Meshgenesistesteigenstueck(ordner / wahl / st['id'], dict(st, b=st[wahl]), form['figur']['regler'], name, Meshgenesisrig.namen()).holen()
-                    kleidung[eigen['stueck']] = {'farbe': None}
-                    # Name und Kategorie in der Garderobe, wie in der Karte gewählt (`Meshgenesistestkleidspeichern`)
-                    from Genesis9.garderobe import G9garderobe
-                    sp = st.get('speichern') or {}
-                    garderobe = Meshgenesistestkleidspeichern.anwenden(eigen['stueck'], {'name': sp.get('name'), 'kategorie': sp.get('kategorie')}, G9garderobe.eintrag(eigen['stueck']))
-                    bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': eigen['stueck'], 'angezogen': eigen.get('angezogen'), 'gemerkt': bool(eigen.get('gemerkt')), 'garderobe': garderobe})
-            fototextur = fototextur or cls.kacheln(kennung, geschlecht)
-            daten = cls.modelldaten(name, kennung, geschlecht, form, kleidung, fototextur)
-            if fototextur and ziel_ordner is None:
-                # Die Kacheln neben das Modell (überleben das Löschen des Mesh-3D-Laufs) — wie jedes Speichern mit Fotohaut. Ein Probelauf mit `ziel_ordner` behält die Adressen des Laufs.
+                for wahl in Meshgenesistestkleidmethoden.wege(st, methoden):
+                    cls._stueck(ordner, st, wahl, form, name, kleidung, bericht, haarnetze)
+            daten = cls.modelldaten(name, kennung, geschlecht, form, kleidung, fototextur, seite=cls.figur_der_seite(kennung, geschlecht, form))
+            if haarnetze:
+                from .modellhaarnetze import Modellhaarnetze
+                cls._schreiben(ordner, meldung='Haar und Bart der Haar-Engine neben das Modell kopieren')
+                daten['figur']['haarnetze'] = Modellhaarnetze.feld(haarnetze, ordner, geschlecht, sichern=ziel_ordner is None)
+            if daten['figur'].get('fototextur') and ziel_ordner is None:
+                # Die Kacheln und das Augenbild neben das Modell (überleben das Löschen des Tests) — wie jedes Speichern mit Fotohaut. Ein Probelauf mit `ziel_ordner` behält die Adressen.
                 from .modelltexturen import Modelltexturen
                 daten['figur'] = Modelltexturen.sichern(name, daten['figur'])
             ziel = Path(ziel_ordner or settings.HUMANBODY_MODELS_DIR) / (name + '.json')
             ziel.write_text(json.dumps(daten, ensure_ascii=False, indent=2), encoding='utf-8')
-            cls._schreiben(ordner, status='fertig', modell=name, meldung='Modell „%s“ gespeichert (%d Stücke)' % (name, len(kleidung)), stuecke=bericht, datei=str(ziel))
+            cls._schreiben(ordner, status='fertig', modell=name, meldung='Modell „%s“ gespeichert (%d Stücke)' % (name, len(kleidung) + len(haarnetze)), stuecke=bericht, datei=str(ziel))
             logger.info('%s %s (%s): Modell %s gespeichert, %s', cls.HERKUNFT, kennung, geschlecht, name, bericht)
             return name
         except Exception as fehler:

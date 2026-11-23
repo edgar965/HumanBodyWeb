@@ -18,4 +18,6 @@ EXPORTLEISTE = [
     path(ENDPUNKT + 'render/loeschen/', Exportleisteendpunkte.render_loeschen, name='exportleiste_render_loeschen'),
     path(ENDPUNKT + 'einstellungen/', Exportleisteendpunkte.einstellungen, name='exportleiste_einstellungen'),
     path(ENDPUNKT + 'datei/<str:name>', Exportleisteendpunkte.datei, name='exportleiste_datei'),
+    # „Als Modell speichern“ — der eine Weg für alle Seiten (23.11.2026, Edgar: „eine einzige Speicherart!“); ersetzt `…/meshgenesis/test/<k>/modell/<g>/` und `…/fotogenesis/<job>/figur/modell/`
+    path(ENDPUNKT + 'modell/', Exportleisteendpunkte.modell, name='exportleiste_modell'),
 ]

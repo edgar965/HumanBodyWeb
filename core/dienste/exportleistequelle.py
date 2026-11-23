@@ -77,6 +77,41 @@ class Exportleistequelle:
         from .exportleistebewegung import Exportleistebewegung
         return Exportleistebewegung.rechnen(bvh, stellung)
 
+    # „Als Modell speichern“ — EIN Weg für jede Exportleiste (23.11.2026, Edgar: „nutze gemeinsamen Code für alle, was soll das???“, „eine einzige Speicherart!“). Bis dahin band jede
+    # Seite den Knopf selbst (Mesh-Genesis-Test, Foto-Genesis, 2D3D Kleider: drei Klassen, drei Adressen); die Karte „Genesis-Ergebnis“ auf Foto-Genesis rief den Weg der Testseite mit einer
+    # eigenen Prüfung und scheiterte an Edgar 1. Jetzt: `POST|GET /api/exportleiste/<bereich>/<kennung>/modell/` → diese zwei Methoden; was ein Modell ist, sagt `modellbau()` des Bereichs.
+
+    def modellbau(self):
+        """Wer das Modell baut: eine Klasse mit `starten(kennung, geschlecht, name, methoden)`, `stand(kennung, geschlecht)` und gern `methoden(kennung, geschlecht)` (Häkchen der
+        Kleider; `Meshgenesistestmodell` und Ableitungen) — None: der Bereich speichert kein Modell."""
+        return None
+
+    def modell_geschlecht(self):
+        """Das Geschlecht der Figur für `modellbau()` — Vorgabe: keins."""
+        return None
+
+    def modellname(self):
+        """Vorgabe für das Feld „Modellname“."""
+        return self.name()
+
+    def modell_stand(self):
+        """`{status: nie|laeuft|fertig|fehler|kein, name, meldung, fehler, methoden}` — `kein`: dieser Bereich speichert kein Modell. `methoden` (23.11.2026): die Häkchen der Kleider
+        (`[{wert, text, anzahl}]`, `Meshgenesistestkleidmethoden.angebot`), nur wo der Bau sie kennt."""
+        bau = self.modellbau()
+        if bau is None:
+            return {'status': 'kein', 'meldung': 'Hier gibt es kein „Als Modell speichern“.'}
+        stand = dict(bau.stand(self.kennung, self.modell_geschlecht()) or {'status': 'nie'})
+        if hasattr(bau, 'methoden'):
+            stand['angebot'] = bau.methoden(self.kennung, self.modell_geschlecht())
+        return stand
+
+    def modell_speichern(self, name, methoden=None):
+        """(Antwort, HTTP-Status) — startet „Als Modell speichern“; die Antwort trägt `stand` wie `modell_stand`. `methoden`: die angehakten Methoden der Kleider."""
+        bau = self.modellbau()
+        if bau is None:
+            return {'error': 'Hier gibt es kein „Als Modell speichern“'}, 400
+        return bau.starten(self.kennung, self.modell_geschlecht(), name, methoden)
+
     def pfade(self, exportordner=None):
         """„Gespeichert unter“: `[{art, label, pfad, fehlt}]` (`Meshpfadliste`). Vorgabe: Exportordner und Arbeitsordner."""
         ziel = exportordner or self.exportordner()

@@ -95,6 +95,12 @@ export class Meshgenesiskartenhaut {
      * dann seine Dreiecke selbst, ohne Kopie (Zauberer: Haar 25 MB, Bart 17 MB). Gezeichnet wird er nur; Frisur und Bart kürzt keine Maske.
      */
     static index(netz, anzahl, gruppe) {
+        // die Läufe hat der Server schon gezählt (24.11.2026, `Meshgenesiskartenvorarbeit`: Haar 2,1 Mio. Punkte, die beiden Schleifen unten 11–15,5 ms im Hauptfaden)
+        const laeufe = netz.kopf.laeufe;
+        if (!netz.verborgen && Array.isArray(laeufe) && netz.kopf.laeufe_letzter === anzahl - 1) {
+            for (const [ab, bis, m] of laeufe) gruppe(ab * 3, (bis - ab) * 3, m);
+            return netz.dreiecke;
+        }
         const mat = netz.material, letzter = anzahl - 1;
         let sortiert = !netz.verborgen, vor = -1;
         for (let t = 0; sortiert && t < mat.length; t++) {
@@ -121,7 +127,8 @@ export class Meshgenesiskartenhaut {
         const k = netz.kopf.haut, v = netz.ruhe.length / 3, kn = netz.knochen, g = netz.gewicht;
         if (k === 4) {
             let genau = true;
-            for (let i = 0; genau && i < v; i++) genau = g[4 * i] + g[4 * i + 1] + g[4 * i + 2] + g[4 * i + 3] === 255;
+            // vom Server geprüft (24.11.2026, `Meshgenesiskartenvorarbeit`: Haar hier 10,7–36 ms im Hauptfaden)
+            if (netz.kopf.summe255 !== true) for (let i = 0; genau && i < v; i++) genau = g[4 * i] + g[4 * i + 1] + g[4 * i + 2] + g[4 * i + 3] === 255;
             if (genau) return { index: kn, gewicht: g };
         }
         const index = zahl + 1 <= 256 ? new Uint8Array(v * 4) : new Uint16Array(v * 4), gewicht = new Uint16Array(v * 4);
@@ -155,7 +162,13 @@ export class Meshgenesiskartenhaut {
      */
     static _huelle(mesh, netz, m) {
         const k = netz.kopf.haut, p = netz.ruhe, zahl = m.length / 12, kaesten = new Map(), q = new THREE.Vector3();
-        for (let i = 0; i < p.length / 3; i += Meshgenesiskartenhaut.PROBE) {
+        // die Kästen je Knochen hat der Server schon gerechnet, über dieselben Proben (24.11.2026, `Meshgenesiskartenvorarbeit`: Haar hier 15,8–18,4 ms im Hauptfaden); −1 = ohne Gewicht
+        const fertig = netz.kopf.huelle_probe === Meshgenesiskartenhaut.PROBE && Array.isArray(netz.kopf.huelle) ? netz.kopf.huelle : null;
+        for (const [j, ...w] of fertig ?? []) {
+            const b = new THREE.Box3(new THREE.Vector3(w[0], w[1], w[2]), new THREE.Vector3(w[3], w[4], w[5])), s = j < 0 ? zahl : j;
+            if (kaesten.has(s)) kaesten.get(s).union(b); else kaesten.set(s, b);
+        }
+        for (let i = 0; !fertig && i < p.length / 3; i += Meshgenesiskartenhaut.PROBE) {
             q.set(p[3 * i], p[3 * i + 1], p[3 * i + 2]);
             let gewichtet = false;
             for (let h = 0; h < k; h++) {

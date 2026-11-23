@@ -73,7 +73,7 @@ class G9figur:
             return JsonResponse({'figuren': [], 'vorhanden': False,
                                  'fehler': FEHLT})
         try:
-            # `quelle` (10.11.2026, Edgar: MB-Lab-Einträge in eine eingeklappte Gruppe): 'MB-Lab' für `G9mblabvorlagen`, der Dialog legt sie in den Bereich „MB-Lab“
+            # `quelle` (10.11.2026): Herkunft des Eintrags; die MB-Lab-Vorlagen (`quelle: 'MB-Lab'`) stehen seit 23.11.2026 nicht mehr im Katalog (Preset im Reglerabschnitt HumanBody)
             figuren = [{'name': e['name'], 'anzeige': e['anzeige'],
                         'geschlecht': e['geschlecht'],
                         'regler': dict(e['regler']),
@@ -113,9 +113,8 @@ class G9figur:
                             'teilmaterial': dict(eintrag.get('teilmaterial') or {}),
                             'hautebenen': dict(eintrag.get('hautebenen') or {}),
                             'groesse_halten': eintrag.get('groesse_halten'),   # „Größe halten“ (R8): {an, soll_m} oder None
-                            'brauenstil': eintrag.get('brauenstil') or '',
-                            'pose': eintrag.get('pose') or '',
-                            'ausdruck': eintrag.get('ausdruck') or '',
+                            'brauenstil': eintrag.get('brauenstil') or '', 'pose': eintrag.get('pose') or '', 'ausdruck': eintrag.get('ausdruck') or '',
+                            'hautausgleich': dict(eintrag.get('hautausgleich') or {}), 'haarnetze': eintrag.get('haarnetze'),   # 23.11.2026, siehe `_eintrag`
                             'fototextur': dict(eintrag.get('fototextur') or {}),
                             # Woher das Modell stammt (`{art: 'blend import', import: <Kennung>}`): der Dialog bietet dann „Import löschen".
                             'herkunft': dict(eintrag.get('herkunft') or {}),
@@ -154,9 +153,10 @@ class G9figur:
                 'hautebenen': figur.get('hautebenen') if isinstance(figur.get('hautebenen'), dict) else {},
                 # „Größe halten“ (R8, 25.10.2026, `genesis9groessehalten.js`): {an, soll_m} — nur mit der Figur gespeichert.
                 'groesse_halten': figur.get('groesse_halten') if isinstance(figur.get('groesse_halten'), dict) else None,
-                'brauenstil': figur.get('brauenstil') or '',
-                'pose': figur.get('pose') or '',
-                'ausdruck': figur.get('ausdruck') or '',
+                'brauenstil': figur.get('brauenstil') or '', 'pose': figur.get('pose') or '', 'ausdruck': figur.get('ausdruck') or '',
+                # Haut-Korrekturen (`Genesis9hautausgleich`) und Haar/Bart der Haar-Engine (`Modellhaarnetze`), 23.11.2026: Mesh-/Foto-Genesis speichern beide, ohne diese Zeile kamen sie nie an
+                'hautausgleich': figur.get('hautausgleich') if isinstance(figur.get('hautausgleich'), dict) else {},
+                'haarnetze': figur.get('haarnetze') if isinstance(figur.get('haarnetze'), dict) else None,
                 # Fotokacheln (27.09.2026, `Modelltexturen`): {kachel: Adresse}, im Browser die Albedo.
                 'fototextur': figur.get('fototextur') if isinstance(figur.get('fototextur'), dict) else {},
                 'bilder': grund.get('bilder') or {},

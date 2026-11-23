@@ -51,6 +51,18 @@ class Fotogenesisexportquelle(Exportleistequelle):
             return {}
         return {int(d.stem): str(d) for d in sorted((p / ('haut_%s' % g)).glob('10??.jpg')) if Fotogenesisfigur.KACHEL.match(d.name)}
 
+    def modellbau(self):
+        """Die Figur aus den Fotos mit ihren Stücken (`Fotogenesismodell`, abgeleitet von `Meshgenesistestmodell`)."""
+        from .fotogenesismodell import Fotogenesismodell
+        return Fotogenesismodell
+
+    def modell_geschlecht(self):
+        from .fotogenesismodell import Fotogenesismodell
+        return Fotogenesismodell.geschlecht(self.kennung)
+
+    def modellname(self):
+        return '%s Foto-Genesis' % self.name()
+
     def bvh_vorgabe(self):
         from .meshgenesisanimationswahl import Meshgenesisanimationswahl
         return Meshgenesisanimationswahl(self.job['ordner'], 'Foto-Genesis %s' % self.kennung).zustand().get('wahl') or ''

@@ -3,7 +3,7 @@
  * Edgar: „Nach dem Bauen müsste ich im Ergebnis View festlegen können, ob ich ein Kleidungsstück in der ersten Option oder zweiten Option haben möchte. Also Toggle für jedes Kleidungsstück
  * für beide Optionen und Button zum übernehmen von Option a oder b in das End-Modell, mit speichern des Modells“.
  * Je Stück drei Schaltknöpfe (a Katalog · b aus dem Netz · aus); „Alle: a / b“ stellt die Vorgabe und nimmt die eigenen Wahlen zurück. Die gewählten Stücke stehen im Feld „Ausgabe“ an der Figur,
- * gehäutet mit denselben Matrizen (`Meshgenesistestnetzbau`). „Übernehmen und speichern“ startet den Prozess auf dem Server und fragt alle 2 s nach seinem Stand.
+ * gehäutet mit denselben Matrizen (`Meshgenesistestnetzbau`). „Übernehmen und speichern“ macht die Exportleiste (`Exportleistemodell`, ein Weg für alle Seiten seit 23.11.2026).
  */
 import { Meshgenesisflaechennetz } from './meshgenesisflaechennetz.js';
 import { Meshgenesistestkleidname } from './meshgenesistestkleidname.js';
@@ -32,12 +32,9 @@ export class Meshgenesistestkleider {
         this.matrizen = null;
         this.tabelle = karte.querySelector('[data-kleider="tabelle"]');
         this.info = karte.querySelector('[data-kleider="info"]');
-        // „Modell speichern“ steht seit 31.10.2026 in der Exportleiste unter der Ausgabe (`_exportleiste.html`, Edgar: „in dem Bereich ‚Ganzer Körper‘, rechts unten“)
-        this.stand = document.getElementById('exportleiste-modell-meldung');
+        // „Modell speichern“ steht in der Exportleiste und gehört ihr (`Exportleistemodell`, 23.11.2026, Edgar: „eine einzige Speicherart!“); hier nur der Name als Vorgabe für die Stücknamen
         this.name = document.getElementById('exportleiste-modell-name');
-        this.knopf = document.getElementById('exportleiste-modell-speichern');
         karte.querySelectorAll('[data-kleider-alle]').forEach(k => k.addEventListener('click', () => this.alle(k.dataset.kleiderAlle)));
-        this.knopf?.addEventListener('click', () => this.speichern());
     }
 
     _adresse(teil = '') {
@@ -45,14 +42,13 @@ export class Meshgenesistestkleider {
     }
 
     /** Liste holen und zeigen; `matrizen` = Haltung der Figur (ohne: nur die Tabelle). */
-    async laden(geschlecht, matrizen, standardname) {
+    async laden(geschlecht, matrizen) {
         if (geschlecht !== this.geschlecht) {
             this.netze.clear();
             this.objekte.clear();
         }
         this.geschlecht = geschlecht;
         if (matrizen) this.matrizen = matrizen;
-        if (this.name && !this.name.value) this.name.value = standardname || '';
         try {
             const antwort = await fetch(this._adresse(`kleider/${geschlecht}/`));
             const daten = await antwort.json();
@@ -62,7 +58,6 @@ export class Meshgenesistestkleider {
             this.info.textContent = `Kleider nicht lesbar: ${fehler.message}`;
             return;
         }
-        this._standHolen();
         await this._objekteBauen();
     }
 
@@ -84,7 +79,6 @@ export class Meshgenesistestkleider {
             k.setAttribute('aria-pressed', String(an));
         });
         this.tabelle.replaceChildren(...daten.stuecke.map(st => this._zeile(st)));
-        if (this.knopf) this.knopf.disabled = !daten.stuecke.length;
     }
 
     _zelle(text, titel) {
@@ -247,35 +241,4 @@ export class Meshgenesistestkleider {
         return this.liste.stuecke.filter(st => st.art !== 'haut' && st.wahl !== 'aus').map(st => this.objekte.get(`${st.wahl}/${st.id}`)).filter(Boolean);
     }
 
-    async speichern() {
-        const name = (this.name?.value || '').trim();
-        if (!name) {
-            alert('Bitte einen Namen für das Modell eingeben.');
-            return;
-        }
-        this.knopf.disabled = true;
-        try {
-            await Serverabruf.senden(this._adresse(`modell/${this.geschlecht}/`), { name });
-        } catch (fehler) {
-            this.stand.textContent = `Nicht gestartet: ${fehler.message}`;
-            this.knopf.disabled = false;
-            return;
-        }
-        this._standHolen();
-    }
-
-    async _standHolen() {
-        clearTimeout(this._takt);
-        try {
-            const antwort = await fetch(this._adresse(`modell/${this.geschlecht}/`));
-            const s = await antwort.json();
-            const text = { nie: '', laeuft: `Übernahme läuft (${s.name}): ${s.meldung || ''}`, fertig: `${s.meldung} — unter „Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle“.`,
-                fehler: `Übernahme gescheitert: ${s.fehler || s.meldung}` }[s.status] ?? '';
-            this.stand.textContent = text;
-            if (this.knopf) this.knopf.disabled = s.status === 'laeuft' || !this.liste?.stuecke?.length;
-            if (s.status === 'laeuft') this._takt = setTimeout(() => this._standHolen(), 2000);
-        } catch (fehler) {
-            this.stand.textContent = `Stand nicht lesbar: ${fehler.message}`;
-        }
-    }
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Pufferabruf } from './pufferabruf.js';
 
 /**
  * Genesis9texturblock — ein Bild als S3TC-Block mit Mip-Stufen (Weg C, `Texturweg`, Server `G9texturblock`, 19.10.2026).
@@ -33,7 +34,7 @@ export class Genesis9texturblock {
             lage += bytes;
             return stufe;
         });
-        const bild = await createImageBitmap(vorschau, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
+        const bild = await Pufferabruf.bild(vorschau, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });     // im Worker (23.11.2026, `Pufferabruf.bild`)
         return { bild, stufen, format: kopf.format, breite: kopf.breite, hoehe: kopf.hoehe };
     }
 

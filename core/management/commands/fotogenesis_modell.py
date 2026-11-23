@@ -14,11 +14,12 @@ class Command(BaseCommand):
         parser.add_argument('geschlecht', choices=('weiblich', 'maennlich'))
         parser.add_argument('name', help='Name des Modells')
         parser.add_argument('--ziel', default=None, help='Ordner für das Modell (Vorgabe: die Modelle der Szene)')
+        parser.add_argument('--methoden', default='', help='Methoden der Kleider, mit Komma: bibliothek, drapieren, eigen, passend (Vorgabe: bibliothek; `Meshgenesistestkleidmethoden`)')
 
     def handle(self, *args, **options):
         from core.dienste.fotogenesismodell import Fotogenesismodell
 
         if Fotogenesismodell.ordner(options['job'], options['geschlecht']) is None:
             raise CommandError('Keine Figur für Job %s (%s)' % (options['job'], options['geschlecht']))
-        name = Fotogenesismodell.ausfuehren(options['job'], options['geschlecht'], options['name'], options.get('ziel'))
+        name = Fotogenesismodell.ausfuehren(options['job'], options['geschlecht'], options['name'], options.get('ziel'), options.get('methoden'))
         self.stdout.write('Modell gespeichert: %s' % name)

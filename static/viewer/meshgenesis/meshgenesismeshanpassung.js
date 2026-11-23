@@ -6,6 +6,7 @@
  * Daten `…/meshanpassung/` (Server `Meshgenesistestanpassung`, gerechnet von `meshgenesis/meshgenesis_meshanpassung.py`).
  */
 import * as THREE from 'three';
+import { Geometrieflink } from '../gemeinsam/geometrieflink.js';
 import { Genesis9texturen } from '../gemeinsam/genesis9texturen.js';
 import { Meshgenesisansicht } from './meshgenesisansicht.js';
 import { Meshgenesisansichtgedaechtnis } from './meshgenesisansichtgedaechtnis.js';
@@ -83,7 +84,7 @@ export class Meshgenesismeshanpassung {
         g.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
         if (farbe) g.setAttribute('color', new THREE.BufferAttribute(farbe, 3, true));
         g.setIndex(new THREE.BufferAttribute(dreiecke, 1));
-        g.computeVertexNormals();
+        Geometrieflink.normalen(g);            // dieselben Normalen wie `computeVertexNormals` (Einpassung 25.182 Punkte: 16–19 → 9,7 ms, 24.11.2026)
         g.userData.gemeinsam = true;
         return g;
     }

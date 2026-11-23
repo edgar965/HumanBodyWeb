@@ -55,14 +55,9 @@ class Auftragsfamilie:
     @staticmethod
     def modell(auftrag, speichern, rumpf, request, job_id):
         """{name} → die Figur als Genesis-Modell (`speichern.fuer(job).modell_speichern`)."""
-        job = get_object_or_404(auftrag, pk=job_id)
-        if job.laeuft or not job.stellung():
-            return JsonResponse({'error': 'Erst wenn die Figur fertig ist'}, status=409)
-        try:
-            name = speichern.fuer(job).modell_speichern(rumpf(request).get('name'))
-        except ValueError as fehler:
-            return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse({'ok': True, 'modell': name})
+        from ..dienste.auftragmodell import Auftragmodell
+        antwort, status = Auftragmodell.speichern(get_object_or_404(auftrag, pk=job_id), speichern, rumpf(request).get('name'))   # derselbe Code wie die Exportleiste (23.11.2026)
+        return JsonResponse(antwort, status=status)
 
     @staticmethod
     def iterationen_loeschen(auftrag, rumpf, loeschung, request, job_id):

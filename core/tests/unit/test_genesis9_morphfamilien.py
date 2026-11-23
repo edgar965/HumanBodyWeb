@@ -130,4 +130,4 @@ class FamilienBasisTest(SimpleTestCase):
             self.assertEqual([b['schluessel'] for b in bereiche], ['mh_makro', 'mh_gesicht'], 'Reihenfolge von BEREICHE, unbelegte fehlen')
             # Mit Herkunftskürzel (Edgar, 18.10.2026: „Makehuman ein MH_“); sortiert wird nach `reihe`, nicht nach dem Namen.
             self.assertEqual([r['anzeige'] for r in bereiche[1]['regler']], ['MH_Erster', 'MH_Zweiter'])
-            self.assertEqual({f.KUERZEL for f in (G9hbmorphe, G9mhmorphe, G9sxmorphe, G9umamorphe)}, {'HB_', 'MH_', 'SM_', 'UM_'})
+            self.assertEqual({f.KUERZEL for f in (G9hbmorphe, G9mhmorphe, G9sxmorphe, G9umamorphe)}, {'HB ', 'MH ', 'SMPL ', 'Uma '})          # seit 23.11.2026 (vorher HB_, MH_, SM_, UM_)

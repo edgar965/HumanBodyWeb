@@ -35,7 +35,9 @@ class Meshgenesistestendpunkte:
         if ordner is None:
             raise Http404('Kein Test %s' % kennung)
         # mit den Tripo-Jobs (Ordner mit `ziel/`): sonst fiel ihre Seite auf `anlage` zurück und zeigte die Kennung statt des Namens (27.10.2026)
-        info = next((t for t in Meshgenesistest.alle(mit_tripo=True) if t.get('kennung') == kennung), None) or Meshgenesistest.anlage(ordner)
+        # nur dieser Test, nicht alle 222 (23.11.2026: 0,76–1,05 s bis zum ersten Byte, `Meshgenesistestliste`)
+        from ..dienste.meshgenesistestliste import Meshgenesistestliste
+        info = Meshgenesistestliste.eintraege([kennung], mit_tripo=True).get(kennung) or Meshgenesistest.anlage(ordner)
         # Die Animation der Ausgabe baut eine Genesis-Figur (22.10.2026): Bilder wie auf der Jobseite (`Meshgenesistexturwahl`).
         from ..dienste.meshgenesistestwahl import Meshgenesistestwahl
         from ..dienste.meshgenesistexturwahl import Meshgenesistexturwahl

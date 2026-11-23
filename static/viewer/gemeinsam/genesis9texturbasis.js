@@ -6,6 +6,8 @@
  * derselben Fassung wie die Importkarte. Das Ergebnis hat dieselbe Form wie ein S3TC-Block (`Genesis9texturblock.lesen`): `{bild, stufen, format, breite, hoehe}` —
  * `Genesis9texturblock.setzen` hängt beides gleich an die Textur. Die Stufen stehen auf dem Kopf (`basisu -y_flip`), `textur.image` ist die Vorschau.
  */
+import { Pufferabruf } from './pufferabruf.js';
+
 export class Genesis9texturbasis {
     static ART = 'application/x-g9kx';
     static _lader = null;
@@ -38,7 +40,7 @@ export class Genesis9texturbasis {
         const lader = await Genesis9texturbasis._bereit;
         const [textur, bild] = await Promise.all([
             new Promise((fertig, fehler) => lader.parse(ktx2, fertig, fehler)),
-            createImageBitmap(vorschau, { imageOrientation: 'flipY', premultiplyAlpha: 'none' }),
+            Pufferabruf.bild(vorschau, { imageOrientation: 'flipY', premultiplyAlpha: 'none' }),     // im Worker (23.11.2026, `Pufferabruf.bild`)
         ]);
         const paket = { bild, stufen: textur.mipmaps, format: textur.format, breite: kopf.breite, hoehe: kopf.hoehe };
         textur.mipmaps = [];

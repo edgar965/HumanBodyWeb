@@ -19,6 +19,7 @@ import { Genesis9reglerliste } from './genesis9reglerliste.js';
 import { Genesis9reglerzeile } from './genesis9reglerzeile.js';
 import { Genesis9genitalien } from './genesis9genitalien.js';
 import { Genesis9groessehalten } from './genesis9groessehalten.js';
+import { Genesis9mblabpreset } from './genesis9mblabpreset.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -245,6 +246,10 @@ export class Genesis9eigenschaften {
             (kasten, bereich) => {
                 Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
                 Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));   // „Nachformung (Ort)": freies Morph-Formular
+                Genesis9mblabpreset.anhaengen(kasten, bereich, inst, () => {     // „HumanBody (MB-Lab)": Auswahl „Preset“ mit MB-Labs Vorlagen (23.11.2026)
+                    Genesis9eigenschaften._kopf(inst);
+                    Genesis9reglerzeile.nachziehen(inst, Genesis9eigenschaften._plan);
+                });
             });
         Genesis9groessehalten.fuellen(inst);     // Schalter „Größe halten" über der Werkzeugzeile (R8, 25.10.2026)
     }

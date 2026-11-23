@@ -16,7 +16,7 @@ from .fotogenesisadresse import Fotogenesisadresse
 from .fotogenesislaeufe import Fotogenesislaeufe
 from .meshgenesisrechendatum import Meshgenesisrechendatum
 from .meshgenesistabelle import Meshgenesistabelle
-from .meshgenesistest import Meshgenesistest
+from .meshgenesistestliste import Meshgenesistestliste
 from .meshgenesistesttabelle import Meshgenesistesttabelle
 
 __all__ = ['Fotogenesistesttabelle']
@@ -47,7 +47,8 @@ class Fotogenesistesttabelle:
     def zeilen(cls, jobs):
         """Jüngste zuerst (04.11.2026, Edgar: „immer die neuesten jobs am Anfang“) — nach der Zeit der
         Spalte „Gerechnet“ (`zeile` → `zeit`)."""
-        meshgenesis = {t['kennung']: t for t in Meshgenesistest.alle(mit_tripo=False)} if any(j['test'] for j in jobs) else {}
+        # nur die Tests der Jobs, nicht alle 222 (23.11.2026, `Meshgenesistestliste`)
+        meshgenesis = Meshgenesistestliste.eintraege([j['test'] for j in jobs])
         zeilen = [cls.zeile(j, meshgenesis.get(j['test'])) for j in jobs]
         return sorted(zeilen, key=lambda z: z['zeit'] or 0, reverse=True)
 

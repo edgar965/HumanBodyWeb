@@ -87,12 +87,7 @@ class Fotogenesisfigur:
             # Form der Zeile 1 in der Ruhelage (`KoerperKI_Fotos.Zeile1versatz`, 31.10.2026 nachts) — die Abspielleiste der Zeile 1 legt sie auf die bewegte Figur (`Fotogenesiszeile1form`)
             zeile1 = {k: base64.b64encode(Torchfeld.als_bytes(Torchfeld.astype(e['zeile1_' + k], Torchfeld.dtype('<f4')))).decode('ascii') for k in ('ruhe', 'versatz')} if 'zeile1_versatz' in e.files else None
         name = (modell.get('kopfbild') or {}).get('quelle') or 'nur Fotos'
-        from .meshgenesisergebnisfigur import Meshgenesisergebnisfigur
-        # Die Figur als Genesis9Modell (31.10.2026, Exportleiste): dieselbe Angabe wie `Meshgenesistest.daten`, dazu die Kacheln der Haut aus den Fotos als `fototextur`
-        figur = dict(Meshgenesisergebnisfigur._figur(g, modell['figur']['regler']), fototextur=cls._kacheln(kennung, p, g))
-        from .fotogesicht import Fotogesicht
-        # dazu das Gesicht aus dem Frontfoto (19.11.2026: Augenbild, Brauenfarbe, Mimik), abgelegt in `<Job>/figur/gesicht_<g>/`
-        figur = Fotogesicht.figur(figur, p, g, lambda name: '/api/fotogenesis/%s/figur/%s/bild/%s' % (kennung, g, name))
+        figur = cls.genesisfigur(kennung, p, g, modell['figur']['regler'])
         from .meshgenesisgenesishaltung import Meshgenesisgenesishaltung
         # die Haltung als Daz-Winkel für Genesis9Modell (19.11.2026, `Fotogenesistestfigur`)
         drehung = Meshgenesisgenesishaltung.drehung(kin, dreh_stand, p / ('ergebnis_Form_%s.npz' % g), haltung)
@@ -104,6 +99,16 @@ class Fotogenesisfigur:
                 'ausgabe_stand': Torchfeld.round(rig_stand, 4).tolist() if stand else None,
                 'dreh_stand': Torchfeld.round(Meshgenesisdaten._quaternionen(dreh_stand), 5).tolist() if stand else None,
                 'ruhezentren': Torchfeld.round(Torchfeld.feld([k['zentrum'] for k in kin], copy=True), 6).tolist(), 'zeile1_ursprung': cls._ursprung(p.parent), 'zeile1_form': zeile1}
+
+    @classmethod
+    def genesisfigur(cls, kennung, p, g, regler):
+        """Die Figur als Genesis9Modell, wie die Seite sie zeigt — EINE Angabe für `daten` und „Als Modell speichern“ (`Fotogenesismodell.figur_der_seite`, 23.11.2026).
+        Seit 31.10.2026 (Exportleiste) dieselbe Angabe wie `Meshgenesistest.daten`, mit den Kacheln der Haut aus den Fotos als `fototextur`; seit 19.11.2026 dazu das Gesicht aus
+        dem Frontfoto (Augenbild, Brauenfarbe, Mimik), abgelegt in `<Job>/figur/gesicht_<g>/`."""
+        from .fotogesicht import Fotogesicht
+        from .meshgenesisergebnisfigur import Meshgenesisergebnisfigur
+        figur = dict(Meshgenesisergebnisfigur._figur(g, regler), fototextur=cls._kacheln(kennung, p, g))
+        return Fotogesicht.figur(figur, p, g, lambda name: '/api/fotogenesis/%s/figur/%s/bild/%s' % (kennung, g, name))
 
     @staticmethod
     def _ursprung(jobordner):

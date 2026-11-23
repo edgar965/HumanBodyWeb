@@ -37,6 +37,7 @@ from KoerperKI_alle.torchfeld import Torchfeld
 from KoerperKI_alle.npztorch import Npztorch
 
 from .meshgenesisdatensatz import Meshgenesisdatensatz
+from .meshgenesiskartenvorarbeit import Meshgenesiskartenvorarbeit
 
 logger = logging.getLogger('core')
 
@@ -148,7 +149,8 @@ class Meshgenesisflaechennetz:
                 'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d, 'punktfarbe': 'punktfarbe' in d,
                 'stufe': 1 if 'eltern' in d else 0, 'kaefig_dreiecke': int(d.get('kaefig_dreiecke', len(d['dreiecke']))), 'eltern': 'eltern' in d,
                 'matrix': [int(d['matrix'].shape[0]), int(d['matrix'].nnz)] if matrix and 'matrix' in d else None,
-                'leit': [int(d['leitpunkte'].shape[0]), int(d['leitpunkte'].shape[1])] if 'leit' in d else None}
+                'leit': [int(d['leitpunkte'].shape[0]), int(d['leitpunkte'].shape[1])] if 'leit' in d else None,
+                **Meshgenesiskartenvorarbeit.kopf(d)}        # Gewichtssummen, Materialläufe, Kästen je Knochen für `Meshgenesiskartenhaut` (24.11.2026)
         text = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         a = cls._auffuellen

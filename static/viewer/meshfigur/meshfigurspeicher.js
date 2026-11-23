@@ -18,8 +18,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 export class Meshfigurspeicher {
 
     static IDS = { format: 'modell-format', name: 'modell-name', knopf: 'modell-speichern', meldung: 'modell-meldung' };
-    /** Die Felder der Exportleiste (`_exportleiste.html`, Block „Modell speichern", 2D3D Kleider seit 31.10.2026): ohne Formatwahl — GLB, OBJ und Blender stehen dort unter „Exportieren". */
-    static EXPORTLEISTE = { format: null, name: 'exportleiste-modell-name', knopf: 'exportleiste-modell-speichern', meldung: 'exportleiste-modell-meldung' };
+    // Der Block „Modell speichern“ der Exportleiste gehört seit 23.11.2026 der Leiste selbst (`Exportleistemodell`, ein Weg für alle Seiten) — vorher band 2D3D Kleider ihn hier.
 
     constructor(seite, ids = Meshfigurspeicher.IDS) {
         this.seite = seite;
