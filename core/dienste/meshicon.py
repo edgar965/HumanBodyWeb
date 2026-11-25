@@ -27,6 +27,8 @@ import os
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
 
+from KoerperKI_alle.trimeshnormalen import Trimeshnormalen
+
 __all__ = ['Meshicon']
 
 logger = logging.getLogger('core')
@@ -52,6 +54,32 @@ class Meshicon:
             return cls._rendern(str(glb_pfad), str(ziel_ordner), datei, matrix)
         except Exception as fehler:  # noqa: BLE001 -- siehe Modulkopf: nie den Lauf scheitern lassen
             logger.warning('Mesh-Icon konnte nicht gerendert werden (%s): %s', glb_pfad, fehler)
+            return ''
+
+    @classmethod
+    def aus_scan(cls, netz_pfad, ziel_ordner, datei=DATEI, matrix=None):
+        """Wie `schreiben`, gerendert auf der Karte aus dem hergerichteten Netz (`Meshfigurscan`, im selben Prozess aus dem Speicher) statt mit pyrender."""
+        try:
+            from KoerperKI_alle.perspektivbild import Perspektivbild
+            from PIL import Image
+
+            from ..daten.meshto3dpfad import Meshto3dpfad
+
+            with Meshto3dpfad():
+                from meshfigur_scan import Meshfigurscan
+                scan = Meshfigurscan.laden(netz_pfad)
+            if matrix is not None:
+                scan.anwenden(matrix)
+            tief, hoch = scan.punkte.amin(0), scan.punkte.amax(0)
+            mitte, spanne = (tief + hoch) / 2.0, float((hoch - tief).max())
+            lage = torch.eye(4, dtype=torch.float64, device=scan.punkte.device)
+            lage[:3, 3] = torch.stack([mitte[0], mitte[1], hoch[2] + spanne])
+            bild = Perspektivbild(scan.punkte, scan.punktnormalen(), scan.flaechen, scan.uv_ecken, scan.textur, scan.punktfarben)
+            farbe, _tiefe = bild.rendern(lage, None, cls.KANTE, cls.KANTE, cls.HINTERGRUND, cls.UMGEBUNG, cls.LICHT, halb=spanne * cls.RAND / 2.0)
+            Image.fromarray(Torchfeld.roh(farbe)).save(os.path.join(str(ziel_ordner), datei))
+            return datei
+        except Exception as fehler:  # noqa: BLE001 -- siehe Modulkopf: nie den Lauf scheitern lassen
+            logger.warning('Mesh-Icon konnte nicht gerendert werden (%s): %s', netz_pfad, fehler)
             return ''
 
     @classmethod
@@ -93,6 +121,7 @@ class Meshicon:
         if not Torchfeld.isfinite(spanne) or spanne <= 0:
             raise ValueError('Netz ohne Ausdehnung')
 
+        Trimeshnormalen.setzen(szene_tm)
         szene = pyrender.Scene.from_trimesh_scene(
             szene_tm, bg_color=cls.HINTERGRUND, ambient_light=cls.UMGEBUNG)
         # Orthografisch von vorn: beide Formmodelle legen die im Foto sichtbare Seite

@@ -92,7 +92,7 @@ class Schammessungtextur:
     def gegen_original(cls, rahmen, punkte, dreiecke, uv_ecken, farbe, farbe_an, abstand_mm):
         """Bericht der Farbe gegen das Original. `farbe_an(punkte, normalen)` → `(N, 3)` Originalfarbe an der Stelle des Originals, die nah liegt und dieselbe Seite zeigt (wie der Bake,
         `Dazgeograftziel.stelle`); `abstand_mm`: `(V,)` Abstand jedes Stückpunkts zum Original."""
-        import trimesh
+        from KoerperKI_alle.torchnetz import Torchnetz
 
         if farbe is None or farbe_an is None or abstand_mm is None:
             return {'hinweis': 'ohne Farbbild, Originalfarbe oder Abstand nicht gemessen'}
@@ -101,7 +101,7 @@ class Schammessungtextur:
         nah = Torchfeld.feld(abstand_mm)[d].reshape(-1) <= cls.NAH_M * 1000.0
         if not nah.any():
             return {'hinweis': 'keine Stückecke nahe am Original'}
-        normalen = Torchfeld.feld(trimesh.Trimesh(Torchfeld.roh(Torchfeld.feld(punkte)), d, process=False).vertex_normals)[d].reshape(-1, 3)
+        normalen = Torchnetz(punkte, d).vertex_normals[d].reshape(-1, 3)
         soll = farbe_an(ort[nah], normalen[nah])
         if soll is None:
             return {'hinweis': 'das Original hat keinen Farbatlas'}

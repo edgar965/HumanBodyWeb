@@ -144,6 +144,17 @@ export class Oberflaechenbindung {
         return true;
     }
 
+    /** Die Bindung einer neuen Lage in dieselben Attribute (`Genesis9nachformen`, 25.11.2026): gleiches Netz, gleiche Punktzahl. */
+    static nachfuellen(inst, netz, teil) {
+        const geo = netz.geometry, b = teil.bindung;
+        for (const [name, werte] of [['bindung', b.dreieck], ['bary', b.bary], ['bindabstand', b.abstand], ['mischung', b.mischung]]) {
+            geo.attributes[name].array = base64ToFloat32(werte);
+            geo.attributes[name].needsUpdate = true;
+        }
+        geo.userData.bindung = { stufen: Number(b.stufen) || 0, gebunden: Oberflaechenbindung._anzahl(geo.attributes.mischung.array) };
+        Oberflaechenbindung._bindgruppenNachtragen(inst, netz);
+    }
+
     /** Gilt die Bindung für den Körper, wie er JETZT ist? Stufe gleich, und —
      *  wo vermerkt — dieselbe Punktzahl (ein neuer Körpertyp hat andere Indizes). */
     static _passt(inst, bindung) {
@@ -187,7 +198,7 @@ export class Oberflaechenbindung {
     }
 
     static _vorZeichnen(renderer, inst, netz) {
-        const lage = Koerperlage.sichern(renderer, inst);
+        const lage = Koerperlage.sichern(renderer, inst, Oberflaechenbindung.KAPSELN_AKTIV);
         // Fehlt, solange der Modellexport die Geometrie gegen eine Kopie ohne eigene Attribute tauscht
         // (`Netzattribute.tauschen`, GLB). Vorher warf `_passt` hier in jedem Bild des Exports — mitten in Threes
         // Renderlauf (Edgars Tab, 18.10.2026: 59 Ausnahmen; die JPG-Ansichten des nächsten Exports waren schwarz,

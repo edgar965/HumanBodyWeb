@@ -5,12 +5,10 @@ import { THREE, serverLog } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml } from './utils.js';
-import { markDirty } from './undo.js';
 import { Getragenliste } from './getragenliste.js';
-import { Charakterkoerper } from './charakter_koerper.js';
+import { Figurneuladen } from './figurneuladen.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
-import { Sanduhr } from '../gemeinsam/sanduhr.js';
 import { Umaeigenschaften } from './uma/umaeigenschaften.js';
 import { Smpleigenschaften } from './smpl/smpleigenschaften.js';
 import { Umapythoneigenschaften } from './umapython/umapythoneigenschaften.js';
@@ -248,25 +246,8 @@ async function populatePresets(inst) {
     } catch (e) { Protokoll.fehler('properties', 'Presets nicht geladen', e); }
 }
 
-/** Ruhezeit, bevor das Netz neu geholt wird — beim Ziehen sammeln sich Werte. */
-const NEULADEN_RUHE_MS = 300;
-
-export async function reloadCharacterMesh(inst) {
-    clearTimeout(state.reloadTimer);
-    state.reloadTimer = setTimeout(async () => {
-        Sanduhr.an('Figur wird neu gerechnet …');   // Edgar, 18.09.2026
-        try {
-            await Charakterkoerper.neuLaden(inst);
-            fn.updateVertexCount();
-            fn.updateCharacterListUI();
-            if (state.currentPropsCharId === inst.id) updateEquippedList(inst);
-            markDirty();
-        } catch (fehler) {
-            Protokoll.fehler('properties', 'Netz nicht neu ladbar', fehler);
-        } finally {
-            Sanduhr.aus();
-        }
-    }, NEULADEN_RUHE_MS);
+export function reloadCharacterMesh(inst) {
+    Figurneuladen.planen(inst, updateEquippedList);
 }
 
 export function updateEquippedList(inst) {

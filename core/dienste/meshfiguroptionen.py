@@ -324,8 +324,8 @@ class Meshfiguroptionen:
                 except TypeError, ValueError:
                     wert = e['vorgabe']
             elif s == 'referenz':
-                erlaubt = [w for w, _ in cls._referenzen()]
-                wert = wert if wert in erlaubt else ''
+                # ohne Testfall nicht die ganze Figurenliste der Daz-Bibliothek lesen (25.11.2026: 2,1 s im ersten Auftrag eines Prozesses)
+                wert = wert if wert and wert in [w for w, _ in cls._referenzen()] else ''
             elif wert not in [w for w, _ in e['werte']]:
                 wert = e['vorgabe']
             aus[s] = wert

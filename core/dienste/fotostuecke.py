@@ -20,6 +20,7 @@ import json
 import logging
 
 import torch
+from KoerperKI_alle.objtext import Objtext
 from KoerperKI_alle.torchfeld import Torchfeld
 from KoerperKI_alle.npztorch import Npztorch
 
@@ -271,10 +272,7 @@ class Fotostuecke:
         Image.fromarray(Torchfeld.roh(Torchfeld.feld(textur, dtype=torch.uint8))).save(ordner / 'textur.png')
         (ordner / 'stueck.mtl').write_text('newmtl Stoff\nKd 1 1 1\nmap_Kd textur.png\n', encoding='utf-8')
         uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2)
-        zeilen = ['mtllib stueck.mtl', 'usemtl Stoff'] + ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['vt %.6f %.6f' % tuple(t) for t in Torchfeld.liste(uv)]
-        zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                   for i, (a, b, c) in enumerate(Torchfeld.feld(flaechen, dtype=torch.int64))]
+        zeilen = ['mtllib stueck.mtl', 'usemtl Stoff', *Objtext.v(punkte), *Objtext.vt(uv), *Objtext.f_ecken(Torchfeld.feld(flaechen, dtype=torch.int64))]
         obj = ordner / 'stueck.obj'
         obj.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
         netz = G9objleser.lesen(str(obj))

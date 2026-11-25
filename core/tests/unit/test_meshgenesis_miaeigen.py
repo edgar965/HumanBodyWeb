@@ -57,11 +57,10 @@ class MiaeigenTest(unittest.TestCase):
     def test_4_wuerfelschnitt_vorauswahl_gleich(self):
         kugel = trimesh.creation.icosphere(subdivisions=4)
         for mitte in ([0.9, 0.0, 0.0], [0.0, 0.5, 0.7]):
-            m = np.array(mitte)
-            v1, f1 = Miaeigenschnitt.wuerfel(kugel.vertices, kugel.faces, m, 0.6, vorauswahl=True)
-            v2, f2 = Miaeigenschnitt.wuerfel(kugel.vertices, kugel.faces, m, 0.6, vorauswahl=False)
+            v1, f1 = Miaeigenschnitt.wuerfel(kugel.vertices, kugel.faces, mitte, 0.6, vorauswahl=True)
+            v2, f2 = Miaeigenschnitt.wuerfel(kugel.vertices, kugel.faces, mitte, 0.6, vorauswahl=False)
             self.assertTrue(len(f1) > 0)
-            self.assertTrue(np.array_equal(v1, v2) and np.array_equal(f1, f2), mitte)
+            self.assertTrue(torch.equal(v1, v2) and torch.equal(f1, f2), mitte)
 
     def test_5_konflikttabelle(self):
         t = Miaeigengewichte.tabelle()
@@ -78,7 +77,11 @@ class MiaeigenTest(unittest.TestCase):
         kugel = trimesh.creation.icosphere(subdivisions=3)
         netz = Miaeigenflaeche(kugel.vertices, kugel.faces)
         s1, f1 = netz.proben(500, 1234)
-        s2, f2 = trimesh.sample.sample_surface(kugel, 500, seed=1234)
-        self.assertTrue(np.array_equal(f1, f2) and np.array_equal(s1, np.asarray(s2)))
-        self.assertTrue(np.array_equal(netz.normalen_von(f1[:40]), kugel.face_normals[f1[:40]]))
-        self.assertTrue(np.array_equal(netz.vertex_normals, kugel.vertex_normals))
+        s2, f2 = (torch.as_tensor(x.tolist(), device='cuda') for x in trimesh.sample.sample_surface(kugel, 500, seed=1234))
+        self.assertTrue(torch.equal(f1, f2))
+
+        def nah(a, b):                                                      # dieselbe Rechnung auf der Karte: gleich bis auf die Rundung
+            torch.testing.assert_close(a, torch.as_tensor(b.tolist(), dtype=torch.float64, device='cuda'), rtol=0, atol=1e-12)
+        nah(s1, s2)
+        nah(netz.normalen_von(f1[:40]), kugel.face_normals[f2[:40].tolist()])
+        nah(netz.vertex_normals, kugel.vertex_normals)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Meshgenesistesthaar — die Bewegung von Haar und Bart eines Teststücks für die Animation der Seite ausliefern (20.11.2026, Edgar: „Weg 2“ — Physik überall mit demselben Code).
 
-Gerechnet wird in der Kette (Schritt „haar“, `meshgenesis/meshgenesis_kleiderhaar_lauf.py`: die Leitsträhnen mit der Stoffsolver-`Straehnenbahn` auf den Kernen); abgelegt je
+Gerechnet wird beim MP4-Export (`Exportleistekettenlauf`, Schritt „haar“: `meshgenesis/meshgenesis_kleiderhaar_lauf.py`, bis 25.11.2026 im Job — die Leitsträhnen mit der Stoffsolver-`Straehnenbahn` auf den Kernen); abgelegt je
 Stück und Bewegung unter `kleider_<g>/<weg>/<stück>/haar/<Kategorie>__<Name>.npz` mit Kopf `.json` (Fassung 2 wie der Stoff, `Meshgenesisteststoff`): `index` int32 (P,) und
 `paket` (deflate der int16-Versätze an den P simulierten Punkten, NACH dem Häuten, mal `skala` Meter), dazu je Leitpunkt `ab` int32 (simulierter Punkt davor, −1 = gehäutet)
 und `anteil` uint8 (·255).

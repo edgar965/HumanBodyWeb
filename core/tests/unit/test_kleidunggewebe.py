@@ -60,7 +60,7 @@ class NahTest(SimpleTestCase):
         """Ein Käfig entlang x (Knochen 0 links von 0,5, Knochen 1 rechts), ein Stoffpunkt bei x = 0,52 im Abstand `d_stoff` → die Gewichte des Punkts."""
         from types import SimpleNamespace
 
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         from Kleidung.kleidunghautgewichte import Kleidunghautgewichte
 
@@ -89,7 +89,7 @@ class NahTest(SimpleTestCase):
         """Der Käfig steht in der Haltung gespiegelt (Knochen 0 rechts): der nächste Käfigpunkt in der HALTUNG gehört zum falschen Knochen, in der Ruhelage zum richtigen — der Stoff folgt der Ruhelage."""
         from types import SimpleNamespace
 
-        from scipy.spatial import cKDTree
+        from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         from Kleidung.kleidunghautgewichte import Kleidunghautgewichte
 

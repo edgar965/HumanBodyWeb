@@ -8,6 +8,7 @@ import { Smplkatalog } from './smplkatalog.js';
 import { Smplformregler } from './smplformregler.js';
 import { Smplhautregler } from './smplhautregler.js';
 import { Smpldetailbereich } from './smpldetailbereich.js';
+import { Smplmassanzeige } from './smplmassanzeige.js';
 
 /**
  * Smpleigenschaften — der Eigenschaften-Reiter für einen GarmentCode-Körper.
@@ -26,17 +27,11 @@ export class Smpleigenschaften {
         const bereich = document.getElementById(Smpleigenschaften.BEREICH);
         if (!bereich) return;
         bereich.classList.remove('hb-versteckt');
-        const kopf = document.getElementById('prop-smpl-kopf');
-        if (kopf) {
-            const punkte = inst.bodyMesh?.geometry?.attributes?.position?.count || 0;
-            kopf.textContent = `${inst.koerper} · ${punkte} Punkte · `
-                + `${inst.hoehe ? (inst.hoehe * 100).toFixed(0) : '?'} cm`;
-        }
         Smpleigenschaften._koerper(inst, document.getElementById('prop-smpl-geschlecht'));
         // Die zehn Regler, die das Online-Tool nicht hat (smplformregler.js).
         Smplformregler.fuellen(inst, document.getElementById('prop-smpl-form'));
         Smplhautregler.fuellen(inst, document.getElementById('prop-smpl-haut'));
-        Smpleigenschaften._masse(inst, document.getElementById('prop-smpl-masse'));
+        Smplmassanzeige.zeigen(inst);
         // Augen, Brauen, Mund, Nägel — derselbe Bereich wie bei HumanBody (25.09.2026),
         // nur bei echten SMPL-X-Körpern (Fototextur + UV).
         if (inst._uvUrsprung) Smpldetailbereich.zeigen(inst);
@@ -110,25 +105,5 @@ export class Smpleigenschaften {
         fn.updateVertexCount();
         fn.selectCharacter(inst.id);
         markDirty('SMPLX');
-    }
-
-    /** Die vorgegebenen Maße — Zentimeter und Grad, wie in der YAML. */
-    static _masse(inst, behaelter) {
-        if (!behaelter) return;
-        behaelter.innerHTML = '';
-        const namen = Object.keys(inst.masse || {}).sort();
-        if (!namen.length) {
-            behaelter.innerHTML = '<div class="hb-hinweis">Keine Maße vorhanden.</div>';
-            return;
-        }
-        for (const name of namen) {
-            const wert = inst.masse[name];
-            const zeile = document.createElement('div');
-            zeile.className = 'slider-row';
-            const text = typeof wert === 'number' ? String(+wert.toFixed(2)) : String(wert);
-            zeile.innerHTML = `<label>${escapeHtml(name)}</label>`
-                + `<span class="slider-val">${escapeHtml(text)}</span>`;
-            behaelter.appendChild(zeile);
-        }
     }
 }

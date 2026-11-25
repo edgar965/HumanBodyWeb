@@ -14,6 +14,8 @@ ohne jede Anfrage (vom Server, dort schon im Speicher: 247 ms); ein Reglerzug er
 5. `groessen`: jeder Antwortpuffer einmal gezählt, auch wenn mehrere Felder auf ihm liegen.
 6. `einstellen` (Einstellungen → Charakter → „Netzantworten", 12.10.2026): nur `server` schaltet das Halten ab — dann findet `suchen` nichts, `ablegen` legt nichts ab und gibt Altbestand frei, `kleid`
    fragt jedes Mal den Server; alles andere (auch keine Angabe) heißt RAM.
+8. `vorab` (24.11.2026): die Anfrage geht sofort hinaus, `kleid` nimmt sie genau einmal und nur für dieselbe Stufe und Stellung; kam statt des Käfigs die gewählte Stufe
+   (`feinStatt`), ist `stufe` die gewählte.
 7. Verdrahtung am Quelltext: `Genesis9kleidung.anziehen` holt über den Speicher und legt VOR dem Bau der Netze ab (der Bau verändert die Objekte der Antwort); die Szene reicht
    `ui_prefs.netzantworten` beim Laden an `einstellen` (`Starteinstellungen`).
 
@@ -132,6 +134,22 @@ await S.kleid(fig, 'hemd', ADR, { regler: { a: 1 } });
 const zweite = await S.kleid(fig, 'hemd', ADR, { regler: { a: 1 } });
 pruefe('aus: jedes Mal eine Anfrage, obwohl die Figur Einträge hat', [anfragen.length, zweite.neu], [2, true]);
 for (const wahl of [undefined, null, '', 'ram', 'unsinn']) { S.einstellen(wahl); pruefe(`Wahl ${wahl}: hält`, S.halten, true); }
+
+// 8. vorab und fein statt Käfig
+S.einstellen('ram'); Netzstufenstand.wahl = 'fein'; anfragen.length = 0;
+const v8 = { kleidung: { hemd: {} } };
+S.vorab(v8, 'hemd', ADR, { regler: { a: 1 } });
+pruefe('vorab fragt sofort', anfragen, [ADR]);
+r = await S.kleid(v8, 'hemd', ADR, { regler: { a: 1 } });
+pruefe('kleid nimmt die Vorab-Anfrage', [anfragen.length, r.neu, r.stufe], [1, true, 'fein']);
+await S.kleid(v8, 'hemd', ADR, { regler: { a: 1 } });
+pruefe('nur einmal', anfragen.length, 2);
+S.vorab(v8, 'hemd', ADR, { regler: { a: 1 } });
+await S.kleid(v8, 'hemd', ADR, { regler: { a: 2 } });
+pruefe('andere Stellung: neu gefragt', anfragen.length, 4);
+Serverabruf.netzSenden = async () => Object.defineProperty(antwort('fein'), 'feinStatt', { value: true });
+r = await S.kleid({ kleidung: { hemd: {} } }, 'hemd', ADR + '?stufen=0', { regler: { a: 1 } });
+pruefe('fein statt Käfig: die gewählte Stufe', [r.stufe, r.daten.feinStatt], ['fein', true]);
 console.log(JSON.stringify({ ok: true }));
 """
 

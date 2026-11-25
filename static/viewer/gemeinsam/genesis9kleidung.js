@@ -5,6 +5,7 @@ import { fn } from './registrierung.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9antwortspeicher } from './genesis9antwortspeicher.js';
+import { Genesis9haeppchen } from './genesis9haeppchen.js';
 import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
@@ -18,6 +19,9 @@ import { Kleidersichtbarkeit } from './kleidersichtbarkeit.js';
 import { Genesis9hautebenen } from './genesis9hautebenen.js';
 import { Zeichenstand } from './zeichenstand.js';
 import { Dazschnittwerte } from './dazschnittwerte.js';
+import { Anatomietraeger } from './anatomietraeger.js';
+import { Genesis9sofortzug } from './genesis9sofortzug.js';
+import { Genesis9stueckstand } from './genesis9stueckstand.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -158,24 +162,32 @@ export class Genesis9kleidung {
         return `${name}${teil} (${herkunft})`;
     }
 
+    /** Adresse und Rumpf der Netzanfrage eines Stücks — `[adresse, rumpf]` für `Genesis9antwortspeicher.kleid` und `.vorab` (24.11.2026, vorher in `anziehen`). */
+    static anfrage(inst, kennung, werte, stufen) {
+        return [Genesis9aufbau.adresse(`${inst.constructor.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
+            regler: inst.regler || {}, variante: werte?.variante || '',
+            stil: Genesis9kleidung.stilliste(werte), regler_stueck: Dazschnittwerte.ohne(werte?.regler),   // `schnitt:` wirkt nur im Browser (K2c)
+            pose: inst.pose, ausdruck: inst.ausdruck, griffe: inst.griffe(),
+            ...(inst.drehung ? { drehung: inst.drehung } : {}),
+            ...(werte?.traegt_anatomie === true ? { traegt_anatomie: true } : {}),   // nicht über die Anatomie drapieren (`Anatomietraeger`, 24.11.2026)
+            ...Genesis9lagen.anfrage(inst.kleidung, kennung),
+            gc_getragen: Genesis9lagen.gcGetragen(inst),
+        }];
+    }
+
     /**
      * Ein Stück anziehen — alle seine Teile, über den getragenen Stücken darunter.
      * `werte`: `{variante, stil, stile: {pose, laenge}, regler, griff}`.
      */
     static async anziehen(inst, kennung, werte, stufen, kaskade, vorBau = null) {
-        inst.kleidung[kennung] = { ...(werte || {}) };
-        const lauf = inst._lauf;
+        // `traegt_anatomie` gehört zum Stück, nicht zu seiner Einstellung: das Garderobe-Fenster schickt `werte` ohne den Vermerk, er bliebe sonst beim ersten Reglerzug weg
+        const traegt = (werte?.traegt_anatomie ?? inst.kleidung[kennung]?.traegt_anatomie) === true;
+        inst.kleidung[kennung] = { ...(werte || {}), ...(traegt ? { traegt_anatomie: true } : {}) };
+        Anatomietraeger.einrichten(inst);       // trägt ein Stück die Anatomie (`traegt_anatomie`), entsteht ihr Stück verborgen (unten, `anatomieGetragen`)
+        const lauf = inst._lauf, reglerstand = { ...inst.regler };
         // Aus dem Speicher der Figur (je Stufe, `Genesis9antwortspeicher`, 12.10.2026), sonst vom Server. Bis die Antwort da ist und noch kein Netz des Stücks steht,
         // nennt die Anzeige es unter „lädt noch" (`Zeichenstand`, 19.10.2026); gebaut wird danach ohne Pause (außer mit `vorBau`, dann steht das alte Netz).
-        const antwort = await Zeichenstand.laden(inst, kennung, Genesis9antwortspeicher.kleid(inst, kennung, Genesis9aufbau.adresse(
-            `${inst.constructor.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
-                regler: inst.regler || {}, variante: werte?.variante || '',
-                stil: Genesis9kleidung.stilliste(werte), regler_stueck: Dazschnittwerte.ohne(werte?.regler),   // `schnitt:` wirkt nur im Browser (K2c)
-                pose: inst.pose, ausdruck: inst.ausdruck, griffe: inst.griffe(),
-                ...(inst.drehung ? { drehung: inst.drehung } : {}),
-                ...Genesis9lagen.anfrage(inst.kleidung, kennung),
-                gc_getragen: Genesis9lagen.gcGetragen(inst),
-            }));
+        const antwort = await Zeichenstand.laden(inst, kennung, Genesis9antwortspeicher.kleid(inst, kennung, ...Genesis9kleidung.anfrage(inst, kennung, inst.kleidung[kennung], stufen)));
         const daten = antwort.daten;
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;   // überholt oder ausgezogen
@@ -187,6 +199,7 @@ export class Genesis9kleidung {
         const sichtbar = Kleidersichtbarkeit.fuer(inst, kennung);       // vor dem Entfernen der alten Netze: „Kleider aus" gilt auch für das neu gebaute Stück
         inst._stueckWeg(kennung);
         if (antwort.neu) Genesis9antwortspeicher.ablegen(inst, antwort.teil, antwort.stellung, antwort.stufe, daten);   // vor dem Bau: er verändert die Objekte der Antwort
+        if (daten.feinStatt) inst._feinTeile?.add(kennung);             // statt des Käfigs kam die gewählte Stufe: der zweite Zug braucht das Stück nicht mehr
         const paare = [];
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
@@ -208,7 +221,10 @@ export class Genesis9kleidung {
             // Kleidung laufen gleichzeitig, siehe `Oberflaechenbindung.anlegen`).
             Oberflaechenbindung.anlegen(netz, teil);
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
+            Genesis9sofortzug.merken([netz], reglerstand);
+            Genesis9stueckstand.merken(inst, kennung, netz, inst.kleidung[kennung].regler);
         });
+        Genesis9sofortzug.nachBau(inst);       // seit der Anfrage weitergezogen? gleich wieder zeigen (25.11.2026)
         Genesis9kleidung.beschildern(inst, kennung, paare);          // Name aus dem Katalog, wenn er schon da ist
         Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);    // eigene Farbe (24.09.2026)
         Kleidfarbmischung.anwenden(inst, kennung, inst.kleidung[kennung].regler);   // Textur der Mischung (30.09.2026)
@@ -232,6 +248,7 @@ export class Genesis9kleidung {
      */
     static melden(inst, kennung, angezogen) {
         Genesis9ersatz.nachziehen(inst);      // Ersatz-Stücke (Originalaugen) blenden Teile der Figur aus oder wieder ein
+        Anatomietraeger.planen(inst);         // die Anatomie unter einem tragenden Stück verbergen bzw. nach dem Ausziehen wieder zeigen (24.11.2026)
         // Die Liste „Objekte" im Reiter Modell neu füllen (16.10.2026, Edgar: „herrenhaar auf Mann - es wird im viewer NICHT angezeigt"): Ein Stück, das nach
         // dem Laden der Figur über die Assets kam oder ging, stand nicht darin — gemessen am Daz Mann: Herrenhaar und JS Pants am Körper, die Liste nannte nur
         // die Anatomie. `beschildern` meldete nur, solange der Katalog noch fehlte.
@@ -249,3 +266,6 @@ export class Genesis9kleidung {
         Genesis9kleidung.melden(inst, kennung, false);
     }
 }
+
+// Für `Genesis9haeppchen`: ein Stück der gewählten Stufe schon anfragen (eingetragen hier — ein Import dorthin wäre ein Ring).
+Genesis9haeppchen.vorab = (inst, kennung) => Genesis9antwortspeicher.vorab(inst, kennung, ...Genesis9kleidung.anfrage(inst, kennung, inst.kleidung[kennung], null));

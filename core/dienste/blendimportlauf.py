@@ -43,7 +43,7 @@ class Blendimportlauf:
                'stuecke': (72, 80), 'haut': (80, 95), 'augen': (95, 97), 'modell': (97, 100)}
 
     #: Alles in DIESEM Prozess, auch die Runner von „Mesh to 3D“ (nur `Vorstufenriglauf` im Skriptdienst der Mesh-Genesis-Kette)
-    IM_PROZESS = False
+    IM_PROZESS, VORNE = False, None          # VORNE: wer die Vorderansicht der Pose rendert (`Blendimportpose.vorne`)
 
     class Angehalten(Exception):
         """Der Nutzer hat angehalten."""
@@ -235,7 +235,7 @@ class Blendimportlauf:
         from .blendimportpose import Blendimportpose
 
         pose = Blendimportpose(self.ablage, self.stand['einstellungen'], self.melden,
-                               lambda: self.ablage.stand().get('status') == 'angehalten', self.Angehalten)
+                               lambda: self.ablage.stand().get('status') == 'angehalten', self.Angehalten, nur_gewaehlte=self.IM_PROZESS, vorne=self.VORNE)
         self.ergebnis('pose', pose.ausfuehren(self.ablage.arbeit(Blendimportkoerper.DATEI)))
 
     def _figur(self):

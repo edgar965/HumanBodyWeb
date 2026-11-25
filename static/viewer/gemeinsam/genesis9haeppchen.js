@@ -22,11 +22,20 @@ import { Genesis9materialabruf } from './genesis9materialabruf.js';
  */
 export class Genesis9haeppchen {
 
+    /** Ein Stück der gewählten Stufe schon anfragen — eingetragen von `Genesis9kleidung` (ein Import dorthin wäre ein Ring). */
+    static vorab = null;
+
+    /** Was nach dem ersten Zug noch in der gewählten Stufe fehlt: Stücke und 'koerper', ohne die in `schon` (sie kamen gleich so, `Genesis9aufbau.progressiv`). */
+    static rest(inst, schon = null) {
+        return [...inst.getragen(), 'koerper'].filter(teil => !schon?.has(teil));
+    }
+
     /**
      * Ein Zug auf die gewählte Stufe. Zwei Züge einer Figur laufen nie zugleich: Der zweite wartet auf den ersten.
      * @param ruhe true = jedes Stück erst in der Ruhe bauen (das automatische Nachladen nach dem Laden)
+     * @param schon was schon in der gewählten Stufe steht (Set aus Kennungen und 'koerper'), oder null
      */
-    static zug(inst, ruhe) {
+    static zug(inst, ruhe, schon = null) {
         if (!ruhe) inst._feinDringend = true;
         if (inst._grobHalt) {                 // Wer hochschaltet, hebt die Sperre auf, die „grob gewählt" dem Export setzte
             inst._grobHalt = false;
@@ -34,20 +43,20 @@ export class Genesis9haeppchen {
         }
         const davor = inst._feinZug || Promise.resolve();
         // Die Stufe nachladen ist eine Anzeige: der Server legt die Antworten dauerhaft ab (`Genesis9vorrat`, 19.10.2026).
-        const zug = davor.then(() => Genesis9vorrat.laden(inst, () => Genesis9haeppchen._lauf(inst, ruhe)));
+        const zug = davor.then(() => Genesis9vorrat.laden(inst, () => Genesis9haeppchen._lauf(inst, ruhe, schon)));
         inst._feinZug = zug.catch(() => {});
         return zug;
     }
 
-    static async _lauf(inst, ruhe) {
+    static async _lauf(inst, ruhe, schon = null) {
         const ziel = Netzstufenstand.wahl;
         if (ziel === 'grob') return inst;                    // der Nutzer will grob: nichts nachholen
         const dringend = () => Boolean(inst._feinDringend);
         // `_bauStart`: ab hier wird gebaut (die Antwort ist da, die Ruhe auch) — die Bauzeit je Stück steht in `inst._bauzeiten`.
         const vorBau = ruhe ? async () => { await Nutzerruhe.abwarten(dringend); inst._bauStart = performance.now(); } : null;
         inst._bauzeiten = [];
-        const stuecke = inst.getragen();
-        const gesamt = 1 + stuecke.length;
+        const rest = Genesis9haeppchen.rest(inst, schon), stuecke = rest.filter(teil => teil !== 'koerper'), koerper = rest.includes('koerper');
+        const gesamt = rest.length;
         const vorher = Netzstufenstand.stufeVon(inst) || 'grob';
         let fertig = 0;
         const melden = () => Netzstufenstand.melden(inst, vorher, true, fertig, gesamt);
@@ -57,19 +66,21 @@ export class Genesis9haeppchen {
             // Die Stücke zuerst, der Körper ZULETZT: Solange der grobe Körper steht, passt seine Haut-Maske zu ihm; der feine
             // hat noch keine, sein Skelett wäre neu und das Umbinden aller Stücke käme vor dem Ende (`Hautverdeckung`: 3,25 s).
             // Angefragt wird der Körper aber schon jetzt, gebaut weiter zuletzt (`Genesis9materialabruf.vorab`, 18.11.2026).
-            if (stuecke.length && inst.constructor.ADRESSE) Genesis9materialabruf.vorab(inst, `${inst.constructor.ADRESSE}${encodeURIComponent(inst.figur)}/netz/`);
+            if (koerper && stuecke.length && inst.constructor.ADRESSE) Genesis9materialabruf.vorab(inst, `${inst.constructor.ADRESSE}${encodeURIComponent(inst.figur)}/netz/`);
+            // Ebenso die Stücke: alle zugleich, gebaut weiter eines nach dem anderen (24.11.2026 — vorher jedes erst nach dem Bau des vorigen angefragt).
+            if (inst.constructor.ADRESSE) for (const kennung of stuecke) Genesis9haeppchen.vorab?.(inst, kennung);
             for (const kennung of stuecke) {
                 if (Netzstufenstand.wahl !== ziel) break;     // inzwischen umgeschaltet
                 await Genesis9haeppchen._stueck(inst, kennung, vorBau);
                 Genesis9haeppchen._gebaut(inst, kennung);
                 fertig += 1; melden();
             }
-            if (Netzstufenstand.wahl === ziel) {
+            if (Netzstufenstand.wahl === ziel && koerper) {
                 await inst.koerperAufbauen(null, true, vorBau);
                 Genesis9haeppchen._gebaut(inst, 'koerper');
                 fertig += 1; melden();
-                Netzstufenstand.melden(inst, ziel, false);
             }
+            if (Netzstufenstand.wahl === ziel) Netzstufenstand.melden(inst, ziel, false);
         } catch (fehler) {
             Protokoll.warnung('Genesis 9', `Stufe „${ziel}" nicht geladen: ${fehler.message}`);
             Netzstufenstand.melden(inst, vorher, false);

@@ -8,6 +8,7 @@ u"""`Genesis9vorrat` — welche Netzanfragen der Server dauerhaft ablegt (19.10.
    (`koerperNutzlast`).
 4. `laden` zählt verschachtelt und gibt auch nach einem Fehler frei.
 5. `laden(…, vorschau=true)` (17.11.2026): nur der Käfig (`?stufen=0`) trägt `X-G9-Vorrat-Vorschau`, ein Reglerzug dabei nicht; danach keiner mehr.
+6. `laden(…, …, fein=true)` (24.11.2026): der Käfig bittet mit `X-G9-Fein-Gern` um die gewählte Stufe — ein Stück mit `1`, der Körper mit `leer`; andere Stufen und danach keiner mehr.
 
 Sabotage (nicht gelaufen): in `kopf` die Stellung ohne `?stufen` vergleichen weglassen (ganze Adresse) → Fall 1 rot (der Stufenwechsel trüge keinen Kopf);
 `finally` in `laden` streichen → Fall 4 rot. Geschrieben, nicht gelaufen.
@@ -57,6 +58,12 @@ const r5 = await V.laden(v, async () => [V.kopf(v, 'koerper', '/n/basis/netz/?st
 pruefe('Vorschau: Käfig', r5[0], { 'X-G9-Vorrat-Vorschau': '1', 'X-G9-Vorrat': '1' });
 pruefe('Vorschau: Reglerzug ohne', r5[1]['X-G9-Vorrat-Vorschau'], undefined);
 pruefe('Vorschau danach aus', V.kopf(v, 'koerper', '/n/basis/netz/?stufen=0', { regler: { x: 1 } }), K);
+
+// 6. fein statt Käfig
+const f = { id: 'fein', kleidung: {} }, G = 'X-G9-Fein-Gern';
+const r6 = await V.laden(f, async () => [V.kopf(f, 'koerper', '/n/basis/netz/?stufen=0', {}), V.kopf(f, 'kleid:hemd', '/g/hemd/netz/?stufen=0', {}), V.kopf(f, 'koerper', '/n/basis/netz/', {})], false, true);
+pruefe('fein: Körper, Stück, andere Stufe', r6.map(k => k[G]), ['leer', '1', undefined]);
+pruefe('fein danach aus', V.kopf(f, 'koerper', '/n/basis/netz/?stufen=0', {})[G], undefined);
 console.log(JSON.stringify({ ok: true }));
 """
 

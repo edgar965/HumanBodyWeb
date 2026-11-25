@@ -25,6 +25,7 @@ from Genesis9.lagen import G9lagen
 from Genesis9.materialteile import G9materialteile
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.passformvorgabe import G9passformvorgabe
+from Genesis9.reglerzugfeld import G9reglerzugfeld
 from Genesis9.stoffhuelle import G9stoffhuelle
 from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stueckfelder import G9stueckfelder
@@ -78,8 +79,13 @@ class G9stueckteile:
         if starr:
             kaefige = G9stueckstarr.gezeigt(teile, formung)
         else:
-            kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
-                       for folger, lage in teile]
+            def kaefig(folger, lage):
+                return folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
+            if stueckformung is formung:            # an der Stellung gemerkt: der nächste Reglerzug beginnt dort (25.11.2026, `G9reglerzugfeld._stueck`)
+                kaefige = [G9reglerzugfeld.je_stellung(formung, ('stueck', G9reglerzugfeld.marke(kennung, zusatz, knochen), n), lambda f=f, la=la: kaefig(f, la)).clone()
+                           for n, (f, la) in enumerate(teile)]
+            else:
+                kaefige = [kaefig(f, la) for f, la in teile]
         roh_kaefige = kaefige
         # Die fuenf gemeinsamen Formachsen einer Frisur (`G9haarachsen`) — sie sind keine
         # Daz-Kanaele und laufen deshalb an `G9garderobe.reglerwerte` vorbei. Linear wie

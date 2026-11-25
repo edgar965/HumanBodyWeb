@@ -19,14 +19,13 @@ export class Genesis9texturblock {
         return textur;
     }
 
-    /** Blob → `{bild, stufen, format, breite, hoehe}` (`bild`: Bitmap der Vorschau). */
-    static async lesen(blob) {
-        const puffer = await blob.arrayBuffer();
-        const magie = new TextDecoder().decode(new Uint8Array(puffer, 0, 4));
-        if (magie !== 'G9BC') throw new Error('kein G9BC-Block');
-        const laenge = new DataView(puffer).getUint32(4, true);
-        const kopf = JSON.parse(new TextDecoder().decode(new Uint8Array(puffer, 8, laenge)));
-        let lage = 8 + laenge;
+    /** Blob oder Ausschnitt `{puffer, ab}` (eines Bündels, ohne Kopie) → `{bild, stufen, format, breite, hoehe}` (`bild`: Bitmap der Vorschau). */
+    static async lesen(quelle) {
+        const puffer = quelle.puffer ?? await quelle.arrayBuffer(), ab = quelle.ab || 0;
+        if (!Genesis9texturblock.erkannt(puffer, ab)) throw new Error('kein G9BC-Block');
+        const laenge = new DataView(puffer).getUint32(ab + 4, true);
+        const kopf = JSON.parse(new TextDecoder().decode(new Uint8Array(puffer, ab + 8, laenge)));
+        let lage = ab + 8 + laenge;
         const vorschau = new Blob([new Uint8Array(puffer, lage, kopf.vorschau.bytes)], { type: kopf.vorschau.art });
         lage += kopf.vorschau.bytes;
         const stufen = kopf.stufen.map(([width, height, bytes]) => {
@@ -36,6 +35,11 @@ export class Genesis9texturblock {
         });
         const bild = await Pufferabruf.bild(vorschau, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });     // im Worker (23.11.2026, `Pufferabruf.bild`)
         return { bild, stufen, format: kopf.format, breite: kopf.breite, hoehe: kopf.hoehe };
+    }
+
+    /** Beginnt bei `ab` ein Block (`G9BC`)? */
+    static erkannt(puffer, ab = 0) {
+        return puffer.byteLength >= ab + 8 && new DataView(puffer).getUint32(ab, false) === 0x47394243;
     }
 
     static ist(inhalt) {

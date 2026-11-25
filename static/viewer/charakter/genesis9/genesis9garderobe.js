@@ -11,6 +11,7 @@ import { Reiterzuordnung } from '../../gemeinsam/reiterzuordnung.js';
 import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Stueckfarbe } from './stueckfarbe.js';
 import { state } from '../state.js';
+import { Aufgabenscheibe } from '../../gemeinsam/aufgabenscheibe.js';
 
 /**
  * Genesis9garderobe — Daz-Kleidung und -Haare einer Genesis-9-Figur (`Dazkleidung`: auch HumanBody).
@@ -64,7 +65,9 @@ export class Genesis9garderobe {
         behaelter.innerHTML = '<div class="gedaempft">Lade Garderobe …</div>';
         const [stuecke, stand] = await Promise.all([Genesis9garderobe.liste(),
                                                     Genesis9garderobekategorien.stand()]);
-        if (behaelter.dataset.figur !== inst.id || behaelter._fuellLauf !== lauf) return;
+        const veraltet = () => behaelter.dataset.figur !== inst.id || behaelter._fuellLauf !== lauf;
+        if (veraltet()) return;
+        const scheibe = new Aufgabenscheibe();          // in Scheiben (24.11.2026): die Liste hielt den Hauptfaden sonst 81–133 ms am Stück an
         behaelter.innerHTML = '';
         if (!stuecke.length) {
             behaelter.innerHTML = '<div class="gedaempft">Keine Daz-Kleidung gefunden.</div>';
@@ -86,7 +89,10 @@ export class Genesis9garderobe {
             // Kein Merken mehr (Edgar, 30.09.2026): Was der Nutzer aufklappt, bleibt bis zum
             // nächsten Laden offen — danach steht wieder alles zu außer der Kategorie des
             // gewählten Stücks. Siehe Kopf von `genesis9garderobekategorien.js`.
-            for (const stueck of eigene) Genesis9garderobe._eintrag(inst, stueck, kasten, gewaehlt, neuzeichnen);
+            for (const stueck of eigene) {
+                if (scheibe.voll) { await scheibe.weiter(); if (veraltet()) return; }
+                Genesis9garderobe._eintrag(inst, stueck, kasten, gewaehlt, neuzeichnen);
+            }
             behaelter.appendChild(kasten);
         }
     }

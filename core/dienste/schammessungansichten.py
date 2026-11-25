@@ -37,7 +37,7 @@ class Schammessungansichten:
     ABSATZ_NACH_INNEN_M = 0.002
 
     def __init__(self, rahmen, haut, original, modell, stueck, vorgabe, ring, ring_normalen):
-        """`haut`, `original`, `modell`, `stueck`, `vorgabe`: `trimesh.Trimesh` (`haut` = die ganze Haut im Kasten OHNE Loch; `original` = Vorgabe samt sichtbarer Haut; `modell` = sichtbare Haut + Stück; `vorgabe` = nur das Original);
+        """`haut`, `original`, `modell`, `stueck`, `vorgabe`: `Torchnetz` (`haut` = die ganze Haut im Kasten OHNE Loch; `original` = Vorgabe samt sichtbarer Haut; `modell` = sichtbare Haut + Stück; `vorgabe` = nur das Original);
         `ring`: `(R, 3)` Ringecken; `ring_normalen`: `(R, 3)` Hautnormalen dort."""
         self.rahmen, self.haut, self.original, self.modell, self.stueck, self.vorgabe = rahmen, haut, original, modell, stueck, vorgabe
         self.ring, self.ring_normalen = Torchfeld.feld(ring, dtype=torch.float64), Torchfeld.feld(ring_normalen, dtype=torch.float64)
@@ -58,11 +58,8 @@ class Schammessungansichten:
 
     def _erste(self, netz, wurzeln, richtung):
         """Weg (m) bis zur ersten Fläche je Strahl, NaN ohne Treffer."""
-        t = Torchfeld.full(len(wurzeln), math.nan)
-        orte, strahl, _ = netz.ray.intersects_location(wurzeln, torch.tile(richtung, (len(wurzeln), 1)), multiple_hits=False)
-        if len(orte):
-            t[strahl] = Torchfeld.linalg_norm(orte - wurzeln[strahl], dim=1)
-        return t
+        t = netz.erste(wurzeln, richtung)
+        return torch.where(torch.isfinite(t), t, math.nan)
 
     def _ansicht(self, name, hoehe, seite):
         r = self.rahmen
@@ -70,7 +67,7 @@ class Schammessungansichten:
         u = r.quer - (r.quer @ blick) * blick
         u /= Torchfeld.linalg_norm(u)
         v = Torchfeld.cross(blick, u)
-        k = Torchfeld.feld(self.stueck.vertices) - r.mitte
+        k = self.stueck.vertices - r.mitte
         a, b = (k @ u).min(), (k @ u).max()
         c, d = (k @ v).min(), (k @ v).max()
         uu, vv = torch.meshgrid(Torchfeld.arange(a, b, self.RASTER_M), Torchfeld.arange(c, d, self.RASTER_M), indexing='xy')
@@ -112,10 +109,9 @@ class Schammessungansichten:
     def _hoehe_entlang(self, netz, ring_punkt, normale, nach_innen):
         """Höhe (mm) der ersten Fläche über der Tangentialebene am Ringpunkt, `ABSATZ_NACH_INNEN_M` hinter dem Ring — NaN ohne Treffer."""
         q = ring_punkt + nach_innen * self.ABSATZ_NACH_INNEN_M
-        orte, _i, _t = netz.ray.intersects_location((q + normale * 0.03)[None], (-normale)[None], multiple_hits=True)
-        if not len(orte):
-            return math.nan
-        return float((orte[int(Torchfeld.argmin(Torchfeld.linalg_norm(orte - (q + normale * 0.03), dim=1)))] - ring_punkt) @ normale * 1000.0)
+        start = q + normale * 0.03
+        t = float(netz.erste(start[None], -normale)[0])
+        return float((start - t * normale - ring_punkt) @ normale * 1000.0) if math.isfinite(t) else math.nan
 
     def _absatz(self):
         mitte = self.ring.mean(axis=0)

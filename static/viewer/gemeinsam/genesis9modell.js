@@ -20,8 +20,10 @@ import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9materialabruf } from './genesis9materialabruf.js';
 import { Netzstufenstand } from './netzstufenstand.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
+import { Genesis9werte } from './genesis9werte.js';
 import { Genesis9ersatz } from './genesis9ersatz.js';
 import { Genesis9maske } from './genesis9maske.js';
+import { Genesis9sofortzug } from './genesis9sofortzug.js';
 import { Materialwechsel } from './materialwechsel.js';
 import { Modell } from './modell.js';
 import { Skelettereignis } from './skelettereignis.js';
@@ -168,7 +170,7 @@ export class Genesis9Modell extends Modell {
      * bewegt hat — `!this.skelett` erzwingt den ersten Bau trotzdem.
      */
     async koerperAufbauen(stufen = null, skelettFrisch = true, vorBau = null) {
-        const lauf = this._lauf = (this._lauf || 0) + 1;
+        const lauf = this._lauf = (this._lauf || 0) + 1, reglerstand = { ...this.regler };
         const adresse = Genesis9aufbau.adresse(`${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen);
         // Aus dem Speicher der Figur (je Stufe), bei anderen Materialien mit der leichten Anfrage, sonst vom Server (`Genesis9materialabruf`, 12.10.2026).
         const antwort = await Genesis9materialabruf.holen(this, adresse, Genesis9materialabruf.nutzlast(this));
@@ -189,35 +191,19 @@ export class Genesis9Modell extends Modell {
             this.skelettBauen(daten.skelett);
             this.eigeneKnochen = daten.skelett?.eigene || [];
         }
-        // Die Fußhaltung getragener Schuhe je Knochen (12.11.2026, `Genesis9/griffkette.py` `deltas`): eine Animation setzt die Füße je
-        // Bild neu, `charakter/posenabsatz.js` legt diese Drehung danach wieder auf — dieselben Felder wie beim Absatz der HumanBody-Figuren.
-        const griffdeltas = daten.griffdeltas && Object.keys(daten.griffdeltas).length ? daten.griffdeltas : null;
-        if (JSON.stringify(griffdeltas) !== JSON.stringify(this.absatzDeltas || null)) { this.absatzDeltas = griffdeltas; this._absatzGemischt = {}; }
         // Fotokacheln des Modells statt der Daz-Albedo (27.09.2026, `Genesis9fototextur`).
         const wahl = { haut: this.haut, praesets: this.praesets, augenGewaehlt: this._augenGewaehlt, brauenstil: this.brauenstil };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel (ein Brauenstil nimmt die gemalten Brauen aus der Kopfkachel)
         const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur, wahl) };
-        this.bodyMesh = this._einhaengen(
-            Genesis9netz.bauen(koerper, `genesis9_koerper_${this.id}`), daten.hautgewichte);
+        this.bodyMesh = this._einhaengen(Genesis9netz.bauen(koerper, `genesis9_koerper_${this.id}`), daten.hautgewichte);
         this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
         for (const roh of daten.anhaenge || []) {
             const anhang = Genesis9fototextur.anhang(roh, this.fototextur, wahl);   // Augenbild des Modells
-            this.anhangNetze[anhang.schluessel] = this._einhaengen(
-                Genesis9netz.bauen(anhang, `genesis9_${anhang.schluessel}_${this.id}`),
-                anhang.hautgewichte);
+            this.anhangNetze[anhang.schluessel] = this._einhaengen(Genesis9netz.bauen(anhang, `genesis9_${anhang.schluessel}_${this.id}`), anhang.hautgewichte);
         }
-        this.hoehe = daten.hoehe || 0;
-        this.punktzahl = daten.punktzahl || 0;
-        this.browserpunkte = daten.browserpunkte || daten.vertex_count || 0;
-        this.stufen = daten.stufen || 0;
-        this.morphwerte = daten.morphwerte || {};
-        this.gelenkregler = daten.gelenkregler || {};   // JCM-Schalter (`genesis9gelenke.js`)
-        /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
-        this.hdkanaele = daten.hdkanaele || [];
-        /** Wert je HD-Kanal dieser Stellung (17.10.2026): die Gewichte der Mimikfalten (`Genesis9mimikfalten`). */
-        this.hdwerte = daten.hdwerte || {};
-        /** Das EINE Aussehen aus „Alter“ und „Wirkt älter / jünger“ (−1…1, `G9alterung`, 17.10.2026): Falten, Altersflecken und graues Haar folgen ihm (`Genesis9hautfalten.alter`). */
-        this.alterAussehen = Number.isFinite(Number(daten.alter_aussehen)) ? Number(daten.alter_aussehen) : null;
+        Genesis9sofortzug.merken([this.bodyMesh, ...Object.values(this.anhangNetze)], reglerstand);
+        Genesis9werte.uebernehmen(this, daten);
         this._kleiderBinden(neuesSkelett);
+        Genesis9sofortzug.nachBau(this);       // seit der Anfrage weitergezogen? gleich wieder zeigen (25.11.2026)
         if (!neuesSkelett) Genesis9maske.nachMaterialwechsel(this);   // kein Skelettereignis: Loch, Naht und Randfarbe des frischen Körpers sonst nie neu (`genesis9maske.js`)
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
         if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
@@ -302,7 +288,7 @@ export class Genesis9Modell extends Modell {
         this.regler = this.regler || {};
         if (Math.abs(wert) < 1e-6) delete this.regler[name];
         else this.regler[name] = wert;
-        return this.neuFormen();
+        return Genesis9aufbau.alles(this, null, false, true);
     }
 
     // Haut, Augen, Brauen und Makeup-Presets bewegen keinen Knochen — `koerperAufbauen`
@@ -399,7 +385,7 @@ export class Genesis9Modell extends Modell {
      */
     async anziehenMitGriff(kennung, werte = null) {
         if (!werte?.griff && !werte?.knochen) return this.anziehen(kennung, werte);
-        this.kleidung[kennung] = { ...werte };
+        this.kleidung[kennung] = { ...(this.kleidung[kennung]?.traegt_anatomie ? { traegt_anatomie: true } : {}), ...werte };
         return this.neuFormen();
     }
 

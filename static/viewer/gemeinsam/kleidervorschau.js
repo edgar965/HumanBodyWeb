@@ -1,5 +1,6 @@
 import { Protokoll } from './protokoll.js';
 import { Kleiderknochen } from './kleiderknochen.js';
+import { Genesis9sofortzug } from './genesis9sofortzug.js';
 
 /**
  * Kleidervorschau — die Kleidung folgt einem neuen Körper SOFORT, noch bevor der Server ihre genaue Lage liefert.
@@ -92,7 +93,7 @@ export class Kleidervorschau {
      */
     static _mitnehmen(inst, netz, verschiebung, stufen, koerperPunkte, wege = null) {
         const geo = netz?.geometry;
-        if (!geo || netz.userData?.stoff || geo.userData?.lauf === inst._lauf) return 0;
+        if (!geo || netz.userData?.stoff || geo.userData?.lauf === inst._lauf || Genesis9sofortzug.zeigt(netz)) return 0;      // trägt es die Sofortschau, ist es schon gefolgt (25.11.2026)
         const bindung = Kleidervorschau._bindung(geo, stufen, koerperPunkte);
         const knochen = wege ? Kleiderknochen.haeuten(netz, wege, bindung ? (i) => Kleidervorschau._frei(bindung, i) : null) : 0;
         if (!bindung) return knochen;

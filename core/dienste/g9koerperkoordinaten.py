@@ -246,7 +246,7 @@ class G9koerperkoordinaten:
     def bauen(cls):
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.texturabtastung import G9texturabtastung
-        from PIL import Image
+        from KoerperKI_alle.pilbild import Pilbild
 
         t0 = time.perf_counter()
         torch, g = G9hautteile.geraet()
@@ -262,10 +262,10 @@ class G9koerperkoordinaten:
             if not any(je[i] for i in glied):
                 continue
             kacheln.append(int(nummer))
-            zeilen.append(cls.kodieren(torch, feld).cpu().numpy())
+            zeilen.append(cls.kodieren(torch, feld))
             texel_je_kette[str(nummer)] = {cls.KETTEN[i]: int(n) for i, n in enumerate(je) if n and i}
         puffer = io.BytesIO()
-        Image.fromarray(Torchfeld.roh(Torchfeld.cat(zeilen, 0)), 'RGBA').save(puffer, 'PNG')
+        Pilbild.aus(torch.cat(zeilen, 0)).save(puffer, 'PNG')
         png = puffer.getvalue()
         angaben = {'fassung': cls.FASSUNG, 'seite': cls.SEITE, 'kacheln': kacheln, 'ketten': list(cls.KETTEN), 'stufe': cls.STUFE,
                    'hoehe_bereich': list(cls.HOEHE_BEREICH), 'anteil_bereich': list(cls.ANTEIL_BEREICH), 'bytes': len(png), 'geraet': str(g),

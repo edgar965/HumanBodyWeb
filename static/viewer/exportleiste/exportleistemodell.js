@@ -1,4 +1,5 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Genesis9modellvorrat } from '../gemeinsam/genesis9modellvorrat.js';
 
 /**
  * Exportleistemodell — „Als Modell speichern“ JEDER Exportleiste (23.11.2026, Edgar: „nutze gemeinsamen Code für alle, was soll das???“, „eine einzige Speicherart!“).
@@ -11,6 +12,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
  * Seit 23.11.2026 dazu Häkchen je Methode der Kleider (Edgar: „beim Speichern sollen zumindest Haare, Bart, Haut mitgehen, Toggles welche Kleider (Bibliothek usw)“): Der Server
  * schickt mit dem Stand ein `angebot` (`Meshgenesistestkleidmethoden.angebot`), angehakt ist zuerst die Methode, die die Seite zeigt (Ereignis `METHODE`). Haut, Haar, Bart, Schuhe,
  * Hut und Requisiten gehen immer mit; das entscheidet der Server.
+ * Ist das Modell gespeichert, rechnet der Server gleich seine Anzeigen vorab (`Genesis9modellvorrat`, 24.11.2026) — die erste Ladung im Charakter kommt dann aus dem Vorrat.
  */
 export class Exportleistemodell {
 
@@ -30,6 +32,7 @@ export class Exportleistemodell {
         this.hinweis = this.meldung?.textContent.trim() || '';      // Text der Vorlage (`speichern_hinweis`): steht da, solange nie gespeichert wurde
         this._geholt = false;
         this._angebot = null;            // die Methoden, die es für dieses Modell gibt (`…/modell/` → `angebot`)
+        this._lief = false;              // läuft seit dieser Seite ein Speichern? Dann gehört nach dem Ende das Vorab-Füllen dazu.
         this._selbst = false;            // hat jemand selbst einen Haken gesetzt? Dann folgen die Haken der Seite nicht mehr.
         this.gezeigt = 'bibliothek';
         this.knopf?.addEventListener('click', () => this.speichern());
@@ -122,6 +125,11 @@ export class Exportleistemodell {
             kein: this.hinweis || s.meldung || '',          // Einpassung: der Hinweis der Vorlage sagt, was stattdessen geht
         }[s.status] ?? '';
         this._melden(text, s.status === 'fehler');
+        if (s.status === 'laeuft') this._lief = true;
+        else if (this._lief) {
+            this._lief = false;
+            if (s.status === 'fertig') Genesis9modellvorrat.fuellen(s.modell || s.name).catch(fehler => console.warn(`Exportleistemodell: Vorab-Anzeigen — ${fehler.message}`));
+        }
         this.knopf.disabled = s.status === 'laeuft';          // nur während des Laufs (Bedienelemente nicht sperren)
         if (s.status === 'laeuft') this._takt = setTimeout(() => this._standHolen(), Exportleistemodell.TAKT_MS);
     }

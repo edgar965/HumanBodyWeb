@@ -15,6 +15,7 @@ Warum es diese Figur gibt: `core/dienste/smplfigur.py`.
 
 import logging
 
+from asgiref.sync import sync_to_async
 from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.http import require_GET
 
@@ -73,6 +74,25 @@ class Smplfigur:
             if uv_felder:
                 antwort.update(uv_felder)
         return Netzausgabe.antwort(antwort, request)
+
+    @staticmethod
+    @require_GET
+    async def masse(request, name):
+        """Die Maße eines Körpers. Eine geformte Variante wird dafür gemessen (0,25 s, `Smplvariantenmasse`, ohne Dateien) — im eigenen Faden, sonst warteten alle synchronen
+        Ansichten dahinter."""
+        return await sync_to_async(Smplfigur._masse, thread_sensitive=False)(request, name)
+
+    @staticmethod
+    def _masse(request, name):
+        if not Smplfiguren.kennt(name):
+            return JsonResponse({'fehler': 'Unbekannter SMPL-Körper'}, status=404)
+        try:
+            from ..dienste.smplvariantenmasse import Smplvariantenmasse
+            gemessen = Smplvariantenmasse.gemessen(name)
+            return JsonResponse({'name': name, 'masse': Smplfiguren.masse(name) if gemessen is None else gemessen})
+        except (OSError, ValueError) as fehler:
+            logger.warning('Maße von %s nicht messbar: %s', name, fehler)
+            return JsonResponse({'fehler': str(fehler)}, status=500)
 
     @staticmethod
     @require_GET

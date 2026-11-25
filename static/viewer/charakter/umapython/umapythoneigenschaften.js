@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
+import { Sanduhr } from '../../gemeinsam/sanduhr.js';
 import { Umapythonkleider } from './umapythonkleider.js';
 
 /**
@@ -30,7 +31,7 @@ import { Umapythonkleider } from './umapythonkleider.js';
 export class Umapythoneigenschaften {
 
     static BEREICH = 'prop-umapython-section';
-    static RUHE_MS = 140;
+    static RUHE_MS = 0;       // ein Lauf zur Zeit, der letzte Wert gewinnt (`_ziehen`)
 
     /** So viele Regler stehen offen; der Rest liegt unter „mehr". */
     static SOFORT = 12;
@@ -170,7 +171,7 @@ export class Umapythoneigenschaften {
         }
         Umapythoneigenschaften._laeuft = true;
         try {
-            await inst.reglerSetzen(name, wert);
+            await Sanduhr.um('Figur wird neu gerechnet …', () => inst.reglerSetzen(name, wert));     // Edgar, 25.11.2026: „Mach eine Sanduhr wenn ein regler nicht durch ist“
             Umapythoneigenschaften._bilanz(inst);
             markDirty();
         } catch (fehler) {

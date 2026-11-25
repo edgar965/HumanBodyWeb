@@ -20,6 +20,7 @@ from pathlib import Path
 from unittest import mock
 
 import numpy as np
+import torch
 from django.conf import settings
 from PIL import Image
 
@@ -174,10 +175,10 @@ class S3dbschaetzerDrehungTest(unittest.TestCase):
         return s
 
     def test_drehen_und_zurueck_heben_sich_auf(self):
-        p = np.array([[3.5, 7.25], [0.0, 0.0], [40.0, 30.0]])
+        p = torch.tensor([[3.5, 7.25], [0.0, 0.0], [40.0, 30.0]], dtype=torch.float64, device='cuda')
         for grad in S3dbschaetzer.DREHUNGEN:
             hin = S3dbschaetzer.drehen(p, grad, 40, 30)
-            np.testing.assert_allclose(S3dbschaetzer.zurueck(hin, grad, 40, 30), p)
+            torch.testing.assert_close(S3dbschaetzer.zurueck(hin, grad, 40, 30), p)
 
     def test_bild_gegen_den_uhrzeigersinn_wie_pil_und_punkte_zurueck_im_ungedrehten_foto(self):
         rgb = np.full((30, 40, 3), S3dbschaetzer.GRAU, dtype=np.uint8)               # schon auf Grau

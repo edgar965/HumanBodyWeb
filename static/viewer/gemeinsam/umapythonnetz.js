@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Netzentsorgung } from './netzentsorgung.js';
+import { base64ToFloat32 } from './kodierung.js';
 
 /**
  * Umapythonnetz — das Körpernetz einer UMA-Python-Figur bauen.
@@ -77,6 +78,7 @@ export class Umapythonnetz {
         }
         geo.setIndex(netz.dreiecke);
         const material = Umapythonnetz._materialien(geo, netz.gruppen, rasse);
+        geo.userData.gruppen = geo.groups.map(g => ({ ...g }));       // unverändert — der Stoffschwung stellt `count` einer laufenden Gruppe auf 0
         const mesh = new THREE.Mesh(geo, material);
         mesh.name = name;
         mesh.userData.beschriftung = beschriftung;
@@ -163,7 +165,38 @@ export class Umapythonnetz {
         });
     }
 
-    /** Ein Netz samt Material freigeben — beim Tausch nach einem Reglerzug. */
+    /** Was ein Reglerzug nicht ändert — der Nachfolger teilt es mit dem alten Netz. */
+    static BLEIBT = ['normal', 'uv', 'skinIndex', 'skinWeight'];
+
+    /**
+     * Ein Reglerzug (25.11.2026, Edgar: „alle regler unter 0,2 s“): neue Punkte (die Normalen hängen nicht an der DNA), alles andere vom stehenden Netz — auch Materialien und Texturen. Bis dahin lud jeder Zug
+     * alle 14 Bilder neu, gemessen 1,4–1,8 s Stillstand in `texSubImage2D`; die alten blieben auf der Karte liegen (`Material.dispose` gibt Texturen nicht frei).
+     *
+     * Ein NEUES `SkinnedMesh`, nicht das alte mit anderen Punkten: Am Netz selbst erkennen Stoffschwung und Auswahl, dass sich die Figur geändert hat.
+     *
+     * @param alt   das stehende, gehäutete Netz; es verlässt die Gruppe, seine Geometrie wird frei
+     * @param netz  `{punkte}` als Puffer
+     */
+    static umformen(gruppe, alt, netz) {
+        const von = alt.geometry, geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(base64ToFloat32(netz.punkte), 3));
+        for (const name of Umapythonnetz.BLEIBT) {
+            if (!von.attributes[name]) continue;
+            geo.setAttribute(name, von.attributes[name]);
+            von.deleteAttribute(name);                      // sonst gäbe `dispose` den geteilten Puffer mit frei
+        }
+        geo.setIndex(von.index);
+        von.setIndex(null);
+        geo.userData.gruppen = von.userData.gruppen || [];
+        for (const g of geo.userData.gruppen) geo.addGroup(g.start, g.count, g.materialIndex);
+        const neu = new THREE.SkinnedMesh(geo, alt.material);
+        Object.assign(neu, { name: alt.name, visible: alt.visible, frustumCulled: false, castShadow: alt.castShadow, receiveShadow: alt.receiveShadow, userData: { ...alt.userData } });
+        gruppe.remove(alt);
+        von.dispose();
+        return neu;
+    }
+
+    /** Ein Netz samt Material freigeben — vor einem vollen Neubau (Rasse, Kleidung). */
     static entfernen(gruppe, name) {
         const alt = gruppe.getObjectByName(name);
         if (!alt) return;

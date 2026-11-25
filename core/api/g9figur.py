@@ -196,7 +196,8 @@ class G9figur:
         except (OSError, ValueError, KeyError) as fehler:
             logger.warning('Genesis 9: Netz nicht baubar: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
-        antwort = G9figur._netzantwort(netz)
+        form = rumpf.get('nur') == 'form'
+        antwort = G9figur._netzantwort(netz, form)
         antwort.update({
             # Die Fußhaltung getragener Schuhe je Knochen — der Browser legt sie nach jedem Bild einer Animation wieder auf (12.11.2026, `G9griffkette`).
             'griffdeltas': G9figur._griffdeltas(rumpf, eintrag, netz['skelett']),
@@ -208,7 +209,7 @@ class G9figur:
             'hdwerte': netz.get('hdwerte') or {},
             'alter_aussehen': netz.get('alter_aussehen') or 0.0,
             'gelenkregler': netz.get('gelenkregler') or {},
-            'anhaenge': [dict(G9figur._netzantwort(a), schluessel=a['schluessel'],
+            'anhaenge': [dict(G9figur._netzantwort(a, form), schluessel=a['schluessel'],
                               name=a['name']) for a in netz['anhaenge']],
         })
         return antwort
@@ -233,7 +234,11 @@ class G9figur:
 
     @staticmethod
     def formung(rumpf, eintrag, ohne_griff=None):
-        u"""`G9formung` aus Reglern, Pose und Ausdruck des Rumpfs (sonst des
+        return G9formung.aus_abfrage(*G9figur.stellung(rumpf, eintrag, ohne_griff))
+
+    @staticmethod
+    def stellung(rumpf, eintrag, ohne_griff=None):
+        u"""(Regler, Drehung) fuer `G9formung` aus Reglern, Pose und Ausdruck des Rumpfs (sonst des
         Eintrags): Preset-Regler ueber Nutzerreglern, Drehung aus der Pose.
         `ohne_griff`: die Griffpose DIESES Stuecks weglassen — ein Genesis-8-
         Schuh ist in seiner Ruhelage schon so modelliert, wie er am posierten
@@ -259,7 +264,7 @@ class G9figur:
                 drehung = dict(knochen)
         # Griffposen getragener Stücke: ein Schuh stellt den Fuß AUF die Pose, ein Requisit greift fest (`G9griffkette`, 18.10.2026).
         G9griffkette.anwenden(drehung, regler, G9figur._namen(rumpf.get('griffe')), ohne_griff)
-        return G9formung.aus_abfrage(regler, drehung)
+        return regler, drehung
 
     @staticmethod
     def _kleidung(wert):

@@ -60,4 +60,30 @@ export class Smplnetz {
             color: Smplnetz.FARBE, roughness: 0.7, metalness: 0.0, clearcoat: 0.0,
         }));
     }
+
+    /** Was ein Formzug nicht ändert — der Nachfolger teilt es mit dem alten Netz. */
+    static BLEIBT = ['uv', 'skinIndex', 'skinWeight'];
+
+    /**
+     * Ein Formzug (25.11.2026, `Smplformzug`): neue Punkte und Normalen, alles andere vom stehenden Netz — auch Material, Textur und Hautdetails.
+     * @param punkte  flach, am UNGETEILTEN Netz; `ursprung` zieht sie auf die Browserpunkte
+     */
+    static umformen(gruppe, alt, punkte, ursprung) {
+        const von = alt.geometry, geo = new THREE.BufferGeometry(), n = ursprung.length, lage = new Float32Array(n * 3);
+        for (let j = 0; j < n; j++) for (let c = 0; c < 3; c++) lage[3 * j + c] = punkte[3 * ursprung[j] + c];
+        geo.setAttribute('position', new THREE.BufferAttribute(lage, 3));
+        for (const name of Smplnetz.BLEIBT) {
+            if (!von.attributes[name]) continue;
+            geo.setAttribute(name, von.attributes[name]);
+            von.deleteAttribute(name);                      // sonst gäbe `dispose` den geteilten Puffer mit frei
+        }
+        geo.setIndex(von.index);
+        von.setIndex(null);
+        geo.computeVertexNormals();
+        const neu = new THREE.SkinnedMesh(geo, alt.material);
+        Object.assign(neu, { name: alt.name, visible: alt.visible, frustumCulled: false, castShadow: alt.castShadow, receiveShadow: alt.receiveShadow, userData: { ...alt.userData } });
+        gruppe.remove(alt);
+        von.dispose();
+        return neu;
+    }
 }

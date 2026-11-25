@@ -35,7 +35,11 @@ class Blendimportpose:
     #: Oberarme der Genesis-A-Haltung zur Senkrechten (Grad), gemessen am Bauplan (Schulter → Ellbogen).
     A_OBERARM_GRAD = 43.0
 
-    def __init__(self, ablage, einstellungen, melden, angehalten=lambda: False, abbrechen=RuntimeError):
+    def __init__(self, ablage, einstellungen, melden, angehalten=lambda: False, abbrechen=RuntimeError, nur_gewaehlte=False, vorne=None):
+        #: rendert (`glb`, Zieldatei) die Vorderansicht (Vorgabe pyrender; die Kette nimmt ihre Fassung auf der Karte, `Ansichtraster.vorne`)
+        self.vorne = vorne or Mesh3dansicht.vorne
+        #: nur die eingestellte Drehung rechnen (die Mesh-Genesis-Kette, 25.11.2026: die drei anderen braucht nur die Auswahl auf der Jobseite, dort rechnet „Pose rechnen“ sie nach)
+        self.nur_gewaehlte = nur_gewaehlte
         self.ablage = ablage
         self.einstellungen = einstellungen
         self.melden = melden
@@ -64,9 +68,9 @@ class Blendimportpose:
         ordner.mkdir(parents=True, exist_ok=True)
         grad = self.drehung(self.einstellungen)
         self.melden(0.0, 'Pose: Körper rendern')
-        ansicht = Mesh3dansicht.vorne(glb, ordner / 'ansicht_vorne.png')
+        ansicht = self.vorne(glb, ordner / 'ansicht_vorne.png')
         best = Posebestimmung(ordner, 'Mesh-3D %s' % self.ablage.kennung, self.melden, self.angehalten, self.abbrechen)
-        sam, neu = best.sam(ansicht, schluessel=Mesh3dansicht.eingaben(glb))
+        sam, neu = best.sam(ansicht, (grad,) if self.nur_gewaehlte else Posebestimmung.DREHUNGEN, schluessel=Mesh3dansicht.eingaben(glb))
         self.melden(0.7, 'Pose: Gelenke ins Netz legen')
         e = best.abbilden(glb, ansicht, sam, grad)
         abbildung, liste = e['abbildung'], e['liste']

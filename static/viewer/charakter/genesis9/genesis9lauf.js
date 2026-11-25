@@ -1,6 +1,7 @@
 import { markDirty } from '../undo.js';
 import { state } from '../state.js';
 import { Sanduhr } from '../../gemeinsam/sanduhr.js';
+import { Figurfertig } from '../../gemeinsam/figurfertig.js';
 
 /**
  * Genesis9lauf — entprellter Neubau der Figur nach einer Bedienung.
@@ -52,22 +53,34 @@ export class Genesis9lauf {
      * @param danach      () => void — nach jedem gelungenen Lauf (Kopfzeile)
      * @param schluessel  worauf sich der Wunsch bezieht; gleicher Schlüssel = der
      *                    spätere ersetzt den früheren, leer = der gemeinsame
+     * @param ruhe        so lange muss es still sein, bis der Lauf beginnt (ein gezogener Schieber: `Genesis9reglerzug.PAUSE_MS`)
      */
-    static planen(inst, aktion, danach = null, schluessel = '') {
+    static planen(inst, aktion, danach = null, schluessel = '', ruhe = Genesis9lauf.RUHE_MS) {
         const lauf = Genesis9lauf._lauf(inst);
         lauf.wartend.set(schluessel, [aktion, danach]);
+        Genesis9lauf._sanduhr(lauf, true);
+        Genesis9lauf._takten(inst, lauf, ruhe);
+    }
+
+    /** Was wartet, beginnt schon nach `ruhe` (der Schieber ist losgelassen). */
+    static vorziehen(inst, ruhe) {
+        const lauf = Genesis9lauf._laeufe.get(inst.id);
+        if (lauf?.wartend.size) Genesis9lauf._takten(inst, lauf, ruhe);
+    }
+
+    static _takten(inst, lauf, ruhe) {
         clearTimeout(lauf.zeitgeber);
         lauf.zeitgeber = setTimeout(() => {
             for (const [k, wunsch] of lauf.wartend) lauf.faellig.set(k, wunsch);
             lauf.wartend.clear();
             Genesis9lauf._abarbeiten(inst);
-        }, Genesis9lauf.RUHE_MS);
+        }, ruhe);
     }
 
     static _lauf(inst) {
         let lauf = Genesis9lauf._laeufe.get(inst.id);
         if (!lauf) {
-            lauf = { zeitgeber: null, laeuft: false, wartend: new Map(), faellig: new Map() };
+            lauf = { zeitgeber: null, laeuft: false, sanduhr: false, wartend: new Map(), faellig: new Map() };
             Genesis9lauf._laeufe.set(inst.id, lauf);
         }
         return lauf;
@@ -78,9 +91,7 @@ export class Genesis9lauf {
         const lauf = Genesis9lauf._lauf(inst);
         if (lauf.laeuft) return;
         lauf.laeuft = true;
-        // Sanduhr, solange der Server rechnet (Edgar, 18.09.2026: „damit ich
-        // weiss, wann die Property geändert wird").
-        Sanduhr.an('Figur wird neu gerechnet …');
+        Sanduhr.text('Figur wird genau nachgerechnet …');
         try {
             while (lauf.faellig.size) {
                 const [schluessel, [aktion, danach]] = lauf.faellig.entries().next().value;
@@ -92,9 +103,30 @@ export class Genesis9lauf {
                 }
             }
         } finally {
-            Sanduhr.aus();
             lauf.laeuft = false;
+            Genesis9lauf._fertig(inst, lauf);
         }
+    }
+
+    /**
+     * Sanduhr, bis der Regler DURCH ist (Edgar, 18.09.2026: „damit ich weiss, wann die Property geändert wird“; 25.11.2026: „Mach eine Sanduhr wenn ein regler nicht durch ist“):
+     * vom ersten Zug an — nicht erst nach der Ruhezeit — bis Form, Kleidung, Bilder und Anatomie stehen (`Figurfertig`). Die Maske der Haut UNTER der Kleidung rechnet danach noch
+     * bis zu 2 s und ist nicht zu sehen — sie steht nur in der Anzeige rechts unten.
+     */
+    static NICHT_ZU_SEHEN = ['Haut unter der Kleidung'];
+
+    static _sanduhr(lauf, an) {
+        if (an === lauf.sanduhr) return;
+        lauf.sanduhr = an;
+        if (an) Sanduhr.an('Regler wird angewendet …');
+        else Sanduhr.aus();
+    }
+
+    static async _fertig(inst, lauf) {
+        const offen = () => lauf.laeuft || lauf.wartend.size > 0 || lauf.faellig.size > 0;
+        if (offen()) return;
+        if (Genesis9lauf.inSzene(inst)) await Figurfertig.abwarten(inst, Figurfertig.FRIST_MS, Genesis9lauf.NICHT_ZU_SEHEN);
+        if (!offen()) Genesis9lauf._sanduhr(lauf, false);
     }
 
     /** Ein Wunsch. `false`, wenn die Figur inzwischen nicht mehr in der Szene steht. */
@@ -117,6 +149,8 @@ export class Genesis9lauf {
     }
 
     static vergessen(inst) {
+        const lauf = Genesis9lauf._laeufe.get(inst.id);
+        if (lauf) Genesis9lauf._sanduhr(lauf, false);
         Genesis9lauf._laeufe.delete(inst.id);
     }
 }

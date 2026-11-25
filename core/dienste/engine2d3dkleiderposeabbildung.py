@@ -186,7 +186,7 @@ class Engine2d3dKleiderposeabbildung:
                         tiefen[name] = vorhersage
                         liste.append(dict(eintrag, stand='verworfen', vorhersage=[round(xy[0], 4), round(xy[1], 4), round(vorhersage, 4)]))
                         continue
-                roh[mp] = [xy[0], xy[1], tiefe]
+                roh[mp] = Torchfeld.feld([float(xy[0]), float(xy[1]), float(tiefe)], dtype=torch.float64)
                 treffer[mp], stand = 9.0, 'innen'
             tiefen[name] = float(roh[mp][2])
             liste.append(dict(eintrag, stand=stand, netz=[round(float(w), 4) for w in roh[mp]]))

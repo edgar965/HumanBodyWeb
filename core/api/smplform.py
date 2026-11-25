@@ -3,7 +3,8 @@
 
     POST /api/character/smpl-figur/formen/
          {geschlecht: 'male'|'female', groesse: -100..100, fuelle: -100..100,
-          form3..form10: -100..100 (optional, Vollausstattung 25.09.2026)}
+          form3..form10: -100..100 (optional, Vollausstattung 25.09.2026),
+          nur: 'form' (Reglerzug, 25.11.2026): punkte als Binaerfeld, ohne Dreiecke, UV und Gewichte — die stehen im Browser}
       -> {name, geschlecht, betas, punkte, dreiecke, hoehe, masse,
           regler, skelett, uv, uv_dreiecke, uv_ursprung}
 
@@ -15,14 +16,22 @@ der 3D-Koerper bei Bust 70 / Waist 55 / Hips 70 Punkt fuer Punkt derselbe
 Blendshapes; welcher Regler welches Beta mit welchem Vorzeichen bewegt,
 steht gemessen in `GarmentCode/smplform.py`.
 
-Der erzeugte Koerper wird abgelegt (`GarmentCode/koerper/smpl/<name>.obj`
-und `.yaml`) und traegt einen Fingerabdruck der Betas im Namen — zwei
-gleiche Regler ergeben dieselbe Datei, zwei verschiedene nie dieselbe.
+Der Koerper traegt einen Fingerabdruck der Betas im Namen — zwei gleiche
+Regler ergeben denselben, zwei verschiedene nie denselben. Gemessen und
+abgelegt (`koerper/smplx/<name>.obj` und `.yaml`) wird er erst, wenn es jemand
+braucht (`Smplvarianten.sicherstellen`, 25.11.2026): In der Antwort stand es
+bis dahin vor jedem Zug, gemessen 13,5 s. `masse` ist leer, solange nicht
+gemessen; der Browser holt sie ueber `…/<name>/masse/`.
+
+Async mit eigenem Faden: Synchrone Ansichten teilen sich EINEN, dahinter
+wartete der Zug auf jede andere Anfrage der Seite (wie `G9reglerzugapi`).
 """
 
 import json
 import logging
 
+import torch
+from asgiref.sync import sync_to_async
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -40,12 +49,18 @@ class Smplformung:
     @staticmethod
     @csrf_exempt
     @require_POST
-    def formen(request):
+    async def formen(request):
+        return await sync_to_async(Smplformung._formen, thread_sensitive=False)(request)
+
+    @staticmethod
+    def _formen(request):
         from GarmentCode.smplform import Smplform
 
         from ..daten.netzantwort import Netzantwort
+        from ..daten.netzfeld import Netzfeld
         from ..dienste.smplfigur import Smplfiguren
         from ..dienste.smplvarianten import Smplvarianten
+        from ..dienste.smplvariantenmasse import Smplvariantenmasse
 
         try:
             anfrage = json.loads(request.body.decode('utf-8') or '{}')
@@ -61,7 +76,7 @@ class Smplformung:
         masse = {schluessel: anfrage.get(schluessel, 0) for schluessel in Smplxmassregler.SCHLUESSEL}
 
         try:
-            daten = Smplvarianten.aus_reglern(geschlecht, groesse, fuelle, weitere, masse)
+            daten = Smplvarianten.form(geschlecht, Smplvarianten.betas_aus_reglern(geschlecht, groesse, fuelle, weitere, masse))
         except (OSError, ValueError) as fehler:
             logger.warning('SMPL-Formung fehlgeschlagen (%s, %s/%s): %s', geschlecht, groesse, fuelle, fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
@@ -77,19 +92,25 @@ class Smplformung:
             # (Summe von Richtungen) — sie gehen so zurueck, wie sie kamen.
             'regler': {**Smplform.regler(geschlecht, daten['betas'][:Smplform.ANZAHL_BETAS]),
                        **{k: float(v or 0) for k, v in masse.items()}},
-            'punkte': punkte.tolist(),
-            'dreiecke': dreiecke.tolist(),
             'hoehe': float(daten['hoehe']),
-            'masse': {k: float(v) for k, v in daten['masse'].items()},
+            'masse': {k: float(v) for k, v in Smplvarianten.masse_abgelegt(daten['name']).items()},
             # Auch die geformte Variante bekommt ihr Skelett — sonst
             # verschwaende die Figur ihre Knochen beim ersten Reglerzug
             # (dieser Endpunkt loest den Netz-Endpunkt dann ab).
             'skelett': Smplfiguren.skelett(daten['name'], punkte),
+        }
+        if anfrage.get('nur') == 'form':
+            Smplvariantenmasse.vorwaermen(geschlecht)
+            antwort.update(punkte=Netzfeld.aus(punkte, torch.float32, genau=True), punktzahl=len(punkte))
+            return Netzausgabe.antwort(antwort, request)
+        antwort.update(
+            punkte=punkte.tolist(),
+            dreiecke=dreiecke.tolist(),
             # Auch die Variante bekommt Hautgewichte — sonst waere
             # ausgerechnet die geformte Figur die einzige, die beim
             # Abspielen starr bleibt.
-            'hautgewichte': Netzantwort.hautgewichte(Smplfiguren.haut(daten['name'], punkte)),
-        }
+            hautgewichte=Netzantwort.hautgewichte(Smplfiguren.haut(daten['name'], punkte)),
+        )
         # UV auch fuer geformte Varianten — Betas aendern nur die Punktlage,
         # nie die Topologie (25.09.2026, „SMPL-X-Texturen").
         uv_felder = Smplfiguren.uv_felder(dreiecke)

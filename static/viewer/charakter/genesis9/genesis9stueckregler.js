@@ -1,6 +1,8 @@
 import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
 import { Genesis9lauf } from './genesis9lauf.js';
+import { Genesis9reglerzug } from './genesis9reglerzug.js';
+import { Genesis9stueckzug } from '../../gemeinsam/genesis9stueckzug.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Sortenanteile } from './sortenanteile.js';
 import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
@@ -161,10 +163,13 @@ export class Genesis9stueckregler {
                 else werte.regler[regler.name] = neu;
             }
             Genesis9stueckregler._zuletzt(werte.regler, regler.name);
+            if (!mischen) Genesis9stueckzug.ziehen(inst, stueck.id, regler, neu, werte);      // sofort am stehenden Netz, genau nach dem Loslassen (25.11.2026)
             Genesis9lauf.planen(inst, () => Dazkleidung.anziehenAuf(inst, stueck.id, werte), () => {},
-                                `stueck:${stueck.id}`);
+                                `stueck:${stueck.id}`, Genesis9reglerzug.PAUSE_MS);
             markDirty();
         });
+        schieber.addEventListener('change', () => Genesis9lauf.vorziehen(inst, Genesis9reglerzug.LOS_MS));
+        schieber.addEventListener('pointerenter', () => { if (!mischen && Dazkleidung.kleidung(inst)[stueck.id]) Genesis9stueckzug.vorab(inst, stueck.id, regler, werteLesen()); });
         return zeile;
     }
 

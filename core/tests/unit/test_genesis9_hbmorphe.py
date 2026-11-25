@@ -112,7 +112,7 @@ class HbmorpheTest(SimpleTestCase):
             ablage = mock.Mock()
             ablage.kanaele = {}
             with mock.patch('Genesis9.formung.G9basisnetz.holen', return_value=basis), \
-                    mock.patch('Genesis9.formung.G9morphablage.holen', return_value=ablage), \
+                    mock.patch('Genesis9.formungswerte.G9morphablage.holen', return_value=ablage), \
                     mock.patch('Genesis9.formung.G9formelnfremd') as formeln:
                 formeln.return_value.morphwerte.return_value = {}
                 formeln.return_value.ablage = ablage

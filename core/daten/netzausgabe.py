@@ -61,7 +61,7 @@ class Netzausgabe:
         ohnehin JSON heraus.
         """
         binaer = cls.will_binaer(request)
-        Netzfeld.abholen(daten)         # alle Felder auf der Karte in EINER Kopie (18.11.2026)
+        Netzfeld.abholen(daten, kurz=binaer == cls.KURZ)         # alle Felder auf der Karte in EINER Kopie (18.11.2026)
         if binaer:
             return HttpResponse(Netzpaket.packen(daten, kurz=binaer == cls.KURZ), status=status,
                                 content_type=Netzpaket.INHALTSTYP)
@@ -75,7 +75,7 @@ class Netzausgabe:
         Schlüssel (`G9antworten.schluessel`): Sonst bekäme der zweite Aufrufer
         das Paket des ersten in seinem Format vorgesetzt.
         """
-        Netzfeld.abholen(daten)         # alle Felder auf der Karte in EINER Kopie (18.11.2026)
+        Netzfeld.abholen(daten, kurz=binaer == cls.KURZ)         # alle Felder auf der Karte in EINER Kopie (18.11.2026)
         if binaer:
             return (Netzpaket.packen(daten, kurz=binaer == cls.KURZ), Netzpaket.INHALTSTYP)
         return (Netzjson.bytes(daten), 'application/json')

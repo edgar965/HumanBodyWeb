@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils.js';
 import { Genesis9seiten } from './genesis9seiten.js';
+import { Aufgabenscheibe } from '../../gemeinsam/aufgabenscheibe.js';
 
 /**
  * Genesis9reglerliste — die Reglerliste des Genesis-Bedienfelds: Bereiche, darin Gruppen, darüber Suche, „nur geänderte" und „Seiten koppeln"
@@ -20,8 +21,9 @@ export class Genesis9reglerliste {
      * @param kopf       Platz für die Werkzeugzeile (`#prop-genesis9-reglerkopf`)
      * @param zeileBauen `regler → .slider-row`
      * @param anhaengen  `(kasten, bereich) → void` — Zusätze je Bereich (Kopf-Eigen-Link, Körpermorph-Formular)
+     * @param veraltet   `() → boolean` — inzwischen eine andere Figur gewählt: die Liste wird in Scheiben gebaut (`Aufgabenscheibe`, 24.11.2026) und hört dann auf
      */
-    static fuellen(behaelter, kopf, plan, zeileBauen, anhaengen) {
+    static async fuellen(behaelter, kopf, plan, zeileBauen, anhaengen, veraltet = () => false) {
         behaelter.innerHTML = '';
         const bereiche = plan.bereiche || [];
         if (!bereiche.length) {
@@ -29,11 +31,12 @@ export class Genesis9reglerliste {
             return;
         }
         Genesis9seiten.kennen(plan);
-        const liste = new Genesis9reglerliste(behaelter, plan);
+        const liste = new Genesis9reglerliste(behaelter, plan), scheibe = new Aufgabenscheibe();
         for (const bereich of bereiche) {
             const kasten = Genesis9reglerliste._kasten('uma-gruppe', bereich.name, bereich.regler.length);
             let gruppe = null;
             for (const r of bereich.regler) {
+                if (scheibe.voll) { await scheibe.weiter(); if (veraltet()) return; }
                 if (!r.gruppe) { kasten.appendChild(zeileBauen(r)); continue; }
                 if (gruppe?.dataset.gruppe !== r.gruppe) {
                     const anzahl = bereich.regler.filter(x => x.gruppe === r.gruppe).length;

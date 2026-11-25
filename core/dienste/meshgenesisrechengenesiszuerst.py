@@ -50,16 +50,10 @@ class Meshgenesisrechengenesiszuerst:
                                                                                               '--nur-pruefen', '--weg', 'f']),
         'pruefung_p': ('pruefung_p', 'Prüfung der Stücke von Passend: Testfälle und Tanz', ['-u', 'meshgenesis_kostuem_lauf.py', '--nur', '{k}', '--stufe', '{kostuem_stufe}',
                                                                                             '--nur-pruefen', '--weg', 'p']),
-        # 19.11.2026 abends (Edgar: „Ja“ auf „Soll der Stoff ein fester Job-Schritt nach Weg z werden?“): die Stücke von Weg z (auch die aus den Bausteinen) über die Animation der Seite als
-        # Stoff (Stoffsolver mit Kernmotor); die Seite zeigt sie dann mit Falten statt als zweite Haut. Gemessen gk_anzug + gk_mieder (goldprinzessin_mesh_genesis_64): 5 + 9 s Simulation
-        'stoff': ('stoff', 'Kleider der Kleiderbibliothek als Stoff über die Animation der Seite (Genesis zuerst)', ['-u', 'meshgenesis_kleiderstoff_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
-        # 20.11.2026 (Edgar: „Weg 2“ — Physik überall mit demselben Code): Haar und Bart in Bewegung, die Leitsträhnen mit der Stoffsolver-Straehnenbahn auf den Kernen; die Seite
-        # zeigt sie statt eigener Pendel. Gemessen zauberer_23: ki_haar 1.478 Leitsträhnen 49 s, z_bart 814 Leitsträhnen 60 s (1.004 Bilder)
-        'haar': ('haar', 'Haar und Bart der Kleiderbibliothek in Bewegung über die Animation der Seite (Genesis zuerst)', ['-u', 'meshgenesis_kleiderhaar_lauf.py', '--nur', '{k}', '--geschlecht', '{g}']),
     }
-    #: Schritte, die nach einem Schritt der alten Kette dazukommen (in dieser Reihenfolge). „stoff“ und „haar“ als letzte: ein Fehler dort hält keinen anderen Schritt auf, die Seite zeigt
-    #: dann gehäutet bzw. ihre Pendel
-    NACH = {'zeile1': ('proportionen',), 'kleider': ('garderobe', 'bausteine', 'drapieren', 'eigen', 'passend', 'kleidregeln'), 'pruefung': ('pruefung_f', 'pruefung_p', 'stoff', 'haar')}
+    #: Schritte, die nach einem Schritt der alten Kette dazukommen (in dieser Reihenfolge). „stoff“ und „haar“ (Physik über die Animation) standen vom 19./20.11. bis 25.11.2026 am Ende der Kette;
+    #: seitdem rechnet sie erst der MP4-Export (Edgar: „physik muss doch erst beim export in mp4 berechnet werden“, `Exportleistekettenlauf`) — die Seite zeigt bis dahin gehäutet bzw. ihre Pendel
+    NACH = {'zeile1': ('proportionen',), 'kleider': ('garderobe', 'bausteine', 'drapieren', 'eigen', 'passend', 'kleidregeln'), 'pruefung': ('pruefung_f', 'pruefung_p')}
     #: Versuch 21.11.2026 (Edgar: „ja, teste Genesis zuerst mit Mesh-Reglern an edgar_fotos“): mit `genesis_zuerst_mesh_regler` in `einstellung.json` behält die Figur den freien
     #: Versatz der Einpassung als Mesh-Regler (Form wie das Netz, `abgleich.mittel_mm` 0 statt 15,1 an edgar_fotos), die Kleiderwege bleiben die von „Genesis zuerst“.
     #: `meshgenesis_zeile1figur.py` liest dieselbe Einstellung (ein Arbeitsprozess mit älterer Schrittliste rechnet so trotzdem das Gewählte).

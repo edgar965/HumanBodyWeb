@@ -150,7 +150,6 @@ export const state = {
     // Properties panel state
     morphDefs: null,
     currentPropsCharId: null,
-    reloadTimer: null,
 
     // Asset panel cached data
     _garmentCatalog: [],

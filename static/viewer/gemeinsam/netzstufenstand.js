@@ -71,6 +71,11 @@ export class Netzstufenstand {
         Netzstufenstand._senden();
     }
 
+    /** Was an DIESER Figur noch fehlt (`Figurfertig`) — leer, wenn alles gezeichnet ist. */
+    static offenAn(inst) {
+        return Netzstufenstand._offen.get(inst?.id) || [];
+    }
+
     static vergessen(inst) {
         if (!inst?.id) return;
         Netzstufenstand._entsorgt.add(inst);

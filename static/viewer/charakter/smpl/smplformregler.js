@@ -4,6 +4,8 @@ import { fn } from '../../gemeinsam/registrierung.js';
 import { markDirty } from '../undo.js';
 import { SmplFigur } from './smplfigur.js';
 import { Sanduhr } from '../../gemeinsam/sanduhr.js';
+import { Smplformzug } from '../../gemeinsam/smplformzug.js';
+import { Smplmassanzeige } from './smplmassanzeige.js';
 
 /**
  * Smplformregler — Größe und Fülle eines SMPL-Körpers.
@@ -21,9 +23,8 @@ import { Sanduhr } from '../../gemeinsam/sanduhr.js';
  * Körpergröße bzw. 16-21 cm Taillenumfang — gemessen, nicht geschätzt
  * (`GarmentCode/smplform.py`).
  *
- * Losgelassen wird der Regler, nicht gezogen: Jeder Bau rechnet ein
- * SMPL-X-Netz mit 10.475 Punkten und legt es ab. Bei jedem Pixel neu zu bauen
- * hieße hunderte Läufe für eine Bewegung.
+ * Losgelassen wird der Regler, nicht gezogen. Der Zug selbst kostet seit dem
+ * 25.11.2026 nur noch Form und Skelett (57 ms auf dem Server statt 13,5 s).
  *
  * ACHT WEITERE REGLER (25.09.2026, „SMPL-X für Vollausstattung"): SMPL-X
  * führt zehn Shape-Betas, nicht nur zwei. Für Beta 2..9 ist — anders als für
@@ -137,11 +138,26 @@ export class Smplformregler {
         return fuss;
     }
 
-    /** Neuen Körper bauen und die Figur austauschen — Lage bleibt. */
+    /** Ein Zug an der stehenden Figur (25.11.2026, `Smplformzug`) — die Werte der Figur gelten sofort, der letzte gewinnt. */
     static async _bauen(inst, schluessel, wert) {
         const stand = document.getElementById('prop-smpl-formstand');
         if (stand) stand.textContent = 'Baue Körper …';
-        const form = { ...inst.form, [schluessel]: wert };
+        if (!Smplformzug.moeglich(inst)) return Smplformregler._neuBauen(inst, { ...inst.form, [schluessel]: wert }, stand);
+        inst.form = { ...inst.form, [schluessel]: wert };
+        try {
+            if (!await Sanduhr.um('Figur wird neu gerechnet …', () => Smplformzug.ziehen(inst))) return;       // ein laufender Zug nimmt den Wert mit
+        } catch (fehler) {
+            if (stand) stand.textContent = `Fehler: ${fehler.message}`;
+            return;
+        }
+        if (stand) stand.textContent = `Geformt: ${inst.koerper}`;
+        if (state.currentPropsCharId === inst.id) Smplmassanzeige.zeigen(inst);
+        fn.updateCharacterListUI();
+        markDirty('SMPL-Form');
+    }
+
+    /** Neuen Körper bauen und die Figur austauschen — Lage bleibt (Figur mit Kleidung oder ohne Gewichte). */
+    static async _neuBauen(inst, form, stand) {
         // Haut (Farbe/Rauheit/Glanz) mitnehmen — sonst faellt ein Reglerzug
         // die eigene Hautfarbe wieder auf Grau zurueck (25.09.2026).
         const neu = new SmplFigur(inst.id, {

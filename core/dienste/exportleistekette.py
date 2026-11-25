@@ -5,8 +5,8 @@ Render zeigen dasselbe Ergebnis).
 Die Seite schickt je Stück der Kleiderbibliothek `{name, adresse, art}` in `stellung.kette` (`Meshgenesisexportquelle`): `name` = Knoten in der GLB (`ki_<id>`), `adresse` = Netz-Adresse
 des Stücks (`/api/meshgenesis/test/<kennung>/kleid/<g>/<weg>/<stück>`). Hier werden daraus geprüfte Dateien (Anzeigenetz, Stoff- und Haar-Ablage zur BVH des Renders, wie sie die Seite
 über `…/stoff/` und `…/haar/` bekommt: `Meshgenesisteststoff.dateien`, `Meshgenesistesthaar.dateien`); der Render (`Figurfilm.Kettenfilm`) liest sie aus `<glb>.stellung.json`.
-Fehlt die Ablage für die BVH des Renders, rechnet der Render-Prozess sie vorher mit denselben Kettenschritten (`Exportleistekettenlauf`, Edgar: „rechnet sonst mit demselben Code“);
-was danach noch fehlt, bleibt im Render gehäutet, wie auf der Seite.
+Fehlt die Ablage für die BVH des Renders, rechnet der Render-Prozess sie vorher mit denselben Kettenschritten (`Exportleistekettenlauf`, Edgar: „rechnet sonst mit demselben Code“) — seit
+25.11.2026 ist das der einzige Ort (Edgar: „physik muss doch erst beim export in mp4 berechnet werden“), der Job rechnet keine Physik mehr. Was danach noch fehlt, bleibt im Render gehäutet.
 
 Weicht ein Wind-, Stoff- oder Haar-Regler des Renders von der Vorgabe ab (`regler`: `Kettenregler`, 20.11.2026, Edgar: „die sollen wirken, wenn der Render eingestellt ist“), gilt die
 Ablage mit seinem Zeichen (`<Kategorie>__<Name>__<Zeichen>`); fehlt sie, wird sie gerechnet, und nie die Ablage der Seite genommen.
@@ -16,8 +16,12 @@ Ablage mit seinem Zeichen (`<Kategorie>__<Name>__<Zeichen>`); fehlt sie, wird si
 """
 
 import logging
+import os
 import re
+import sys
 from pathlib import Path
+
+from django.conf import settings
 
 from .meshgenesistestkleider import Meshgenesistestkleider
 from .meshgenesisteststoff import Meshgenesisteststoff
@@ -66,21 +70,32 @@ class Exportleistekette:
             return None
         ordner = Meshgenesistestkleider.ordner(teile[0], teile[1]) / teile[2] / teile[3] / quelle.ORDNER
         feld, kopf = ordner / ('%s__%s.npz' % (name, zusatz)), ordner / ('%s__%s.json' % (name, zusatz))
-        return (feld, kopf) if kopf.is_file() and Npztorch.da(feld) else None
+        return (feld, kopf) if kopf.is_file() and Npztorch.da(feld) and not quelle.veraltet(ordner, feld) else None
 
     @classmethod
     def fehlend(cls, stellung, bvh_pfad, regler=None):
-        """[(kennung, g, Schritt 'stoff'|'haar', stück)] ohne Ablage für diese BVH (und die Regler) — nur Stücke, die die Kette schon für eine BVH als Stoff bzw. Haar gerechnet hat (welche
-        Stücke Stoff oder Haar werden, entscheidet der Kettenschritt; ein Schuh hat keinen Ordner `stoff/` und wird nicht nachgerechnet)."""
+        """[(kennung, g, Schritt 'stoff'|'haar', stück)] ohne gültige Ablage für diese BVH (und die Regler) — nur Stücke, die der Kettenschritt rechnet (`rechenbar`; ein Schuh nicht)."""
         wahl = cls.wahl(bvh_pfad)
         aus = []
         for _e, teile in cls.seite(stellung or {}) if wahl else ():
             for schritt, quelle in cls.SCHRITTE:
-                ordner = Meshgenesistestkleider.ordner(teile[0], teile[1]) / teile[2] / teile[3] / quelle.ORDNER
                 zusatz = regler.zeichen(schritt) if regler else ''
-                if cls.dateien(quelle, teile, wahl, zusatz) is None and ordner.is_dir() and any(ordner.glob('*.json')):
+                if cls.dateien(quelle, teile, wahl, zusatz) is None and (teile[2], teile[3]) in cls.rechenbar(teile[0], teile[1], schritt):
                     aus.append((teile[0], teile[1], schritt, teile[3]))
         return aus
+
+    @staticmethod
+    def rechenbar(kennung, g, schritt):
+        """{(weg, stück)}, die der Kettenschritt „stoff“ bzw. „haar“ an diesem Test rechnet — seine eigene Wahl (`Kleiderstofflauf.stuecke`, `Kleiderhaarlauf.stuecke`). Nur im Render-Prozess
+        (lädt die Kettenmodule). Bis 25.11.2026 zählte, ob der Job das Stück schon einmal gerechnet hatte; seit er keine Physik mehr rechnet, wäre das keins."""
+        kette = os.path.join(str(settings.TOOLS_ROOT), 'meshgenesis')
+        if kette not in sys.path:
+            sys.path.append(kette)
+        if schritt == 'stoff':
+            from meshgenesis_kleiderstoff_lauf import Kleiderstofflauf as Lauf
+        else:
+            from meshgenesis_kleiderhaar_lauf import Kleiderhaarlauf as Lauf
+        return {(weg, Path(ordner).name) for _id, weg, ordner in Lauf(kennung, g).stuecke()}
 
     @classmethod
     def aufloesen(cls, stellung, bvh_pfad, regler=None):

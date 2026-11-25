@@ -109,7 +109,7 @@ class Meshfigurrunnerbahn:
         os.chdir(pfad)
         strom = _Zeilenstrom(self._zeile)
         try:
-            with contextlib.redirect_stdout(strom):
+            with Meshfigurdauerlauf.schritt(), contextlib.redirect_stdout(strom):
                 Meshfigurrunner(str(auftrag), schritt, runde or 1).ausfuehren()
         finally:
             os.chdir(ordner)
@@ -118,7 +118,6 @@ class Meshfigurrunnerbahn:
                     os.environ.pop(k, None)
                 else:
                     os.environ[k] = v
-            Meshfigurdauerlauf.aufraeumen()
         if self.ergebnis is None:
             raise RuntimeError(self.meldung or 'Runner ohne Ergebnis')
         return self.ergebnis

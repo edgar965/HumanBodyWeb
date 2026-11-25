@@ -66,7 +66,7 @@ export class Stoffkapseln {
         const zuordnung = Koerperzuordnung.staerksterKnochen(netz);
         const a = new THREE.Vector3(), b = new THREE.Vector3(), q = new THREE.Vector3();
         const d = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), o = new THREE.Vector3();
-        const aus = [];
+        const aus = [], { ab, liste } = Stoffkapseln.jeKnochen(zuordnung, n, bones.length);
         bones.forEach((bone, nummer) => {
             if (!Stoffkapseln.GLIEDER.test(bone.name)) return;
             const kinder = Stoffkapseln.achsenkinder(bone);
@@ -79,8 +79,8 @@ export class Stoffkapseln {
             // die Schenkelköpfe hinaus verlängert stand die Pelvis-Kapsel im
             // Schritt und drückte die Jeans dort 19 cm heraus (19.09.2026).
             const lauf = [], x1 = [], x2 = [];
-            for (let i = 0; i < n; i++) {
-                if (zuordnung[i] !== nummer) continue;
+            for (let k = ab[nummer]; k < ab[nummer + 1]; k++) {
+                const i = liste[k];
                 o.set(welt[3 * i], welt[3 * i + 1], welt[3 * i + 2]).sub(a);
                 lauf.push(o.dot(d)); x1.push(o.dot(e1)); x2.push(o.dot(e2));
             }
@@ -99,6 +99,16 @@ export class Stoffkapseln {
         });
         aus.sort((x, y) => y.punkte - x.punkte);
         return aus.slice(0, Stoffkapseln.HOECHSTENS);
+    }
+
+    /** Die Hautpunkte je Knochen in aufsteigender Folge: `liste[ab[k] … ab[k+1])` (24.11.2026 — vorher lief jeder der 138 Knochen über alle 104.480 Punkte, 65 ms im ersten Bild). */
+    static jeKnochen(zuordnung, n, knochen) {
+        const ab = new Uint32Array(knochen + 1), liste = new Uint32Array(n);
+        for (let i = 0; i < n; i++) if (zuordnung?.[i] < knochen) ab[zuordnung[i] + 1]++;
+        for (let k = 0; k < knochen; k++) ab[k + 1] += ab[k];
+        const stelle = ab.slice();
+        for (let i = 0; i < n; i++) if (zuordnung?.[i] < knochen) liste[stelle[zuordnung[i]]++] = i;
+        return { ab, liste };
     }
 
     /**

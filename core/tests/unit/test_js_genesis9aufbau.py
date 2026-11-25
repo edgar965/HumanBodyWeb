@@ -13,6 +13,7 @@ In Node mit einer Figur-Attrappe, deren `koerperAufbauen`/`anziehen` erst auf ei
 5. `grob`: alles im Käfig (`stufen` 0), der Export bleibt gesperrt (`_grobHalt`); ohne Angabe holt `adresse` bei gewähltem
    „grob" ebenfalls `?stufen=0`.
 6. Ruhe: Mit `ruhe` ruft der Bau `vorBau`, bevor er baut; ohne nicht.
+7. `progressiv` (24.11.2026, `G9feinstatt`): kam alles gleich in der gewählten Stufe, gibt es keinen zweiten Zug; fehlt ein Stück, holt der zweite Zug nur dieses.
 
 Sabotage-Gegenprobe: `alles` wieder nacheinander (`await` je Stück) → Fall 1 rot; `Genesis9haeppchen._lauf` startet alle Stücke
 zugleich → Fall 2 rot; `adresse` ohne die Regel für „grob" → Fall 5 rot.
@@ -107,6 +108,26 @@ await freigeben(r, s);
 await mit; await ohne;
 pruefe('mit ruhe: vorBau gesetzt', r.vorBau, [true, true]);
 pruefe('ohne ruhe: kein vorBau', s.vorBau, [false, false]);
+
+// 7. fein statt Käfig
+class Mitadresse {} Mitadresse.ADRESSE = '/x/';
+const { Genesis9materialabruf } = await import(MODUL.replace('genesis9aufbau.js', 'genesis9materialabruf.js'));
+Genesis9materialabruf.vorab = () => {};
+const sofort = (feine) => { const f = Object.setPrototypeOf(figur('genesis9', ['rock', 'hut']), Mitadresse.prototype);
+    f.koerperAufbauen = async (stufen) => { f._lauf += 1; f.gestartet.push(['koerper', stufen]); if (stufen === 0 && feine.includes('koerper')) f._feinTeile?.add('koerper'); return f; };
+    f.anziehen = async (k, w, stufen) => { f.gestartet.push([k, stufen]); if (stufen === 0 && feine.includes(k)) f._feinTeile?.add(k); return 1; };
+    return f; };
+Netzstufenstand.wahl = 'fein';
+const ganz = sofort(['koerper', 'rock', 'hut']);
+await Genesis9aufbau.progressiv(ganz); await ganz.fein;
+pruefe('alles fein: kein zweiter Zug', ganz.gestartet, [['koerper', 0], ['rock', 0], ['hut', 0]]);
+pruefe('alles fein: Stand', Netzstufenstand.stufeVon(ganz), 'fein');
+const teils = sofort(['koerper', 'rock']);
+await Genesis9aufbau.progressiv(teils); await teils.fein;
+pruefe('teils: nur das fehlende Stück', teils.gestartet.slice(3), [['hut', null]]);
+const keins = sofort([]);
+await Genesis9aufbau.progressiv(keins); await keins.fein;
+pruefe('keins: alles im zweiten Zug, der Körper zuletzt', keins.gestartet.slice(3), [['rock', null], ['hut', null], ['koerper', null]]);
 console.log(JSON.stringify({ ok: true }));
 """
 

@@ -300,13 +300,13 @@ class Smplfiguren:
 
     @classmethod
     def _armwinkel(cls, name):
-        """`arm_pose_angle` des Koerpers in Grad — die Haltung, in der ein
-        Uebertrag auf fremde Topologie gerechnet wird."""
+        """`arm_pose_angle` in Grad — die Haltung, in der ein Uebertrag auf fremde Topologie gerechnet wird. Winkel sind die der Vorlage (`Smplmasse.relativ`)."""
+        from .smplvarianten import Smplvarianten
+
         try:
-            wert = cls.masse(name).get('arm_pose_angle')
+            wert = cls.masse(Smplvarianten.vorlage(name)).get('arm_pose_angle')
             return float(wert) if wert is not None else cls.ARMWINKEL_VORGABE
-        # stumm gewollt: ohne lesbare YAML gilt der Winkel der Vorgabe — die Figur
-        # laedt trotzdem
+        # stumm gewollt: ohne lesbare YAML gilt der Winkel der Vorgabe — die Figur laedt trotzdem
         except OSError, ValueError, KeyError, TypeError:
             return cls.ARMWINKEL_VORGABE
 

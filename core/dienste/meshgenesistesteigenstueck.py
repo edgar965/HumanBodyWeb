@@ -64,6 +64,7 @@ class Meshgenesistesteigenstueck:
             if 'punktfarbe' in z.files and not Torchfeld.ptp(z['uv'], axis=0).any():
                 h.update(b'gebacken %d' % self.BACKEN_KANTE)
                 h.update(json.dumps(self.ABWICKLUNG, sort_keys=True).encode('ascii'))      # seit 22.11.2026 (`ABWICKLUNG`): ein mit LSCM gebackenes Stück gilt nicht als gemerkt
+                h.update(b'schnell gepackt')                                               # seit 25.11.2026 ohne `Uvboxpack`
         return '%d:%s' % (self.FASSUNG, h.hexdigest()[:16])
 
     def holen(self):
@@ -95,7 +96,9 @@ class Meshgenesistesteigenstueck:
         from KoerperKI_alle.pngtorch import Pngtorch
         from Stoffsolver.texturbacker import Texturbacker
         from Stoffsolver.uvabwicklung import Uvabwicklung
-        erg = Uvabwicklung(punkte, dreiecke, **self.ABWICKLUNG).rechnen()
+        abwicklung = Uvabwicklung(punkte, dreiecke, **self.ABWICKLUNG)
+        abwicklung.packer.nur_schnell = True
+        erg = abwicklung.rechnen()
         bild = arbeit / ('%s_farbe.png' % kennung)
         gebacken = torch.as_tensor(Texturbacker(punkte, dreiecke, erg.uv, groesse=self.BACKEN_KANTE).farbe_je_punkt(farben), device='cuda')
         Pngtorch.schreiben(gebacken, bild)       # 19.11.2026: statt `Texturbacker.als_png` (PIL 550–710 ms, Pngtorch 70–150 ms, dieselben Pixel, `pngtorch_probe.py`)
@@ -116,10 +119,9 @@ class Meshgenesistesteigenstueck:
 
     def bauen(self):
         from Genesis9.eigenstueck import G9eigenstueck
-        from Genesis9.gcfigurbau import G9gcfigurbau
-        from Genesis9.objleser import G9objleser
 
         from .blendimportbilder import Blendimportbilder
+        from .meshgenesistesteigenlage import Meshgenesistesteigenlage
 
         anzeige = self.ordner / 'anzeige'
         with Npztorch.lesen(anzeige / 'netz.npz') as z:
@@ -143,29 +145,17 @@ class Meshgenesistesteigenstueck:
         farbe = tuple(round(float(Blendimportbilder.srgb(w)), 4) for w in Torchfeld.liste(lin)) if bild is None else (1.0, 1.0, 1.0)
         material = {'name': kennung + '_Mat', 'farbe': farbe, 'bild': str(bild) if bild else None, 'normalen': None, 'rauheit_bild': None, 'alpha_bild': None,
                     'detailnormalen': None, 'detail_kachel': None, 'alpha_schwelle': None, 'shininess': None, 'opacity': None}
-        obj = Blendimportbilder.obj(arbeit, punkte, dreiecke, uv_ecken, material)
-        netz = G9objleser.lesen(str(obj))
-        roh = Torchfeld.feld(netz['punkte'], dtype=torch.float64)
+        netz = Meshgenesistesteigenlage.netz(arbeit, punkte, dreiecke, uv_ecken)
         kategorie, art, knochen = self._art()
 
-        def schreiben(lage):
-            gewichte = self.gewichte(Torchfeld.feld(lage, dtype=torch.float64)) if self.gewichte is not None and knochen is None else None
-            return G9eigenstueck.schreiben(lage, netz, kennung, anzeige_name, kategorie, material, heben=False, knochen=knochen, art_ordner=art, gewichte=gewichte,
-                                           textur_mittel=mittel)
+        def gewichte(lage):
+            return self.gewichte(Torchfeld.feld(lage, dtype=torch.float64)) if self.gewichte is not None and knochen is None else None
 
-        bilanz = schreiben(roh)
-        ruhe, bericht = G9gcfigurbau.ruhelage(bilanz['stueck'], self.regler, roh, roh)
-        bilanz = schreiben(ruhe)
-        angezogen = G9gcfigurbau.pruefen(bilanz['stueck'], self.regler, roh)
-        if angezogen['p99_mm'] > self.NACHRECHNEN_MM and art != 'Hair':
-            ruhe2, bericht2 = G9gcfigurbau.ruhelage(bilanz['stueck'], self.regler, roh, ruhe)
-            bilanz2 = schreiben(ruhe2)
-            angezogen2 = G9gcfigurbau.pruefen(bilanz2['stueck'], self.regler, roh)
-            if (angezogen2['p99_mm'], angezogen2['max_mm']) < (angezogen['p99_mm'], angezogen['max_mm']):
-                bilanz, bericht, angezogen = bilanz2, dict(bericht2, zweiter_durchgang=True), angezogen2
-            else:
-                bilanz = schreiben(ruhe)
-                bericht['zweiter_durchgang'] = 'verworfen'
+        # die Ruhelage im Speicher, das Stück einmal geschrieben (25.11.2026; bis dahin zwei- bis dreimal geschrieben und wieder gelesen)
+        ruhe, bericht, angezogen = Meshgenesistesteigenlage(netz, kennung, anzeige_name, kategorie, art, knochen, gewichte, self.regler).rechnen(
+            None if art == 'Hair' else self.NACHRECHNEN_MM)
+        bilanz = G9eigenstueck.schreiben(ruhe, netz, kennung, anzeige_name, kategorie, material, heben=False, knochen=knochen, art_ordner=art, gewichte=gewichte(ruhe),
+                                         textur_mittel=mittel)
         logger.info('Mesh-Genesis Test: eigenes Stück %s (%s) — angezogen %s', bilanz['stueck'], anzeige_name, angezogen)
         return {'stueck': bilanz['stueck'], 'name': anzeige_name, 'kennung': kennung, 'punkte': bilanz['punkte'], 'flaechen': bilanz['flaechen'],
                 'kategorie': list(kategorie), 'knochen': bilanz.get('knochen'), 'angezogen': angezogen, 'ruhelage': {k: v for k, v in bericht.items() if not isinstance(v, (list, dict))}}

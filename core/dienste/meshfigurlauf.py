@@ -254,6 +254,8 @@ class Meshfigurlauf:
             with Npztorch.lesen(lage) as d:
                 matrix = d['matrix']
         netz = self.ablage.netzdatei()
+        if self.im_prozess:          # die Kette: aus dem Netz, das schon auf der Karte liegt (25.11.2026: pyrender las es neu, 1,9 s)
+            return Meshicon.aus_scan(netz, self.ablage.ergebnis(), Meshicon.VORLAGE, matrix) or None
         return Meshicon.schreiben(netz, self.ablage.ergebnis(), Meshicon.VORLAGE, matrix) or None
 
     def _kalibrierung(self):

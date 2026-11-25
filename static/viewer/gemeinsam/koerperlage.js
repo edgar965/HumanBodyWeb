@@ -47,10 +47,11 @@ export class Koerperlage {
     }
 
     /**
-     * Die Texturen dieses Bildes sicherstellen — einmal je Bild und Figur.
+     * Die Texturen dieses Bildes sicherstellen — einmal je Bild und Figur. `kapseln`: auch die Gliedmaßenkapseln (nur, solange die Schicht 3 an ist; bis 25.11.2026 immer —
+     * 116 ms im ersten Bild nach jedem neuen Skelett, EdgarNeu, für nichts).
      * @returns {{lage: THREE.Texture, normale: THREE.Texture, breite: number}|null}
      */
-    static sichern(renderer, inst) {
+    static sichern(renderer, inst, kapseln = false) {
         const koerper = inst?.bodyMesh;
         if (!koerper?.isSkinnedMesh || !koerper.skeleton) return null;
         const s = Koerperlage.stand(inst);
@@ -69,7 +70,8 @@ export class Koerperlage {
         }
         renderer.setRenderTarget(zielAlt);
         renderer.autoClear = autoClearAlt;
-        Koerperlage._kapseln(s, inst, koerper);
+        if (kapseln) Koerperlage._kapseln(s, inst, koerper);
+        else s.anzahl = 0;
         // NACH den eigenen Renderlaeufen lesen: jeder zaehlt den Bildzaehler hoch;
         // das naechste Stueck desselben Bildes findet dann denselben Stand vor.
         s.bild = renderer.info.render.frame;
@@ -84,7 +86,10 @@ export class Koerperlage {
     /** Punkt-Zeichner und Ziele anlegen (oder erneuern, wenn der Körper neu ist). */
     static _vorbereiten(s, koerper) {
         const geo = koerper.geometry;
-        if (s.quelle === geo && s.ziele) return;
+        if (s.quelle === geo && s.ziele) {
+            if (s.punkte.skeleton !== koerper.skeleton) s.punkte.skeleton = koerper.skeleton;      // dasselbe Netz an einem neuen Skelett (`Genesis9nachformen`, 25.11.2026)
+            return;
+        }
         Koerperlage._freigeben(s);
         s.quelle = geo;
         const n = geo.attributes.position.count;

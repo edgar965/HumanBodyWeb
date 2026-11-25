@@ -57,14 +57,16 @@ float g9Punkte( vec2 uv, float zelle, float radius, float anteil ) {
 
     /**
      * Die Farbe. `frei` ist der Anteil, der nicht unter Schminke liegt (`g9Schminke`, wenn die Haut Schminke trägt). Reihenfolge: Struktur (an der Textur), Hautton, Rötung, Farbton …
-     * Helligkeit, Teint/Röte/Augenringe/Äderchen, Sommersprossen und Altersflecken, Pigment, Muttermale, Weißflecken, Pickel. `htPickel` und `htGebietW` stehen außerhalb des
-     * Blocks, die Beulenschicht liest sie später.
+     * Helligkeit, Teint/Röte/Augenringe/Äderchen, Sommersprossen und Altersflecken, Pigment, Muttermale, Weißflecken, Pickel. `htPickel`, `htGebietW`, `htZelle` und `htNarben` stehen
+     * außerhalb des Blocks, die Beulenschicht liest sie später.
      */
     static farbe(mitSchminke) {
         const R = Genesis9hautrauschenGLSL;
         const T = Genesis9hautteileGLSL;
         return `
 float htPickel = 0.0;
+float htZelle = 0.5;
+float htNarben = 0.0;
 vec4 htGebietW = vec4( 0.0 );
 vec4 htTe[ 5 ];
 for ( int j = 0; j < 5; j ++ ) htTe[ j ] = vec4( 0.0 );
@@ -75,6 +77,8 @@ ${R.GEBIET}
     vec3 htL = htC;
 ${T.LESEN}
 ${T.SCHATTEN}
+${R.RAUSCHEN}
+${R.PUNKTE}
 ${R.STRUKTUR}
     htL = pow( max( htL, vec3( 0.0005 ) ), vec3( 1.0 + 0.55 * uHtTon ) );
     float htLuma = dot( htL, vec3( 0.2126, 0.7152, 0.0722 ) );
@@ -89,11 +93,11 @@ ${R.TEINT}
 #ifdef USE_MAP
     // je Körperteil (htTe[2].y Sommersprossen, .z Altersflecken) auf dem ganzen Teil, nicht nur im Gebiet der Karte (26.10.2026)
     if ( uHtGebietAn > 0.5 && ( uHtSommer > 0.0 || htTe[ 2 ].y > 0.0 ) ) {
-        float htS = g9Punkte( HT_UV, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, uHtF4.w ) * ( mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer + htTe[ 2 ].y );
+        float htS = htPk.x * ( mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer + htTe[ 2 ].y );
         htL *= mix( vec3( 1.0 ), vec3( 0.58, 0.40, 0.30 ), clamp( htS, 0.0, 1.0 ) );
     }
     if ( uHtGebietAn > 0.5 && ( uHtAlter > 0.0 || htTe[ 2 ].z > 0.0 ) ) {
-        float htA = g9Punkte( HT_UV + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * ( htGebietW.g * uHtAlter + htTe[ 2 ].z );
+        float htA = htPk.y * ( htGebietW.g * uHtAlter + htTe[ 2 ].z );
         htL *= mix( vec3( 1.0 ), vec3( 0.72, 0.56, 0.42 ), clamp( htA, 0.0, 1.0 ) );
     }
 #endif

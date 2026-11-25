@@ -1,5 +1,5 @@
 import { escapeHtml } from '../utils.js';
-import { Genesis9lauf } from './genesis9lauf.js';
+import { Genesis9reglerzug } from './genesis9reglerzug.js';
 import { Genesis9skala } from './genesis9skala.js';
 import { Genesis9seiten } from './genesis9seiten.js';
 import { Genesis9groessehalten } from './genesis9groessehalten.js';
@@ -84,41 +84,66 @@ export class Genesis9reglerzeile {
             const neu = parseFloat(schieber.value);
             anzeige.textContent = Genesis9reglerzeile.text(neu, false, regler);
             const partner = Genesis9seiten.partner(regler);
-            Genesis9lauf.planen(inst, () => Genesis9reglerzeile.setzen(inst, regler, neu, partner), nachher,
-                                `regler:${regler.name}`);
+            Genesis9reglerzug.ziehen(inst, regler.name, Genesis9reglerzeile.stellen(inst, regler, neu, partner),
+                                     () => Genesis9reglerzeile.setzen(inst, regler, neu, partner), nachher);
             if (partner) Genesis9seiten.anzeigen(partner, neu, Genesis9reglerzeile.text(neu, false, partner));
         });
+        Genesis9reglerzug.kennen(schieber, inst, regler);
         return zeile;
     }
 
-    /** Wert stellen — bei einem Paar die passende Seite, bei Aliassen sie abräumen; `partner` (Seiten gekoppelt) bekommt denselben Wert. */
+    /** Wert stellen — bei einem Paar die passende Seite, bei Aliassen sie abräumen; `partner` (Seiten gekoppelt) bekommt denselben Wert — und die Figur genau neu bauen. */
     static setzen(inst, regler, wert, partner = null) {
-        inst.regler = inst.regler || {};
-        for (const r of partner ? [regler, partner] : [regler]) {
-            for (const alias of r.aliase || []) delete inst.regler[alias.name];
-            if (r.paar) {
-                if (wert < 0) inst.regler[r.paar] = -wert;
-                else delete inst.regler[r.paar];
-            }
-            if (r !== regler) {
-                const w = r.paar ? Math.max(wert, 0) : wert;
-                if (Math.abs(w) < 1e-6) delete inst.regler[r.name];
-                else inst.regler[r.name] = w;
-            }
-        }
+        Genesis9reglerzeile.stellen(inst, regler, wert, partner);
         const w = regler.paar ? Math.max(wert, 0) : wert;
         // „Größe halten" (R8, 25.10.2026): erst rechnet der Server den Ausgleich, dann baut die Figur EINMAL (`genesis9groessehalten.js`).
         return Genesis9groessehalten.zug(inst, regler.name, w, () => inst.reglerSetzen(regler.name, w));
     }
 
-    /** Nach einem Lauf die Schieber auf den neuen Wert (Liste `g9-` UND Popup „Form" `g9d-` tragen denselben `data-regler`). */
+    /** Nur `inst.regler` stellen, ohne zu bauen — `{kanaele, grenzen}` der berührten Kanäle (für die Sofortschau, `Genesis9reglerzug`). */
+    static stellen(inst, regler, wert, partner = null) {
+        inst.regler = inst.regler || {};
+        const kanaele = [], grenzen = {};
+        const eintragen = (name, w, min, max) => {
+            if (Math.abs(w) < 1e-6) delete inst.regler[name];
+            else inst.regler[name] = w;
+            kanaele.push(name);
+            grenzen[name] = { min, max };
+        };
+        for (const r of partner ? [regler, partner] : [regler]) {
+            for (const alias of r.aliase || []) if (inst.regler[alias.name] !== undefined) eintragen(alias.name, 0, -1, 1);
+            if (r.paar) eintragen(r.paar, Math.max(-wert, 0), 0, Math.max(-r.min, 0));
+            eintragen(r.name, r.paar ? Math.max(wert, 0) : wert, r.paar ? 0 : r.min, r.max);
+        }
+        return { kanaele, grenzen };
+    }
+
+    /** Alle Schieber des Dokuments nach Reglername — EINE Suche. */
+    static _schieberJeName() {
+        const jeName = new Map();
+        for (const schieber of document.querySelectorAll('input[data-regler]')) {
+            const liste = jeName.get(schieber.dataset.regler);
+            if (liste) liste.push(schieber);
+            else jeName.set(schieber.dataset.regler, [schieber]);
+        }
+        return jeName;
+    }
+
+    /**
+     * Nach einem Lauf die Schieber auf den neuen Wert (Liste `g9-` UND Popup „Form" `g9d-` tragen denselben `data-regler`).
+     * Gesucht wird einmal, nicht je Regler (25.11.2026): bei EdgarNeu durchsuchten 3.064 Suchen je 33.000 Elemente — im Chrome 1.536/1.731/3.382 ms, jetzt 21/16/19 ms.
+     */
     static nachziehen(inst, plan) {
         const alle = (plan?.bereiche || []).flatMap(b => b.regler || []);
+        const jeName = Genesis9reglerzeile._schieberJeName();
+        const aktiv = document.activeElement;
         for (const regler of alle) {
-            for (const schieber of document.querySelectorAll(`input[data-regler="${CSS.escape(regler.name)}"]`)) {
-                if (schieber === document.activeElement) continue;
-                const { wert, gesteuert } = Genesis9reglerzeile.wert(inst, regler);
-                const { unten, oben } = Genesis9reglerzeile.bereich(regler, wert);
+            const schieberliste = jeName.get(regler.name);
+            if (!schieberliste) continue;
+            const { wert, gesteuert } = Genesis9reglerzeile.wert(inst, regler);
+            const { unten, oben } = Genesis9reglerzeile.bereich(regler, wert);
+            for (const schieber of schieberliste) {
+                if (schieber === aktiv) continue;
                 if (parseFloat(schieber.min) !== unten) schieber.min = unten;
                 if (parseFloat(schieber.max) !== oben) schieber.max = oben;
                 if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;

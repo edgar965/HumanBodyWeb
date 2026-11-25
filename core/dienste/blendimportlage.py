@@ -19,6 +19,7 @@ Kachel an der Gruppe: Head/Mouth Cavity 1001, Body 1002, Legs 1003, Arms 1004, N
 import logging
 
 import torch
+from KoerperKI_alle.objtext import Objtext
 from KoerperKI_alle.torchfeld import Torchfeld
 from KoerperKI_alle.npztorch import Npztorch
 
@@ -259,10 +260,7 @@ class Blendimportlage:
             dreiecke = g['dreiecke'][g['kachel'] == kachel]
             genutzt, neu = Torchfeld.unique(dreiecke.reshape(-1), return_inverse=True)
             uv = g['uv'][dreiecke.reshape(-1)]
-            zeilen = ['o Genesis_%d' % kachel] + ['v %.6f %.6f %.6f' % tuple(v) for v in blender[genutzt]]
-            zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
-            zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                       for i, (a, b, c) in enumerate(neu.reshape(-1, 3))]
+            zeilen = ['o Genesis_%d' % kachel, *Objtext.v(blender[genutzt]), *Objtext.vt(uv), *Objtext.f_ecken(neu.reshape(-1, 3))]
             pfad = ordner / ('genesis_%d.obj' % kachel)
             pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
             aus[kachel] = str(pfad)

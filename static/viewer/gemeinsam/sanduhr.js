@@ -52,6 +52,13 @@ export class Sanduhr {
         if (feld) feld.textContent = `⏳ ${Sanduhr._text} ${((performance.now() - Sanduhr._beginn) / 1000).toFixed(1)} s`;
     }
 
+    /** Ein anderer Text, solange sie läuft (der Lauf ist einen Schritt weiter). */
+    static text(text) {
+        if (!Sanduhr._offen) return;
+        Sanduhr._text = text;
+        Sanduhr._zeigen();
+    }
+
     static aus() {
         Sanduhr._offen = Math.max(0, Sanduhr._offen - 1);
         if (Sanduhr._offen) return;

@@ -37,7 +37,7 @@ class TeileablageStempelTest(unittest.TestCase):
 
     def test_3_spur(self):
         """`_bauen_mit_spur`: ein Modul, dessen Code im Bau läuft (`kanalnamen`, nicht im statischen Abschluss), steht in der Liste; ohne Aufruf nicht. Sabotage:
-        `sys.settrace(spur)` weg → `kanalnamen` fehlt."""
+        in `G9codespur._beginn` `menge.add(datei)` weg → `kanalnamen` fehlt."""
         from Genesis9.teileablage import G9teileablage
         self.assertNotIn('kanalnamen', G9teileablage._bau_module())
 

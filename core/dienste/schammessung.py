@@ -106,7 +106,7 @@ class Schammessung:
         return Schammessungtextur.am_ring(rand, self.punkte, self.dreiecke, self.uv_ecken, Schammessungtextur.bild(self.farbe_pfad), f, sichtbar, self.kachelbild)
 
     def messen(self):
-        import trimesh
+        from KoerperKI_alle.torchnetz import Torchnetz
 
         from .schammessunggeometrie import Schammessunggeometrie
         from .schammessungknick import Schammessungknick
@@ -121,9 +121,9 @@ class Schammessung:
             sichtbar[Torchfeld.feld(self.loch['dreiecke'], dtype=torch.int64)] = False
         lo, hi = Torchfeld.amin(self.punkte, dim=0) - self.UMKREIS_M, Torchfeld.amax(self.punkte, dim=0) + self.UMKREIS_M
         haut = self._zuschneiden(fp, fd[sichtbar], lo, hi)
-        stueck = trimesh.Trimesh(self.punkte, self.dreiecke, process=False)
-        modell = trimesh.util.concatenate([haut, stueck])
-        ring_normalen = Torchfeld.feld(trimesh.Trimesh(fp, fd[sichtbar], process=False).vertex_normals)
+        stueck = Torchnetz(self.punkte, self.dreiecke)
+        modell = Torchnetz.zusammen([haut, stueck])
+        ring_normalen = Torchnetz(fp, fd[sichtbar]).vertex_normals
         aus = {'stueck': {'punkte': int(len(self.punkte)), 'dreiecke': int(len(self.dreiecke))}}
         if self.loch:
             ring_punkte = Torchfeld.feld(self.loch['ring_punkte'], dtype=torch.int64)
@@ -134,9 +134,9 @@ class Schammessung:
             rand = naht.rand
         else:
             aus['naht'] = {'hinweis': 'Stück ohne Naht (kein Loch in der Haut)'}
-            tief = Torchfeld.feld(haut.vertices)[Torchfeld.unique(haut.faces)]
+            tief = haut.vertices[Torchfeld.unique(haut.faces)]
             nah = torch.argsort(Torchfeld.linalg_norm(tief - self.punkte.mean(axis=0), dim=1), stable=True)[:50]
-            rahmen = Schammessungrahmen(self.punkte.mean(axis=0), Torchfeld.feld(haut.vertex_normals)[Torchfeld.unique(haut.faces)[nah]].mean(axis=0), self.punkte)
+            rahmen = Schammessungrahmen(self.punkte.mean(axis=0), haut.vertex_normals[Torchfeld.unique(haut.faces)[nah]].mean(axis=0), self.punkte)
             rand, naht = torch.zeros((0, 3), dtype=torch.float64, device='cuda'), None
         vorgabe, original = self._vorgabe(lo, hi, haut)
         geometrie = Schammessunggeometrie(rahmen, stueck, modell, vorgabe, original, rand)
@@ -154,25 +154,23 @@ class Schammessung:
         return aus
 
     def _vorgabe(self, lo, hi, haut):
-        """`(vorgabe, original)` als `trimesh.Trimesh`: die zugeschnittene Vorgabe und das Original für Strahlen (bei einer Teil-Vorgabe samt sichtbarer Haut)."""
-        import trimesh
+        """`(vorgabe, original)` als `Torchnetz`: die zugeschnittene Vorgabe und das Original für Strahlen (bei einer Teil-Vorgabe samt sichtbarer Haut)."""
+        from KoerperKI_alle.torchnetz import Torchnetz
 
         if not self.vorgabe:
             return None, None
         vorgabe = self._zuschneiden(Torchfeld.feld(self.vorgabe['punkte'], dtype=torch.float64), Torchfeld.feld(self.vorgabe['dreiecke'], dtype=torch.int64), lo, hi)
         if not len(vorgabe.faces):
             return None, None
-        return vorgabe, (trimesh.util.concatenate([vorgabe, haut]) if self.vorgabe.get('teil') else vorgabe)
+        return vorgabe, (Torchnetz.zusammen([vorgabe, haut]) if self.vorgabe.get('teil') else vorgabe)
 
     @staticmethod
     def _zuschneiden(punkte, dreiecke, lo, hi):
         """Die Dreiecke, deren Mitte im Kasten `lo … hi` liegt, ohne ungenutzte Punkte."""
-        import trimesh
+        from KoerperKI_alle.torchnetz import Torchnetz
 
         mitte = punkte[dreiecke].mean(axis=1)
-        netz = trimesh.Trimesh(punkte, dreiecke[((mitte >= lo) & (mitte <= hi)).all(axis=1)], process=False)
-        netz.remove_unreferenced_vertices()
-        return netz
+        return Torchnetz(punkte, dreiecke[((mitte >= lo) & (mitte <= hi)).all(axis=1)]).ohne_lose()
 
     # ------------------------------------------------------------ Urteil
 

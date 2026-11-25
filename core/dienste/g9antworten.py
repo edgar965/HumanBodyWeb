@@ -55,6 +55,7 @@ from Genesis9.stueckstand import G9stueckstand
 from ..daten.netzausgabe import Netzausgabe
 from ..daten.netzpaket import Netzpaket
 from .g9antwortvorrat import G9antwortvorrat
+from .g9feinstatt import G9feinstatt
 from .g9pruefbau import G9pruefbau
 from .g9vorratanfrage import G9vorratanfrage
 
@@ -78,7 +79,7 @@ class G9antworten(G9antwortvorrat):
     #: `core/api` und `core/daten` stehen nicht mehr als ganze Ordner hier, sondern als Huelle der Module, die Antworten rechnen oder
     #: ausliefern (`G9antwortquellen.WURZELN`) — seit 12.10.2026, und die Fassung ist ein Inhalts-Hash (siehe dort).
     QUELLEN = ('Genesis9',
-               'HumanBody/humanbody_core/catmull_clark.py',
+               'HumanBody/humanbody_core/catmull_clark.py', 'KoerperKI_alle/netzkerne.py', 'KoerperKI_alle/netzkerne_cu/figur.cu', 'Genesis9/g9kerne_cu/punktbaum.cu',
                # Dienste, die Stueckantworten rechnen (19.09.2026): Lagen, Daz auf HumanBody.
                'HumanBodyWeb/core/dienste/g9lagenanfrage.py',
                'HumanBodyWeb/core/dienste/g9lagenanatomie.py',
@@ -132,20 +133,21 @@ class G9antworten(G9antwortvorrat):
         gemerkt. `bauen` liefert das Antwort-Dict oder eine fertige
         `HttpResponse` (Fehler), die unveraendert durchgeht.
 
-        `request` entscheidet nur ueber das FORMAT (Binaerpaket oder JSON,
-        `Netzausgabe`) — und weil der Vorrat die fertigen Bytes ablegt, gehoert
-        es in den Schluessel."""
-        from .netzstufenwahl import Netzstufenwahl
-        gewaehlt = Netzstufenwahl.gewaehlt()
+        `request` entscheidet ueber das FORMAT (Binaerpaket oder JSON, `Netzausgabe`; es gehoert in den Schluessel, der Vorrat legt die fertigen
+        Bytes ab) und, ob statt des Kaefigs gleich die gewaehlte Stufe hinausgeht (`G9feinstatt`, 24.11.2026)."""
         cls._letzte_anfrage = time.time()
         binaer = Netzausgabe.will_binaer(request)
+        statt = G9feinstatt(request, lambda stufe, fassung=None: cls.schluessel(art, name, rumpf, stufe, eintrag, binaer, fassung), cls)
+        gewaehlt, bescheid = statt.stufe, statt.bescheid()
+        if bescheid is not None:
+            return bescheid
         schluessel = cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer)
         # Erst dieser Vorrat, dann der dauerhafte über Code-Änderungen hinweg (`G9modellvorrat`, 19.10.2026; älterer Code nur als Vorschau, 17.11.2026), dann rechnen.
         dauer = G9vorratanfrage(request, cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer, fassung='stabil'), cls.fassung())
         antwort = dauer.liefern(cls.holen(schluessel), lambda: cls.rechnen(schluessel, bauen, platte=cls.platte_an(), binaer=binaer), cls.inhaltstyp(binaer))
         if gewaehlt != cls.VORAUS and antwort.status_code < 400:
             cls.vorausrechnen(art, name, rumpf, bauen, eintrag, binaer)
-        return antwort
+        return statt.zeichnen(antwort)
 
     @staticmethod
     def inhaltstyp(binaer):
@@ -168,7 +170,7 @@ class G9antworten(G9antwortvorrat):
                 return daten
             return cls.rechnen(schluessel, bauen, platte)
         try:
-            aus = G9pruefbau.bauen(bauen)       # vermutete Entscheidungen, geprüft beim Abholen der Antwort (18.11.2026, `Kartenvermutung`)
+            aus = G9pruefbau.bauen(bauen, kurz=binaer == Netzausgabe.KURZ)       # vermutete Entscheidungen, geprüft beim Abholen der Antwort (18.11.2026, `Kartenvermutung`)
             if isinstance(aus, HttpResponse):
                 return aus
             daten = cls.kodieren(aus, binaer)
@@ -196,8 +198,7 @@ class G9antworten(G9antwortvorrat):
         if bauart is not None:
             teile.append(['bauart', bauart])
         text = json.dumps(teile, sort_keys=True, default=str)
-        return '%s_%s_%s' % (art, cls._sicher(name),
-                             hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])
+        return '%s_%s_%s' % (art, cls._sicher(name), hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])
 
     @staticmethod
     def _eigenstand(rumpf, eintrag):
@@ -318,5 +319,4 @@ class G9antworten(G9antwortvorrat):
                                               binaer=binaer))
         if isinstance(aus, HttpResponse):
             return
-        logger.info('Genesis 9: %s %s fuer Strg+Alt+H vorausgerechnet (%.1f s)',
-                    art, name, time.time() - beginn)
+        logger.info('Genesis 9: %s %s fuer Strg+Alt+H vorausgerechnet (%.1f s)', art, name, time.time() - beginn)

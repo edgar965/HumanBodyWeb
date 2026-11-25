@@ -107,6 +107,11 @@ export class Auswahlaura {
         return true;
     }
 
+    /** Zeichnet die Seite mit einer gewählten Figur über den Composer (in ein Renderziel)? Für den Vorbau der Programme (`Programmvorbau.bauen`). */
+    static ueberZiel() {
+        return Auswahlaura.stil !== 'rand' && Auswahlaura.faktor > 0;
+    }
+
     /** Sichtbare Netze unter Wurzeln (die unsichtbare Stoffkopie zählt nicht). */
     static netze(...wurzeln) {
         const aus = [];

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Meshgenesisteststoff — der Stoff eines Teststücks für die Animation der Seite ausliefern (19.11.2026, Kleiderbibliothek als Stoff).
 
-Gerechnet wird in der Kette (Schritt „stoff“, `meshgenesis/meshgenesis_kleiderstoff_lauf.py`, Stoffsolver mit Kernmotor); abgelegt je Stück und Bewegung unter
+Gerechnet wird beim MP4-Export (`Exportleistekettenlauf`, Schritt „stoff“: `meshgenesis/meshgenesis_kleiderstoff_lauf.py`, Stoffsolver mit Kernmotor; bis 25.11.2026 im Job); abgelegt je Stück und Bewegung unter
 `kleider_<g>/<weg>/<stück>/stoff/<Kategorie>__<Name>.npz` mit Kopf `.json`. Fassung 2 (19.11.2026 abends, 126 → 26,8 MB am Mieder): `index` int32 (M,) — Spalte des Punkts unter den bewegten
 oder −1 (folgt der Häutung) — und `paket` = deflate (zlib) der int16-Versätze (Bilder, bewegte Punkte, 3) in der Ruhelage, mal `skala` Meter, von Bild zu Bild differenziert. Eine Ablage einer
 anderen Fassung wird nicht ausgeliefert (Warnung im Log; die Seite zeigt das Stück dann gehäutet) — gegen Daten eines alten Laufs (Regel „Zwischenspeicher tragen den Namen ihrer Fassung“).
@@ -54,7 +54,13 @@ class Meshgenesisteststoff:
         feld, kopf = ordner / (name + '.npz'), ordner / (name + '.json')
         if not kopf.is_file() or not Npztorch.da(feld):
             return None
-        return feld, kopf
+        return None if cls.veraltet(ordner, feld) else (feld, kopf)
+
+    @staticmethod
+    def veraltet(ordner, feld):
+        u"""Das Stück wurde nach dieser Ablage neu gebaut (wie `Kostuemstoff`): sie gilt nicht mehr, der Export rechnet sie neu (25.11.2026). `ordner`: `<stück>/stoff` bzw. `haar`."""
+        netz = ordner.parent / 'anzeige' / 'netz.npz'
+        return Npztorch.da(netz) and Npztorch.stat(netz).st_mtime > Npztorch.stat(feld).st_mtime
 
     @classmethod
     def paket(cls, kennung, geschlecht, weg, stueck, bvh):

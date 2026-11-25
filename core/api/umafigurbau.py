@@ -5,8 +5,8 @@
       -> {rassen: [{name, gruppe}], beispiele: [...]}
 
     POST /api/umapython/figur/
-         {rasse, dna: {name: 0..1}, kleidung: [rezeptname, …]}
-      -> {rasse, netz, skelett, bilanz, regler, kleidung}
+         {rasse, dna: {name: 0..1}, kleidung: [rezeptname, …], nur: 'form'}
+      -> {rasse, netz, skelett, bilanz, regler, kleidung}; mit `nur: 'form'` (Reglerzug) nur Punkte und Skelett — `Umareglerzug`
 
 WARUM (Edgar, 08.09.2026: „Beim Modell UMA Python habe ich immer noch keine
 Portierung. Ich moechte doch ein Male, Female, Elf usw. auswaehlen, genau so
@@ -75,7 +75,9 @@ class Umafigurbau:
         """Eine Figur bauen und ihre Regler stellen."""
         from UMA_Python.szene import Szenenfigur
 
+        from core.daten.netzausgabe import Netzausgabe
         from core.dienste.umapythonfiguren import Umapythonfiguren
+        from core.dienste.umareglerzug import Umareglerzug
 
         try:
             wunsch = json.loads(request.body or b'{}')
@@ -96,6 +98,8 @@ class Umafigurbau:
             logger.exception('UMA Python: unerwarteter Fehler bei %s', rasse)
             return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
 
+        if wunsch.get('nur') == 'form':
+            return Netzausgabe.antwort(Umareglerzug.antwort(gebaut, dna), request)
         antwort = Szenenfigur.alles(gebaut, dna)
         antwort['regler'] = Szenenfigur.regler(gebaut)
         # Was wirklich angezogen ist — ein unbekanntes Rezept ueberspringt

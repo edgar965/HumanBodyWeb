@@ -20,6 +20,7 @@ from pathlib import Path
 
 import math
 import torch
+from KoerperKI_alle.glbfelder import Glbfelder
 from KoerperKI_alle.torchfeld import Torchfeld
 
 from .blendimportweg import Blendimportweg
@@ -111,7 +112,7 @@ class Blendimportnetz:
                       [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]], copy=True)
         m = torch.eye(4, dtype=torch.float64, device='cuda')
         m[:3, :3] = d @ Torchfeld.diag(knoten.get('scale') or [1.0, 1.0, 1.0])
-        m[:3, 3] = knoten.get('translation') or [0.0, 0.0, 0.0]
+        m[:3, 3] = Torchfeld.feld(knoten.get('translation') or [0.0, 0.0, 0.0], dtype=torch.float64)
         return m
 
     # ------------------------------------------------------------------ Schreiben
@@ -152,10 +153,14 @@ class Blendimportnetz:
     @staticmethod
     def _pruefen(ziel, soll):
         """Höhe von `ziel`, wie trimesh sie liest (der Leser von Pose, Segmentierung und „Mesh to 3D“: `Meshfigurscan`, `Mesh3dansicht`) — weicht sie um mehr als 0,5 % von `soll` ab, bricht der Schritt ab."""
-        import trimesh
+        e = Glbfelder.lesen(ziel) if torch.cuda.is_initialized() else None          # im Skriptdienst: dieselben Punkte ohne trimesh (25.11.2026), der Rest des Laufs liest die Datei auch so
+        if e is not None:
+            gelesen = float(e.punkte[:, 1].max() - e.punkte[:, 1].min())
+        else:
+            import trimesh
 
-        tief, hoch = trimesh.load(str(ziel), force='scene', process=False).bounds
-        gelesen = float(hoch[1] - tief[1])
+            tief, hoch = trimesh.load(str(ziel), force='scene', process=False).bounds
+            gelesen = float(hoch[1] - tief[1])
         if abs(gelesen - soll) > 0.005 * soll:
             raise RuntimeError('%s liest sich mit %.3f m statt %.3f m — die Streckung kommt beim Leser nicht an (Knoten der GLB prüfen)' % (ziel, gelesen, soll))
         return gelesen

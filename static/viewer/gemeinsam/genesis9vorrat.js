@@ -3,6 +3,7 @@ import { Netzpaket } from './netzpaket.js';
 import { Protokoll } from './protokoll.js';
 import { Nutzerruhe } from './nutzerruhe.js';
 import { Netzstufenstand } from './netzstufenstand.js';
+import { Figurfertig } from './figurfertig.js';
 
 /**
  * Genesis9vorrat — die Anzeigen einer Genesis-Figur dauerhaft auf dem Server ablegen lassen (19.10.2026).
@@ -19,6 +20,8 @@ import { Netzstufenstand } from './netzstufenstand.js';
  * 4. Der Käfig des ersten Zugs, wenn eine feinere Stufe folgt, ist eine VORSCHAU (Kopf `X-G9-Vorrat-Vorschau`, nur `?stufen=0`): nur ihn darf der Server
  *    mit älterem Code gerechnet liefern; alles andere rechnet er nach einer Code-Änderung neu (17.11.2026, Edgar: „fixe das: Nach einer Code-Änderung
  *    zeigen sie beim ersten Laden noch den alten Stand").
+ * 5. Der Käfig des ersten Zugs bittet um die GEWÄHLTE Stufe, falls sie schon fertig liegt (Kopf `X-G9-Fein-Gern`, `core/dienste/g9feinstatt.py`, 24.11.2026, Edgar: „EdgarNeu
+ *    laden im Charakter dauert ewig, das muss in 2 s laden“): ein Stück bekommt sie statt des Käfigs, der Körper ist schon in der gewählten Stufe bestellt (`leer`).
  *
  * Die Stellung ist Adresse ohne Stufe plus Rumpf (wie `Genesis9antwortspeicher`): Sie bestimmt die Antwort, nicht die Stufe.
  */
@@ -27,6 +30,7 @@ export class Genesis9vorrat {
     static KOPF = 'X-G9-Vorrat';
     static KOPF_NUR = 'X-G9-Vorrat-Nur';
     static KOPF_VORSCHAU = 'X-G9-Vorrat-Vorschau';
+    static KOPF_FEIN = 'X-G9-Fein-Gern';
     static STUFEN = ['grob', 'fein', 'ultrafein'];
     /** Die Stufe in der Adresse der Vorab-Anfrage: grob = Käfig, fein = die Einstellung (auch bei gesetztem Keks), ultrafein = wie der Keks von Strg+Alt+H. */
     static ADRESSSTUFE = { grob: '0', fein: 'einstellung', ultrafein: '3' };
@@ -45,16 +49,18 @@ export class Genesis9vorrat {
         return JSON.stringify([adresse.replace(/[?&]stufen=[^&]*/, ''), nutzlast]);
     }
 
-    /** Während `arbeit` läuft, sind alle Anfragen der Figur Anzeigen (siehe oben, 1.); mit `vorschau` ist ihr Käfig eine Vorschau (4.). */
-    static async laden(inst, arbeit, vorschau = false) {
+    /** Während `arbeit` läuft, sind alle Anfragen der Figur Anzeigen (siehe oben, 1.); mit `vorschau` ist ihr Käfig eine Vorschau (4.), mit `fein` bittet er um die gewählte Stufe (5.). */
+    static async laden(inst, arbeit, vorschau = false, fein = false) {
         if (!inst) return arbeit();
         inst._vorratLaedt = (inst._vorratLaedt || 0) + 1;
         if (vorschau) inst._vorratVorschau = (inst._vorratVorschau || 0) + 1;
+        if (fein) inst._feinGern = (inst._feinGern || 0) + 1;
         try {
             return await arbeit();
         } finally {
             inst._vorratLaedt -= 1;
             if (vorschau) inst._vorratVorschau -= 1;
+            if (fein) inst._feinGern -= 1;
         }
     }
 
@@ -69,7 +75,9 @@ export class Genesis9vorrat {
         const anzeigen = inst._vorratAnzeige ??= new Map();
         if (inst._vorratLaedt > 0) anzeigen.set(teil, { adresse, nutzlast, stellung });
         // Nur der Käfig: ein Reglerzug während des ersten Zugs (ohne `?stufen=0`) bekommt nie eine Antwort älteren Codes (4.).
-        const kopf = inst._vorratVorschau > 0 && /[?&]stufen=0(&|$)/.test(adresse) ? { [Genesis9vorrat.KOPF_VORSCHAU]: '1' } : {};
+        const kaefig = /[?&]stufen=0(&|$)/.test(adresse);
+        const kopf = inst._vorratVorschau > 0 && kaefig ? { [Genesis9vorrat.KOPF_VORSCHAU]: '1' } : {};
+        if (inst._feinGern > 0 && kaefig) kopf[Genesis9vorrat.KOPF_FEIN] = teil === 'koerper' ? 'leer' : '1';
         if (anzeigen.get(teil)?.stellung === stellung) kopf[Genesis9vorrat.KOPF] = '1';
         return kopf;
     }
@@ -95,13 +103,13 @@ export class Genesis9vorrat {
         const t0 = performance.now();
         let n = 0;
         try {
-            await Promise.resolve(inst.fein).catch(() => {});
+            await Figurfertig.abwarten(inst);              // erst die Figur samt Bildern, dann die Vorab-Anfragen (24.11.2026: sie liefen ab 0,7 s neben den Texturen)
             const stufen = Genesis9vorrat.STUFEN.slice(0, Genesis9vorrat.STUFEN.indexOf(Genesis9vorrat.wahl) + 1);
             for (const stufe of stufen) {
                 for (const [teil, anfrage] of [...(inst._vorratAnzeige || [])]) {
                     if (Netzstufenstand.entsorgt(inst)) return n;
                     await Nutzerruhe.abwarten(() => Netzstufenstand.entsorgt(inst));
-                    if (await Genesis9vorrat._ablegen(anfrage, stufe, teil)) n += 1;
+                    if (await Genesis9vorrat.ablegen(anfrage, stufe, teil)) n += 1;
                 }
             }
         } finally {
@@ -114,7 +122,8 @@ export class Genesis9vorrat {
     /** Stufe + Stellung, die in diesem Seitenleben schon vorab abgelegt sind: dieselbe Figur in mehreren Feldern (Mesh-Genesis) fragt nur einmal. */
     static _abgelegt = new Set();
 
-    static async _ablegen({ adresse, nutzlast, stellung }, stufe, teil) {
+    /** Eine Anzeige auf `stufe` rechnen und ablegen lassen, ohne sie zu holen — true, wenn es geklappt hat (auch für `Genesis9modellvorrat`). */
+    static async ablegen({ adresse, nutzlast, stellung }, stufe, teil) {
         const ohne = adresse.replace(/[?&]stufen=[^&]*/, '');
         const ziel = `${ohne}${ohne.includes('?') ? '&' : '?'}stufen=${Genesis9vorrat.ADRESSSTUFE[stufe]}`;
         const merke = `${stufe}|${stellung}`;

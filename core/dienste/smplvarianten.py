@@ -24,12 +24,16 @@ damit gespeicherte Szenen aufgehen; neu erzeugt wird dort nichts mehr.
 """
 
 import hashlib
+import json
 import logging
 import os
+import threading
 
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
 from django.conf import settings
+
+from ..atomic_write import AtomarSchreiber
 
 logger = logging.getLogger('core')
 
@@ -50,8 +54,12 @@ class Smplvarianten:
     #: die Massvorlage aller Varianten.
     VORLAGE = {'female': 'f_smpl_average_A40', 'male': 'm_smpl_average_A40'}
 
+    #: Die Betas einer Variante, von der nur die Form gerechnet ist (`form`): Masse, OBJ und YAML entstehen daraus, wenn sie jemand braucht (`sicherstellen`).
+    BETAS = '.betas.json'
+
     _erzeugt = {}
     _segmentierung = None
+    _schloss = threading.RLock()
 
     @staticmethod
     def ordner():
@@ -111,7 +119,12 @@ class Smplvarianten:
             return False
         if name in cls.DURCHSCHNITT.values():
             return True  # wird beim ersten Zugriff gebaut
-        return os.path.isfile(os.path.join(cls._ordner_von(name), name + '.obj'))
+        return any(os.path.isfile(os.path.join(cls._ordner_von(name), name + e)) for e in ('.obj', cls.BETAS))
+
+    @classmethod
+    def vorlage(cls, name):
+        """Der Koerper, dessen YAML die Winkel einer SMPL-X-Variante vorgibt — sonst der Name selbst."""
+        return cls.VORLAGE[cls.geschlecht(name)] if str(name).startswith(cls.PRAEFIX) else name
 
     @classmethod
     def groesse(cls, name):
@@ -141,7 +154,28 @@ class Smplvarianten:
         return cls._segmentierung
 
     @classmethod
+    def form(cls, geschlecht, betas):
+        """Nur die Form einer Variante — das, was ein Reglerzug braucht (18 ms; mit Massen und Ablage 13,5 s, gemessen 25.11.2026). Masse und Dateien: `sicherstellen`."""
+        name, modell = cls.name(geschlecht, betas), cls.modell(geschlecht)
+        v = modell.a40(betas)
+        betas = [float(x) for x in (betas if betas is not None else [])]
+        pfad = os.path.join(cls.ordner(), name + cls.BETAS)
+        if not cls._abgelegt(name) and name not in cls.DURCHSCHNITT.values() and not os.path.isfile(pfad):
+            AtomarSchreiber.json_schreiben(pfad, betas, einzug=None)
+        return {'name': name, 'ordner': cls.ordner(), 'geschlecht': geschlecht, 'betas': betas, 'punkte': v, 'dreiecke': modell.faces,
+                'hoehe': float(v[:, 1].max() - v[:, 1].min())}
+
+    @classmethod
+    def _abgelegt(cls, name):
+        return all(os.path.isfile(os.path.join(cls._ordner_von(name), name + e)) for e in ('.obj', '.yaml'))
+
+    @classmethod
     def erzeugen(cls, geschlecht, betas):
+        with cls._schloss:                  # zwei Anfragen nach derselben Variante messen sie nur einmal
+            return cls._erzeugen(geschlecht, betas)
+
+    @classmethod
+    def _erzeugen(cls, geschlecht, betas):
         """Koerper, Masse und Ablage einer Variante.
 
         Rueckgabe: {name, ordner, geschlecht, betas, punkte (Meter, Y oben),
@@ -150,39 +184,24 @@ class Smplvarianten:
         from GarmentCode.koerperablage import Koerperablage
         from SMPL.masse import Smplmasse
 
-        from .smplfigur import Smplfiguren
+        from .smplvariantenmasse import Smplvariantenmasse
 
         name = cls.name(geschlecht, betas)
         if name in cls._erzeugt:
             return cls._erzeugt[name]
 
         modell = cls.modell(geschlecht)
-        v = modell.a40(betas)
-        v_avg = modell.a40(None)
-        yaml_avg = Smplfiguren.masse(cls.VORLAGE[geschlecht])
-        # Die Armlaenge kommt aus den Gelenken, nicht aus der YAML: dort
-        # stehen 80 cm bei 165 cm Koerpergroesse (siehe Smplkoerper.armlaenge).
-        masse, herkunft = Smplmasse(cls.segmentierung()).relativ(
-            v, v_avg, yaml_avg, zusatz={'arm_length': modell.armlaenge(betas)}
-        )
+        daten = cls.form(geschlecht, betas)
+        v = daten['punkte']
+        masse, herkunft = Smplvariantenmasse.von(geschlecht, betas, v)
 
         ordner = cls.ordner()
-        if not os.path.isfile(os.path.join(ordner, name + '.obj')):
+        if not cls._abgelegt(name):
             # Koerperablage rechnet Projekt -> GarmentCode; die Punkte hier
             # SIND schon GarmentCode-Lage, also erst hin, damit sie zurueck
             # genau so landen.
             Koerperablage(name, Smplmasse.projekt(v), modell.faces, ordner=ordner).ablegen(masse)
-        daten = {
-            'name': name,
-            'ordner': ordner,
-            'geschlecht': geschlecht,
-            'betas': [float(x) for x in (betas or [])],
-            'punkte': v,
-            'dreiecke': modell.faces,
-            'hoehe': float(v[:, 1].max() - v[:, 1].min()),
-            'masse': masse,
-            'herkunft': herkunft,
-        }
+        daten.update(masse=masse, herkunft=herkunft)
         cls._erzeugt[name] = daten
         logger.info(
             'SMPL-X-Variante %s: %s, Betas %s, %.1f cm, Taille %.0f cm',
@@ -196,6 +215,11 @@ class Smplvarianten:
 
     @classmethod
     def aus_reglern(cls, geschlecht, groesse=0.0, fuelle=0.0, weitere=None, masse=None):
+        """Eine Variante samt Massen und Ablage aus Reglern (der Reglerzug nimmt `betas_aus_reglern` und `form`)."""
+        return cls.erzeugen(geschlecht, cls.betas_aus_reglern(geschlecht, groesse, fuelle, weitere, masse))
+
+    @classmethod
+    def betas_aus_reglern(cls, geschlecht, groesse=0.0, fuelle=0.0, weitere=None, masse=None):
         """Der Weg, den das Bedienfeld geht: Regler statt roher Betas.
 
         `weitere`: die acht ungemessenen Formregler (`Smplform.WEITERE_SCHLUESSEL`).
@@ -214,7 +238,7 @@ class Smplvarianten:
             voll = torch.zeros(Smplxmassregler.BETAS, dtype=torch.float64, device='cuda')
             voll[: len(betas)] = betas
             betas = [float(x) for x in Torchfeld.liste(Torchfeld.round(voll + zusatz, 4))]
-        return cls.erzeugen(geschlecht, betas)
+        return betas
 
     _massregler = {}
 
@@ -229,10 +253,20 @@ class Smplvarianten:
 
     @classmethod
     def sicherstellen(cls, name):
-        """Einen Durchschnittskoerper bauen, falls seine Dateien fehlen."""
-        for geschlecht, durchschnitt in cls.DURCHSCHNITT.items():
-            if name == durchschnitt and not os.path.isfile(os.path.join(cls.ordner(), name + '.obj')):
-                cls.erzeugen(geschlecht, None)
+        """OBJ und YAML bauen, falls sie fehlen: Durchschnittskoerper, und Varianten, von denen nur die Form gerechnet ist (`form`)."""
+        if cls._abgelegt(name):
+            return
+        pfad = os.path.join(cls.ordner(), str(name) + cls.BETAS)
+        if name in cls.DURCHSCHNITT.values():
+            cls.erzeugen(cls.geschlecht(name), None)
+        elif os.path.isfile(pfad):
+            with open(pfad, encoding='utf-8') as quelle:
+                cls.erzeugen(cls.geschlecht(name), json.load(quelle))
+
+    @classmethod
+    def masse_abgelegt(cls, name):
+        """Die Masse, wenn sie schon gemessen sind — sonst {}; misst nie."""
+        return cls.masse(name) if cls._abgelegt(name) else {}
 
     # ----------------------------------------------------------------- lesen
 

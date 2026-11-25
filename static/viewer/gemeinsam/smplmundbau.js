@@ -23,8 +23,16 @@ export class Smplmundbau {
                     [0.7, 0.034, 0.004], [0.25, 0.040, 0.003]];
     static ZAEHNE_JE_REIHE = 14;
 
+    /** Dreiecke → ihre Randschleife: je Figur einmal, sie hängt nicht an der Form (25.11.2026). */
+    static _schleifen = new WeakMap();
+
     /** Die Randschleife des Netzes (Punktnummern, geordnet) — das Mundloch. */
     static randschleife(dreiecke) {
+        if (!Smplmundbau._schleifen.has(dreiecke)) Smplmundbau._schleifen.set(dreiecke, Smplmundbau._randschleife(dreiecke));
+        return Smplmundbau._schleifen.get(dreiecke);
+    }
+
+    static _randschleife(dreiecke) {
         const zaehler = new Map();
         for (const [a, b, c] of dreiecke) {
             for (const [p, q] of [[a, b], [b, c], [c, a]]) {

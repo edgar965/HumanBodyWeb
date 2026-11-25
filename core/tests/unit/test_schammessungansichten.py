@@ -18,9 +18,9 @@ Sabotage-Gegenprobe: in `_ansicht` die Zeile `vm = …` auf `vo` setzen (Modell 
 from unittest import mock
 
 import numpy as np
-import trimesh
 from django.test import SimpleTestCase
 
+from KoerperKI_alle.torchnetz import Torchnetz
 from core.dienste.schammessung import Schammessung
 from core.dienste.schammessungansichten import Schammessungansichten
 from core.dienste.schammessungrahmen import Schammessungrahmen
@@ -36,7 +36,7 @@ def _feld(z_von_xy, halb=0.06, n=61):
         for i in range(n - 1):
             a = j * n + i
             dreiecke += [[a, a + 1, a + n + 1], [a, a + n + 1, a + n]]
-    return trimesh.Trimesh(punkte, np.array(dreiecke), process=False)
+    return Torchnetz(punkte, dreiecke)
 
 
 def _huegel(hoehe):
@@ -49,7 +49,7 @@ class SchammessungansichtenTest(SimpleTestCase):
     def setUp(self):
         self.haut = _feld(lambda x, y: np.zeros_like(x))
         self.original = _feld(_huegel(0.010))
-        self.rahmen = Schammessungrahmen([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], self.original.vertices[np.hypot(self.original.vertices[:, 0], self.original.vertices[:, 1]) < 0.03])
+        self.rahmen = Schammessungrahmen([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], self.original.vertices[self.original.vertices[:, :2].norm(dim=1) < 0.03])
         self.ring = np.array([[0.03 * np.cos(t), 0.03 * np.sin(t), 0.0] for t in np.linspace(0, 2 * np.pi, 24, endpoint=False)])
         self.ring_n = np.tile([0.0, 0.0, 1.0], (len(self.ring), 1))
         patcher = mock.patch.object(Schammessungansichten, 'RASTER_M', 0.004)

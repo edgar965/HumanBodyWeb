@@ -5,7 +5,7 @@
 
 Hier Kunstfiguren: zufällige Dreiecke mit vielen Sonderfällen (ganzzahlige Ecken, waagrechte Kanten, zusammenfallende Punkte, Ränder außerhalb des Bilds) gegen PIL im selben Prozess, und eine
 Kugel aus Breiten- und Längenkreisen für die Vereinfachung. Braucht die Grafikkarte (sonst übersprungen). Nicht gelaufen — läuft nur auf Ansage.
-Sabotage: in `Flaechenbild._round_up` `+ h` → `+ 2 * h` → `test_1` rot; in `Gitterquadrik.vereinfachen` `TOLERANZ = 0.5` → `test_3` rot.
+Sabotage: in `netzkerne_cu/flaechenbild.cu` (seit 25.11.2026 der Kern) beim Aufrunden `+ 0.5f` → `+ 1.0f` → `test_1` rot; in `Gitterquadrik.vereinfachen` `TOLERANZ = 0.5` → `test_3` rot.
 """
 import math
 import sys

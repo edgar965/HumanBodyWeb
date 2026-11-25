@@ -63,6 +63,19 @@ class G9anatomiedrapierung:
             return None
         return cls(G9drapierhindernis.aus_stuecken(stuecke))
 
+    @staticmethod
+    def ohne_anatomie(rumpf):
+        u"""Der Rumpf einer Stückanfrage ohne die getragenen Anatomie-Stücke, wenn das Stück selbst die Anatomie trägt (`traegt_anatomie`, 24.11.2026) — sonst unverändert.
+
+        So entscheidet es Mesh-/Foto-Genesis seit 20.11.2026 (Garderobe-Schritt: die Anatomie nie als getragen; Edgar zum Drapieren der Shorts über das Glied: „Schlauch“), und die Seite
+        zeigt das Anatomie-Stück unter einem tragenden Stück nicht (`Meshgenesisanatomiehuelle`, im Charakter `Anatomietraeger`). Gemessen an EdgarNeu (Hose aus Foto-Genesis, 97.235
+        Punkte): mit der Anatomie in `getragen` löste der Drapierer 17.334 Unbekannte iterativ; von der Ladung um 01:04 bis zum Neustart um 01:52 steht in `django.log` keine fertige
+        Hosen-Anfrage der Seite; mit dem Vermerk 1,5–2,9 s im Server bei neuer Stellung neben den anderen Anfragen der Seite (vier Läufe, 01:54–01:57)."""
+        if not rumpf.get('traegt_anatomie') or not isinstance(rumpf.get('getragen'), list):
+            return rumpf
+        from .g9lagenanfrage import G9lagenanfrage
+        return dict(rumpf, getragen=[g for g in rumpf['getragen'] if not (isinstance(g, dict) and G9lagenanfrage._anatomie(str(g.get('kennung') or '')))])
+
     def anwenden(self, punkte, flaechen, normalen, regler):
         u"""`(punkte (N, 3), bilanz)`: der Stoff mit `flaechen` (Dreiecke oder Vierecke des Browsernetzes) und seinen Normalen `normalen` (N, 3),
         über das Hindernis drapiert; `regler`: `regler_stueck` des Rumpfs (`G9drapierung.werte`)."""

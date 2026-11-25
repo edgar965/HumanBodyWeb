@@ -50,16 +50,8 @@ export class Genesis9normalen {
         if (!lage || !normal || !geo.index || !ruhePos) return null;
         const n = lage.count, index = geo.index.array;
         // Kopien: gleiche Ruhelage (Bits) → gleiche Gruppe.
-        const bits = new Uint32Array(ruhePos.buffer, ruhePos.byteOffset, n * 3);
-        const gruppe = new Uint32Array(n), gruppen = new Map();
-        for (let p = 0; p < n; p++) {
-            const key = `${bits[3 * p]},${bits[3 * p + 1]},${bits[3 * p + 2]}`;
-            let g = gruppen.get(key);
-            if (g === undefined) { g = gruppen.size; gruppen.set(key, g); }
-            gruppe[p] = g;
-        }
+        const { gruppe, anzahl } = Genesis9normalen._kopien(new Uint32Array(ruhePos.buffer, ruhePos.byteOffset, n * 3), n);
         // Mitglieder je Gruppe (CSR) und Dreiecke je Gruppe (CSR).
-        const anzahl = gruppen.size;
         const mitgliedZahl = new Uint32Array(anzahl + 1), dreieckZahl = new Uint32Array(anzahl + 1);
         for (let p = 0; p < n; p++) mitgliedZahl[gruppe[p] + 1]++;
         for (let i = 0; i < index.length; i++) dreieckZahl[gruppe[index[i]] + 1]++;
@@ -77,6 +69,29 @@ export class Genesis9normalen {
             summen: null,                                // Arbeitsfeld von `_summenAlle`, beim ersten dichten Zug angelegt
         };
         return daten.normalen;
+    }
+
+    /**
+     * Punkte mit denselben Ruhebits → dieselbe Gruppe, gezählt in der Folge ihres ersten Punkts. Streutabelle über die Bits (25.11.2026): mit einer Zeichenkette je Punkt als Schlüssel
+     * kostete `vorbereiten` an EdgarNeu (104.480 Punkte) 191 ms — beim ersten Reglerzug an jedem neuen Körper.
+     */
+    static _kopien(bits, n) {
+        let groesse = 16;
+        while (groesse < 2 * n) groesse *= 2;
+        const tabelle = new Int32Array(groesse).fill(-1), maske = groesse - 1, gruppe = new Uint32Array(n);
+        let anzahl = 0;
+        for (let p = 0; p < n; p++) {
+            const a = bits[3 * p], b = bits[3 * p + 1], c = bits[3 * p + 2];
+            let h = Math.imul(a, 0x9E3779B1) ^ Math.imul(b, 0x85EBCA6B) ^ Math.imul(c, 0xC2B2AE35);
+            h = (h ^ (h >>> 15)) & maske;
+            for (;;) {
+                const q = tabelle[h];
+                if (q < 0) { tabelle[h] = p; gruppe[p] = anzahl++; break; }
+                if (bits[3 * q] === a && bits[3 * q + 1] === b && bits[3 * q + 2] === c) { gruppe[p] = gruppe[q]; break; }
+                h = (h + 1) & maske;
+            }
+        }
+        return { gruppe, anzahl };
     }
 
     /** Flächennormalen aller Dreiecke der Gruppe `g` summieren (in `aus`). */

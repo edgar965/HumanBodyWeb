@@ -75,7 +75,7 @@ class G9neustartnachlauf:
         if len(rumpf) > cls.HOECHSTENS_BYTES:
             return
         eintrag = {'methode': request.method, 'pfad': request.path,
-                   'abfrage': request.META.get('QUERY_STRING', ''),
+                   'abfrage': getattr(request, 'g9_abfrage', request.META.get('QUERY_STRING', '')),      # `G9feinstatt`: statt des Käfigs ging die gewählte Stufe hinaus
                    'koepfe': {k: request.headers[k] for k in cls.KOEPFE if request.headers.get(k)},
                    'keks': request.COOKIES.get(Netzstufenwahl.KEKS, ''),
                    'rumpf': rumpf.decode('utf-8', 'replace'), 'zeit': time.time()}

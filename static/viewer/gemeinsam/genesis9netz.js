@@ -77,6 +77,7 @@ export class Genesis9netz {
         }
         const netz = new THREE.Mesh(geo, material);
         netz.name = name;
+        netz.userData.gruppenkennung = Genesis9netz.gruppenkennung(daten.gruppen);      // gehört eine spätere Antwort zu diesen Materialien (`Genesis9nachformen`)?
         // Was Auswahl und Schwebeanzeige zeigen — sonst stünde dort `angie_jeans/0`.
         if (daten.name) netz.userData.beschriftung = `${daten.name} (Genesis 9)`;
         netz.castShadow = true;
@@ -96,6 +97,10 @@ export class Genesis9netz {
         // Anliegende Kleidung: Lage des Käfigs für die Glättung je Bild (`Genesis9glaettung`, 12.11.2026).
         if (daten.glaettung?.kaefig) netz.userData.glaettung = { kaefig: base64ToFloat32(daten.glaettung.kaefig), stufen: daten.stufen || 0 };
         return netz;
+    }
+
+    static gruppenkennung(gruppen) {
+        return JSON.stringify(gruppen || []);
     }
 
     /**

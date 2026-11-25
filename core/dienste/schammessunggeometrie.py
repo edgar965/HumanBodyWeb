@@ -32,7 +32,7 @@ class Schammessunggeometrie:
     PROFIL_QUER_M = (-0.024, -0.016, -0.008, 0.0, 0.008, 0.016, 0.024)
 
     def __init__(self, rahmen, stueck, modell, vorgabe, original, rand):
-        """`stueck`, `modell`, `vorgabe`, `original`: `trimesh.Trimesh` (Modell = sichtbare Haut + Stück; `original` = Vorgabe, bei einer Teil-Vorgabe samt Haut der Figur); `rand`: `(R, 3)`
+        """`stueck`, `modell`, `vorgabe`, `original`: `Torchnetz` (Modell = sichtbare Haut + Stück; `original` = Vorgabe, bei einer Teil-Vorgabe samt Haut der Figur); `rand`: `(R, 3)`
         Randpunkte des Stücks."""
         self.rahmen, self.stueck, self.modell, self.vorgabe, self.original = rahmen, stueck, modell, vorgabe, original
         self.rand = Torchfeld.feld(rand, dtype=torch.float64).reshape(-1, 3)
@@ -70,32 +70,29 @@ class Schammessunggeometrie:
 
     @staticmethod
     def _abstand_mm(netz, punkte):
-        import trimesh
+        from KoerperKI_alle.dreiecksfragen import Dreiecksfragen
 
-        return trimesh.proximity.closest_point(netz, punkte)[1] * 1000.0
+        return Dreiecksfragen.abstand(netz.vertices, netz.faces, Torchfeld.feld(punkte, dtype=torch.float64)) * 1000.0
 
     # ------------------------------------------------------------ Maße
 
     def _original_zu_modell(self, region):
-        punkte = Torchfeld.feld(self.vorgabe.vertices)[region]
+        punkte = self.vorgabe.vertices[region]
         d = self._abstand_mm(self.modell, punkte)
-        return {'gesamt': self.rahmen.statistik(d), 'innerhalb_1mm': round(float((d < 1.0).mean()), 3), 'innerhalb_2mm': round(float((d < 2.0).mean()), 3),
+        return {'gesamt': self.rahmen.statistik(d), 'innerhalb_1mm': round(float((d < 1.0).double().mean()), 3), 'innerhalb_2mm': round(float((d < 2.0).double().mean()), 3),
                 'zonen': self.rahmen.tabelle(d, punkte)}
 
     def _stueck_zu_original(self):
-        punkte = Torchfeld.feld(self.stueck.vertices)
+        punkte = self.stueck.vertices
         self.abstand_stueck = self._abstand_mm(self.original, punkte)
         return {'gesamt': self.rahmen.statistik(self.abstand_stueck), 'zonen': self.rahmen.tabelle(self.abstand_stueck, punkte)}
 
     def _tiefen(self, netz, ursprung):
         """Tiefe (m, relativ zur Mitte, längs `vorne`) der ersten Fläche je Strahl — NaN ohne Treffer."""
         r = self.rahmen
-        tiefe = Torchfeld.full(len(ursprung), -math.inf)
-        orte, strahl, _ = netz.ray.intersects_location(ursprung, torch.tile(-r.vorne, (len(ursprung), 1)), multiple_hits=False)
-        if len(orte):
-            Torchfeld.maximum_at(tiefe, strahl, (orte - r.mitte) @ r.vorne)
-        tiefe[Torchfeld.isinf(tiefe)] = math.nan
-        return tiefe
+        t = netz.erste(ursprung, -r.vorne)
+        tiefe = (ursprung - r.mitte) @ r.vorne - t
+        return torch.where(torch.isfinite(t), tiefe, math.nan)
 
     def _tiefenkarte(self):
         r, g = self.rahmen, self.rahmen.grenzen
@@ -131,21 +128,21 @@ class Schammessunggeometrie:
         `ueber_90` = Anteil der Kanten, an denen die Fläche um mehr als 90° knickt (Falten, umgeklappte Dreiecke) — beim Stück und beim Original. (Ein Vergleich der Normalen mit dem nächsten
         Original-Dreieck taugt nicht: im Spalt ist das nächste Dreieck das der anderen Lippe — am 10.10.2026 meldete er 35–46 % „umgeklappt" bei jeder Fassung.)"""
         stat = self.rahmen.statistik
-        stueck, original = Torchfeld.degrees(self.stueck.face_adjacency_angles), Torchfeld.degrees(self.vorgabe.face_adjacency_angles)
+        stueck, original = (Torchfeld.degrees(n.face_adjacency_angles) for n in (self.stueck, self.vorgabe))
         return {'kantenwinkel_grad': stat(stueck), 'kantenwinkel_original_grad': stat(original),
-                'ueber_90': round(float((stueck > 90.0).mean()), 4), 'ueber_90_original': round(float((original > 90.0).mean()), 4)}
+                'ueber_90': round(float((stueck > 90.0).double().mean()), 4), 'ueber_90_original': round(float((original > 90.0).double().mean()), 4)}
 
     def _symmetrie(self):
         from KoerperKI_alle.kartenbaum import Kartenbaum as cKDTree
 
         r = self.rahmen
-        p = Torchfeld.feld(self.stueck.vertices)
+        p = self.stueck.vertices
         kern = Torchfeld.abs(r.koordinaten(p)[:, 0]) < self.KERN_M
         if len(self.rand):
             kern &= cKDTree(self.rand).query(p)[0] > self.RAND_ABSTAND_M
         aus = {'stueck': r.statistik(self._abstand_mm(self.stueck, r.spiegeln(p[kern]))) if kern.any() else None}
         if self.vorgabe is not None and len(self.vorgabe.vertices):
-            v = Torchfeld.feld(self.vorgabe.vertices)[self._region()]
+            v = self.vorgabe.vertices[self._region()]
             v = v[Torchfeld.abs(r.koordinaten(v)[:, 0]) < self.KERN_M]
             aus['original'] = r.statistik(self._abstand_mm(self.vorgabe, r.spiegeln(v))) if len(v) else None
         return aus

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { Genesis9texturbasis } from './genesis9texturbasis.js';
 import { Genesis9texturblock } from './genesis9texturblock.js';
+import { Genesis9texturbuendel } from './genesis9texturbuendel.js';
 import { Genesis9texturzaehler } from './genesis9texturzaehler.js';
 import { Pufferabruf } from './pufferabruf.js';
-import { Seitenabbruch } from './seitenabbruch.js';
 import { Texturweg } from './texturweg.js';
 
 /**
@@ -36,8 +36,6 @@ import { Texturweg } from './texturweg.js';
 export class Genesis9texturen {
 
     static ADRESSE = '/api/character/genesis9-figur/textur/';
-    /** Alle Bilder eines Netzes in EINER Anfrage (`core/api/g9texturbuendel.py`). */
-    static BUENDEL = '/api/character/genesis9-figur/texturbuendel/';
     /** Adresse -> {textur, fertig: Promise<THREE.Texture|null>} */
     static _vorrat = new Map();
 
@@ -85,7 +83,7 @@ export class Genesis9texturen {
             gruppen.set(wahl, offen);
             Genesis9texturen._vorrat.set(adresse, { textur, fertig });
         }
-        for (const [wahl, offen] of gruppen) Genesis9texturen._buendelHolen(offen, wahl);
+        for (const [wahl, offen] of gruppen) Genesis9texturbuendel.holen(offen, wahl, { bild: Genesis9texturen._ausBuendel, einzeln: Genesis9texturen._einzeln });
     }
 
     static _leereTextur(pfad, srgb) {
@@ -97,66 +95,17 @@ export class Genesis9texturen {
         return textur;
     }
 
-    /** Länger darf die Adresse des Bündels nicht werden (Daphnes Anfragezeile) — sonst POST, das der Browser nicht behält. */
-    static ADRESSE_MAX = 12000;
-
-    /**
-     * Das Bündel holen und Stück für Stück lesen (19.10.2026): GET, damit der Browser es behält (ETag, ein unverändertes Bündel kommt als 304 aus seinem
-     * Speicher — vorher übertrug jedes Laden alles neu, an Mann1 48,6 MB in 5,2 s); und jedes Bild wird dekodiert, sobald SEINE Bytes da sind, nicht erst
-     * nach dem ganzen Bündel. Scheitert etwas, kommt jedes Bild, das noch fehlt, einzeln (wie vor dem 23.09.2026).
-     */
-    static async _buendelHolen(offen, abfrage = Texturweg.abfrage()) {
-        try {
-            const pfade = [...offen.keys()], wahl = abfrage ? `?${abfrage}` : '';
-            const adresse = `${Genesis9texturen.BUENDEL}${wahl || '?'}${wahl ? '&' : ''}${pfade.map(p => `p=${encodeURIComponent(p)}`).join('&')}`;
-            const signal = Seitenabbruch.signal;           // endet beim Verlassen der Seite (30.10.2026, `Seitenabbruch`)
-            const antwort = adresse.length <= Genesis9texturen.ADRESSE_MAX ? await fetch(adresse, { signal })
-                : await fetch(Genesis9texturen.BUENDEL + wahl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pfade }), signal });
-            if (!antwort.ok || !antwort.body) throw new Error(`HTTP ${antwort.status}`);
-            await Genesis9texturen._buendelLesen(antwort.body.getReader(), offen);
-        } catch (fehler) {
-            // Was noch fehlt (kein Bündel, Strom abgerissen): einzeln — nach einem Abbruch beim Verlassen erst, wenn die Seite doch bleibt.
-            await Seitenabbruch.geblieben();
-        }
-        for (const [pfad, eintrag] of offen) Genesis9texturen._einzeln(pfad, eintrag);
-    }
-
-    /** `[4 Byte Kopflänge][Kopf][Bild 1][Bild 2] …` aus dem Strom: jedes Bild an `_bitmap`, sobald es ganz da ist; erledigte fallen aus `offen`. */
-    static async _buendelLesen(leser, offen) {
-        const stuecke = [];                            // {start, daten}: empfangen, absolute Lage im Strom
-        let da = 0, teile = null, naechster = 0, versatz = 0;
-        const bereich = (von, bis) => stuecke.filter(s => s.start < bis && s.start + s.daten.length > von)
-            .map(s => s.daten.subarray(Math.max(0, von - s.start), Math.min(s.daten.length, bis - s.start)));
-        const kopie = (von, bis) => { const aus = new Uint8Array(bis - von); let p = 0; for (const t of bereich(von, bis)) { aus.set(t, p); p += t.length; } return aus; };
-        for (;;) {
-            const { done, value } = await leser.read();
-            if (value?.length) { stuecke.push({ start: da, daten: value }); da += value.length; }
-            if (!teile && da >= 4) {
-                const laenge = new DataView(kopie(0, 4).buffer).getUint32(0);
-                if (da >= 4 + laenge) { teile = JSON.parse(new TextDecoder().decode(kopie(4, 4 + laenge))).teile || []; versatz = 4 + laenge; }
-            }
-            while (teile && naechster < teile.length) {
-                const teil = teile[naechster], eintrag = offen.get(teil.pfad);
-                const groesse = teil.art && teil.bytes ? teil.bytes : 0;
-                if (da < versatz + groesse) break;
-                naechster += 1;
-                if (!eintrag) { versatz += groesse; continue; }
-                offen.delete(teil.pfad);
-                if (!groesse) { Genesis9texturen._einzeln(teil.pfad, eintrag); continue; }       // war zu groß fürs Bündel
-                const blob = new Blob(bereich(versatz, versatz + groesse), { type: teil.art });
-                versatz += groesse;
-                Genesis9texturen._bitmap(blob, Genesis9texturen.adresse(teil.pfad, eintrag.srgb)).then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
-                    .catch(() => Genesis9texturen._einzeln(teil.pfad, eintrag));
-            }
-            while (stuecke.length && stuecke[0].start + stuecke[0].daten.length <= versatz) stuecke.shift();     // Gelesenes freigeben
-            if (done) return;
-        }
+    /** Ein Bild des Bündels einsetzen (`Genesis9texturbuendel`): Blob oder Ausschnitt des Puffers; scheitert es, kommt es einzeln. */
+    static _ausBuendel(pfad, quelle, eintrag) {
+        Genesis9texturen._bitmap(quelle, Genesis9texturen.adresse(pfad, eintrag.srgb)).then(bild => Genesis9texturen._fertig(eintrag, bild))
+            .catch(() => Genesis9texturen._einzeln(pfad, eintrag));
     }
 
     /** Blob → Bitmap, ein S3TC-Block (Weg C, `Genesis9texturblock`) oder UASTC (`Genesis9texturbasis`) → `{bild, stufen, …}`. Scheitert UASTC im Browser (Wandler
      *  nicht geladen), kommt derselbe Pfad als S3TC-Block (`adresse` ohne Abfrage + `format=bc`). */
     static _bitmap(blob, adresse = '') {
         if (blob.type === Genesis9texturblock.ART) return Genesis9texturblock.lesen(blob);
+        if (blob.puffer) blob = new Blob([new Uint8Array(blob.puffer, blob.ab, blob.bytes)], { type: blob.type });      // Ausschnitt eines Bündels, kein Block
         if (blob.type === Genesis9texturbasis.ART) {
             return Genesis9texturbasis.lesen(blob).catch(fehler => {
                 console.warn(`Genesis9texturen: UASTC nicht lesbar (${fehler?.message || fehler}) — S3TC-Block für ${adresse.split('?')[0].split('/').pop()}`);
@@ -172,6 +121,11 @@ export class Genesis9texturen {
 
     /** Eine Adresse einzeln laden — jedes Format über `fetch`, das Bild im Worker (`_bitmap`; bis 23.11.2026 Bilder über threes `ImageBitmapLoader` im Hauptfaden). */
     static _laden(adresse) {
+        if (Genesis9texturbuendel.perWorker() && adresse.includes('format=')) {          // GPU-Block der Bibliothek (11 MB je 4096er): über den Worker, erkannt am Inhalt
+            return Pufferabruf.holen(adresse, null, { kasten: Genesis9texturbuendel.KASTEN }).then(puffer => Genesis9texturen._bitmap(
+                Genesis9texturblock.erkannt(puffer) ? { puffer, ab: 0, bytes: puffer.byteLength, type: Genesis9texturblock.ART }
+                    : new Blob([puffer], { type: adresse.includes('format=uastc') ? Genesis9texturbasis.ART : '' }), adresse));
+        }
         return fetch(adresse, { credentials: 'same-origin' }).then(antwort => {
             if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
             return antwort.blob();

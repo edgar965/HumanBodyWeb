@@ -23,6 +23,7 @@ from types import SimpleNamespace
 
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
+from KoerperKI_alle.kurzspeicher import Kurzspeicher
 from KoerperKI_alle.npztorch import Npztorch
 from django.conf import settings
 from django.utils import timezone
@@ -136,16 +137,11 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
     def _abstimmnetz_karte(self, glb):
         """Fassung 2: das Abstimm-Netz mit `Gitterquadrik` auf der Karte (Punkte je Gitterzelle zusammengelegt, Lage aus den Quadriken der Flächen), als GLB nach `self._netz` → `(Dreiecke, Punkte)`.
         Koordinaten wie das Original (trimesh mit den Knoten-Transformationen, wie `Mesh3dnetzansicht.vereinfachen`)."""
-        import torch
         import trimesh
 
         from KoerperKI_alle.gitterquadrik import Gitterquadrik
 
-        roh = trimesh.load(str(glb), process=False)
-        netz = roh.to_geometry() if isinstance(roh, trimesh.Scene) else roh
-        g = torch.device('cuda')
-        lage, flaechen = Gitterquadrik.vereinfachen(torch.as_tensor(netz.vertices, dtype=torch.float64, device=g), torch.as_tensor(netz.faces, dtype=torch.int64, device=g),
-                                                    self.PROXY_FLAECHEN)
+        lage, flaechen = Gitterquadrik.vereinfachen(*self._netzfelder(glb), self.PROXY_FLAECHEN)
         teil = self._netz.with_name(self._netz.name + '.teil')
         trimesh.Trimesh(vertices=lage.cpu().numpy(), faces=flaechen.cpu().numpy(), process=False).export(str(teil), file_type='glb')     # Übergabe an trimesh (Datei)
         os.replace(teil, self._netz)
@@ -182,13 +178,14 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
                 kopie[feld] = kopie[feld][nah]
             kopie['netz'] = Torchfeld.feld(self.stempel(glb), copy=True)
             kopie['flaechen'] = len(voll)
-            Npztorch.speichern(self.ordner() / datei, **kopie, komprimiert=True)
+            Npztorch.speichern(self.ordner() / datei, **kopie, komprimiert=True, nebenher=True)
+            type(self)._zuletzt[str(self.ordner() / datei)] = kopie
 
     @staticmethod
     def _naechste(klein, voll):
         """Je Zeile von `voll` der Index der nächsten Zeile von `klein` (beide (n, 3)) — auf der Karte mit der exakten Rastersuche (`G9rasternachbarn`, Ergebnis wie `cKDTree.query`, gleich weite
         Punkte: kleinerer Index). Bis 12.11.2026 cKDTree auf allen Kernen (Edgar: „alles auf GPU und VRAM, alles pytorch“; py-spy am Zauberer: `_uebertragen` 1,7 % des Schritts „rig“).
-        Gegenprobe `ProjektTemp/_wegwerf/genesis_zuerst/umbau/naechste_probe.py`. Das Ergebnis geht als Feld an `_uebertragen` (liest und schreibt die npz-Ablagen wie bisher).
+        Gegenprobe `ProjektTemp/_wegwerf/genesis_zuerst/umbau/naechste_probe.py`. Das Ergebnis geht als Tensor an `_uebertragen`.
         `je_zelle=8`: das Abstimm-Netz ist in flachen Bereichen grob; mit der Vorgabe 4 blieben am Zauberer 932.959 von 2.334.176 Zeilen im ersten Block offen (1,25 s), mit 8 sind es 411.524
         und alle in den Ringen bewiesen (0,63 s, der Baum auf der CPU 0,79 s; `naechste_zelle.py`)."""
         import torch
@@ -198,16 +195,39 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
 
         karte = G9rechenkarte.an() or G9rechenkarte(torch)
         _w, i = G9rasternachbarn(karte, klein, je_zelle=8).naechste(voll, 1)
-        return i[:, 0].cpu().numpy()
+        return i[:, 0]
 
     @staticmethod
     def _flaechenmitten(glb):
         """(F, 3) Flächenmitten in der Reihenfolge der Flächen, die der Runner liest (`_run_sapiens._netz`: trimesh, ohne Zusammenführen, mit den Knoten-Transformationen)."""
+        punkte, flaechen = Blendimportsegmentierung._netzfelder(glb)
+        return punkte[flaechen].mean(axis=1)
+
+    @staticmethod
+    def _netzfelder(glb):
+        """(Punkte (n, 3) float64, Dreiecke (f, 3) int64) auf der Karte — einmal je Datei (`Glbfelder`), sonst über trimesh."""
+        from KoerperKI_alle.glbfelder import Glbfelder
+
+        einfach = Glbfelder.lesen(glb)
+        if einfach is not None:
+            return einfach.punkte, einfach.dreiecke
         import trimesh
 
         roh = trimesh.load(str(glb), force='scene', process=False)
         netz = roh.to_geometry() if hasattr(roh, 'to_geometry') else roh.dump(concatenate=True)
-        return Torchfeld.feld(netz.vertices, dtype=torch.float64)[Torchfeld.feld(netz.faces)].mean(axis=1)
+        return Torchfeld.feld(netz.vertices, dtype=torch.float64), Torchfeld.feld(netz.faces, dtype=torch.int64)
+
+    #: Die Stimmen, die dieser Prozess zuletzt geschrieben hat (Pfad → Felder): „figur“ braucht sie gleich darauf und muss nicht auf die 340–470 MB warten (25.11.2026)
+    _zuletzt = {}
+    Kurzspeicher.melden(_zuletzt.clear)
+
+    @classmethod
+    def _stimmen(cls, pfad):
+        felder = cls._zuletzt.pop(str(pfad), None)
+        if felder is None:
+            with Npztorch.lesen(pfad) as d:
+                felder = {k: d[k] for k in d.files}
+        return dict(felder)
 
     def _abschluss(self):
         kennzahlen = (self._ergebnis or {}).get('kennzahlen') or {}
@@ -256,17 +276,15 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         if grund:
             logger.warning('Mesh-3D %s: Segmentierung nicht benutzt (%s) — „Mesh to 3D“ rechnet ohne Sapiens', ablage.kennung, grund)
             return None
-        with Npztorch.lesen(quelle) as d:
-            daten = {k: d[k] for k in d.files}
+        daten = cls._stimmen(quelle)
         daten['netz'] = Torchfeld.feld(cls.stempel(eingang), copy=True)
         ziel = job_ablage.arbeit(cls.DATEI)
         ziel.parent.mkdir(parents=True, exist_ok=True)
-        Npztorch.speichern(ziel, **daten, komprimiert=True)
+        Npztorch.speichern(ziel, **daten, komprimiert=True, nebenher=True)
         # Die Stimmen der Begriffe (SAM 3) gehören zum selben Netz und gehen mit — fehlen sie, rechnet „Mesh to 3D“ ohne Bestandteile (kein Fehler).
         teile = ablage.arbeit(cls.ORDNER) / Blendimportbegriffe.DATEI
         if Npztorch.da(teile):
-            with Npztorch.lesen(teile) as d:
-                gleiche = {k: d[k] for k in d.files}
+            gleiche = cls._stimmen(teile)
             gleiche['netz'] = daten['netz']
-            Npztorch.speichern(job_ablage.arbeit(Blendimportbegriffe.DATEI), **gleiche, komprimiert=True)
+            Npztorch.speichern(job_ablage.arbeit(Blendimportbegriffe.DATEI), **gleiche, komprimiert=True, nebenher=True)
         return dict(bericht.get('optionen') or {})

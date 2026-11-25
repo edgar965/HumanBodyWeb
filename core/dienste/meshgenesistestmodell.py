@@ -150,9 +150,10 @@ class Meshgenesistestmodell:
         `fototextur` = `{kachel: Adresse}` bei „Haut b“ (die Kacheln des Mesh-3D-Laufs, wie ein Modell aus „Mesh to 3D“ sie trägt — `Meshfigurspeichern.modelldaten`),
         `seite` = die Figur der Seite (`figur_der_seite`, 23.11.2026): Grundfigur, Regler (mit der Mimik des Fotos), Anatomie-Stück, Brauen, Haut der KI, Haut-Korrekturen."""
         from .blendimportmodell import Blendimportmodell
-        # 'regler' (12.11.2026): die Regler des Stücks (Weg z, „Genesis zuerst“: Passform aus der Messung am Netzstück, `Garderoberegler`), sonst leer
+        # 'regler' (12.11.2026): die Regler des Stücks (Weg z, „Genesis zuerst“: Passform aus der Messung am Netzstück, `Garderoberegler`), sonst leer.
+        # 'traegt_anatomie' (24.11.2026): das Stück trägt die Anatomie wie auf der Seite (`Kleideranatomie.getragen`) — der Charakter verdeckt sie dann, statt zu drapieren (`Anatomietraeger`)
         eintraege = {k: {'variante': '', 'stil': '', 'stile': {}, 'regler': dict(w.get('regler') or {}), 'farbe': w.get('farbe'), 'gruppenfarben': {}, 'griff': Blendimportmodell.griff(k),
-                         'knochen': False}
+                         'knochen': False, 'traegt_anatomie': bool(w.get('traegt_anatomie'))}
                      for k, w in kleidung.items()}
         figur = form.get('figur') or {}
         aus = {'name': name, 'quelle': 'genesis9',
@@ -197,13 +198,13 @@ class Meshgenesistestmodell:
             haarnetze.append(netz)
             bericht.append({'id': st['id'], 'wahl': wahl, 'haarnetz': netz['quelle']})
         elif wahl in cls.GARDEROBE:
-            kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe'), 'regler': st[wahl].get('regler_stueck') or {}}
+            kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe'), 'regler': st[wahl].get('regler_stueck') or {}, 'traegt_anatomie': st[wahl].get('traegt_anatomie')}
             bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': st[wahl]['kennung']})
         elif wahl in Meshgenesistestkleidspeichern.EIGENE:
             # b: Objekt des Mesh-3D-Laufs; k, s, f, g (KI): geschnitten, GarmentCode-Schnitt, Drapieren, Schicht — alle liegen als Anzeigenetz auf der Figur und werden eigene
             # Genesis-Stücke (`Meshgenesistesteigenstueck` liest den Übertrag unter `b`). f und g fehlten hier bis 22.10.2026: Stücke aus dem Schichtkopf kamen nie ins Modell.
             eigen = Meshgenesistesteigenstueck(ordner / wahl / st['id'], dict(st, b=st[wahl]), form['figur']['regler'], name, Meshgenesisrig.namen()).holen()
-            kleidung[eigen['stueck']] = {'farbe': None}
+            kleidung[eigen['stueck']] = {'farbe': None, 'traegt_anatomie': st[wahl].get('traegt_anatomie')}
             # Name und Kategorie in der Garderobe, wie in der Karte gewählt (`Meshgenesistestkleidspeichern`)
             from Genesis9.garderobe import G9garderobe
             sp = st.get('speichern') or {}

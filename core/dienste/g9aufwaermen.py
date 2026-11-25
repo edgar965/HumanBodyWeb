@@ -70,12 +70,15 @@ class G9aufwaermen:
         from Genesis9.gelenkkorrekturen import G9gelenkkorrekturen
         from Genesis9.reglerplan import G9reglerplan
 
+        from ..api.g9reglerzug import G9reglerzugapi
         from .g9neustartnachlauf import G9neustartnachlauf
         # Die Netze der zuletzt offenen Seite gleich nach dem Basisnetz (18.11.2026, `G9neustartnachlauf`):
         # nach einer Code-Änderung rechnete die Seite sie sonst selbst — Anatomie fein 7,3–7,6 s statt
         # 0,17 s aus dem Vorrat (`django.log`, siehe dort).
         aus = [('basisnetz', G9basisnetz.holen),
                ('zuletzt angezeigt', G9neustartnachlauf.nachrechnen),
+               # Der erste Reglerzug der Seite (25.11.2026): sonst zahlt ihn Edgar
+               ('reglerzug', G9reglerzugapi.aufwaermen),
                ('charaktere', G9charaktere.liste),
                ('reglerplan', G9reglerplan.holen),
                ('skelett', lambda: G9formung({}).skelett())]

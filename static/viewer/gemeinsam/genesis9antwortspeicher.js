@@ -87,10 +87,26 @@ export class Genesis9antwortspeicher {
     static async kleid(inst, kennung, adresse, nutzlast) {
         const teil = `kleid:${kennung}`;
         const stellung = JSON.stringify([Genesis9antwortspeicher.ohneStufen(adresse), nutzlast]);
-        const stufe = Genesis9antwortspeicher.stufe(adresse);
+        const stufe = Genesis9antwortspeicher.stufe(adresse), gewaehlt = Netzstufenstand.wahl;
+        const vorab = inst._vorabStuecke?.get(teil);
+        if (vorab) inst._vorabStuecke.delete(teil);                                    // genommen oder überholt (andere Stufe, andere Stellung)
+        if (vorab?.schluessel === `${stufe}|${stellung}`) return vorab.versprechen;
         const treffer = Genesis9antwortspeicher.suchen(inst, teil, stellung, stufe);
         if (treffer) return { daten: Genesis9antwortspeicher.kopie(treffer.daten), teil, stellung, stufe, neu: false };
-        return { daten: await Serverabruf.netzSenden(adresse, nutzlast, Genesis9vorrat.kopf(inst, teil, adresse, nutzlast)), teil, stellung, stufe, neu: true };   // Anzeige → dauerhaft (`Genesis9vorrat`)
+        const daten = await Serverabruf.netzSenden(adresse, nutzlast, Genesis9vorrat.kopf(inst, teil, adresse, nutzlast));   // Anzeige → dauerhaft (`Genesis9vorrat`)
+        // Kam statt des Käfigs gleich die gewählte Stufe (`Genesis9vorrat`, 5.), liegt sie auch als diese im Speicher.
+        return { daten, teil, stellung, stufe: daten?.feinStatt ? gewaehlt : stufe, neu: true };
+    }
+
+    /**
+     * Ein Stück schon anfragen, bevor es gebaut wird (24.11.2026, Edgar: „EdgarNeu laden … muss in 2 s laden“): `Genesis9haeppchen` fragte die Stücke der feinen Stufe eines nach dem
+     * anderen an, jedes erst nach dem Bau des vorigen. `kleid` nimmt die Anfrage, solange Stufe und Stellung dieselben sind.
+     */
+    static vorab(inst, kennung, adresse, nutzlast) {
+        const teil = `kleid:${kennung}`, schluessel = `${Genesis9antwortspeicher.stufe(adresse)}|${JSON.stringify([Genesis9antwortspeicher.ohneStufen(adresse), nutzlast])}`;
+        const versprechen = Genesis9antwortspeicher.kleid(inst, kennung, adresse, nutzlast);
+        versprechen.catch(() => {});        // stumm gewollt: den Fehler bekommt, wer die Antwort nimmt (`kleid`)
+        (inst._vorabStuecke ??= new Map()).set(teil, { schluessel, versprechen });
     }
 
     /** Was im Speicher liegt, in Bytes: `{teil: {stufe: Bytes}}` — jeder Antwortpuffer einmal gezählt (die Felder einer Antwort teilen ihn). Für Proben. */

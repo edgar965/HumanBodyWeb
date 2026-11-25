@@ -28,6 +28,7 @@ Käfig (Nummern bis 27.086, Raster 0,41, Fehler höchstens 0,21) rundete noch ri
 eine Figurart davon betroffen war, ist nicht gemessen.
 """
 import torch
+from KoerperKI_alle.netzkerne import Netzkerne
 from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Netzkurz']
@@ -58,8 +59,14 @@ class Netzkurz:
         q = Torchfeld.astype(Torchfeld.clip(Torchfeld.round((w - ab) / schritt), 0, 65535), Torchfeld.dtype('<u2'))
         return Torchfeld.als_bytes(q), {'ab': ab, 'schritt': schritt}
 
+    @classmethod
+    def auf_karte(cls, werte):
+        u"""Dieselbe Rechnung, solange das Feld noch auf der Karte liegt (25.11.2026): `(q uint16, kopf (3,) float64: ab, schritt, 1 = gültig)` ohne Abholen — bis dahin ging jedes Feld
+        zur CPU, zurück zur Karte, mit drei Wartepunkten, und wieder zur CPU (60–80 ms je Reglerzug)."""
+        return Netzkerne.kurz(werte, cls.STUFEN)
+
     @staticmethod
     def entpacken(rohdaten, anzahl, kurz):
         u"""Die float32-Bytes zurück (Gegenprobe, Werkzeuge) — dieselbe Rechnung wie `gemeinsam/netzpaket.js`."""
-        q = Torchfeld.astype(torch.frombuffer(bytearray(rohdaten), dtype='<u2', count=anzahl).to(Torchfeld.KARTE), torch.float64)
+        q = Torchfeld.astype(torch.frombuffer(bytearray(rohdaten), dtype=torch.uint16, count=anzahl).to(Torchfeld.KARTE), torch.float64)
         return Torchfeld.als_bytes(Torchfeld.astype(float(kurz['ab']) + q * float(kurz['schritt']), torch.float32))

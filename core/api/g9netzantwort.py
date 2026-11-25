@@ -16,13 +16,13 @@ __all__ = ['G9netzantwort']
 class G9netzantwort:
 
     @staticmethod
-    def aus(netz):
-        antwort = Netzantwort.aus(netz['punkte'], faces=netz['dreiecke'],
-                                  normals=netz['normalen'], uvs=netz['uv'])
+    def aus(netz, form=False):
+        u"""`form` (25.11.2026, `nur: 'form'` im Rumpf): der Browser schreibt die Antwort in das stehende Netz (`Genesis9nachformen`) — ohne Dreiecke, UV und Dünne, die er schon hat."""
+        antwort = Netzantwort.aus(netz['punkte'], normals=netz['normalen'], **({} if form else {'faces': netz['dreiecke'], 'uvs': netz['uv']}))
         antwort['gruppen'] = netz['gruppen']
         antwort['hautgewichte'] = Netzantwort.hautgewichte(netz.get('haut'),
                                                            kompakt=True)
-        if netz.get('dicke') is not None:
+        if netz.get('dicke') is not None and not form:
             # Duenne 0..1 je Punkt — das Durchlicht der Haut (`G9dicke`).
             antwort['dicke'] = Netzantwort.feld(netz['dicke'], 'dicke')
         if netz.get('stoff') is not None:

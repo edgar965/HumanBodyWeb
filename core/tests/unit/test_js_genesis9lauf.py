@@ -60,7 +60,7 @@ class Genesis9laufUndHaarkartenTest(SimpleTestCase):
         ihren Wert erst im Lauf ein. Sabotage: `wartend.set(schluessel` → `wartend.set(''` → rot.
         """
         text = quelltext('charakter', 'genesis9', 'genesis9lauf.js')
-        self.assertIn("static planen(inst, aktion, danach = null, schluessel = '') {", text)
+        self.assertIn("static planen(inst, aktion, danach = null, schluessel = '', ruhe = Genesis9lauf.RUHE_MS) {", text)
         self.assertIn('lauf.wartend.set(schluessel, [aktion, danach]);', text)
         self.assertIn('for (const [k, wunsch] of lauf.wartend) lauf.faellig.set(k, wunsch);', text)
         self.assertIn('while (lauf.faellig.size) {', text)
@@ -78,13 +78,26 @@ class Genesis9laufUndHaarkartenTest(SimpleTestCase):
             ('genesis9eigenschaften.js', "_kopf(inst), 'brauenstil')"): 1,
             ('genesis9eigenschaften.js', '`praeset:${kategorie.kategorie}`'): 1,
             # Die Reglerzeile steht seit 18.10.2026 in eigenem Modul (Aliasse und Paare der Gliederung nach Körperteil).
-            ('genesis9reglerzeile.js', '`regler:${regler.name}`'): 1,
+            # Seit 25.11.2026 plant `Genesis9reglerzug` den genauen Zug (davor läuft die Sofortschau).
+            ('genesis9reglerzug.js', '`regler:${name}`'): 1,
             ('genesis9posen.js', "'formen'"): 1,
             ('genesis9posen.js', '`pose:${feld}`'): 1,
         }
         for (datei, schluessel), anzahl in erwartet.items():
             self.assertEqual(quelltext('charakter', 'genesis9', datei).count(schluessel), anzahl,
                              '%s: %s' % (datei, schluessel))
+
+    def test_4_nachziehen_sucht_die_schieber_einmal(self):
+        """Nach einem Reglerzug EINE Suche im Dokument, nicht eine je Regler (25.11.2026).
+
+        Bei EdgarNeu waren es 3.064 Suchen in 33.000 Elementen: 1,5–3,4 s Sperre, jetzt rund 20 ms (im Chrome gemessen, alle
+        Schieber danach gleich). Sabotage (nicht gelaufen): die Suche zurück in die Schleife → rot.
+        """
+        text = quelltext('charakter', 'genesis9', 'genesis9reglerzeile.js')
+        self.assertEqual(text.count('document.querySelectorAll('), 1)
+        nachziehen = text.split('static nachziehen(inst, plan) {')[1]
+        self.assertNotIn('querySelectorAll', nachziehen)
+        self.assertLess(nachziehen.index('Genesis9reglerzeile._schieberJeName()'), nachziehen.index('for (const regler of alle)'))
 
     def test_2_haarkarten_mit_msaa_deckung(self):
         text = quelltext('gemeinsam', 'genesis9netz.js')

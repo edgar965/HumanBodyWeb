@@ -14,6 +14,7 @@ import { Genesis9lipsync } from './genesis9/genesis9lipsync.js';
 import { Humanbodybindung } from '../gemeinsam/humanbodybindung.js';
 import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
 import { Auswahlziele } from './auswahlziele.js';
+import { Programmvorbau } from '../gemeinsam/programmvorbau.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -83,6 +84,7 @@ export class Szenenschleife extends Zeichenschleife {
     vorbereiten() {
         this.anzeigen = this._anzeigen();
         Auswahlaura.laden();          // Stil aus Einstellungen → Studio
+        Programmvorbau.anmelden(state.renderer);      // Shader vor dem ersten Bild einer Figur bauen, nicht darin (24.11.2026)
     }
 
     schritt() {
@@ -127,8 +129,9 @@ export class Szenenschleife extends Zeichenschleife {
         Humanbodybindung.takt(state.characters.values());
         // Der Stoffschwung auf die Pose, in der gezeichnet wird (nach Bodenfix und Weichgewebe) — sonst steckt das Bein im Rock.
         Genesis9stoffschwung.nachfuehren();
-        // Mit Aura um Auswahl und Hover (25.09.2026, `auswahlaura.js`) — ohne Ziel direkt.
-        Auswahlaura.rendern(state.renderer, state.scene, state.camera, ...Auswahlziele.jetzt());
+        // Mit Aura um Auswahl und Hover (25.09.2026, `auswahlaura.js`) — ohne Ziel direkt. Wird ein neues Shader-Programm noch übersetzt, bleibt das letzte Bild stehen (`Programmvorbau`).
+        const ziele = Auswahlziele.jetzt(), ueberZiel = Auswahlaura.ueberZiel() && ziele.some(z => z.length > 0);
+        if (!Programmvorbau.wartet(state.renderer, state.scene, state.camera, ueberZiel)) Auswahlaura.rendern(state.renderer, state.scene, state.camera, ...ziele);
         this.kameraanzeige();
         this.bildrate(dt);
     }
@@ -189,6 +192,7 @@ export class Szenenschleife extends Zeichenschleife {
         if (state.fpsAccum < Szenenschleife.FPS_FENSTER_S) return;
         const feld = this.feld('bildrate');
         if (feld) feld.textContent = state.frameCount;
+        Programmvorbau.nachpruefen(state.renderer);   // einmal je Sekunde: Shader, die niemand vorgebaut hat
         state.frameCount = 0;
         state.fpsAccum = 0;
     }

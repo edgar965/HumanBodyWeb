@@ -199,7 +199,7 @@ class FormungTest(SimpleTestCase):
 
     def test_5b_aus_abfrage_nimmt_den_schieber_an_und_begrenzt_ihn(self):
         kanaele = SimpleNamespace(kanaele={M: {'min': 0.0, 'max': 1.0}})
-        with mock.patch('Genesis9.formung.G9morphablage.holen', return_value=kanaele), grenzen():
+        with mock.patch('Genesis9.formungswerte.G9morphablage.holen', return_value=kanaele), grenzen():
             zu_gross = G9formung.aus_abfrage({M: 1.0, G9alter.NAME: 5.0})
             drin = G9formung.aus_abfrage({M: 1.0, G9alter.NAME: 1.0})
         self.assertEqual(zu_gross.fingerabdruck(), drin.fingerabdruck(), '5,0 gilt wie 1,0')

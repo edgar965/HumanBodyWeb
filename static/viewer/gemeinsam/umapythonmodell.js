@@ -1,6 +1,7 @@
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
 import { Knochenbau } from './knochenbau.js';
+import { Knochenkette } from './knochenkette.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Umapythonnetz } from './umapythonnetz.js';
 import { Modell } from './modell.js';
@@ -73,11 +74,33 @@ export class UmapythonModell extends Modell {
      * Einen Regler stellen und die Figur neu rechnen.
      *
      * Der Server hält die gebaute Figur; hier läuft nur die Knochen- und
-     * Hautrechnung (gemessen 0,07 s gegen 6–14 s für den Bau).
+     * Hautrechnung (gemessen 0,07 s gegen 6–14 s für den Bau). Seit 25.11.2026
+     * kommt auch nur das (`nur: 'form'`, `Umareglerzug`): Netz, Texturen und
+     * Gewichte bleiben stehen (`Umapythonnetz.umformen`).
      */
     async reglerSetzen(name, wert) {
         this.dna[name] = wert;
-        return this._holen();
+        if (!this.bodyMesh?.isSkinnedMesh || !this.skelett) return this._holen();
+        const daten = await Serverabruf.netzSenden(UmapythonModell.ADRESSE, {
+            rasse: this.rasse, dna: this.dna, kleidung: this.kleidung, nur: 'form',
+        });
+        if (daten.fehler) throw new Error(daten.fehler);
+        if (!this._formPasst(daten)) return this._holen();
+        this._skelettSetzen(daten.skelett);
+        this.bodyMesh = Umapythonnetz.umformen(this.group, this.bodyMesh, daten.netz);
+        Eigenhaut.einhaengen(this.group, this.bodyMesh, this.skelett);
+        this.bodyMesh.userData.umastoff = daten.stoff || null;
+        this.bilanz = daten.bilanz || null;
+        this.hoehe = Number(daten.bilanz?.hoehe_m) || 0;
+        return this.bilanz;
+    }
+
+    /** Dieselben Punkte und dieselben Knochen in derselben Reihe — sonst gälten die stehenden Gewichte nicht. */
+    _formPasst(daten) {
+        const namen = this.skelett.bones.map(k => k.name);
+        const neu = Knochenkette.bauplan(daten.skelett?.knochen).map(k => k.name);
+        return this.bodyMesh.geometry.attributes.position.count === daten.netz?.punktzahl
+            && namen.length === neu.length && namen.every((n, i) => n === neu[i]);
     }
 
     /**

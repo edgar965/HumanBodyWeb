@@ -90,11 +90,20 @@ export class Genesis9materialabruf {
         }
         const daten = treffer ? await Genesis9materialabruf._leicht(adresse, nutzlast, Genesis9antwortspeicher.kopie(treffer.daten)) : null;
         // Eine Anzeige (Laden, Stufenwechsel) legt der Server dauerhaft ab (`Genesis9vorrat`, 19.10.2026).
-        return { daten: daten || await Serverabruf.netzSenden(adresse, nutzlast, Genesis9vorrat.kopf(inst, 'koerper', adresse, nutzlast)), stellung, stufe, material, neu: true };
+        const voll = daten || await Serverabruf.netzSenden(adresse, nutzlast, Genesis9vorrat.kopf(inst, 'koerper', adresse, nutzlast));
+        return voll ? { daten: voll, stellung, stufe, material, neu: true } : Genesis9materialabruf._feinStatt(inst, adresse, nutzlast);
+    }
+
+    /** Statt des Käfigs kam die Antwort ohne Inhalt (`Genesis9vorrat`, 5.): die gewählte Stufe liegt fertig und ist seit diesem Zug bestellt (`vorab(…, fein)`) — sie wird gleich gebaut. */
+    static async _feinStatt(inst, adresse, nutzlast) {
+        const vorab = inst._vorabFein;
+        inst._vorabFein = null;
+        return { ...await (vorab?.versprechen ?? Genesis9materialabruf._holen(inst, Genesis9antwortspeicher.ohneStufen(adresse), nutzlast)), feinStatt: true };
     }
 
     /** Eine Antwort, die gebaut wird, im Speicher ablegen (nicht die einer überholten Anfrage; nicht, was schon so darin liegt). */
     static merken(inst, antwort) {
+        if (antwort.feinStatt) inst._feinTeile?.add('koerper');          // der zweite Zug braucht ihn nicht mehr (`Genesis9aufbau.progressiv`)
         if (antwort.neu) Genesis9antwortspeicher.ablegen(inst, 'koerper', antwort.stellung, antwort.stufe, antwort.daten, antwort.material);
     }
 

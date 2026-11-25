@@ -11,6 +11,7 @@ import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Ursprungsfix } from './ursprungsfix.js';
 import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { Kleidersichtbarkeit } from '../gemeinsam/kleidersichtbarkeit.js';
+import { Anatomietraeger } from '../gemeinsam/anatomietraeger.js';
 import { Modellcheck } from './modellcheck.js';
 
 export function closeAllMenus() {
@@ -165,6 +166,7 @@ export function bindVisibilityToggles() {
             state.characters.forEach(inst => {
                 Kleidersichtbarkeit.setzen(inst, state.clothesVisible);      // neu gebaute Stücke übernehmen den Stand (`Genesis9kleidung.anziehen`)
                 Kleidersichtbarkeit.anwenden(inst, state.clothesVisible);      // die Scham (Körperteil, `hautTiefe`) bleibt stehen
+                Anatomietraeger.planen(inst);       // … außer ein Stück trägt sie (`traegt_anatomie`): dann verborgen, solange die Kleider an sind (24.11.2026)
                 if (inst.hairMesh) inst.hairMesh.visible = state.clothesVisible;
                 Hautverdeckung.sichtbarkeit(inst);      // ausgeblendeter Stoff verdeckt die Haut nicht
             });

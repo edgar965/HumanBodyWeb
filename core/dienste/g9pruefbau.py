@@ -25,14 +25,15 @@ class G9pruefbau:
     VERSUCHE = 2
 
     @classmethod
-    def bauen(cls, bauen):
+    def bauen(cls, bauen, kurz=False):
+        u"""`kurz`: die Antwort geht als 16-Bit-Paket hinaus (`Netzausgabe.KURZ`) — die Felder kommen gleich so von der Karte (`Netzfeld.abholen`)."""
         for _versuch in range(cls.VERSUCHE):
             with Kartenvermutung.lauf() as saetze:
                 aus = bauen()
             if isinstance(aus, HttpResponse) or not saetze:
                 return aus
             empfang = []
-            Netzfeld.abholen(aus, mit=[(Kartenvermutung.bits(saetze), empfang.append)])
+            Netzfeld.abholen(aus, mit=[(Kartenvermutung.bits(saetze), empfang.append)], kurz=kurz)
             falsch = [s for (s, _p), b in zip(saetze, empfang[0], strict=True) if not b]
             if not falsch:
                 return aus

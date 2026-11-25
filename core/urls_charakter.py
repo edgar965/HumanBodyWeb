@@ -156,8 +156,8 @@ CHARAKTER = [
          name='uma_bauer_vorwaermen'),
     # SMPL-Referenzkoerper von GarmentCode (06.09.2026, core/api/smplfigur.py).
     path('api/character/smpl-figur/', Smplfigur.liste, name='smpl_figur_liste'),
-    path('api/character/smpl-figur/formen/', Smplformung.formen,
-         name='smpl_figur_formen'),
+    path('api/character/smpl-figur/formen/', Smplformung.formen, name='smpl_figur_formen'),
+    path('api/character/smpl-figur/<str:name>/masse/', Smplfigur.masse, name='smpl_figur_masse'),
     # Benannte Massregler (Armlänge, Brustgröße, …) mit gemessener Wirkung
     # je Geschlecht (25.09.2026, SMPL/xmassregler.py).
     path('api/character/smpl-figur/massregler/<str:geschlecht>/', Smplformung.massregler,

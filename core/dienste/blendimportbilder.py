@@ -3,6 +3,7 @@
 stand bei 297 Zeilen, Grenze 300): Format für den Browser, Deckkraft als Graubild, Farbumrechnung, das OBJ des Stücks."""
 
 import torch
+from KoerperKI_alle.objtext import Objtext
 from KoerperKI_alle.torchfeld import Torchfeld
 
 __all__ = ['Blendimportbilder']
@@ -52,14 +53,8 @@ class Blendimportbilder:
         """`stueck.obj` (+ MTL ohne Bild: das Material geht getrennt an den Schreiber) — Punkte in Ruhe (m, Y oben),
         UV je Dreiecksecke."""
         (ordner / 'stueck.mtl').write_text('newmtl Stoff\nKd 1 1 1\n', encoding='utf-8')
-        # je Feld EIN Holen von der Karte (14.11.2026: Zeile für Zeile über Karten-Tensoren wartete je Zahl auf die Karte, Minuten bei einem Requisit mit 200.000 Dreiecken)
-        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2).tolist()
-        punkte = Torchfeld.feld(punkte, dtype=torch.float64).tolist()
-        dreiecke = Torchfeld.feld(dreiecke, dtype=torch.int64).tolist()
-        zeilen = ['mtllib stueck.mtl', 'usemtl Stoff'] + ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
-        zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                   for i, (a, b, c) in enumerate(dreiecke)]
+        uv = Torchfeld.feld(uv_ecken, dtype=torch.float64).reshape(-1, 2)
+        zeilen = ['mtllib stueck.mtl', 'usemtl Stoff', *Objtext.v(Torchfeld.feld(punkte, dtype=torch.float64)), *Objtext.vt(uv), *Objtext.f_ecken(Torchfeld.feld(dreiecke, dtype=torch.int64))]
         pfad = ordner / 'stueck.obj'
         pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
         return pfad

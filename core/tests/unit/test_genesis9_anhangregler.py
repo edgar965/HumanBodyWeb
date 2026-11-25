@@ -82,7 +82,7 @@ class FormungTest(SimpleTestCase):
     def test_3_die_formung_nimmt_zahnregler_an_und_reicht_sie_weiter(self):
         kanaele = SimpleNamespace(kanaele={})
         angaben = {'200_teeth_bs_a': {'min': -0.5, 'max': 1.0}}
-        with mock.patch('Genesis9.formung.G9morphablage.holen', return_value=kanaele), \
+        with mock.patch('Genesis9.formungswerte.G9morphablage.holen', return_value=kanaele), \
                 mock.patch.object(G9anhangregler, 'angaben', classmethod(lambda cls, n: angaben.get(n))):
             f = G9formung.aus_abfrage({'200_teeth_bs_a': 5.0, 'unbekannt': 1.0})
         self.assertEqual(f.regler, {'200_teeth_bs_a': 1.0}, 'begrenzt auf die Grenze des Reglers, Unbekanntes verworfen')
@@ -131,7 +131,7 @@ class AufloesenTest(SimpleTestCase):
 
     def test_4c_ein_alias_ist_in_der_formung_nur_der_griff(self):
         a = ablage(**{'alias_x': {'alias': 'x', 'min': 0.0, 'max': 1.0}, 'x': {'min': 0.0, 'max': 1.0}})
-        with mock.patch('Genesis9.formung.G9morphablage.holen', return_value=a):
+        with mock.patch('Genesis9.formungswerte.G9morphablage.holen', return_value=a):
             f = G9formung.aus_abfrage({'alias_x': 0.6})
         self.assertEqual(f.regler, {'x': 0.6})
 

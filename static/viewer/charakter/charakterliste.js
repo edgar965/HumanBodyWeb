@@ -15,6 +15,8 @@ import { Speichernmenue } from './speichernmenue.js';
 import { Startfigur } from './startfigur.js';
 import { Letztewahl } from './letztewahl.js';
 import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
+import { Programmvorbau } from '../gemeinsam/programmvorbau.js';
+import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -100,17 +102,14 @@ export async function charakterAusModelldaten(daten, wahl = {}) {
         Figurplatzierung.anwenden(inst, wahl.lage || null);
         state.characters.set(id, inst);
         state.scene.add(inst.group);
-        // Die Zahl, um die es geht: seit Navigationsbeginn bis zu dem
-        // Augenblick, in dem etwas auf der Buehne steht.
+        // Die Zahl, um die es geht: seit Navigationsbeginn bis zu dem Augenblick, in dem etwas auf der Buehne steht.
         Startmessung.eintragen('FIGUR SICHTBAR', performance.now());
     };
     await inst.load(zeigen);
-    // Nach `load()` und nach der Platzierung: GarmentCode bindet in der Lage
-    // der Figurgruppe, und das Skelett entsteht in `load()`.
+    // Nach `load()` und nach der Platzierung: GarmentCode bindet in der Lage der Figurgruppe, und das Skelett entsteht in `load()`.
     await GarmentcodeAblage.laden(inst, daten[GarmentcodeAblage.FELD]);
-    // Sicherheitsnetz, falls `load()` den Rueckruf nicht erreicht hat — etwa
-    // weil eine Figurart ihn nicht kennt. `zeigen` tut beim zweiten Mal
-    // nichts.
+    // Sicherheitsnetz, falls `load()` den Rueckruf nicht erreicht hat — etwa weil eine Figurart ihn nicht kennt.
+    // `zeigen` tut beim zweiten Mal nichts.
     zeigen();
 
     fn.updateCharacterListUI();
@@ -134,6 +133,7 @@ async function figurAusModelldaten(daten, wahl) {
         inst.presetName = name;
     }
     Figurplatzierung.anwenden(inst, wahl.lage || null);
+    await Programmvorbau.bauen(state.renderer, inst.group, state.camera, state.scene, Auswahlaura.ueberZiel());   // sonst hält das erste Bild an (24.11.2026)
     state.characters.set(inst.id, inst);
     state.scene.add(inst.group);
     Startmessung.eintragen('FIGUR SICHTBAR', performance.now());

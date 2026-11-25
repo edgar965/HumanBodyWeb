@@ -26,15 +26,40 @@ export class Smpldetails {
     static async bauen(inst, punkte, dreiecke, haut) {
         Smpldetails.abbauen(inst);
         if (!inst._uvUrsprung || !inst.skelett) return;
+        inst._mundGrund = { dreiecke, haut };
+        Smpldetails._netze(inst, punkte);
+        await Smpldetails.anwenden(inst);
+    }
+
+    /** Mund und Wimpern an diesen Punkten (Dreiecke und Gewichte aus dem Bau). */
+    static _netze(inst, punkte) {
+        inst._mund = null;
+        inst._wimpern = null;
         try {
-            inst._mund = Smplmundbau.bauen(inst.group, inst.skelett, punkte, dreiecke, haut);
+            inst._mund = Smplmundbau.bauen(inst.group, inst.skelett, punkte, inst._mundGrund.dreiecke, inst._mundGrund.haut);
             inst._wimpernPunkte = punkte;
             inst._wimpern = Smplwimpernbau.bauen(inst.group, inst.skelett, punkte,
                                                  inst.details.wimpern_laenge);
         } catch (fehler) {
             Protokoll.warnung('Smpldetails', `Mund/Wimpern nicht gebaut: ${fehler.message}`);
         }
-        await Smpldetails.anwenden(inst);
+    }
+
+    /** Ein Formzug (25.11.2026, `Smplformzug`): Mund und Wimpern an den neuen Punkten, mit ihren stehenden Materialien — neue hießen neue Shaderprogramme. Die Haut behält ihre Details. */
+    static umformen(inst, punkte) {
+        if (!inst._mundGrund) return;
+        const vorher = { ...inst._mund, wimpern: inst._wimpern };
+        Smpldetails._netze(inst, punkte);
+        const neu = { ...inst._mund, wimpern: inst._wimpern };
+        for (const [name, netz] of Object.entries(vorher)) {
+            if (!netz) continue;
+            netz.parent?.remove(netz);
+            netz.geometry.dispose();
+            if (neu[name]) {
+                neu[name].material.dispose();
+                neu[name].material = netz.material;
+            } else netz.material.dispose();
+        }
     }
 
     /** Die eigenen Netze wieder abnehmen (vor einem Neubau). */

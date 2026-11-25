@@ -131,7 +131,7 @@ class FormungTest(SimpleTestCase):
 
     def test_11_die_formung_traegt_das_aussehen_und_der_fingerabdruck_unterscheidet_es(self):
         kanaele = SimpleNamespace(kanaele={})
-        with alle_da(), grenzen(), mock.patch('Genesis9.formung.G9morphablage.holen', return_value=kanaele):
+        with alle_da(), grenzen(), mock.patch('Genesis9.formungswerte.G9morphablage.holen', return_value=kanaele):
             alt = G9formung({W: 1.0, JAHRE: 0.4, WIRKT: 0.2})
             gleich = G9formung({W: 1.0, JAHRE: 0.4, WIRKT: 0.2})
             anders = G9formung({W: 1.0, JAHRE: 0.4})

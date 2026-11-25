@@ -103,7 +103,9 @@ class Netzpaket:
             versatz = [0]
         if isinstance(wert, Netzfeld):
             # Ein Feld mit `genau` trägt Nummern (Körperpunkte der Bindung, Knochen) und bleibt float32 (`netzkurz.py`, 12.11.2026).
-            gekuerzt = Netzkurz.packen(wert.rohdaten, wert.anzahl) if kurz and wert.typ == 'float32' and not wert.genau else None
+            gekuerzt = wert.kurz if kurz else None
+            if gekuerzt is None and kurz and wert.typ == 'float32' and not wert.genau:
+                gekuerzt = Netzkurz.packen(wert.rohdaten, wert.anzahl)
             if gekuerzt:
                 wert = Netzfeld(gekuerzt[0], 'float32', wert.anzahl)     # die Bytes sind uint16, gelesen wird float32 (`kurz` in der Marke)
             marke = {'typ': wert.typ, 'pos': versatz[0],

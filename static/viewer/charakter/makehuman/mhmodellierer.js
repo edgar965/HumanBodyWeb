@@ -2,6 +2,7 @@ import { escapeHtml } from '../utils.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Zeiten } from '../../gemeinsam/zeiten.js';
+import { Sanduhr } from '../../gemeinsam/sanduhr.js';
 import { Mhkoerperregler } from './mhkoerperregler.js';
 
 /**
@@ -230,7 +231,7 @@ export class Mhmodellierer {
         }
         Mhmodellierer._laeuft = true;
         try {
-            await inst.neuFormen();
+            await Sanduhr.um('Figur wird neu gerechnet …', () => inst.neuFormen());     // Edgar, 25.11.2026: „Mach eine Sanduhr wenn ein regler nicht durch ist“
             Mhkoerperregler.nachAufbau(inst, 'MakeHuman-Modellierung');
         } catch (fehler) {
             Protokoll.fehler('MhModell', 'Netz nicht ladbar', fehler);

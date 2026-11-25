@@ -10,6 +10,7 @@
  * Ein Worker für alle Abrufe der Seite (aus einer Blob-Adresse: keine Vorlage braucht einen Pfad); ohne Worker der Abruf im Hauptfaden wie bisher.
  * Antworten mit ETag (Server `Netzpackung`) legt der Worker im CacheStorage ab und fragt beim nächsten Mal mit `If-None-Match` nach; bei 304 liest er von der Platte
  * (Haar 106 MB: 189–209 ms statt 0,85–1,8 s übers Netz). Chromes HTTP-Zwischenspeicher nimmt so große Antworten nicht (60 MB mit ETag: nie nachgefragt, 23.11.2026).
+ * Seit 24.11.2026 kommen auch die Texturblöcke der Genesis-Figuren hierüber (`Genesis9texturen`), in einem eigenen Kasten: eine Figur sind ~190 MB.
  */
 export class Pufferabruf {
     /** Code des Workers: liest den Rumpf stückweise (Fortschritt höchstens alle 100 ms), setzt ihn zusammen und gibt den Puffer ab. */
@@ -35,11 +36,11 @@ const glbTeile = async ganz => {
     return { bilder, ansichten, json };
 };
 // Antworten mit ETag (Server \`Netzpackung\`) bleiben im CacheStorage, höchstens GRENZE Bytes, die ältesten fallen weg; nachgefragt wird jedes Mal, 304 = unverändert
-const KASTEN = 'pufferabruf-1', GRENZE = 1536 * 1048576;
-const aufraeumen = async k => {
+const GRENZEN = { 'pufferabruf-1': 1536 * 1048576, 'texturen-1': 1024 * 1048576 };
+const aufraeumen = async (k, grenze) => {
     const schluessel = await k.keys(), groessen = [];
     for (const s of schluessel) groessen.push(Number((await k.match(s))?.headers.get('X-Bytes')) || 0);
-    for (let i = schluessel.length - 1, summe = 0; i >= 0; i--) if ((summe += groessen[i]) > GRENZE) await k.delete(schluessel[i]);
+    for (let i = schluessel.length - 1, summe = 0; i >= 0; i--) if ((summe += groessen[i]) > grenze) await k.delete(schluessel[i]);
 };
 const lesen = async (id, antwort) => {
     // Content-Length ist bei gepacktem Rumpf (Content-Encoding) die gepackte Größe — dann nur „geladen“ melden
@@ -69,17 +70,17 @@ const bildLesen = async (id, blob, optionen) => {
         postMessage({ id, fehler: String(fehler?.message ?? fehler) });
     }
 };
-onmessage = async ({ data: { id, adresse, bilder: mitBildern, blob, optionen } }) => {
+onmessage = async ({ data: { id, adresse, bilder: mitBildern, blob, optionen, kasten: name } }) => {
     if (blob) { bildLesen(id, blob, optionen); return; }
     try {
-        const k = await caches.open(KASTEN).catch(() => null), alt = k ? await k.match(adresse) : null, marke = alt?.headers.get('ETag');
+        const k = await caches.open(name || 'pufferabruf-1').catch(() => null), alt = k ? await k.match(adresse) : null, marke = alt?.headers.get('ETag');
         const antwort = await fetch(adresse, { credentials: 'same-origin', headers: marke ? { 'If-None-Match': marke } : {} });
         const kasten = antwort.status === 304 && !!alt;
         if (!kasten && !antwort.ok) { postMessage({ id, status: antwort.status }); return; }
         const ganz = kasten ? new Uint8Array(await alt.arrayBuffer()) : await lesen(id, antwort);
         const neu = kasten ? null : antwort.headers.get('ETag');
         // \`new Response\` kopiert die Bytes sofort — der Puffer darf danach in den Hauptfaden
-        if (k && neu) k.put(adresse, new Response(ganz, { headers: { ETag: neu, 'X-Bytes': String(ganz.byteLength) } })).then(() => aufraeumen(k)).catch(() => {});
+        if (k && neu) k.put(adresse, new Response(ganz, { headers: { ETag: neu, 'X-Bytes': String(ganz.byteLength) } })).then(() => aufraeumen(k, GRENZEN[name || 'pufferabruf-1'])).catch(() => {});
         const glb = mitBildern ? await glbTeile(ganz).catch(() => null) : null;
         postMessage({ id, status: 200, puffer: ganz.buffer, glb, kasten }, [ganz.buffer, ...Object.values(glb?.bilder || {}), ...(glb?.ansichten || []).filter(Boolean)]);
     } catch (fehler) {
@@ -99,8 +100,8 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern, blob, optionen } }
     /**
      * @param {string} adresse  relativ zur Seite oder absolut
      * @param {(f: {loaded: number, total: number}) => void} [fortschritt]  wie `onProgress` von three (`total` 0, wenn unbekannt)
-     * @param {{bilder?: boolean}} [wahl]  `bilder`: die eingebetteten Bilder eines GLB gleich im Worker dekodieren (23.11.2026: PSHuman-Textur 4096², 8,1 MB PNG, 331–367 ms) → `glbBilder`,
-     *   dazu JSON und Pufferansichten → `glbTeile` (24.11.2026)
+     * @param {{bilder?: boolean, kasten?: string}} [wahl]  `bilder`: die eingebetteten Bilder eines GLB gleich im Worker dekodieren (23.11.2026: PSHuman-Textur 4096², 8,1 MB PNG, 331–367 ms) → `glbBilder`,
+     *   dazu JSON und Pufferansichten → `glbTeile` (24.11.2026); `kasten`: 'texturen-1' statt des Kastens der Netze
      * @returns {Promise<ArrayBuffer>}
      */
     static holen(adresse, fortschritt, wahl = {}) {
@@ -110,7 +111,7 @@ onmessage = async ({ data: { id, adresse, bilder: mitBildern, blob, optionen } }
         const id = ++Pufferabruf._zaehler;
         return new Promise((fertig, fehler) => {
             Pufferabruf._offen.set(id, { fertig, fehler, fortschritt, adresse: absolut });
-            arbeiter.postMessage({ id, adresse: absolut, bilder: !!wahl.bilder });
+            arbeiter.postMessage({ id, adresse: absolut, bilder: !!wahl.bilder, kasten: wahl.kasten });
         });
     }
 

@@ -17,9 +17,11 @@ import { Genesis9eigenregler } from './genesis9eigenregler.js';
 import { Genesis9eigengarderobe } from './genesis9eigengarderobe.js';
 import { Genesis9reglerliste } from './genesis9reglerliste.js';
 import { Genesis9reglerzeile } from './genesis9reglerzeile.js';
+import { Genesis9reglerfeld } from '../../gemeinsam/genesis9reglerfeld.js';
 import { Genesis9genitalien } from './genesis9genitalien.js';
 import { Genesis9groessehalten } from './genesis9groessehalten.js';
 import { Genesis9mblabpreset } from './genesis9mblabpreset.js';
+import { Figurfertig } from '../../gemeinsam/figurfertig.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -48,19 +50,30 @@ export class Genesis9eigenschaften {
     static ADRESSE = '/api/character/genesis9-figur/regler/';
     static _plan = null;
     static _griff = null;
+    static _lauf = 0;
+    /** Kennung der Figur, deren Regler gerade dastehen. */
+    static _gezeigt = null;
 
     static async fuellen(inst) {
         const bereich = document.getElementById(Genesis9eigenschaften.BEREICH);
         if (!bereich) return;
         bereich.classList.remove('hb-versteckt');
         Genesis9eigenschaften._kopf(inst);
+        // Gebaut wird erst, wenn die Figur dasteht (`Figurfertig`, 24.11.2026) — angefragt gleich. Bis dahin keine Regler einer anderen Figur: sie stellten jene.
+        const lauf = Genesis9eigenschaften._lauf += 1, steht = Figurfertig.abwarten(inst);
+        const veraltet = () => lauf !== Genesis9eigenschaften._lauf;
+        if (Genesis9eigenschaften._gezeigt !== inst.id) Genesis9eigenschaften._raeumen();
         // PARALLEL statt nacheinander (23.09.2026, Edgar: „mach das laden parallel und asynchron wie auf BVH Studio"):
         // Regler-Plan, Posenliste und Garderobe sind DREI unabhaengige Anfragen in getrennte Behaelter — nur `_haut`/`_regler`/
         // Texturmischung brauchen den Plan. Vorher eine `await`-Kette (Log: drei Anfragen ueber ~2 s verteilt).
         await Promise.all([
-            Genesis9eigenschaften.plan().then(plan => {
+            Genesis9eigenschaften.plan().then(plan => steht.then(() => plan)).then(async plan => {
+                if (veraltet()) return;
+                Genesis9eigenschaften._gezeigt = inst.id;
+                Genesis9eigenschaften._kopf(inst);
                 Genesis9eigenschaften._haut(inst, plan);
-                Genesis9eigenschaften._regler(inst, plan);
+                await Genesis9eigenschaften._regler(inst, plan, veraltet);
+                if (veraltet()) return;
                 Genesis9eigenschaften._reglergriff();
                 // Texturmischung ganz unten (21.09.2026): alle Hautsaetze mit Prozent.
                 Genesis9texturmischung.fuellen(inst, plan);
@@ -70,11 +83,18 @@ export class Genesis9eigenschaften {
             Genesis9posen.fuellen(inst),
             // Die Garderobe steht im Assets-Reiter (`_genesis9_garderobe.html`,
             // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
-            Genesis9garderobe.fuellen(inst,
-                document.getElementById(Genesis9garderobe.BEREICH)),
+            steht.then(() => veraltet() || Genesis9garderobe.fuellen(inst, document.getElementById(Genesis9garderobe.BEREICH))),
             // Assets → Eigen (Stufe K2a, 25.10.2026): eigene Stücke und die Regler der getragenen — `Genesis9eigengarderobe`.
             Genesis9eigengarderobe.fuellen(inst, document.getElementById(Genesis9eigengarderobe.BEREICH)),
         ]);
+    }
+
+    /** Die Regler der vorigen Figur weg, bis die der neuen gebaut sind. */
+    static _raeumen() {
+        for (const kennung of ['prop-genesis9-haut', 'prop-genesis9-eigen', 'prop-genesis9-genitalien', 'prop-genesis9-regler']) {
+            const feld = document.getElementById(kennung);
+            if (feld) feld.innerHTML = kennung === 'prop-genesis9-regler' ? '<div class="gedaempft">Regler folgen, sobald die Figur steht …</div>' : '';
+        }
     }
 
     /** Für eine HumanBody-Figur nur die Daz-Garderobe: Bereich einblenden und füllen
@@ -234,14 +254,14 @@ export class Genesis9eigenschaften {
     // -------------------------------------------------------------- Regler
 
     /** Die Reglerliste nach Körperteil mit Suche (`genesis9reglerliste.js`, 18.10.2026). Alle Bereiche zu — welcher aufgeht, entscheidet `Modellklappung`. */
-    static _regler(inst, plan) {
+    static async _regler(inst, plan, veraltet = () => false) {
         const behaelter = document.getElementById('prop-genesis9-regler');
         if (!behaelter) return;
         const [ohneEigen, eigen] = Genesis9eigenregler.teilen(plan);     // „Eigen": eigener Abschnitt unter Genesis, an erster Stelle (25.10.2026)
         Genesis9eigenregler.fuellen(document.getElementById('prop-genesis9-eigen'), eigen, inst, r => Genesis9eigenschaften._zeile(inst, r));
         const [liste, genitalien] = Genesis9genitalien.teilen(ohneEigen);     // „Genitalien": eigener Bereich unter Genesis, nicht in der Liste (18.10.2026)
         Genesis9genitalien.fuellen(document.getElementById('prop-genesis9-genitalien'), genitalien, inst, r => Genesis9eigenschaften._zeile(inst, r));
-        Genesis9reglerliste.fuellen(behaelter, document.getElementById('prop-genesis9-reglerkopf'), liste,
+        await Genesis9reglerliste.fuellen(behaelter, document.getElementById('prop-genesis9-reglerkopf'), liste,
             r => Genesis9eigenschaften._zeile(inst, r),
             (kasten, bereich) => {
                 Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
@@ -250,8 +270,9 @@ export class Genesis9eigenschaften {
                     Genesis9eigenschaften._kopf(inst);
                     Genesis9reglerzeile.nachziehen(inst, Genesis9eigenschaften._plan);
                 });
-            });
-        Genesis9groessehalten.fuellen(inst);     // Schalter „Größe halten" über der Werkzeugzeile (R8, 25.10.2026)
+            }, veraltet);
+        if (!veraltet()) Genesis9reglerfeld.wecken(inst);        // der erste Reglerzug ist dann so schnell wie jeder weitere (25.11.2026)
+        if (!veraltet()) Genesis9groessehalten.fuellen(inst);     // Schalter „Größe halten" über der Werkzeugzeile (R8, 25.10.2026)
     }
 
     /** Der Griff unter der Reglerliste (Edgar, 20.09.2026: „mach unten an der Stelle einen Griff …, merke dir die Position"). Einmal verdrahtet. */

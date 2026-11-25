@@ -17,10 +17,12 @@ Kleidung nichts und macht die Datei nur größer.
 """
 
 
+from KoerperKI_alle.objtext import Objtext
+
+
 class Objdatei:
     """Schreibt Punkte und Dreiecke als OBJ (Indexe ab 1)."""
 
-    STELLEN = 6
     #: OBJ-Flächen sind 1-basiert, unsere Dreiecksindexe 0-basiert.
     VERSATZ = 1
 
@@ -32,24 +34,8 @@ class Objdatei:
     def zeilen(self):
         if self.kopfzeile:
             yield '# %s' % self.kopfzeile
-        for punkt in self.punkte:
-            yield 'v %.*f %.*f %.*f' % (
-                self.STELLEN,
-                punkt[0],
-                self.STELLEN,
-                punkt[1],
-                self.STELLEN,
-                punkt[2],
-            )
-        for dreieck in self.dreiecke:
-            yield 'f %d %d %d' % (
-                dreieck[0] + self.VERSATZ,
-                dreieck[1] + self.VERSATZ,
-                dreieck[2] + self.VERSATZ,
-            )
+        yield from Objtext.v(self.punkte)
+        yield from Objtext.f(self.dreiecke, ab=self.VERSATZ)
 
     def schreiben(self, pfad):
-        with open(pfad, 'w', encoding='utf-8') as datei:
-            for zeile in self.zeilen():
-                datei.write(zeile + '\n')
-        return pfad
+        return Objtext.schreiben(pfad, self.zeilen())

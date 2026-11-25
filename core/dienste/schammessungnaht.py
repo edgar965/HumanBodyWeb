@@ -30,14 +30,14 @@ class Schammessungnaht:
     def __init__(self, punkte, dreiecke, ring_lage, ring_normalen, ring_d=None):
         """`punkte`, `dreiecke`: das Stück; `ring_lage`: `(R, 3)` Ringecken; `ring_normalen`: `(R, 3)` Normalen der sichtbaren Haut an den Ringecken (gleiche Reihenfolge);
         `ring_d`: `(R, 3)` Verschiebung der Glättung (optional)."""
-        import trimesh
+        from KoerperKI_alle.torchnetz import Torchnetz
 
         p = Torchfeld.feld(punkte, dtype=torch.float64)
         schluessel = Torchfeld.astype(Torchfeld.round(p / self.LAGE_M), torch.int64)
         _, erste, rep = Torchfeld.unique(schluessel, axis=0, return_index=True, return_inverse=True)
         d = rep.ravel()[Torchfeld.feld(dreiecke, dtype=torch.int64)]
         self.punkte = p[erste]
-        self.netz = trimesh.Trimesh(self.punkte, d, process=False)
+        self.netz = Torchnetz(self.punkte, d)
         kanten = torch.sort(Torchfeld.cat([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), dim=1, stable=True).values
         eindeutig, zahl = Torchfeld.unique(kanten, axis=0, return_counts=True)
         self.rand_nummern = Torchfeld.unique(eindeutig[zahl == 1])
@@ -60,11 +60,11 @@ class Schammessungnaht:
                'ring_zu_rand_mm': stat(cKDTree(self.rand).query(self.ring_lage)[0] * 1000.0)}
         if self.ring_d is not None:
             aus['ring_glaettung_mm'] = stat(Torchfeld.linalg_norm(self.ring_d, dim=1) * 1000.0)
-        n_stueck = Torchfeld.feld(self.netz.vertex_normals)[self.rand_nummern]
+        n_stueck = self.netz.vertex_normals[self.rand_nummern]
         n_haut = self.ring_normalen[naechster]
         skalar = Torchfeld.einsum('ij,ij->i', n_stueck, n_haut) / Torchfeld.maximum(Torchfeld.linalg_norm(n_stueck, dim=1) * Torchfeld.linalg_norm(n_haut, dim=1), 1e-12)
         winkel = Torchfeld.degrees(Torchfeld.arccos(Torchfeld.clip(Torchfeld.abs(skalar), 0.0, 1.0)))
-        aus['normalen_grad'] = dict(stat(winkel), umgekehrt=round(float((skalar < 0).mean()), 3))
+        aus['normalen_grad'] = dict(stat(winkel), umgekehrt=round(float((skalar < 0).double().mean()), 3))
         aus['kanten_am_rand'] = self._kanten(cKDTree(self.rand))
         return aus
 
@@ -77,4 +77,4 @@ class Schammessungnaht:
         winkel = Torchfeld.degrees(self.netz.face_adjacency_angles[im_band])
         if not len(winkel):
             return None
-        return {'kanten': int(len(winkel)), 'median_grad': round(float(Torchfeld.median(winkel)), 1), 'ueber_60': round(float((winkel > 60).mean()), 3), 'ueber_90': round(float((winkel > 90).mean()), 3)}
+        return {'kanten': int(len(winkel)), 'median_grad': round(float(Torchfeld.median(winkel)), 1), 'ueber_60': round(float((winkel > 60).double().mean()), 3), 'ueber_90': round(float((winkel > 90).double().mean()), 3)}

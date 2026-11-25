@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Exportleistekettenlauf — Stoff und Haar der Kleiderbibliothek für die BVH des Renders nachrechnen, wo die Kette noch keine Ablage hat (20.11.2026, Edgar „ja, Weg 2“: der Render nimmt
-die Ergebnisse der Kette; bewegt er sich anders, rechnet er mit demselben Code).
+"""Exportleistekettenlauf — Stoff und Haar der Kleiderbibliothek für die BVH des Renders rechnen, wo noch keine gültige Ablage liegt (20.11.2026, Edgar „ja, Weg 2“: Seite und Render nehmen
+dieselben Ergebnisse, derselbe Code; seit 25.11.2026 nur noch hier, Edgar: „physik muss doch erst beim export in mp4 berechnet werden“ — der Job rechnet keine Physik).
 
-Dieselben Kettenschritte wie im Job (`meshgenesis_kleiderstoff_lauf.py`, `meshgenesis_kleiderhaar_lauf.py`, mit `--bvh` und `--stueck`) über den Skriptdienst von python14 bzw. einen eigenen
+Die Kettenschritte „stoff“ und „haar“ (`meshgenesis_kleiderstoff_lauf.py`, `meshgenesis_kleiderhaar_lauf.py`, mit `--bvh` und `--stueck`) über den Skriptdienst von python14 bzw. einen eigenen
 Prozess (`Meshgenesisrechenschritt`, gleiche Umgebung wie der Rechenlauf: reproduzierbar). Die Ablage liegt danach beim Stück wie jede andere — auch die Seite spielt sie ab, wenn dort
 diese BVH gewählt ist. Ausgabe nach `arbeit/render/kette.log`. Gerechnet wird vor der Gpusperre des Renders (die Läufe holen sie selbst).
 

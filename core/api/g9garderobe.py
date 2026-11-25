@@ -51,6 +51,7 @@ from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stuecklochstufen import G9stuecklochstufen
 from Genesis9.stueckstarr import G9stueckstarr
 
+from ..dienste.g9anatomiedrapierung import G9anatomiedrapierung
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9eigenhaarbau import G9eigenhaarbau
 from ..dienste.g9haarmischbau import G9haarmischbau
@@ -190,6 +191,7 @@ class G9garderobeapi:
             rumpf = dict(rumpf, regler_stueck=regler)
         if rumpf.get('getragen'):
             rumpf = dict(rumpf, getragen=G9kleidgenerisch.getragene_aufloesen(rumpf.get('getragen')))
+        rumpf = G9anatomiedrapierung.ohne_anatomie(rumpf)      # trägt das Stück die Anatomie, wird es nicht über sie drapiert (24.11.2026)
         eintrag = G9garderobe.eintrag(kennung) or {}
         if rumpf.get('figurart') == G9kleidhumanbody.FIGURART:
             # Dasselbe Stueck auf einer HumanBody-Figur (19.09.2026).
@@ -252,7 +254,7 @@ class G9garderobeapi:
                 netz = vor_antwort(nummer, netz)
                 if netz is None:
                     continue
-            teil = G9figur._netzantwort(netz)
+            teil = G9figur._netzantwort(netz, rumpf.get('nur') == 'form' and netz.get('art') != 'strang')
             teil['name'] = folger.name
             teil['stufen'] = netz['stufen']
             teil['knochen'] = lage.knochen if lage is not None else None

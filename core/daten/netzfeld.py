@@ -33,10 +33,13 @@ verdächtigt einen Datentyp. Deshalb reist der Typ hier MIT den Bytes, statt auf
 beiden Seiten getrennt gepflegt zu werden.
 """
 import base64
+import struct
 
 import torch
 from KoerperKI_alle.kartenwerte import Kartenwerte
 from KoerperKI_alle.torchfeld import Torchfeld
+
+from .netzkurz import Netzkurz
 
 __all__ = ['Netzfeld']
 
@@ -44,7 +47,7 @@ __all__ = ['Netzfeld']
 class Netzfeld:
     u"""Rohe Bytes eines Zahlenfeldes plus der Typ, mit dem sie zu lesen sind."""
 
-    __slots__ = ('_roh', '_karte', 'typ', 'anzahl', 'genau')
+    __slots__ = ('_roh', '_karte', '_kurz', 'typ', 'anzahl', 'genau')
 
     #: Typen, die der Browser lesen kann (`gemeinsam/netzpaket.js`). Was hier
     #: nicht steht, hat drüben kein `TypedArray` — dann lieber jetzt ein Fehler
@@ -55,6 +58,8 @@ class Netzfeld:
         self._roh = rohdaten
         #: Bis zum Abholen der Tensor auf der Karte (`aus`, `abholen`; 18.11.2026).
         self._karte = None
+        #: `(bytes uint16, {'ab', 'schritt'})`, wenn das Feld schon gekürzt abgeholt ist (`Netzkurz.auf_karte`, 25.11.2026); die vollen Bytes holt `rohdaten` dann nur auf Verlangen.
+        self._kurz = None
         self.typ = typ
         self.anzahl = anzahl
         #: Das Feld trägt NUMMERN (Punkt- oder Knochennummern als float32), keine Messwerte: `Netzpaket` kürzt es nie auf 16 Bit
@@ -90,15 +95,35 @@ class Netzfeld:
         return cls(Torchfeld.als_bytes(flach), Torchfeld.typname(ziel), int(Torchfeld.groesse(flach)), genau=genau)
 
     @classmethod
-    def abholen(cls, daten, mit=()):
+    def abholen(cls, daten, mit=(), kurz=False):
         u"""Alle Netzfelder in `daten` (verschachtelt in dict, list, tuple), die noch auf der Karte liegen, in EINER Kopie zur CPU — je Gerät; dieselben Bytes wie einzeln.
         In derselben Kopie die `Kartenwerte` der Antwort (Skelett, Höhe, Boden; 18.11.2026): ihr gebauter Wert ersetzt den Platzhalter. `mit`: weitere
-        [(uint8-Feld auf der Karte, Empfänger(bytes))] in derselben Kopie (die Prüfbits der Vermutungen, `G9pruefbau`)."""
+        [(uint8-Feld auf der Karte, Empfänger(bytes))] in derselben Kopie (die Prüfbits der Vermutungen, `G9pruefbau`). `kurz`: große Messwertfelder gleich als 16 Bit."""
         netzfelder = []
         gefunden = Kartenwerte.finden(daten, auch=(Netzfeld, netzfelder))
-        weitere = [(f._karte.reshape(-1).view(torch.uint8), f._setzen) for f in netzfelder if f._roh is None and f._karte is not None] + list(mit)
+        weitere = list(mit)
+        for f in netzfelder:
+            if f._roh is not None or f._karte is None or f._kurz is not None:
+                continue
+            if kurz and f.typ == 'float32' and not f.genau and f.anzahl >= Netzkurz.AB_ANZAHL:
+                q, kopf = Netzkurz.auf_karte(f._karte)
+                weitere += [(q.view(torch.uint8), f._kurz_bytes), (kopf.view(torch.uint8), f._kurz_kopf)]
+            else:
+                weitere.append((f._karte.reshape(-1).view(torch.uint8), f._setzen))
         if gefunden or weitere:
             Kartenwerte.einsetzen(gefunden, weitere)
+
+    def _kurz_bytes(self, roh):
+        self._kurz = (roh, None)
+
+    def _kurz_kopf(self, roh):
+        u"""Nach `_kurz_bytes`, in derselben Kopie: ab, schritt, gültig — ein Feld mit einem einzigen Wert oder NaN bleibt ungekürzt (wie `Netzkurz.packen`)."""
+        ab, schritt, gut = struct.unpack('<3d', roh)
+        self._kurz = (self._kurz[0], {'ab': ab, 'schritt': schritt}) if gut else None
+
+    @property
+    def kurz(self):
+        return self._kurz
 
     def _setzen(self, roh):
         self._roh, self._karte = roh, None

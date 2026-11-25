@@ -12,6 +12,8 @@ import os
 import torch
 from KoerperKI_alle.torchfeld import Torchfeld
 
+from KoerperKI_alle.trimeshnormalen import Trimeshnormalen
+
 __all__ = ['Mesh3dansicht']
 
 
@@ -52,6 +54,7 @@ class Mesh3dansicht:
         if not Torchfeld.isfinite(ausdehnung).all() or float(ausdehnung.max()) <= 0:
             raise ValueError('Netz ohne Ausdehnung: %s' % glb)
         abstand = float(Torchfeld.linalg_norm(ausdehnung)) + 1.0
+        Trimeshnormalen.setzen(szene_tm)
         szene = pyrender.Scene.from_trimesh_scene(szene_tm, bg_color=cls.HINTERGRUND, ambient_light=cls.UMGEBUNG)
         renderer = pyrender.OffscreenRenderer(kante, kante)
         try:
@@ -96,6 +99,7 @@ class Mesh3dansicht:
         spanne = float(max(hoch[0] - tief[0], hoch[1] - tief[1]))
         if not Torchfeld.isfinite(spanne) or spanne <= 0:
             raise ValueError('Netz ohne Ausdehnung: %s' % glb)
+        Trimeshnormalen.setzen(szene_tm)
         szene = pyrender.Scene.from_trimesh_scene(szene_tm, bg_color=cls.HINTERGRUND, ambient_light=cls.UMGEBUNG)
         halb = spanne * cls.RAND / 2.0
         lage = torch.eye(4, dtype=torch.float64, device='cuda')

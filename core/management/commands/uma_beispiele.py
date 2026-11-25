@@ -30,6 +30,7 @@ import time
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from KoerperKI_alle.objtext import Objtext
 from KoerperKI_alle.torchfeld import Torchfeld
 
 
@@ -146,6 +147,5 @@ class Command(BaseCommand):
         """Netz als OBJ. Nur Punkte und Flaechen — Texturen rechnet der
         Port nicht mit, und ein leeres `vt` waere eine Behauptung."""
         zeilen = ['# %s — UMA_Python, Meter, Y oben' % rasse]
-        zeilen += ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['f %d %d %d' % (a + 1, b + 1, c + 1) for a, b, c in dreiecke]
+        zeilen += Objtext.v(punkte) + Objtext.f(dreiecke)
         pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')

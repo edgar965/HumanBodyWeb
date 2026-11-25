@@ -148,9 +148,9 @@ export class Genesis9felder {
     /**
      * Die Gewichte einer Gruppe am Netz merken und die Summe ALLER Gruppen
      * schreiben. `felder` = `{kanal: {n, d}}` dieser Gruppe auf diesem Netz.
-     * Liefert true, wenn geschrieben wurde.
+     * Liefert true, wenn geschrieben wurde. `spaeter` (Reglerzug): berühren die Felder viele Punkte, kommen die Normalen erst NACH dem nächsten Bild — die Form steht sofort.
      */
-    static anwenden(netz, gruppe, felder, gewichte) {
+    static anwenden(netz, gruppe, felder, gewichte, spaeter = false) {
         const lage = netz?.geometry?.getAttribute('position');
         if (!lage) return false;
         const stand = Genesis9felder.stand(netz);
@@ -158,7 +158,7 @@ export class Genesis9felder {
         const alt = stand.gruppen.get(gruppe);
         if (alt && alt.kennung === kennung) return false;
         stand.gruppen.set(gruppe, { felder, gewichte, kennung });
-        Genesis9felder._schreiben(netz.geometry, stand);
+        Genesis9felder._schreiben(netz.geometry, stand, spaeter);
         return true;
     }
 
@@ -170,7 +170,10 @@ export class Genesis9felder {
         Genesis9felder._schreiben(netz.geometry, stand);
     }
 
-    static _schreiben(geo, stand) {
+    /** Ab so vielen berührten Punkten wartet die Normalenrechnung eines Reglerzugs auf das Bild danach. */
+    static VIELE = 15000;
+
+    static _schreiben(geo, stand, spaeter = false) {
         const lage = geo.getAttribute('position');
         const a = lage.array, ruhe = stand.ruhe, marke = stand.marke;
         // Die zuletzt berührten Punkte merken (ihre Normalen gehen zurück auf die Ruhe) …
@@ -200,8 +203,19 @@ export class Genesis9felder {
             }
         }
         lage.needsUpdate = true;
-        Genesis9normalen.nachziehen(geo, stand.beruehrt, stand.anzahl, stand.vorher,
-                                    stand.vorherAnzahl, ruhe);
+        const normalen = () => Genesis9normalen.nachziehen(geo, stand.beruehrt, stand.anzahl, stand.vorher, stand.vorherAnzahl, ruhe);
+        if (!spaeter || stand.anzahl < Genesis9felder.VIELE) { normalen(); return; }
+        if (stand.normalenBestellt) return;
+        stand.normalenBestellt = true;
+        requestAnimationFrame(() => setTimeout(() => {
+            stand.normalenBestellt = false;
+            if (geo.userData.felder === stand) normalen();
+        }, 0));
+    }
+
+    /** Ruhelage und Nachbarn der Normalen anlegen, bevor das erste Feld kommt (sonst zahlt es der erste Zug). */
+    static vorbereiten(netz) {
+        if (netz?.geometry?.getAttribute('position')) Genesis9normalen.vorbereiten(netz.geometry, Genesis9felder.stand(netz).ruhe);
     }
 
     /** Ruhelage, Marken und Berührt-Liste am Netz (einmal angelegt). */
